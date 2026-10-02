@@ -119,7 +119,9 @@ static void gchd_ts(struct gchd *d,const u8 *p,u8 *pes,size_t *n)
  start=!!(p[1]&0x40); afc=(p[3]>>4)&3; if(!afc||afc==2)return;
  if(afc==3){off+=1+p[4];if(off>=188)return;}
  if(start){
-  if(*n)gchd_ring_push(&d->ring,pes,*n); *n=0;
+  if (*n)
+   gchd_ring_push(&d->ring, pes, *n);
+  *n = 0;
   if(188-off>=9 && p[off]==0 && p[off+1]==0 && p[off+2]==1){
    unsigned int h=9+p[off+8]; if(h>=188-off)return; off+=h;
   }
@@ -187,7 +189,10 @@ static int gchd_rx(void *arg)
   gchd_signal_check(d);
   gchd_deliver(d);
  }
- if(n)gchd_ring_push(&d->ring,pes,n);kfree(pes);return 0;
+ if (n)
+  gchd_ring_push(&d->ring, pes, n);
+ kfree(pes);
+ return 0;
 }
 
 static int gchd_queue_setup(struct vb2_queue *q,unsigned int *nb,unsigned int *np,
@@ -273,7 +278,7 @@ static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
 
 static int gchd_ginput(struct file *f, void *p, unsigned int *i)
 {
- *i = video_drvdata(f)->input;
+ *i = ((struct gchd *)video_drvdata(f))->input;
  return 0;
 }
 
@@ -527,15 +532,15 @@ static int gchd_tryfmt(struct file*f,void*p,struct v4l2_format*x)
  return 0;
 }
 
-static int gchd_subscribe_event(struct file *file, void *fh,
-                                    struct v4l2_event_subscription *sub)
+static int gchd_subscribe_event(struct v4l2_fh *fh,
+                                const struct v4l2_event_subscription *sub)
 {
  if (sub->type != V4L2_EVENT_SOURCE_CHANGE &&
      sub->type != V4L2_EVENT_CTRL)
   return -EINVAL;
  if (sub->type == V4L2_EVENT_CTRL)
-  return v4l2_ctrl_subscribe_event(file->private_data, sub);
- return v4l2_event_subscribe(file->private_data, sub, 8, NULL);
+  return v4l2_ctrl_subscribe_event(fh, sub);
+ return v4l2_event_subscribe(fh, sub, 8, NULL);
 }
 
 static const struct v4l2_ioctl_ops gchd_ioctl={
@@ -553,8 +558,7 @@ static const struct v4l2_ioctl_ops gchd_ioctl={
  .vidioc_qbuf=vb2_ioctl_qbuf,.vidioc_dqbuf=vb2_ioctl_dqbuf,
  .vidioc_streamon=vb2_ioctl_streamon,.vidioc_streamoff=vb2_ioctl_streamoff,
  .vidioc_subscribe_event=gchd_subscribe_event,
- .vidioc_unsubscribe_event=v4l2_event_unsubscribe,
- .vidioc_dqevent=v4l2_event_dqevent
+ .vidioc_unsubscribe_event=v4l2_event_unsubscribe
 };
 
 static int gchd_ctrl(struct v4l2_ctrl *c)
@@ -639,6 +643,12 @@ errv4l2:gchd_v4l2_unregister(d);errbuf:kfree(d->usb_buf);err:usb_put_dev(d->udev
 }
 static void gchd_disconnect(struct usb_interface*i)
 {struct gchd*d=usb_get_intfdata(i);if(!d)return;usb_set_intfdata(i,NULL);d->disconnected=true;if(d->rx_thread)kthread_stop(d->rx_thread);
- if(d->hw_initialized)gchd_hw_shutdown(d);gchd_v4l2_unregister(d);gchd_ring_free(&d->ring);kfree(d->usb_buf);usb_put_dev(d->udev);kfree(d);}
+ if (d->hw_initialized)
+  gchd_hw_shutdown(d);
+ gchd_v4l2_unregister(d);
+ gchd_ring_free(&d->ring);
+ kfree(d->usb_buf);
+ usb_put_dev(d->udev);
+ kfree(d);}
 static struct usb_driver gchd_usb={.name="elgato_gchd",.id_table=gchd_ids,.probe=gchd_probe,.disconnect=gchd_disconnect};
 module_usb_driver(gchd_usb);
