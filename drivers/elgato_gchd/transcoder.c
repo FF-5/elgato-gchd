@@ -206,8 +206,8 @@ int gchd_transcoder_final_configure(struct gchd *d)
  else if (d->input_fps_num != 30 && d->input_fps_num != 60)
   return -EINVAL;
 
- r = gchd_sparam(d, 0x1100, 0, 16, VPID); if (r) return r;
- r = gchd_sparam(d, 0x1240, 0, 16, VPID); if (r) return r;
+ r = gchd_sparam(d, 0x1126, 0, 13, VPID); if (r) return r;
+ r = gchd_sparam(d, 0x1266, 0, 13, VPID); if (r) return r;
  r = gchd_sparam(d, 0x1128, 0, 13, APID); if (r) return r;
  r = gchd_sparam(d, 0x1268, 0, 13, APID); if (r) return r;
  r = gchd_sparam(d, 0x1130, 0, 8, VSID); if (r) return r;
