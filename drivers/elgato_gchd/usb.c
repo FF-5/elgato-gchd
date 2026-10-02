@@ -2,7 +2,6 @@
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/usb/ch9.h>
 #include "elgato_gchd.h"
 
 
@@ -156,7 +155,7 @@ static int gchd_load_firmware(struct gchd *d, const char *name)
 
    ep = usb_pipe_endpoint(d->udev, usb_sndbulkpipe(d->udev, GCHD_EP_OUT));
    if (!ep) {
-    dev_err(&d->intf->dev, "firmware endpoint 0x%02x is missing\\n",
+    dev_err(&d->intf->dev, "firmware endpoint 0x%02x is missing\n",
             GCHD_EP_OUT);
     r = -ENODEV;
     break;
@@ -183,7 +182,7 @@ static int gchd_load_firmware(struct gchd *d, const char *name)
 
    if (r || actual != (int)n) {
     dev_err(&d->intf->dev,
-            "firmware transfer failed at %zu: %d (actual=%d requested=%zu)\\n",
+            "firmware transfer failed at %zu: %d (actual=%d requested=%zu)\n",
             off, r ? r : -EIO, actual, n);
     r = r ? r : -EIO;
     break;
