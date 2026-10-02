@@ -778,10 +778,8 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  u8 magic[5] = {0xab, 0xa9, 0x0f, 0xa4, 0x5b};
  int r, i;
 
- r = gchd_mail_write(d, 0x33, (u8[]){0xaa,0x8d,0x35}, 3);
- if (r)
-  return r;
-
+ /* The preceding 56-byte sweep ends with the reference's
+  * 0xaa 0x8d 0x35 command, so do not emit it a second time here. */
  for (i = 0; i < 5; ++i) {
   r = gchd_mail_write(d, 0x33, magic, sizeof(magic));
   if (r)
@@ -822,6 +820,17 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
   if (r)
    return r;
  }
+
+ /* Exact source-routing enable order from configureDevice(). */
+ r = gchd_do_enable(d, BIT(0), d->input == 2 ? BIT(0) : 0);
+ if (r)
+  return r;
+ r = gchd_do_enable(d, BIT(1), d->input != 0 ? BIT(1) : 0);
+ if (r)
+  return r;
+ r = gchd_do_enable(d, BIT(2), d->input != 0 ? BIT(2) : 0);
+ if (r)
+  return r;
 
  r = gchd_mail_write(d, 0x33, (u8[]){0x89,0x89,0xf8}, 3);
  if (r)
