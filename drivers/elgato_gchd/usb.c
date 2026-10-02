@@ -3,6 +3,8 @@
 #include <linux/module.h>
 #include "elgato_gchd.h"
 
+MODULE_FIRMWARE("gchd/mb86h57_h58_idle.bin");
+MODULE_FIRMWARE("gchd/mb86h57_h58_enc_h.bin");
 MODULE_FIRMWARE("gchd/mb86m01_assp_nsec_idle.bin");
 MODULE_FIRMWARE("gchd/mb86m01_assp_nsec_enc_h.bin");
 
@@ -29,8 +31,10 @@ MODULE_FIRMWARE("gchd/mb86m01_assp_nsec_enc_h.bin");
 #define HDNEW_MAIL_WRITE_INDEX 0x00c0
 #define HDNEW_MAIL_CONFIG_INDEX 0x0000
 
-#define FW_IDLE "gchd/mb86m01_assp_nsec_idle.bin"
-#define FW_ENC  "gchd/mb86m01_assp_nsec_enc_h.bin"
+#define FW_IDLE_OLD "gchd/mb86h57_h58_idle.bin"
+#define FW_ENC_OLD  "gchd/mb86h57_h58_enc_h.bin"
+#define FW_IDLE_NEW "gchd/mb86m01_assp_nsec_idle.bin"
+#define FW_ENC_NEW  "gchd/mb86m01_assp_nsec_enc_h.bin"
 
 #define EB_FIRMWARE_PROCESSOR BIT(1)
 #define EB_ANALOG_INPUT BIT(2)
@@ -90,7 +94,8 @@ static int gchd_load_firmware(struct gchd *d, const char *name)
  }
 
  while (off < fw->size) {
-  size_t n = min_t(size_t, 32768, fw->size - off);
+  size_t chunk = d->family == GCHD_FAMILY_HDNEW ? 32768 : 16384;
+  size_t n = min_t(size_t, chunk, fw->size - off);
   r = usb_bulk_msg(d->udev, usb_sndbulkpipe(d->udev, GCHD_EP_OUT),
                    (void *)(fw->data + off), n, &actual, 5000);
   if (r || actual != (int)n) {
@@ -149,7 +154,7 @@ static int gchd_send_enable_state(struct gchd *d)
  }
 }
 
-static int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
+int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
 {
  u8 padded[256];
  u8 cfg[4] = { 0x09, 0x00, (u8)(port << 1), len };
@@ -157,6 +162,13 @@ static int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
 
  if (len > 254)
   return -EINVAL;
+
+ if (d->family == GCHD_FAMILY_OLD) {
+  r = gchd_ctrl_write(d, MAIL_REG, (u16)port << 8, 0, data, len);
+  if (r)
+   return r;
+  return gchd_send_enable_state(d);
+ }
 
  memcpy(padded, data, len);
  if (len & 1)
@@ -195,7 +207,7 @@ static int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
  return gchd_reg_write16(d, ENABLE_STATE_INDEX, d->hw_enable_state);
 }
 
-static int gchd_mail_read(struct gchd *d, u8 port, u8 *data, u8 len)
+int gchd_mail_read(struct gchd *d, u8 port, u8 *data, u8 len)
 {
  u8 cfg[4] = { 0x09, 0x01, (u8)(port << 1), len };
  u8 tmp[2 + 256 + 1];
@@ -203,6 +215,9 @@ static int gchd_mail_read(struct gchd *d, u8 port, u8 *data, u8 len)
 
  if (len > 255)
   return -EINVAL;
+
+ if (d->family == GCHD_FAMILY_OLD)
+  return gchd_ctrl_read(d, MAIL_REG, (u16)port << 8, 0, data, len);
 
  r = gchd_ctrl_write(d, REG_REQ, 0x0000, HDNEW_MAIL_CONFIG_INDEX,
                      cfg, sizeof(cfg));
@@ -295,7 +310,7 @@ static int gchd_wait_state(struct gchd *d, u16 expected)
  return state == expected ? 0 : -EIO;
 }
 
-static int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
+int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
                           u16 expected)
 {
  int r = gchd_scmd(d, command, mode, data);
@@ -304,7 +319,7 @@ static int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
  return gchd_wait_state(d, expected);
 }
 
-static int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
+int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
 {
  int r;
 
@@ -372,7 +387,7 @@ int gchd_hw_init(struct gchd *d)
  state &= 0x1f;
 
  if (state == 0) {
-  r = gchd_load_firmware(d, FW_IDLE);
+  r = gchd_load_firmware(d, d->family == GCHD_FAMILY_HDNEW ? FW_IDLE_NEW : FW_IDLE_OLD);
   if (r)
    return r;
   r = gchd_reg_write16(d, 0x0070, 4);
