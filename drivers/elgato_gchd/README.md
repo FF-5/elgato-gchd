@@ -6,7 +6,7 @@ Linux USB/V4L2 driver.
 
 ### Current implementation
 
-- binds directly to USB VID:PID 0fd9:005d;
+- binds directly to all four Game Capture HD revisions supported by the original project: 0fd9:0044, 0fd9:004e, 0fd9:0051, and 0fd9:005d;
 - creates a /dev/video* V4L2 capture device;
 - exposes H.264 capture format;
 - receives the existing MPEG-TS video stream from bulk endpoint 0x81;
@@ -14,13 +14,13 @@ Linux USB/V4L2 driver.
 - keeps encoded frames in a bounded circular RAM buffer;
 - drops the oldest buffered frames when the RAM/frame limit is reached;
 - exposes standard V4L2 H.264 bitrate/profile/level controls;
-- includes DKMS metadata.
+- selects the legacy MB86H57/H58 firmware and USB mailbox protocol for 0044/004e/0051, and the MB86M01/HDNew protocol for 005d;\n- includes DKMS metadata.
 
 The driver contains no Qt GUI and does not require a userspace capture daemon.
 
 ### Important limitation
 
-The kernel driver now contains the verified USB control-transfer primitives, HDNew mailbox/interrupt handling, state commands, enable-state handling, and request_firmware() uploads for the two HDNew firmware images. The full original transcoder/input configuration state machine is still not fully ported, so this is not yet a drop-in replacement for the original working userspace implementation.
+The kernel driver now contains the verified USB control-transfer primitives, legacy/HDNew mailbox paths, state commands, enable-state handling, and request_firmware() uploads for both firmware families. The four original Game Capture HD product IDs are now bound separately so their firmware/protocol differences can be handled explicitly. The full original transcoder/input configuration state machine is still not fully ported, so this is not yet a drop-in replacement for the original working userspace implementation.
 
 The V4L2 controls establish the Linux-facing interface, but their hardware programming is still pending the remaining transcoder/input port.
 
