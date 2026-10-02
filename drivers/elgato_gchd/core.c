@@ -261,7 +261,11 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  struct gchd *d = video_drvdata(f);
 
  if (i > 2) return -EINVAL;
- if (vb2_is_busy(&d->vbq)) return -EBUSY;
+ if (vb2_is_busy(&d->vbq)) {
+  if (!d->streaming || d->signal_present)
+   return -EBUSY;
+  gchd_input_stop(d);
+ }
 
  d->input = i;
  d->input_configured = false;
@@ -286,6 +290,22 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  }
  d->width = d->input_width;
  d->height = d->input_height;
+
+ if (d->streaming) {
+  int r = gchd_input_configure(d);
+  if (r)
+   return r;
+  r = gchd_scmd(d, 4, 0xa0, 0);
+  if (r) {
+   gchd_input_stop(d);
+   return r;
+  }
+  r = gchd_state_cmd(d, 5, 0, 0x0002, 0x0002);
+  if (r) {
+   gchd_input_stop(d);
+   return r;
+  }
+ }
  return 0;
 }
 
