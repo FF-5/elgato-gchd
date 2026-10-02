@@ -111,9 +111,18 @@ static int gchd_queue_setup(struct vb2_queue *q,unsigned int *nb,unsigned int *n
 static void gchd_buf_queue(struct vb2_buffer *vb)
 {struct gchd*d=vb2_get_drv_priv(vb->vb2_queue);struct gchd_buffer*b=container_of(to_vb2_v4l2_buffer(vb),struct gchd_buffer,vb);
  unsigned long f;spin_lock_irqsave(&d->qlock,f);list_add_tail(&b->list,&d->queued);spin_unlock_irqrestore(&d->qlock,f);gchd_deliver(d);}
-static int gchd_start(struct vb2_queue*q,unsigned int c){vb2_get_drv_priv(q)->streaming=true;return 0;}
+static int gchd_start(struct vb2_queue*q,unsigned int c)
+{
+ struct gchd *d = vb2_get_drv_priv(q);
+ int r = gchd_input_configure(d);
+ if (r)
+  return r;
+ d->streaming = true;
+ return 0;
+}
 static void gchd_stop(struct vb2_queue*q)
 {struct gchd*d=vb2_get_drv_priv(q);struct gchd_buffer*b,*tmp;unsigned long f;d->streaming=false;
+ gchd_input_stop(d);
  spin_lock_irqsave(&d->qlock,f);list_for_each_entry_safe(b,tmp,&d->queued,list){list_del(&b->list);vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);}spin_unlock_irqrestore(&d->qlock,f);}
 static const struct vb2_ops gchd_vb2_ops={.queue_setup=gchd_queue_setup,.buf_queue=gchd_buf_queue,.start_streaming=gchd_start,.stop_streaming=gchd_stop,.wait_prepare=vb2_ops_wait_prepare,.wait_finish=vb2_ops_wait_finish};
 
