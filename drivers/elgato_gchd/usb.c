@@ -439,10 +439,13 @@ static int gchd_complete_state_change(struct gchd *d, u16 current, u16 next)
    r = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
    if (r)
     return r;
-   /* This read is part of the original completion handshake. */
-   r = gchd_req_read16(d, 0x0900, 0x01b0, &completion);
-   if (r)
-    return r;
+   /* This read is part of the original completion handshake; its value is discarded. */
+   {
+    u16 dummy;
+    r = gchd_req_read16(d, 0x0900, 0x01b0, &dummy);
+    if (r)
+     return r;
+   }
    if (completion & 0x0004)
     break;
    usleep_range(1000, 2000);
