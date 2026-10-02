@@ -573,6 +573,48 @@ int gchd_hw_init(struct gchd *d)
   r = gchd_reg_write16(d, 0x0070, 4);
   if (r)
    return r;
+
+  /*
+   * Match the original post-firmware initialization sequence.  The two
+   * enable-register reads refresh the saved hardware state, and the eight
+   * bank-0 reads are part of the device's startup handshake.  In particular,
+   * do not issue SCMD_IDLE until these reads have completed.
+   */
+  if (d->family == GCHD_FAMILY_HDNEW) {
+   u16 dummy;
+
+   r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
+   if (r)
+    return r;
+   r = gchd_reg_read16(d, ENABLE_INDEX, &d->hw_enable_register);
+   if (r)
+    return r;
+
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0010, &dummy, sizeof(dummy));
+   if (r)
+    return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0012, &dummy, sizeof(dummy));
+   if (r)
+    return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0014, &dummy, sizeof(dummy));
+   if (r)
+    return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0016, &dummy, sizeof(dummy));
+   if (r)
+    return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0018, &dummy, sizeof(dummy));
+   if (r)
+    return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001a, &dummy, sizeof(dummy));
+   if (r)
+    return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001c, &dummy, sizeof(dummy));
+   if (r)
+    return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001e, &dummy, sizeof(dummy));
+   if (r)
+    return r;
+  }
  } else {
   r = gchd_state_cmd(d, SCMD_RESET, 0, 0, 0x10);
   if (r)
