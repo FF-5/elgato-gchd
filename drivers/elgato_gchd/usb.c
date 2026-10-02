@@ -247,12 +247,12 @@ static int gchd_interrupt_pend(struct gchd *d)
   * That must not prevent hardware initialization.
   */
  r = usb_interrupt_msg(d->udev, usb_rcvintpipe(d->udev, GCHD_EP_INT),
-                       status, sizeof(status), &actual, 100);
- if (r == -EAGAIN || r == -ETIMEDOUT)
-  return 0;
+                       status, sizeof(status), &actual, 0);
  if (r)
-  dev_warn(&d->intf->dev, "USB interrupt drain failed: %d\n", r);
- return r;
+  return r;
+ if (actual != sizeof(status))
+  return -EIO;
+ return 0;
 }
 
 static int gchd_mail_ready(struct gchd *d)
@@ -577,9 +577,6 @@ int gchd_hw_init(struct gchd *d)
   return r;
 
  r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
- if (r)
-  return r;
- r = gchd_reg_read16(d, ENABLE_INDEX, &d->hw_enable_register);
  if (r)
   return r;
 
