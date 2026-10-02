@@ -33,5 +33,5 @@ int gchd_ring_push(struct gchd_ring *, const u8 *, size_t);
 struct gchd_frame *gchd_ring_pop(struct gchd_ring *);
 void gchd_ring_free(struct gchd_ring *);
 int gchd_v4l2_register(struct gchd *);
-void gchd_v4l2_unregister(struct gchd *);
+void gchd_v4l2_unregister(struct gchd *);\nextern const struct v4l2_file_operations vb2_fops;
 #endif
