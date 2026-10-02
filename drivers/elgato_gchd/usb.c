@@ -726,7 +726,7 @@ int gchd_hw_shutdown(struct gchd *d)
 
  r = gchd_reg_write16(d, BANKSEL_INDEX, 0x0000);
  if (r) return r;
- r = gchd_send_enable_state(d);
+ r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
  if (r) return r;
 
  /* Disable amck_mode (transcoder output). */
