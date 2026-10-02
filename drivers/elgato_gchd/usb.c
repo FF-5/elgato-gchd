@@ -3,10 +3,10 @@
 #include <linux/module.h>
 #include "elgato_gchd.h"
 
-MODULE_FIRMWARE("gchd/mb86h57_h58_idle.bin");
-MODULE_FIRMWARE("gchd/mb86h57_h58_enc_h.bin");
-MODULE_FIRMWARE("gchd/mb86m01_assp_nsec_idle.bin");
-MODULE_FIRMWARE("gchd/mb86m01_assp_nsec_enc_h.bin");
+MODULE_FIRMWARE("gchd/MB86H57_H58_IDLE");
+MODULE_FIRMWARE("gchd/MB86H57_H58_ENC_H");
+MODULE_FIRMWARE("gchd/MB86M01_ASSP_NSEC_IDLE");
+MODULE_FIRMWARE("gchd/MB86M01_ASSP_NSEC_ENC_H");
 
 #define REQ_READ  0xc0
 #define REQ_WRITE 0x40
@@ -31,10 +31,10 @@ MODULE_FIRMWARE("gchd/mb86m01_assp_nsec_enc_h.bin");
 #define HDNEW_MAIL_WRITE_INDEX 0x00c0
 #define HDNEW_MAIL_CONFIG_INDEX 0x0000
 
-#define FW_IDLE_OLD "gchd/mb86h57_h58_idle.bin"
-#define FW_ENC_OLD  "gchd/mb86h57_h58_enc_h.bin"
-#define FW_IDLE_NEW "gchd/mb86m01_assp_nsec_idle.bin"
-#define FW_ENC_NEW  "gchd/mb86m01_assp_nsec_enc_h.bin"
+#define FW_IDLE_OLD "gchd/MB86H57_H58_IDLE"
+#define FW_ENC_OLD  "gchd/MB86H57_H58_ENC_H"
+#define FW_IDLE_NEW "gchd/MB86M01_ASSP_NSEC_IDLE"
+#define FW_ENC_NEW  "gchd/MB86M01_ASSP_NSEC_ENC_H"
 
 #define EB_FIRMWARE_PROCESSOR BIT(1)
 #define EB_ANALOG_INPUT BIT(2)
