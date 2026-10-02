@@ -81,6 +81,8 @@ static int gchd_req_read16(struct gchd *d, u16 value, u16 index, u16 *v)
  return r;
 }
 
+static int gchd_load_firmware(struct gchd *d, const char *name);
+
 int gchd_load_encoder_firmware(struct gchd *d)
 {
  const char *name = d->family == GCHD_FAMILY_HDNEW ? FW_ENC_NEW : FW_ENC_OLD;
