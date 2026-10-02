@@ -12,7 +12,11 @@
 #include <media/videobuf2-vmalloc.h>
 
 #define GCHD_VID 0x0fd9
-#define GCHD_PID 0x005d
+#define GCHD_PID_0 0x0044
+#define GCHD_PID_1 0x004e
+#define GCHD_PID_2 0x0051
+#define GCHD_PID_3 0x005d
+#define GCHD_PID GCHD_PID_3
 #define GCHD_EP_IN 0x81
 #define GCHD_EP_OUT 0x02
 #define GCHD_EP_INT 0x83
@@ -36,8 +40,11 @@ struct gchd_buffer {
  struct list_head list;
 };
 
+enum gchd_family { GCHD_FAMILY_OLD, GCHD_FAMILY_HDNEW };
+
 struct gchd {
  struct usb_device *udev;
+ enum gchd_family family;
  struct usb_interface *intf;
  struct video_device vdev;
  struct v4l2_device v4l2_dev;
