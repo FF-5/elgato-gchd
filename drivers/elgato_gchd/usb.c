@@ -81,7 +81,7 @@ static int gchd_ctrl_write(struct gchd *d, u8 req, u16 value, u16 index,
   return -ENOMEM;
 
  r = usb_control_msg(d->udev, usb_sndctrlpipe(d->udev, 0),
-                     req, REQ_WRITE, value, index, tmp, len, 10000);
+                     req, REQ_WRITE, value, index, tmp, len, 0);
  kfree(tmp);
 
  return r < 0 ? r : (r == len ? 0 : -EIO);
