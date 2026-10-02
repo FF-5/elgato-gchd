@@ -86,6 +86,11 @@ int gchd_sparam(struct gchd *, u16, u8, u8, u16);
 int gchd_slsi(struct gchd *, u16, u16);
 int gchd_load_encoder_firmware(struct gchd *);
 int gchd_input_configure(struct gchd *);
+int gchd_common_block_a(struct gchd *);
+int gchd_common_block_b1(struct gchd *, bool);
+int gchd_common_block_b2(struct gchd *);
+int gchd_common_block_b3(struct gchd *);
+int gchd_common_block_c(struct gchd *);
 void gchd_input_stop(struct gchd *);
 
 int gchd_ring_push(struct gchd_ring *, const u8 *, size_t);
