@@ -158,8 +158,10 @@ static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
  struct gchd*d;int r;d=kzalloc(sizeof(*d),GFP_KERNEL);if(!d)return-ENOMEM;
  d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;mutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
  spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
- if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;usb_set_intfdata(i,d);
- d->rx_thread=kthread_run(gchd_rx,d,"gchd-rx");if(IS_ERR(d->rx_thread)){r=PTR_ERR(d->rx_thread);d->rx_thread=NULL;goto errv4l2;}return 0;
+ if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;
+ r=gchd_hw_init(d);if(r)goto errv4l2;d->hw_initialized=true;usb_set_intfdata(i,d);
+ d->rx_thread=kthread_run(gchd_rx,d,"gchd-rx");if(IS_ERR(d->rx_thread)){r=PTR_ERR(d->rx_thread);d->rx_thread=NULL;goto errhw;}return 0;
+errhw:gchd_hw_shutdown(d);d->hw_initialized=false;
 errv4l2:gchd_v4l2_unregister(d);errbuf:kfree(d->usb_buf);err:usb_put_dev(d->udev);kfree(d);return r;
 }
 static void gchd_disconnect(struct usb_interface*i)
