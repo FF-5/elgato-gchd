@@ -610,7 +610,7 @@ int gchd_v4l2_register(struct gchd*d)
   ~(BIT(V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)),V4L2_MPEG_VIDEO_H264_PROFILE_MAIN);
  v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_LEVEL,V4L2_MPEG_VIDEO_H264_LEVEL_5_1,0,V4L2_MPEG_VIDEO_H264_LEVEL_4_1);
  if(d->ctrls.error){r=d->ctrls.error;goto err;}
- memset(&d->vbq,0,sizeof(d->vbq));d->vbq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE;d->vbq.io_modes=VB2_MMAP|VB2_READ;
+ memset(&d->vbq,0,sizeof(d->vbq));d->vbq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE;d->vbq.io_modes=VB2_MMAP|VB2_READ;d->vbq.timestamp_flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;d->vbq.dev=&d->intf->dev;
  d->vbq.drv_priv=d;d->vbq.ops=&gchd_vb2_ops;d->vbq.mem_ops=&vb2_vmalloc_memops;d->vbq.lock=&d->lock;
  r=vb2_queue_init(&d->vbq);if(r)goto err;
  strscpy(d->vdev.name,d->family == GCHD_FAMILY_HDNEW ? "Elgato Game Capture HD (HDNew)" : "Elgato Game Capture HD",sizeof(d->vdev.name));d->vdev.v4l2_dev=&d->v4l2_dev;d->vdev.release=video_device_release_empty;
