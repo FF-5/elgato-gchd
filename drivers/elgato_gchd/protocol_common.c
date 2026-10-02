@@ -59,7 +59,7 @@ static int gchd_read_9989ec(struct gchd *d, unsigned int count)
 #define GCHD_POLL(d) do { int __r=gchd_poll_9989ed((d)); if(__r) return __r; } while(0)
 #define GCHD_READ_EC(d,n) do { int __r=gchd_read_9989ec((d),(n)); if(__r) return __r; } while(0)
 
-static int configureCommonBlockA(struct gchd *d)
+int gchd_common_block_a(struct gchd *d)
 {
 	GCHD_MW(d, 0x33, 0x99, 0x89, 0xfd);
 	GCHD_MR(d, 0x33, 1); //EXPECTED {0x6e}
@@ -203,7 +203,7 @@ static int configureCommonBlockA(struct gchd *d)
  return 0;
 }
 
-static int configureCommonBlockB1(struct gchd *d)
+int gchd_common_block_b1(struct gchd *d)
 {
 	GCHD_MW(d, 0x33, 0x99, 0x89, 0x89);
 	GCHD_MR(d, 0x33, 1); //EXPECTED {0x6e}
@@ -233,7 +233,7 @@ static int configureCommonBlockB1(struct gchd *d)
  return 0;
 }
 
-static int configureCommonBlockB2(struct gchd *d)
+int gchd_common_block_b2(struct gchd *d)
 {
 	GCHD_MW(d, 0x4c, 0x0f, 0x89);
 	GCHD_MW(d, 0x4c, 0x58, 0xd8);
@@ -448,7 +448,7 @@ static int configureCommonBlockB2(struct gchd *d)
  return 0;
 }
 
-static int configureCommonBlockB3(struct gchd *d)
+int gchd_common_block_b3(struct gchd *d)
 {
 	if (gchd_resolution(d) != GCHD_RES_PAL) {
 		GCHD_MW(d, 0x4c, 0x0f, 0x89);
@@ -470,7 +470,7 @@ static int configureCommonBlockB3(struct gchd *d)
  return 0;
 }
 
-static int configureCommonBlockC(struct gchd *d)
+int gchd_common_block_c(struct gchd *d)
 {
 	GCHD_MW(d, 0x33, 0xaa, 0xb8, 0x29, 0xf6);
 	GCHD_MW(d, 0x33, 0xa1, 0x08, 0x73);
