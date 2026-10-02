@@ -26,7 +26,9 @@ static const struct gchd_mode gchd_modes[] = {
  {1920, 1080, 60, 1, false},
  {1920, 1080, 60, 1, true},
  {1280,  720, 60, 1, false},
- { 720,  576, 50, 1, true},
+ { 720,  576, 50, 1, false},
+ { 720, 576, 50, 1, true},
+ { 720,  480, 60, 1, false},
  { 720,  480, 60, 1, true},
 };
 
@@ -49,8 +51,10 @@ static bool gchd_mode_allowed(const struct gchd *d,
 {
  switch (d->input) {
  case 0: /* HDMI: 480p/576p/720p/1080i/1080p are supported by the original. */
-  return !m->interlaced ||
-         (m->width == 1920 && m->height == 1080);
+  return (m->width == 1920 && m->height == 1080) ||
+         (m->width == 1280 && m->height == 720) ||
+         (m->width == 720 &&
+          (m->height == 480 || m->height == 576));
  case 1: /* Component: progressive/interlaced HD plus PAL/NTSC interlaced. */
   return true;
  case 2: /* Composite: SD interlaced only. */
@@ -405,6 +409,8 @@ static int gchd_subscribe_event(struct file *file, void *fh,
  if (sub->type != V4L2_EVENT_SOURCE_CHANGE &&
      sub->type != V4L2_EVENT_CTRL)
   return -EINVAL;
+ if (sub->type == V4L2_EVENT_CTRL)
+  return v4l2_ctrl_subscribe_event(file->private_data, sub);
  return v4l2_event_subscribe(file->private_data, sub, 8, NULL);
 }
 
