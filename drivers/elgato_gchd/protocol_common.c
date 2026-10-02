@@ -51,7 +51,7 @@ static int gchd_read_9989ec(struct gchd *d, unsigned int count)
  return 0;
 }
 
-#define GCHD_MW(d,p,...) do { u8 __b[]={(u8)(__VA_ARGS__)}; int __r=gchd_mail_write((d),(p),__b,sizeof(__b)); if(__r) return __r; } while(0)
+#define GCHD_MW(d,p,...) do { u8 __b[]={__VA_ARGS__}; int __r=gchd_mail_write((d),(p),__b,sizeof(__b)); if(__r) return __r; } while(0)
 #define GCHD_MR(d,p,n) do { int __r=gchd_mail_read_discard((d),(p),(n)); if(__r) return __r; } while(0)
 #define GCHD_MR_IN(d,p,b,n) do { int __r=gchd_mail_read((d),(p),(b),(n)); if(__r) return __r; } while(0)
 #define GCHD_MR1(d,p,v) do { u8 __x; int __r=gchd_mail_read((d),(p),&__x,1); if(__r) return __r; (v)=__x; } while(0)
