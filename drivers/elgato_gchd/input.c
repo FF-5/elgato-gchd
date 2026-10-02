@@ -206,6 +206,35 @@ static int gchd_encoder_start(struct gchd *d)
   * In particular, firmware load occurs after the 0x27f97b processor state and
   * before the four post-firmware readbacks.
   */
+ /* Exact pre-encoder processor handshake from configureDevice(). */
+ r = gchd_mail_write(d, 0x33, (u8[]){0xab,0xa9,0x0f,0xa4,0x55}, 5);
+ if (r) return r;
+ r = gchd_mail_read(d, 0x33, reply, 3);
+ if (r) return r;
+
+ for (i = 0; i < 1000; ++i) {
+  r = gchd_mail_write(d, 0x33,
+                      (u8[]){0xab,0xa9,0x0f,0xa4,0x55}, 5);
+  if (r) return r;
+  r = gchd_mail_read(d, 0x33, reply, 3);
+  if (r) return r;
+  /* 0x334455 means the processor is still coming up. */
+  state = ((u32)reply[0] << 16) | ((u32)reply[1] << 8) | reply[2];
+  if (state == 0x27f97b)
+   break;
+  if (state == 0x334455) {
+   r = gchd_send_enable_state(d);
+   if (r) return r;
+   r = gchd_do_enable(d, BIT(2), d->input ? BIT(2) : 0);
+   if (r) return r;
+   r = gchd_do_enable(d, BIT(1), BIT(1));
+   if (r) return r;
+   continue;
+  }
+ }
+ if (i == 1000)
+  return -ETIMEDOUT;
+
  r = gchd_transcoder_init(d);
  if (r)
   return r;
