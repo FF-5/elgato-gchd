@@ -561,15 +561,9 @@ int gchd_hw_init(struct gchd *d)
    return r;
 
   /*
-   * The HDNew boot ROM accepts the complete firmware image on the bulk OUT
-   * endpoint before its application firmware is ready to answer control
-   * requests again.  usb_bulk_msg() completing only means the USB transfer
-   * finished; give the newly loaded firmware a short window to come up before
-   * touching the register interface again.
+   * Keep the post-firmware sequence tight, as in the original implementation:
+   * the next register write follows the completed firmware bulk transfer.
    */
-  if (d->family == GCHD_FAMILY_HDNEW)
-   msleep(100);
-
   r = gchd_reg_write16(d, 0x0070, 4);
   if (r)
    return r;
