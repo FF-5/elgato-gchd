@@ -44,16 +44,44 @@ MODULE_FIRMWARE("gchd/mb86m01_assp_nsec_enc_h.bin");
 static int gchd_ctrl_read(struct gchd *d, u8 req, u16 value, u16 index,
                           void *buf, u16 len)
 {
- int r = usb_control_msg(d->udev, usb_rcvctrlpipe(d->udev, 0),
-                         req, REQ_READ, value, index, buf, len, 2000);
- return r < 0 ? r : (r == len ? 0 : -EIO);
+ void *tmp;
+ int r;
+
+ if (!len)
+  return 0;
+
+ tmp = kmalloc(len, GFP_KERNEL);
+ if (!tmp)
+  return -ENOMEM;
+
+ r = usb_control_msg(d->udev, usb_rcvctrlpipe(d->udev, 0),
+                     req, REQ_READ, value, index, tmp, len, 2000);
+ if (r == len)
+  memcpy(buf, tmp, len);
+ else if (r >= 0)
+  r = -EIO;
+
+ kfree(tmp);
+ return r < 0 ? r : 0;
 }
 
 static int gchd_ctrl_write(struct gchd *d, u8 req, u16 value, u16 index,
                            const void *buf, u16 len)
 {
- int r = usb_control_msg(d->udev, usb_sndctrlpipe(d->udev, 0),
-                         req, REQ_WRITE, value, index, (void *)buf, len, 2000);
+ void *tmp;
+ int r;
+
+ if (!len)
+  return 0;
+
+ tmp = kmemdup(buf, len, GFP_KERNEL);
+ if (!tmp)
+  return -ENOMEM;
+
+ r = usb_control_msg(d->udev, usb_sndctrlpipe(d->udev, 0),
+                     req, REQ_WRITE, value, index, tmp, len, 2000);
+ kfree(tmp);
+
  return r < 0 ? r : (r == len ? 0 : -EIO);
 }
 
