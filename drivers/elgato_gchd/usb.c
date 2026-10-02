@@ -132,6 +132,23 @@ static int gchd_mail_ready(struct gchd *d)
  return -ETIMEDOUT;
 }
 
+static int gchd_send_enable_state(struct gchd *d)
+{
+ int r;
+ u16 status;
+ for (;;) {
+  r = gchd_reg_write16(d, ENABLE_STATE_INDEX, d->hw_enable_state);
+  if (r)
+   return r;
+  r = gchd_reg_read16(d, MAIL_READY_INDEX, &status);
+  if (r)
+   return r;
+  if (status & BIT(0))
+   return 0;
+  usleep_range(1000, 2000);
+ }
+}
+
 static int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
 {
  u8 padded[256];
