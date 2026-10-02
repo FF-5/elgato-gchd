@@ -798,7 +798,6 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
       (reply[1] & 0xf0) == 0xe0 &&
       (reply[2] & 0xf0) == 0x40)
    break;
-  usleep_range(10000, 20000);
  }
  if (i == 5)
   return -ETIMEDOUT;
