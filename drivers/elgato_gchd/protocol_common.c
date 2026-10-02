@@ -284,7 +284,7 @@ int gchd_common_block_b2(struct gchd *d)
 			}
 			break;
 		default:
-			throw runtime_error( "Current selected video mode is not a supported mode.");
+			return -EINVAL;
 			break;
 	}
 
@@ -324,7 +324,7 @@ int gchd_common_block_b2(struct gchd *d)
 			}
 			break;
 		default:
-			throw runtime_error( "Current selected video mode is not a supported mode.");
+			return -EINVAL;
 			break;
 	}
 
@@ -400,7 +400,7 @@ int gchd_common_block_b2(struct gchd *d)
 			GCHD_MW(d, 0x4c, 0x34, 0x90);
 			break;
 		default:
-			throw runtime_error( "Current selected video mode is not a supported mode.");
+			return -EINVAL;
 			break;
 	}
 	GCHD_MW(d, 0x4c, 0x35, 0x88);
