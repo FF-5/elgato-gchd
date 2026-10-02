@@ -68,6 +68,9 @@ struct gchd {
  u32 input_width, input_height;
  u32 input_fps_num, input_fps_den;
  bool input_interlaced;
+ u32 bitrate;
+ u8 h264_profile;
+ u8 h264_level;
 };
 
 int gchd_hw_init(struct gchd *);
