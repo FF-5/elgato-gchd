@@ -339,6 +339,12 @@ static int gchd_encoder_start(struct gchd *d)
  r = gchd_mail_read(d, 0x33, reply, 1);
  if (r) return r;
 
+ r = gchd_post_encoder_prefix(d);
+ if (r) return r;
+
+ r = gchd_post_encoder_sweep(d);
+ if (r) return r;
+
  return 0;
 }
 
