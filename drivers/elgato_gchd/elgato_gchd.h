@@ -22,12 +22,12 @@ struct gchd_ring {
  unsigned int head, count; size_t bytes; u64 sequence; spinlock_t lock;
 };
 struct gchd_buffer { struct vb2_v4l2_buffer vb; struct list_head list; };
-struct gchd {
+int gchd_hw_init(struct gchd *);\nint gchd_hw_shutdown(struct gchd *);\n\nstruct gchd {
  struct usb_device *udev; struct usb_interface *intf;
  struct video_device vdev; struct v4l2_device v4l2_dev; struct vb2_queue vbq;
  struct v4l2_ctrl_handler ctrls; struct mutex lock; spinlock_t qlock;
  struct list_head queued; struct task_struct *rx_thread; struct gchd_ring ring;
- u8 *usb_buf; bool streaming, disconnected; u32 width, height, sizeimage;
+ u8 *usb_buf; bool streaming, disconnected, hw_initialized;\n u16 hw_enable_state; u32 width, height, sizeimage;
 };
 int gchd_ring_push(struct gchd_ring *, const u8 *, size_t);
 struct gchd_frame *gchd_ring_pop(struct gchd_ring *);
