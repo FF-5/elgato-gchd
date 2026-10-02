@@ -278,7 +278,7 @@ static int gchd_mail_write33(struct gchd *d, const u8 *data, u8 len)
  return gchd_mail_write(d, 0x33, data, len);
 }
 
-static int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
+int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
 {
  u8 b_old[6] = { 0, 0, command, mode, data >> 8, data };
  u8 b_new[4] = { command, mode, data >> 8, data };
