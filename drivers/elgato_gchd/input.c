@@ -140,6 +140,114 @@ static int gchd_encoder_start(struct gchd *d)
  return gchd_do_enable(d, BIT(4), 0);
 }
 
+static int gchd_read_9dcd(struct gchd *d, u8 index, u8 *value)
+{
+ u8 cmd[3] = {0x9d, 0xcd, index};
+ return gchd_mail_write(d, 0x33, cmd, sizeof(cmd)) ?:
+        gchd_mail_read(d, 0x33, value, 1);
+}
+
+static int gchd_post_encoder_setup(struct gchd *d)
+{
+ static const struct gchd_mail_cmd common[] = {
+  {0x33,1,{0x28,0x28}},
+  {0x33,3,{0x29,0x89,0x5b}},
+  {0x33,4,{0xdd,0xce,0x3f,0xb2}},
+  {0x33,3,{0x43,0x23,0x84}},
+  {0x33,3,{0x89,0x89,0xfb}},
+  {0x44,2,{0x02,0xc9}},
+  {0x44,2,{0x14,0xd2}},
+  {0x44,2,{0x3c,0x6b}},
+  {0x33,3,{0x89,0x89,0xfa}},
+  {0x33,3,{0x89,0x89,0xca}},
+  {0x33,3,{0x89,0x89,0xe7}},
+  {0x44,2,{0x03,0x2a}},
+  {0x44,2,{0x05,0x89}},
+  {0x44,2,{0x19,0xde}},
+  {0x44,2,{0x1a,0x87}},
+  {0x44,2,{0x1b,0x88}},
+  {0x44,2,{0x29,0x8b}},
+  {0x44,2,{0x2d,0x8f}},
+  {0x44,2,{0x4c,0x89}},
+  {0x44,2,{0x55,0x88}},
+  {0x44,2,{0x6b,0xae}},
+  {0x44,2,{0x6c,0xbe}},
+  {0x44,2,{0x6d,0x78}},
+  {0x44,2,{0x6e,0xa0}},
+  {0x44,2,{0x06,0x08}},
+ };
+ u8 reply[2];
+ int r, i;
+
+ r = gchd_seq(d, common, ARRAY_SIZE(common));
+ if (r)
+  return r;
+
+ /* The original waits for these mailbox replies as readiness barriers. */
+ r = gchd_mail_read(d, 0x33, reply, 1);
+ if (r)
+  return r;
+ r = gchd_mail_read(d, 0x33, reply, 2);
+ if (r)
+  return r;
+
+ r = gchd_do_enable(d, BIT(4), BIT(4));
+ if (r)
+  return r;
+
+ for (i = 0; i < 100; ++i) {
+  u8 cmd[] = {0x43,0x23,0x84};
+  r = gchd_mail_write(d, 0x33, cmd, sizeof(cmd));
+  if (r)
+   return r;
+  r = gchd_mail_read(d, 0x33, reply, 1);
+  if (r)
+   return r;
+  if (reply[0] == 0xf7)
+   break;
+  usleep_range(1000, 2000);
+ }
+ if (i == 100)
+  return -ETIMEDOUT;
+
+ r = gchd_do_enable(d, BIT(4), 0);
+ if (r)
+  return r;
+
+ /*
+  * 0x9dcd is a small device-side read primitive used by the original
+  * configuration. We perform the reads as synchronization points; their
+  * values are deliberately not treated as hard failures because captures
+  * of the original hardware show several board/firmware-dependent values.
+  */
+ {
+  static const u8 indices[] = {0x88,0x3f,0x15,0x3f,0x3f};
+  for (i = 0; i < ARRAY_SIZE(indices); ++i) {
+   u8 value;
+   r = gchd_read_9dcd(d, indices[i], &value);
+   if (r)
+    return r;
+  }
+ }
+
+ if (d->input == 0) {
+  static const struct gchd_mail_cmd seq[] = {
+   {0x44,2,{0x08,0x9b}}, {0x44,2,{0x09,0x7a}},
+  };
+  r = gchd_seq(d, seq, ARRAY_SIZE(seq));
+ } else {
+  static const struct gchd_mail_cmd seq[] = {
+   {0x44,2,{0x08,0x91}}, {0x44,2,{0x09,0xa8}},
+  };
+  r = gchd_seq(d, seq, ARRAY_SIZE(seq));
+ }
+ if (r)
+  return r;
+
+ dev_dbg(&d->intf->dev, "post-encoder input synchronization complete\n");
+ return 0;
+}
+
 int gchd_input_configure(struct gchd *d)
 {
  int r;
@@ -200,6 +308,10 @@ int gchd_input_configure(struct gchd *d)
  if (r) return r;
 
  r = gchd_encoder_start(d);
+ if (r)
+  return r;
+
+ r = gchd_post_encoder_setup(d);
  if (r)
   return r;
 
