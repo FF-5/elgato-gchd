@@ -68,6 +68,7 @@ struct gchd {
 
 int gchd_hw_init(struct gchd *);
 int gchd_hw_shutdown(struct gchd *);
+int gchd_transcoder_init(struct gchd *);
 
 int gchd_ring_push(struct gchd_ring *, const u8 *, size_t);
 struct gchd_frame *gchd_ring_pop(struct gchd_ring *);
