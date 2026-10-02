@@ -144,6 +144,31 @@ static int gchd_color_yuv(struct gchd *d)
   if (r)
    return r;
  }
+ if (d->input == 1) {
+  static const struct gchd_mail_cmd mode[] = {
+   {0x4e,2,{0xb2,0xcc}}, {0x4e,2,{0xb5,0xc4}},
+   {0x4e,2,{0x03,0x0c}},
+  };
+  static const struct gchd_mail_cmd mode1080p[] = {
+   {0x4e,2,{0xb2,0xcc}}, {0x4e,2,{0xb5,0xc4}},
+   {0x4e,2,{0x03,0x04}},
+  };
+  static const struct gchd_mail_cmd mode_sd[] = {
+   {0x4e,2,{0xb2,0xcf}}, {0x4e,2,{0xb5,0xc4}},
+   {0x4e,2,{0x03,0x8c}},
+  };
+  static const struct gchd_mail_cmd mode_sdp[] = {
+   {0x4e,2,{0xb2,0xcf}}, {0x4e,2,{0xb5,0xc4}},
+   {0x4e,2,{0x03,0x84}},
+  };
+  if (d->input_width == 1920 && !d->input_interlaced)
+   return gchd_seq(d, mode1080p, ARRAY_SIZE(mode1080p));
+  if (d->input_width < 1280 && !d->input_interlaced)
+   return gchd_seq(d, mode_sdp, ARRAY_SIZE(mode_sdp));
+  if (d->input_width < 1280)
+   return gchd_seq(d, mode_sd, ARRAY_SIZE(mode_sd));
+  return gchd_seq(d, mode, ARRAY_SIZE(mode));
+ }
  return gchd_seq(d, seq, ARRAY_SIZE(seq));
 }
 
