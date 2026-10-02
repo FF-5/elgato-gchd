@@ -707,23 +707,50 @@ int gchd_hw_init(struct gchd *d)
 
 int gchd_hw_shutdown(struct gchd *d)
 {
- int r = 0;
+ int r;
+ u8 v;
 
  if (!d->udev)
   return 0;
 
- if (d->hw_enable_register & EB_ENCODER_ENABLE)
-  gchd_do_enable(d, EB_ENCODER_ENABLE, 0);
- if (d->hw_enable_register & EB_ENCODER_TRIGGER)
-  gchd_do_enable(d, EB_ENCODER_TRIGGER, 0);
+ /* Reference shutdown preamble: select the transcoder bank only after the
+  * source path has been stopped, then disable the encoder output. */
+ r = gchd_mail_write(d, 0x44, (u8[]){0x06,0x86}, 2);
+ if (r) return r;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x89,0x89,0xf8}, 3);
+ if (r) return r;
+ r = gchd_mail_read(d, 0x33, &v, 1);
+ if (r) return r;
+ r = gchd_mail_write(d, 0x44, (u8[]){0x03,0x2f}, 2);
+ if (r) return r;
 
- if (d->hw_enable_register & EB_FIRMWARE_PROCESSOR)
-  gchd_do_enable(d, EB_FIRMWARE_PROCESSOR, 0);
- gchd_reg_write16(d, ENABLE_STATE_INDEX, 0);
+ r = gchd_reg_write16(d, BANKSEL_INDEX, 0x0000);
+ if (r) return r;
+ r = gchd_send_enable_state(d);
+ if (r) return r;
+
+ /* Disable amck_mode (transcoder output). */
+ r = gchd_sparam(d, 0x1a08, 3, 1, 0);
+ if (r) return r;
+
+ r = gchd_scmd(d, SCMD_INIT, 0xa0, 0x0000);
+ if (r) return r;
+
+ /* Clear all enable-state bits, then explicitly release the firmware
+  * processor bit as the reference implementation does. */
+ r = gchd_reg_write16(d, ENABLE_STATE_INDEX, 0);
+ if (r) return r;
  d->hw_enable_state = 0;
 
+ r = gchd_do_enable(d, EB_FIRMWARE_PROCESSOR, 0);
+ if (r) return r;
+
  r = gchd_scmd(d, SCMD_IDLE, 0, 0);
- if (!r)
-  r = gchd_scmd(d, SCMD_RESET, 1, 0);
- return r;
+ if (r) return r;
+ r = gchd_scmd(d, SCMD_RESET, 1, 0);
+ if (r) return r;
+
+ d->hw_enable_state = 0;
+ d->hw_enable_register = 0;
+ return 0;
 }
