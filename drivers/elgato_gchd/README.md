@@ -31,331 +31,208 @@ For that reason, this README describes the **hardware initialization and capture
 | Kernel USB entry point | `drivers/elgato_gchd/usb.c` → `gchd_probe()` |
 | Kernel V4L2 streaming entry point | `drivers/elgato_gchd/core.c` → `gchd_start()` |
 
-## Original userspace architecture
+## Hardware initialization and configuration
 
-The original program is a useful reference because it separates the problem into layers:
+The sequence below describes the **hardware protocol that the DKMS driver must reproduce**, using the names used by the kernel driver. It is derived from the original userspace implementation, but it deliberately does not reproduce the userspace call graph or C++ API.
 
-```text
-src/main.cpp
-    │
-    ├── parse command-line input/transcoder settings
-    │
-    └── GCHD gchd(...)
-             │
-             ├── checkDevice()
-             │     ├── openDevice()
-             │     └── checkFirmware()
-             │
-             └── init()
-                   ├── getInterface()
-                   └── setupConfiguration()
-                         └── configureDevice()
-                               ├── boot/idle firmware and state machine
-                               ├── processor/encoder bring-up
-                               ├── common hardware setup
-                               ├── input-specific setup
-                               ├── transcoder setup
-                               └── SCMD_STATE_START
-```
+The important rule is: preserve the original ordering and synchronization points, while expressing each operation through the DKMS driver's state (`struct gchd`), register helpers, mailbox helpers, state commands, enable masks, and firmware helpers.
 
-This distinction matters: `GCHD::init()` is not just one USB initialization call. It is the point where the program claims the USB interface and then executes a large, reverse-engineered hardware bring-up sequence.
+### 1. Establish the device state
 
-## Original device initialization sequence
+Start from `gchd_hw_init()`.
 
-The sequence below is the conceptual sequence implemented by the original userspace project. It is intentionally described in terms of **what the hardware is being made to do**, rather than reproducing the long list of register writes.
+Before changing the device, the driver should:
 
-### 1. Discover the device and choose its hardware family
+- select the base register bank with `BANKSEL_INDEX`;
+- capture the current `ENABLE_STATE_INDEX` into `d->hw_enable_state`;
+- capture the current `ENABLE_INDEX` into `d->hw_enable_register`;
+- read `STATE_INDEX` and reduce it to the device state bits;
+- handle the HDNew boot-state completion handshake before attempting firmware transfer.
 
-`src/gchd.cpp` first initializes libusb and tries the supported Elgato VID/PIDs in `GCHD::openDevice()`.
+The saved enable values matter later: the original protocol expects the host to preserve and reapply the device-side enable state during processor bring-up.
 
-Supported devices are grouped as:
+### 2. Bring a cold device through the idle-firmware stage
 
-| USB ID | Hardware family |
+When the state read from `STATE_INDEX` is zero, treat the device as being at the boot boundary.
+
+For HDNew, first complete the boot-state synchronization: consume the interrupt notification when applicable, wait for `STATE_COMPLETE_INDEX` bit `0x0004`, and acknowledge that completion. Only after this synchronization should firmware transfer begin.
+
+Then select the idle image from the device family and call `gchd_load_firmware()` with the appropriate `FW_IDLE_*` value.
+
+After the firmware transfer, perform the required post-firmware register access before changing state. On HDNew this includes refreshing `d->hw_enable_state` and `d->hw_enable_register` and completing the startup reads used by the original protocol.
+
+For a device that was not cold, do not reload idle firmware. Reset the existing state with `gchd_state_cmd(..., SCMD_RESET, ...)` and continue through the same idle-state entry used by the cold path.
+
+### 3. Enter the processor idle state
+
+Use `gchd_state_cmd()` to place the device into the idle state expected by the original sequence.
+
+Then obtain the processor/mode value through the DKMS mailbox helper. If the processor reports the initial startup value, use `gchd_enable_analog()` followed by `gchd_do_enable()` with `EB_FIRMWARE_PROCESSOR` to bring the firmware processor online.
+
+Do not collapse these operations into a generic 'enable firmware' step. The mailbox state and the enable register are two parts of the same handshake.
+
+### 4. Initialize the transcoder's common state
+
+Run `gchd_transcoder_init()` before the encoder-specific configuration. This corresponds to the original common transcoder-default stage.
+
+The purpose of this stage is to establish the baseline transcoder state that must exist before the encoder firmware and input-specific configuration are applied. Keep this separate from the later mode-specific settings.
+
+### 5. Start the encoder processor
+
+Encoder startup is a distinct phase. The DKMS sequence should:
+
+1. enable the processor/encoder prerequisites with `gchd_do_enable()`;
+2. enter the encoder initialization state with the appropriate `gchd_scmd()`/state command;
+3. load the encoder image with `gchd_load_encoder_firmware()`;
+4. enable the encoder through the appropriate `EB_*` bits;
+5. use `gchd_mail_write()` and `gchd_mail_read()` on mailbox `0x33` to wait for the intermediate encoder-ready state;
+6. perform the second mailbox wait until the device reaches the encoder-ready value;
+7. clear the transient encoder trigger/processor enable as required by the protocol.
+
+`gchd_encoder_start()` is the DKMS implementation of this phase. The important point for future changes is that firmware transfer, encoder enable, mailbox acknowledgement, and trigger handling are separate protocol stages.
+
+### 6. Configure the selected input path
+
+Once the encoder processor is ready, configuration follows the selected `d->input` path.
+
+`gchd_input_configure()` should be understood as an ordered hardware transaction, not merely as a collection of input presets.
+
+For each input path, the sequence is:
+
+1. issue the input-specific mailbox/register setup with `gchd_seq()` and the corresponding mailbox commands;
+2. configure the common hardware sub-blocks with `gchd_setup_subblock()`;
+3. select the required color path with `gchd_color_yuv()` or the corresponding input-specific color configuration;
+4. program the dimensions and mode-dependent registers with `gchd_mode_regs()`;
+5. start/handshake the encoder with `gchd_encoder_start()` where required by the current implementation;
+6. execute the post-encoder setup and calibration stages;
+7. finalize the input state with `gchd_input_finalize()`.
+
+The original userspace sequence must be treated as the ordering authority here. The DKMS implementation should preserve its waits and readbacks even when several low-level writes are represented by one helper such as `gchd_seq()`.
+
+### 7. Preserve the input-specific differences
+
+The three physical input paths are not interchangeable. Their early mailbox/register setup differs, while they converge on the common configuration stages.
+
+Use the driver's `d->input` selection rather than reproducing userspace `InputSource` types:
+
+| `d->input` path | Configuration intent |
 | --- | --- |
-| `0fd9:0044`, `0fd9:004e`, `0fd9:0051` | original Game Capture HD / MB86H57/H58 |
-| `0fd9:005d` | newer Game Capture HD / HDNew / MB86M01 |
+| HDMI path | establish the digital input path and its detected video characteristics |
+| Component path | establish the analog component path and its detected mode/color characteristics |
+| Composite path | establish the composite path and its detected PAL/NTSC characteristics |
 
-The selected `DeviceType` affects later state handling, firmware, and some register/mailbox behavior. The HDNew path cannot always use exactly the same state-change procedure as the older devices because some state-register reads have interrupt side effects.
+The input-specific configuration must occur after the processor/encoder prerequisites are established and before the final capture state is entered.
 
-### 2. Find the matching firmware pair
+### 8. Apply mode and encoder parameters
 
-`GCHD::checkFirmware()` chooses two firmware images based on the detected hardware family:
+Mode information gathered during input configuration is represented by the driver's input state, including values such as `d->input_width`, `d->input_height`, `d->input_fps_num`, and `d->input_fps_den`.
 
-- idle firmware: `MB86H57_H58_IDLE` or `MB86M01_ASSP_NSEC_IDLE`
-- encoder firmware: `MB86H57_H58_ENC_H` or `MB86M01_ASSP_NSEC_ENC_H`
+Use that state when applying the encoder/transcoder parameters. The common transcoder defaults from `gchd_transcoder_init()` are not the final capture configuration.
 
-The userspace program searches several filesystem locations. The kernel driver replaces this with Linux `request_firmware()` and the firmware files installed for the DKMS driver.
+Mode-dependent encoder parameters such as H.264 profile/level, bitrate, dimensions, timing, and audio-related settings should be applied after the corresponding input mode is known and before the device enters the final streaming state.
 
-The important architectural point is that there are **two firmware stages**. Loading the idle firmware is part of initial hardware bring-up; loading the encoder firmware happens later, after the device processor has been brought to the appropriate internal state.
+### 9. Enter the capture-ready state
 
-### 3. Claim USB interface 0
+After input configuration and final encoder/transcoder setup, use the DKMS state helpers to perform the final state transition.
 
-`GCHD::getInterface()` does three things:
+The required behavior is:
 
-1. detaches an already-bound kernel driver if necessary;
-2. sets USB configuration 1;
-3. claims interface 0.
+1. issue the final initialization/state command with the mode required by the original protocol;
+2. read the state/completion indication using the driver's state helpers;
+3. request the streaming/start state with `gchd_state_cmd()` or the equivalent DKMS helper;
+4. wait until the requested state is confirmed;
+5. acknowledge any sticky completion indication before considering initialization complete.
 
-Only after this does the original program have exclusive access to the device protocol.
+The significant point is that `SCMD_STATE_START` is the **end of hardware configuration**, not the beginning of USB probing. A successful `gchd_hw_init()` alone does not mean the capture path is configured for a particular input mode.
 
-In the kernel driver this responsibility belongs to the USB driver core and `gchd_probe()`. The important difference is that the kernel driver does not use libusb or manually detach its own driver.
+### 10. Stream only after the hardware state is complete
 
-### 4. Read the hardware revision and establish a known register bank
+Once the device has reached the final start state, the receive path can consume USB bulk endpoint `0x81`.
 
-`GCHD::configureDevice()` starts by calling `readVersion()` and printing the hardware revision. It then selects the base register bank with `BANKSEL`.
-
-The original implementation also reads the enable-state shadow register before changing anything. This is important because the enable register is not just a collection of independent GPIO-like bits: the accompanying mailbox/shadow state is part of the communication protocol with another processor in the device.
-
-Useful code:
-
-- `src/gchd/configure.cpp` — beginning of `GCHD::configureDevice()`
-- `src/gchd/commands.cpp` — `sendEnableState()` and `doEnable()`
-- `src/gchd_hardware.hpp` — `ENABLE_REGISTER`, `MAIL_SEND_ENABLE_REGISTER_STATE`, and `EB_*` definitions
-
-### 5. Determine whether the device already has boot firmware running
-
-The original driver reads the state machine before deciding whether the idle firmware must be uploaded.
-
-There are two cases:
-
-**Cold / uninitialized device**
-
-- the state is effectively zero;
-- the device is treated as needing its firmware loaded;
-- idle firmware is uploaded with `dlfirm()`;
-- enable-state registers are read again after the upload.
-
-**Already initialized device**
-
-- the flash/firmware does not need to be loaded again;
-- the original program resets the device with `SCMD_RESET`;
-- it then forces the device back to `SCMD_IDLE`.
-
-The exact state handling is different for the original Game Capture HD and HDNew. For HDNew, reading the state register can itself trigger an interrupt, so `configureDevice()` explicitly acknowledges the completion condition rather than blindly using the older `completeStateChange()` path.
-
-### 6. Load idle firmware and bring the embedded processor up
-
-On a cold device, `GCHD::configureDevice()` calls `dlfirm(firmwareIdle_)`.
-
-This is more than a firmware copy. After the image is transferred, the program interacts with the device processor through the enable-state register and mailbox protocol.
-
-The original sequence repeatedly queries mailbox port `0x33` for a device-mode value. Two values are particularly important:
-
-- `0x334455` — the processor is not yet at the next initialization stage;
-- `0x27f97b` — the processor has reached the stage where the rest of the bring-up can continue.
-
-While the device reports `0x334455`, the program sends the saved enable state, enables the appropriate analog-input state, and sets `EB_FIRMWARE_PROCESSOR`.
-
-This is why `sendEnableState()` and `doEnable()` are central to understanding the original init sequence. They are not merely convenience wrappers around register writes; they implement the synchronization between the host and the device-side processor.
-
-### 7. Detect or select the input source
-
-When the device reaches the `0x27f97b` stage for the first time, the original implementation interprets bits collected by `sendEnableState()` as cable/input detection information.
-
-The logic distinguishes:
-
-- HDMI;
-- Component;
-- Composite;
-- no detected signal.
-
-If the user requested `auto`, the detected source becomes the current input. If a source was explicitly selected, that selection is forced even if autodetection disagrees.
-
-This is an important difference from simply saying “input configuration happens in `input.c`”. In the original implementation, **input selection is part of the hardware bring-up state machine**, before the large input-specific configuration functions are entered.
-
-### 8. Initialize common transcoder defaults before loading encoder firmware
-
-Once the device reaches the appropriate processor state, the original sequence calls:
-
-`transcoderDefaultsInitialize()`
-
-from `src/gchd/transcoder.cpp`.
-
-This establishes common transcoder parameters before the encoder firmware is loaded. The function programs defaults for things such as transport-stream behavior, clocking, video/audio paths, and other transcoder state.
-
-This is deliberately separate from `transcoderSetup()` and `transcoderFinalConfigure()`: the latter two depend on the selected input/mode and are performed later.
-
-### 9. Transition into encoder initialization and load encoder firmware
-
-The original sequence then sends `SCMD_INIT`, loads the encoder firmware with `dlfirm(firmwareEnc_)`, and performs a small set of post-firmware reads.
-
-The device can temporarily fall back to the earlier mailbox mode during this transition. Therefore the original code does not assume that the first state read after the firmware transfer is already the final encoder state; it polls until the expected state is reached.
-
-This is one of the most important details to preserve when porting the sequence: firmware upload and firmware activation are separate phases with observable intermediate states.
-
-### 10. Enable the encoder and trigger encoder-side initialization
-
-After the encoder firmware is active, the original implementation:
-
-1. sets `EB_ENCODER_ENABLE`;
-2. waits for the device to return to the expected mailbox state;
-3. performs a series of mailbox commands on ports such as `0x33` and `0x44`;
-4. sets `EB_ENCODER_TRIGGER`;
-5. waits for a specific acknowledgement value;
-6. clears `EB_ENCODER_TRIGGER`.
-
-The trigger bit is intentionally edge-like in the reverse-engineered protocol: it is set for a short operation and then cleared. Do not treat it as a persistent “encoder enabled” flag. The persistent encoder state is represented separately by `EB_ENCODER_ENABLE`.
-
-For the low-level mechanics, read `src/gchd/commands.cpp` rather than trying to infer the protocol from the kernel wrapper names.
-
-### 11. Run the common hardware/mailbox setup
-
-After the processor and encoder are alive, `configureDevice()` executes a long common setup sequence consisting of mailbox writes, reads, bank changes, and register accesses.
-
-Much of this sequence is still only partially understood. The original source explicitly labels some operations as unknown or as likely subroutines, and some groups were reconstructed from USB captures.
-
-For documentation and porting purposes, the useful way to think about this region is:
+The DKMS data path is:
 
 ```text
-encoder processor running
-        │
-        ├── common device/mailbox configuration
-        ├── hardware block setup
-        ├── source/mux enable bits
-        └── prepare input-specific configuration
+USB bulk IN 0x81
+      -> gchd_rx()
+      -> MPEG-TS packets
+      -> gchd_ts()
+      -> video PID / PES extraction
+      -> gchd_ring_push()
+      -> gchd_deliver()
+      -> videobuf2
+      -> /dev/video*
 ```
 
-The actual register sequence is in `src/gchd/configure.cpp`, roughly the middle of `GCHD::configureDevice()`.
+Keep this separate from hardware configuration. If `gchd_rx()` is receiving data but no frames are delivered, the problem is downstream of the hardware initialization sequence; if no valid transport stream arrives, investigate the state/encoder/input configuration first.
 
-### 12. Configure the selected physical input
+## Initialization ownership in the DKMS driver
 
-Near the end of the common bring-up, the original code sets the source-related enable bits and dispatches to exactly one of:
+The original protocol spans several kernel functions. The following is the useful mental model when navigating the driver:
 
-```text
-InputSource::HDMI      -> configureHDMI()
-InputSource::Component -> configureComponent()
-InputSource::Composite -> configureComposite()
-```
-
-The source files are:
-
-- `src/gchd/configure_hdmi.cpp`
-- `src/gchd/configure_component.cpp`
-- `src/gchd/configure_composite.cpp`
-
-These functions are not simple “set input” functions. Each one contains a substantial reverse-engineered sequence for the corresponding signal path.
-
-#### HDMI
-
-`configureHDMI()` reads HDMI signal information and determines the relevant video characteristics. It then configures HDMI-specific hardware registers/mailboxes, color space, and final transcoder state.
-
-At the end it calls `transcoderFinalConfigure()`, `transcoderSetup()`, performs `SCMD_INIT` with mode `0xa0`, and transitions the device to `SCMD_STATE_START` using `completeStateChange()`.
-
-#### Component
-
-`configureComponent()` performs component-specific signal detection and mode interpretation. It maps measured signal values to supported modes such as 1080i, 1080p, 720p, PAL, and NTSC, then merges autodetected information with explicit user settings.
-
-It also selects color space, programs the mode-dependent component registers, runs common setup blocks, configures the transcoder, and finally transitions the state machine to `SCMD_STATE_START`.
-
-#### Composite
-
-`configureComposite()` performs a smaller autodetection step based on the composite status value. It identifies NTSC/PAL, merges that with requested settings, performs the composite-specific mailbox/register sequence, then runs the common setup blocks and final transcoder configuration before entering `SCMD_STATE_START`.
-
-### 13. Configure the transcoder for the actual capture mode
-
-The final transcoder configuration is intentionally later than the initial defaults.
-
-`src/gchd/transcoder.cpp` has three conceptually different stages:
-
-| Function | Purpose |
+| Hardware phase | DKMS implementation |
 | --- | --- |
-| `transcoderDefaultsInitialize()` | common defaults needed while bringing up the transcoder/encoder |
-| `transcoderFinalConfigure()` | final output-related configuration, including video/audio PID and output selection |
-| `transcoderSetup()` | mode-dependent video/audio encoder parameters derived from the selected input settings |
+| Save initial device state | `gchd_hw_init()` → `d->hw_enable_state`, `d->hw_enable_register` |
+| Boot-state synchronization | `gchd_interrupt_pend()`, `STATE_COMPLETE_INDEX` handling |
+| Idle firmware | `gchd_load_firmware()` with `FW_IDLE_OLD` / `FW_IDLE_NEW` |
+| Reset/idle state machine | `gchd_state_cmd()` / `gchd_scmd()` |
+| Processor bring-up | `gchd_processor_state()`, `gchd_enable_analog()`, `gchd_do_enable()` |
+| Common transcoder defaults | `gchd_transcoder_init()` |
+| Encoder firmware and handshake | `gchd_encoder_start()` / `gchd_load_encoder_firmware()` |
+| Mailbox protocol | `gchd_mail_write()`, `gchd_mail_read()` |
+| Input configuration | `gchd_input_configure()` |
+| Input-specific register/mailbox sequence | `gchd_seq()` and input helpers in `input.c` |
+| Mode/color configuration | `gchd_mode_regs()`, `gchd_color_yuv()` |
+| Post-encoder calibration | `gchd_post_encoder_setup()`, `gchd_post_encoder_calibration()`, `gchd_post_encoder_sweep()` |
+| Final input state | `gchd_input_finalize()` |
+| Stream-on state transition | `gchd_start()` + `gchd_state_cmd()` |
+| USB receive | `gchd_rx()` |
 
-The selected resolution, scan mode, refresh rate, bitrate, H.264 profile/level, audio bitrate, and related settings flow into this stage.
+This table is intentionally organized by **hardware phase**, not by source-file order. When debugging initialization, follow the phase sequence from top to bottom.
 
-### 14. Enter the actual streaming state
+## Configuration sequence during stream-on
 
-The original input-specific configure functions finish with the same essential state transition:
+Hardware initialization and capture-mode configuration are separate.
 
-```text
-SCMD_INIT (mode 0xa0)
-       │
-       v
-read SCMD_STATE_READBACK_REGISTER
-       │
-       v
-SCMD_STATE_CHANGE -> SCMD_STATE_START
-       │
-       v
-completeStateChange(..., SCMD_STATE_START)
-```
+`gchd_probe()` establishes the driver, performs the hardware-level initialization, registers the V4L2 device, and prepares the driver for use. The actual input/mode setup is performed when streaming starts.
 
-The expected resulting state is `SCMD_STATE_START`.
-
-This is the point where the hardware has been configured for the selected input/mode and the encoder output is enabled. It is **not** the same thing as the initial USB probe or idle-firmware initialization.
-
-### 15. Userspace then starts receiving the MPEG-TS stream
-
-After `GCHD::init()` returns, `main.cpp` creates a `Streamer` and calls `streamer.loop()`.
-
-`GCHD::stream()` performs a libusb bulk transfer from endpoint `0x81` into a userspace buffer. The userspace streamer then handles the resulting transport stream.
-
-This is the boundary where the original architecture differs strongly from the kernel driver: the original project has a separate userspace streaming loop, while the DKMS driver moves the USB receive path and MPEG-TS/H.264 extraction into the kernel.
-
-## Original init sequence at a glance
+The stream-on path should therefore be understood as:
 
 ```text
-main.cpp
-  │
-  ├─ GCHD::checkDevice()
-  │    ├─ openDevice()             find VID/PID + select DeviceType
-  │    └─ checkFirmware()          select idle + encoder firmware
-  │
-  └─ GCHD::init()
-       ├─ getInterface()            detach/set configuration/claim interface
-       └─ setupConfiguration()
-            └─ configureDevice()
-                 │
-                 ├─ read version + select register bank
-                 ├─ inspect current state
-                 ├─ [if cold] load idle firmware
-                 ├─ force/reset to IDLE
-                 ├─ mailbox handshake
-                 ├─ enable firmware processor
-                 ├─ detect/select input source
-                 ├─ transcoderDefaultsInitialize()
-                 ├─ SCMD_INIT
-                 ├─ load encoder firmware
-                 ├─ wait for encoder state
-                 ├─ enable encoder
-                 ├─ encoder trigger + mailbox setup
-                 ├─ common hardware configuration
-                 ├─ configure HDMI / Component / Composite
-                 │       ├─ signal/mode detection
-                 │       ├─ input-path register programming
-                 │       └─ color-space setup
-                 ├─ transcoderFinalConfigure()
-                 ├─ transcoderSetup()
-                 ├─ SCMD_INIT (0xa0)
-                 └─ SCMD_STATE_START
-
-  streamer.loop()
-       └─ GCHD::stream() -> USB bulk IN 0x81
+V4L2 stream start
+      -> gchd_start()
+      -> gchd_input_configure()
+           -> input-specific setup
+           -> common sub-block setup
+           -> color/mode setup
+           -> encoder handshake
+           -> post-encoder calibration
+           -> final input configuration
+      -> final state transition
+      -> gchd_rx()
 ```
 
-## How this maps to the DKMS driver
+This is deliberately not a copy of the current `gchd_start()` implementation. It describes the sequence that the DKMS driver is expected to execute while preserving the ordering established by the original hardware protocol.
 
-The kernel driver should be read as an implementation of the above hardware protocol, not as a replacement specification.
+## Shutdown sequence
 
-| Original userspace | Kernel driver |
-| --- | --- |
-| `GCHD::openDevice()` | USB ID table + `gchd_probe()` |
-| `GCHD::checkFirmware()` | firmware selection in `usb.c` |
-| `GCHD::getInterface()` | kernel USB interface binding |
-| `GCHD::configureDevice()` | `gchd_hw_init()` + input/encoder setup |
-| `read_config()` / `write_config()` | `gchd_ctrl_read()` / `gchd_ctrl_write()` |
-| `mailWrite()` / `mailRead()` | `gchd_mail_write()` / `gchd_mail_read()` |
-| `scmd()` / `stateConfirmedScmd()` / `completeStateChange()` | state helpers in `usb.c` |
-| `dlfirm()` | `gchd_load_firmware()` |
-| `transcoderDefaultsInitialize()` | `gchd_transcoder_init()` |
-| `configureHDMI()` / Component / Composite | input configuration in `input.c` |
-| `transcoderFinalConfigure()` / `transcoderSetup()` | transcoder/input configuration in `transcoder.c` and `input.c` |
-| `GCHD::stream()` | `gchd_rx()` |
-| userspace streamer / output handling | MPEG-TS parser + ring + videobuf2 in `core.c` |
+Shutdown is the reverse hardware protocol, not merely stopping the receive thread.
 
-If the kernel implementation appears to have lost a hardware operation, compare the corresponding original function rather than guessing a new sequence.
+The driver should first stop the capture state, then clear transient encoder state, disable the encoder and firmware processor through `gchd_do_enable()`, clear `ENABLE_STATE_INDEX`, and finally return the device through the appropriate idle/reset state commands.
+
+`gchd_hw_shutdown()` is the kernel entry point for this cleanup. When stream state is active, the higher-level stream-stop path must first perform the capture-state transition before hardware shutdown clears the processor/encoder enables.
+
+## Using the original project as the protocol reference
+
+The original userspace project remains useful as the source of **ordering and meaning**, but the DKMS README should be read entirely in terms of the kernel driver's state and helpers.
+
+When investigating a missing or suspicious operation:
+
+1. identify the hardware phase in the tables above;
+2. find the corresponding DKMS helper;
+3. compare that helper's ordering, waits, mailbox exchanges, and state acknowledgements with the original protocol;
+4. preserve the DKMS abstractions (`struct gchd`, `d->input`, `d->family`, `d->hw_enable_state`, `d->hw_enable_register`, `EB_*`, `SCMD_*`, `FW_*`) rather than introducing userspace concepts into the kernel documentation.
+
+The original source should therefore answer **what must happen and in what order**; the DKMS source should answer **how this driver performs each step**.
 
 ## Low-level protocol pieces worth understanding
 
