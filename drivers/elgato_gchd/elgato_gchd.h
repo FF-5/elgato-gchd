@@ -59,6 +59,8 @@ struct gchd {
  bool disconnected;
  bool hw_initialized;
  bool input_configured;
+ bool signal_present;
+ unsigned long last_video_jiffies;
  u16 hw_enable_state;
  u16 hw_enable_register;
  u32 width, height, sizeimage;
