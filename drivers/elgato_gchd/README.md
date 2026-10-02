@@ -2,409 +2,578 @@
 
 This directory contains the experimental native Linux kernel driver for the Elgato Game Capture HD.
 
-The v4l2-dkms-driver branch converts the original libusb userspace streamer into a kernel USB/V4L2 driver. It:
+The most important thing to understand when working on this driver is that the device protocol was reverse-engineered in the original libusb userspace implementation. The kernel driver is a port of that protocol, not the authoritative description of what the hardware is supposed to do.
 
-- binds 0fd9:0044, 0fd9:004e, 0fd9:0051, and 0fd9:005d;
-- creates a /dev/video* V4L2 capture device for a supported USB device;
-- exposes H.264 capture through V4L2;
-- exposes HDMI, Component, and Composite inputs;
-- receives the device's MPEG-TS stream from USB bulk endpoint 0x81;
-- extracts video PID 0x1011 and turns PES payloads into V4L2 buffers;
-- keeps encoded frames in a bounded RAM ring;
-- uploads device firmware through the kernel firmware API;
-- contains the device-specific USB control, mailbox, state-machine, transcoder, and input-configuration code.
+For that reason, this README describes the **hardware initialization and capture setup in terms of the original userspace project first**, and then points to the corresponding kernel implementation. If a kernel-side sequence is unclear, go back to `src/gchd/` and follow the original call chain before changing the DKMS driver.
 
-The driver contains no Qt GUI and does not require a userspace capture daemon.
-
-> **Status:** experimental / pre-hardware-validation. The kernel-side plumbing is in place, but device-specific signal detection and some mode/calibration behavior are still being brought over from the original implementation.
+> **Status:** experimental / pre-hardware-validation. The kernel-side plumbing is in place, but some device-specific signal detection and mode/calibration behavior is still being brought over from the original implementation.
 
 ## Where to look
 
-If you are trying to understand a particular part of the driver, start here:
-
-| What you want to understand | Where to look |
+| Question | Start here |
 | --- | --- |
-| USB device matching and driver entry point | [usb.c](./usb.c) — gchd_ids, gchd_probe(), gchd_disconnect() |
-| **Device initialization** | [usb.c](./usb.c) — gchd_probe() → gchd_hw_init() |
-| Initial device state / firmware upload | [usb.c](./usb.c) — gchd_hw_init(), gchd_load_firmware() |
-| USB control transfers | [usb.c](./usb.c) — gchd_ctrl_read(), gchd_ctrl_write() |
-| Mailbox protocol | [usb.c](./usb.c) — gchd_mail_write(), gchd_mail_read() |
-| Device state commands | [usb.c](./usb.c) — gchd_scmd(), gchd_state_cmd(), gchd_wait_state() |
-| Hardware enable bits | [usb.c](./usb.c) — gchd_do_enable() and EB_* definitions |
-| Transcoder initialization | [transcoder.c](./transcoder.c) — gchd_transcoder_init() |
-| Input/mode configuration | [input.c](./input.c) — gchd_input_configure() |
-| Input-specific hardware sequences | [input.c](./input.c) — HDMI / Component / Composite branches in gchd_input_configure() |
-| Encoder startup | [input.c](./input.c) — gchd_encoder_start() and post-encoder setup |
-| V4L2 device registration | [core.c](./core.c) — gchd_v4l2_register() |
-| V4L2 ioctl interface | [core.c](./core.c) — gchd_ioctl and the gchd_* format/input/timing functions |
-| V4L2 streaming start/stop | [core.c](./core.c) — gchd_start(), gchd_stop() |
-| USB receive thread | [core.c](./core.c) — gchd_rx() |
-| MPEG-TS parsing / H.264 extraction | [core.c](./core.c) — gchd_ts() |
-| Encoded-frame buffering | [core.c](./core.c) — gchd_ring_push(), gchd_ring_pop(), gchd_ring_free() |
-| Delivery of encoded frames to V4L2 | [core.c](./core.c) — gchd_deliver() |
-| V4L2 file operations | [fops.c](./fops.c) |
-| Shared driver state and declarations | [elgato_gchd.h](./elgato_gchd.h) |
-| DKMS package configuration | [dkms.conf](./dkms.conf) |
-| Kernel module build inputs | [Makefile](./Makefile) |
+| What happens when the application starts? | `src/main.cpp` → `GCHD::checkDevice()` → `GCHD::init()` |
+| How is the USB device found? | `src/gchd.cpp` → `GCHD::openDevice()` |
+| How is firmware selected? | `src/gchd.cpp` → `GCHD::checkFirmware()` |
+| How is the USB interface claimed? | `src/gchd.cpp` → `GCHD::getInterface()` |
+| **How does hardware initialization actually work?** | `src/gchd/configure.cpp` → `GCHD::configureDevice()` |
+| Firmware upload and low-level state changes | `src/gchd/commands.cpp` → `dlfirm()`, `scmd()`, `completeStateChange()` |
+| Enable bits / processor / encoder activation | `src/gchd/commands.cpp` → `sendEnableState()`, `doEnable()` |
+| Mailbox protocol | `src/gchd/commands.cpp` → `mailWrite()`, `mailRead()` |
+| Common transcoder setup | `src/gchd/transcoder.cpp` → `transcoderDefaultsInitialize()` |
+| Encoder/output configuration | `src/gchd/transcoder.cpp` → `transcoderSetup()`, `transcoderFinalConfigure()` |
+| HDMI-specific setup | `src/gchd/configure_hdmi.cpp` → `configureHDMI()` |
+| Component-specific setup | `src/gchd/configure_component.cpp` → `configureComponent()` |
+| Composite-specific setup | `src/gchd/configure_composite.cpp` → `configureComposite()` |
+| Input settings and autodetection | `src/gchd/settings.cpp` + the three `configure_*` files |
+| Hardware register/bit definitions | `src/gchd_hardware.hpp` |
+| Userspace streaming after init | `src/streamer.cpp` / `src/gchd.cpp` → `GCHD::stream()` |
+| Kernel USB entry point | `drivers/elgato_gchd/usb.c` → `gchd_probe()` |
+| Kernel V4L2 streaming entry point | `drivers/elgato_gchd/core.c` → `gchd_start()` |
 
-## Device initialization flow
+## Original userspace architecture
 
-The most useful path to follow when debugging bring-up is:
+The original program is a useful reference because it separates the problem into layers:
 
-    USB device appears
-          |
-          v
-    usb_driver.probe()
-          |
-          +--> allocate struct gchd
-          +--> reset active USB configuration
-          +--> initialize locks / defaults / buffers
-          |
-          +--> gchd_v4l2_register()
-          |       |
-          |       +--> register v4l2_device
-          |       +--> create V4L2 controls
-          |       +--> initialize videobuf2 queue
-          |       +--> video_register_device()
-          |
-          +--> gchd_hw_init()
-          |       |
-          |       +--> read initial enable/state registers
-          |       +--> HDNew boot-state handshake when required
-          |       +--> upload idle firmware
-          |       +--> transition device to IDLE
-          |       +--> query processor state
-          |       +--> enable required hardware blocks
-          |
-          +--> gchd_transcoder_init()
-          |       |
-          |       +--> program common transcoder defaults
-          |
-          +--> start gchd-rx kernel thread
-                  |
-                  +--> wait for USB MPEG-TS data
+```text
+src/main.cpp
+    │
+    ├── parse command-line input/transcoder settings
+    │
+    └── GCHD gchd(...)
+             │
+             ├── checkDevice()
+             │     ├── openDevice()
+             │     └── checkFirmware()
+             │
+             └── init()
+                   ├── getInterface()
+                   └── setupConfiguration()
+                         └── configureDevice()
+                               ├── boot/idle firmware and state machine
+                               ├── processor/encoder bring-up
+                               ├── common hardware setup
+                               ├── input-specific setup
+                               ├── transcoder setup
+                               └── SCMD_STATE_START
+```
 
-There is an important distinction between **USB/device initialization** and **capture initialization**:
+This distinction matters: `GCHD::init()` is not just one USB initialization call. It is the point where the program claims the USB interface and then executes a large, reverse-engineered hardware bring-up sequence.
 
-1. gchd_probe() performs the one-time device bring-up.
-2. gchd_hw_init() loads idle firmware and brings the hardware into its idle state.
-3. gchd_transcoder_init() programs common transcoder defaults.
-4. A V4L2 application later starts streaming.
-5. gchd_start() calls gchd_input_configure(), starts the encoder/state machine, and marks the device as streaming.
-6. gchd_rx() receives MPEG-TS data and feeds encoded frames into V4L2 buffers.
+## Original device initialization sequence
 
-So, if you are looking for **"what happens when I plug the device in?"**, start with [usb.c](./usb.c): gchd_probe(), gchd_hw_init(), and then [transcoder.c](./transcoder.c): gchd_transcoder_init().
+The sequence below is the conceptual sequence implemented by the original userspace project. It is intentionally described in terms of **what the hardware is being made to do**, rather than reproducing the long list of register writes.
 
-If you are looking for **"what happens when an application starts capture?"**, start with [core.c](./core.c): gchd_start(), [input.c](./input.c): gchd_input_configure(), [usb.c](./usb.c): gchd_state_cmd(), and [core.c](./core.c): gchd_rx().
+### 1. Discover the device and choose its hardware family
+
+`src/gchd.cpp` first initializes libusb and tries the supported Elgato VID/PIDs in `GCHD::openDevice()`.
+
+Supported devices are grouped as:
+
+| USB ID | Hardware family |
+| --- | --- |
+| `0fd9:0044`, `0fd9:004e`, `0fd9:0051` | original Game Capture HD / MB86H57/H58 |
+| `0fd9:005d` | newer Game Capture HD / HDNew / MB86M01 |
+
+The selected `DeviceType` affects later state handling, firmware, and some register/mailbox behavior. The HDNew path cannot always use exactly the same state-change procedure as the older devices because some state-register reads have interrupt side effects.
+
+### 2. Find the matching firmware pair
+
+`GCHD::checkFirmware()` chooses two firmware images based on the detected hardware family:
+
+- idle firmware: `MB86H57_H58_IDLE` or `MB86M01_ASSP_NSEC_IDLE`
+- encoder firmware: `MB86H57_H58_ENC_H` or `MB86M01_ASSP_NSEC_ENC_H`
+
+The userspace program searches several filesystem locations. The kernel driver replaces this with Linux `request_firmware()` and the firmware files installed for the DKMS driver.
+
+The important architectural point is that there are **two firmware stages**. Loading the idle firmware is part of initial hardware bring-up; loading the encoder firmware happens later, after the device processor has been brought to the appropriate internal state.
+
+### 3. Claim USB interface 0
+
+`GCHD::getInterface()` does three things:
+
+1. detaches an already-bound kernel driver if necessary;
+2. sets USB configuration 1;
+3. claims interface 0.
+
+Only after this does the original program have exclusive access to the device protocol.
+
+In the kernel driver this responsibility belongs to the USB driver core and `gchd_probe()`. The important difference is that the kernel driver does not use libusb or manually detach its own driver.
+
+### 4. Read the hardware revision and establish a known register bank
+
+`GCHD::configureDevice()` starts by calling `readVersion()` and printing the hardware revision. It then selects the base register bank with `BANKSEL`.
+
+The original implementation also reads the enable-state shadow register before changing anything. This is important because the enable register is not just a collection of independent GPIO-like bits: the accompanying mailbox/shadow state is part of the communication protocol with another processor in the device.
+
+Useful code:
+
+- `src/gchd/configure.cpp` — beginning of `GCHD::configureDevice()`
+- `src/gchd/commands.cpp` — `sendEnableState()` and `doEnable()`
+- `src/gchd_hardware.hpp` — `ENABLE_REGISTER`, `MAIL_SEND_ENABLE_REGISTER_STATE`, and `EB_*` definitions
+
+### 5. Determine whether the device already has boot firmware running
+
+The original driver reads the state machine before deciding whether the idle firmware must be uploaded.
+
+There are two cases:
+
+**Cold / uninitialized device**
+
+- the state is effectively zero;
+- the device is treated as needing its firmware loaded;
+- idle firmware is uploaded with `dlfirm()`;
+- enable-state registers are read again after the upload.
+
+**Already initialized device**
+
+- the flash/firmware does not need to be loaded again;
+- the original program resets the device with `SCMD_RESET`;
+- it then forces the device back to `SCMD_IDLE`.
+
+The exact state handling is different for the original Game Capture HD and HDNew. For HDNew, reading the state register can itself trigger an interrupt, so `configureDevice()` explicitly acknowledges the completion condition rather than blindly using the older `completeStateChange()` path.
+
+### 6. Load idle firmware and bring the embedded processor up
+
+On a cold device, `GCHD::configureDevice()` calls `dlfirm(firmwareIdle_)`.
+
+This is more than a firmware copy. After the image is transferred, the program interacts with the device processor through the enable-state register and mailbox protocol.
+
+The original sequence repeatedly queries mailbox port `0x33` for a device-mode value. Two values are particularly important:
+
+- `0x334455` — the processor is not yet at the next initialization stage;
+- `0x27f97b` — the processor has reached the stage where the rest of the bring-up can continue.
+
+While the device reports `0x334455`, the program sends the saved enable state, enables the appropriate analog-input state, and sets `EB_FIRMWARE_PROCESSOR`.
+
+This is why `sendEnableState()` and `doEnable()` are central to understanding the original init sequence. They are not merely convenience wrappers around register writes; they implement the synchronization between the host and the device-side processor.
+
+### 7. Detect or select the input source
+
+When the device reaches the `0x27f97b` stage for the first time, the original implementation interprets bits collected by `sendEnableState()` as cable/input detection information.
+
+The logic distinguishes:
+
+- HDMI;
+- Component;
+- Composite;
+- no detected signal.
+
+If the user requested `auto`, the detected source becomes the current input. If a source was explicitly selected, that selection is forced even if autodetection disagrees.
+
+This is an important difference from simply saying “input configuration happens in `input.c`”. In the original implementation, **input selection is part of the hardware bring-up state machine**, before the large input-specific configuration functions are entered.
+
+### 8. Initialize common transcoder defaults before loading encoder firmware
+
+Once the device reaches the appropriate processor state, the original sequence calls:
+
+`transcoderDefaultsInitialize()`
+
+from `src/gchd/transcoder.cpp`.
+
+This establishes common transcoder parameters before the encoder firmware is loaded. The function programs defaults for things such as transport-stream behavior, clocking, video/audio paths, and other transcoder state.
+
+This is deliberately separate from `transcoderSetup()` and `transcoderFinalConfigure()`: the latter two depend on the selected input/mode and are performed later.
+
+### 9. Transition into encoder initialization and load encoder firmware
+
+The original sequence then sends `SCMD_INIT`, loads the encoder firmware with `dlfirm(firmwareEnc_)`, and performs a small set of post-firmware reads.
+
+The device can temporarily fall back to the earlier mailbox mode during this transition. Therefore the original code does not assume that the first state read after the firmware transfer is already the final encoder state; it polls until the expected state is reached.
+
+This is one of the most important details to preserve when porting the sequence: firmware upload and firmware activation are separate phases with observable intermediate states.
+
+### 10. Enable the encoder and trigger encoder-side initialization
+
+After the encoder firmware is active, the original implementation:
+
+1. sets `EB_ENCODER_ENABLE`;
+2. waits for the device to return to the expected mailbox state;
+3. performs a series of mailbox commands on ports such as `0x33` and `0x44`;
+4. sets `EB_ENCODER_TRIGGER`;
+5. waits for a specific acknowledgement value;
+6. clears `EB_ENCODER_TRIGGER`.
+
+The trigger bit is intentionally edge-like in the reverse-engineered protocol: it is set for a short operation and then cleared. Do not treat it as a persistent “encoder enabled” flag. The persistent encoder state is represented separately by `EB_ENCODER_ENABLE`.
+
+For the low-level mechanics, read `src/gchd/commands.cpp` rather than trying to infer the protocol from the kernel wrapper names.
+
+### 11. Run the common hardware/mailbox setup
+
+After the processor and encoder are alive, `configureDevice()` executes a long common setup sequence consisting of mailbox writes, reads, bank changes, and register accesses.
+
+Much of this sequence is still only partially understood. The original source explicitly labels some operations as unknown or as likely subroutines, and some groups were reconstructed from USB captures.
+
+For documentation and porting purposes, the useful way to think about this region is:
+
+```text
+encoder processor running
+        │
+        ├── common device/mailbox configuration
+        ├── hardware block setup
+        ├── source/mux enable bits
+        └── prepare input-specific configuration
+```
+
+The actual register sequence is in `src/gchd/configure.cpp`, roughly the middle of `GCHD::configureDevice()`.
+
+### 12. Configure the selected physical input
+
+Near the end of the common bring-up, the original code sets the source-related enable bits and dispatches to exactly one of:
+
+```text
+InputSource::HDMI      -> configureHDMI()
+InputSource::Component -> configureComponent()
+InputSource::Composite -> configureComposite()
+```
+
+The source files are:
+
+- `src/gchd/configure_hdmi.cpp`
+- `src/gchd/configure_component.cpp`
+- `src/gchd/configure_composite.cpp`
+
+These functions are not simple “set input” functions. Each one contains a substantial reverse-engineered sequence for the corresponding signal path.
+
+#### HDMI
+
+`configureHDMI()` reads HDMI signal information and determines the relevant video characteristics. It then configures HDMI-specific hardware registers/mailboxes, color space, and final transcoder state.
+
+At the end it calls `transcoderFinalConfigure()`, `transcoderSetup()`, performs `SCMD_INIT` with mode `0xa0`, and transitions the device to `SCMD_STATE_START` using `completeStateChange()`.
+
+#### Component
+
+`configureComponent()` performs component-specific signal detection and mode interpretation. It maps measured signal values to supported modes such as 1080i, 1080p, 720p, PAL, and NTSC, then merges autodetected information with explicit user settings.
+
+It also selects color space, programs the mode-dependent component registers, runs common setup blocks, configures the transcoder, and finally transitions the state machine to `SCMD_STATE_START`.
+
+#### Composite
+
+`configureComposite()` performs a smaller autodetection step based on the composite status value. It identifies NTSC/PAL, merges that with requested settings, performs the composite-specific mailbox/register sequence, then runs the common setup blocks and final transcoder configuration before entering `SCMD_STATE_START`.
+
+### 13. Configure the transcoder for the actual capture mode
+
+The final transcoder configuration is intentionally later than the initial defaults.
+
+`src/gchd/transcoder.cpp` has three conceptually different stages:
+
+| Function | Purpose |
+| --- | --- |
+| `transcoderDefaultsInitialize()` | common defaults needed while bringing up the transcoder/encoder |
+| `transcoderFinalConfigure()` | final output-related configuration, including video/audio PID and output selection |
+| `transcoderSetup()` | mode-dependent video/audio encoder parameters derived from the selected input settings |
+
+The selected resolution, scan mode, refresh rate, bitrate, H.264 profile/level, audio bitrate, and related settings flow into this stage.
+
+### 14. Enter the actual streaming state
+
+The original input-specific configure functions finish with the same essential state transition:
+
+```text
+SCMD_INIT (mode 0xa0)
+       │
+       v
+read SCMD_STATE_READBACK_REGISTER
+       │
+       v
+SCMD_STATE_CHANGE -> SCMD_STATE_START
+       │
+       v
+completeStateChange(..., SCMD_STATE_START)
+```
+
+The expected resulting state is `SCMD_STATE_START`.
+
+This is the point where the hardware has been configured for the selected input/mode and the encoder output is enabled. It is **not** the same thing as the initial USB probe or idle-firmware initialization.
+
+### 15. Userspace then starts receiving the MPEG-TS stream
+
+After `GCHD::init()` returns, `main.cpp` creates a `Streamer` and calls `streamer.loop()`.
+
+`GCHD::stream()` performs a libusb bulk transfer from endpoint `0x81` into a userspace buffer. The userspace streamer then handles the resulting transport stream.
+
+This is the boundary where the original architecture differs strongly from the kernel driver: the original project has a separate userspace streaming loop, while the DKMS driver moves the USB receive path and MPEG-TS/H.264 extraction into the kernel.
+
+## Original init sequence at a glance
+
+```text
+main.cpp
+  │
+  ├─ GCHD::checkDevice()
+  │    ├─ openDevice()             find VID/PID + select DeviceType
+  │    └─ checkFirmware()          select idle + encoder firmware
+  │
+  └─ GCHD::init()
+       ├─ getInterface()            detach/set configuration/claim interface
+       └─ setupConfiguration()
+            └─ configureDevice()
+                 │
+                 ├─ read version + select register bank
+                 ├─ inspect current state
+                 ├─ [if cold] load idle firmware
+                 ├─ force/reset to IDLE
+                 ├─ mailbox handshake
+                 ├─ enable firmware processor
+                 ├─ detect/select input source
+                 ├─ transcoderDefaultsInitialize()
+                 ├─ SCMD_INIT
+                 ├─ load encoder firmware
+                 ├─ wait for encoder state
+                 ├─ enable encoder
+                 ├─ encoder trigger + mailbox setup
+                 ├─ common hardware configuration
+                 ├─ configure HDMI / Component / Composite
+                 │       ├─ signal/mode detection
+                 │       ├─ input-path register programming
+                 │       └─ color-space setup
+                 ├─ transcoderFinalConfigure()
+                 ├─ transcoderSetup()
+                 ├─ SCMD_INIT (0xa0)
+                 └─ SCMD_STATE_START
+
+  streamer.loop()
+       └─ GCHD::stream() -> USB bulk IN 0x81
+```
+
+## How this maps to the DKMS driver
+
+The kernel driver should be read as an implementation of the above hardware protocol, not as a replacement specification.
+
+| Original userspace | Kernel driver |
+| --- | --- |
+| `GCHD::openDevice()` | USB ID table + `gchd_probe()` |
+| `GCHD::checkFirmware()` | firmware selection in `usb.c` |
+| `GCHD::getInterface()` | kernel USB interface binding |
+| `GCHD::configureDevice()` | `gchd_hw_init()` + input/encoder setup |
+| `read_config()` / `write_config()` | `gchd_ctrl_read()` / `gchd_ctrl_write()` |
+| `mailWrite()` / `mailRead()` | `gchd_mail_write()` / `gchd_mail_read()` |
+| `scmd()` / `stateConfirmedScmd()` / `completeStateChange()` | state helpers in `usb.c` |
+| `dlfirm()` | `gchd_load_firmware()` |
+| `transcoderDefaultsInitialize()` | `gchd_transcoder_init()` |
+| `configureHDMI()` / Component / Composite | input configuration in `input.c` |
+| `transcoderFinalConfigure()` / `transcoderSetup()` | transcoder/input configuration in `transcoder.c` and `input.c` |
+| `GCHD::stream()` | `gchd_rx()` |
+| userspace streamer / output handling | MPEG-TS parser + ring + videobuf2 in `core.c` |
+
+If the kernel implementation appears to have lost a hardware operation, compare the corresponding original function rather than guessing a new sequence.
+
+## Low-level protocol pieces worth understanding
+
+### Control transfers
+
+The original `read_config()` and `write_config()` wrappers issue USB control transfers to access device registers. They also handle big-endian conversion when reconstructing integer values.
+
+The kernel equivalents live in `usb.c` and are the lowest layer used by almost every higher-level hardware operation.
+
+### Mailbox
+
+`mailWrite()` and `mailRead()` communicate with internal device processors through mailbox ports. The enable-state register is also part of this synchronization mechanism on the original Game Capture HD.
+
+When debugging a sequence that appears to “hang”, inspect mailbox readiness and completion before assuming that the following register write is wrong.
+
+### State machine
+
+The `SCMD_*` commands are the device-level state machine. `SCMD_IDLE`, `SCMD_INIT`, `SCMD_RESET`, and `SCMD_STATE_CHANGE` are used to move between initialization and encoding states.
+
+`completeStateChange()` is especially important because sending a state command is not sufficient: the original code waits for the device completion indication, reads the resulting state, acknowledges the sticky completion bit, and verifies that the expected state was reached.
+
+### Enable bits
+
+The `EB_*` definitions in `src/gchd_hardware.hpp` document the reverse-engineered meaning of the main enable bits. In particular:
+
+- `EB_FIRMWARE_PROCESSOR` — enables the processor whose firmware is being loaded;
+- `EB_ANALOG_INPUT` — selects the analog-input side versus HDMI;
+- `EB_ENCODER_ENABLE` — enables the encoder;
+- `EB_ENCODER_TRIGGER` — transient encoder initialization trigger;
+- `EB_COMPOSITE_MUX` — composite mux selection;
+- `EB_ANALOG_MUX` — analog input mux selection.
+
+Some of these meanings are explicitly documented as educated guesses in the original source. Preserve that uncertainty in the kernel documentation rather than turning hypotheses into facts.
 
 ## Capture data path
 
-Once streaming is active, the data path is approximately:
-
-    Elgato hardware
-         |
-         | USB bulk IN 0x81
-         v
-    gchd_rx()
-         |
-         | 188-byte MPEG-TS packets
-         v
-    gchd_ts()
-         |
-         | select video PID 0x1011
-         | collect PES payload
-         v
-    gchd_ring_push()
-         |
-         | bounded encoded-frame queue
-         v
-    gchd_ring_pop()
-         |
-         v
-    gchd_deliver()
-         |
-         v
-    videobuf2 buffer
-         |
-         v
-    /dev/video*
-
-The receive thread is in [core.c](./core.c). It reads USB bulk data, reassembles 188-byte MPEG-TS packets, extracts PID 0x1011, accumulates PES payloads, and places completed encoded frames into the ring.
+After the original hardware sequence reaches `SCMD_STATE_START`, the device emits an MPEG transport stream over USB bulk endpoint `0x81`.
+
+In the original userspace implementation:
 
-The default buffering limits are:
-
-- 32 encoded frames;
-- 64 MiB total encoded data;
-- 8 MiB maximum size for one frame.
-
-When the byte or frame limit is reached, the oldest buffered frame is discarded. The byte limit can be changed with the ring_bytes module parameter.
+```text
+Elgato hardware
+      │
+      └── USB bulk IN 0x81
+             │
+             v
+        GCHD::stream()
+             │
+             v
+       Streamer / userspace processing
+```
 
-## Source files
+In the kernel driver this becomes:
 
-### core.c
+```text
+Elgato hardware
+      │
+      └── USB bulk IN 0x81
+             │
+             v
+          gchd_rx()
+             │
+             v
+       188-byte MPEG-TS
+             │
+             v
+          gchd_ts()
+             │
+             v
+       video PID 0x1011 / PES
+             │
+             v
+       gchd_ring_push()
+             │
+             v
+       gchd_deliver()
+             │
+             v
+          videobuf2
+             │
+             v
+          /dev/video*
+```
 
-The main V4L2-side implementation.
+The kernel receive path therefore corresponds to the **post-init** portion of the original project, not to the hardware bring-up itself.
 
-Responsibilities:
+## Source files in the original project
 
-- module metadata and parameters;
-- V4L2 mode definitions;
-- encoded-frame ring buffer;
-- MPEG-TS/PES parsing;
-- USB receive kernel thread;
-- delivery of encoded frames to videobuf2;
-- V4L2 format/input/timing ioctls;
-- V4L2 controls;
-- V4L2 device registration;
-- USB ID matching;
-- probe() / disconnect().
+| File | Role |
+| --- | --- |
+| `src/main.cpp` | program orchestration, settings, creation of `GCHD`, and start of streaming |
+| `src/gchd.cpp` | libusb device discovery, firmware-file selection, interface claiming, top-level lifecycle, USB bulk reads |
+| `src/gchd.hpp` | `GCHD` class and hardware-operation declarations |
+| `src/gchd_hardware.hpp` | USB IDs, firmware constants, register definitions, enable bits, state constants |
+| `src/gchd/configure.cpp` | top-level hardware initialization and shutdown sequence |
+| `src/gchd/commands.cpp` | control transfers, mailbox, enable-state synchronization, SCMD state machine, firmware download, stream stop |
+| `src/gchd/transcoder.cpp` | transcoder defaults and mode-dependent encoder/output configuration |
+| `src/gchd/configure_hdmi.cpp` | HDMI signal detection and HDMI hardware configuration |
+| `src/gchd/configure_component.cpp` | Component signal detection and mode-specific configuration |
+| `src/gchd/configure_composite.cpp` | Composite signal detection and configuration |
+| `src/gchd/settings.cpp` / `.hpp` | input/transcoder settings and validation/merging of autodetected values |
+| `src/streamer.cpp` | userspace streaming/output loop |
 
-Important functions:
+The `src/gchd/psi_*` files implement MPEG PSI-related structures/parsing. They are useful when investigating transport-stream semantics, but they are not the place to start when investigating device initialization.
 
-- gchd_probe() — top-level device initialization;
-- gchd_start() — V4L2 stream start;
-- gchd_stop() — V4L2 stream stop;
-- gchd_rx() — USB receive loop;
-- gchd_ts() — MPEG-TS/PES extraction;
-- gchd_deliver() — move an encoded frame into a V4L2 buffer;
-- gchd_v4l2_register() — create/register the V4L2 node.
+## Kernel driver source files
 
-### usb.c
+### `core.c`
 
-Low-level communication with the Game Capture HD.
+Main V4L2-side implementation: V4L2 registration, streaming callbacks, receive thread, MPEG-TS/PES extraction, encoded-frame ring, and delivery to videobuf2.
 
-Responsibilities:
+Important functions include `gchd_probe()`, `gchd_start()`, `gchd_stop()`, `gchd_rx()`, `gchd_ts()`, `gchd_deliver()`, and `gchd_v4l2_register()`.
 
-- USB control transfers;
-- register access;
-- mailbox access;
-- state-machine commands;
-- hardware enable-state handling;
-- firmware upload;
-- device boot/idle initialization;
-- hardware shutdown.
+### `usb.c`
 
-Important functions:
+Low-level device protocol and the kernel-side home for the original userspace hardware-control logic: USB control transfers, mailbox, state commands, enable state, firmware loading, initialization, and shutdown.
 
-- gchd_hw_init() — device bring-up;
-- gchd_hw_shutdown() — device shutdown;
-- gchd_load_firmware() — firmware transfer over USB bulk OUT;
-- gchd_mail_write() / gchd_mail_read() — mailbox protocol;
-- gchd_scmd() — send a device state command;
-- gchd_state_cmd() — send a state command and wait for completion;
-- gchd_do_enable() — modify hardware enable bits.
+### `input.c`
 
-This is the file to read first when investigating USB protocol or device boot problems.
+Kernel-side port of input-specific configuration. This is where the HDMI/Component/Composite hardware sequences currently live after being moved out of the original C++ organization.
 
-### input.c
+### `transcoder.c`
 
-Input and encoder configuration.
+Kernel-side common transcoder setup. Compare it primarily with `src/gchd/transcoder.cpp` when validating register programming or encoder defaults.
 
-Responsibilities:
+### `fops.c`
 
-- configure HDMI, Component, and Composite paths;
-- configure signal/mode-dependent hardware;
-- configure/start the encoder;
-- perform the post-encoder initialization sequence;
-- stop the configured input.
+V4L2/videobuf2 file operations and the glue between the video node and the driver.
 
-The main entry point is gchd_input_configure(). It is called from V4L2 stream start in core.c.
+### `elgato_gchd.h`
 
-This file contains much of the device-specific configuration work translated from the original C++ implementation. It is the main place to look when adding or fixing a particular input mode.
+Shared kernel-driver structures, constants, USB IDs, firmware names, ring-buffer definitions, and declarations.
 
-### transcoder.c
+### `Makefile` / `dkms.conf`
 
-Common transcoder configuration.
+Kernel module build and DKMS packaging metadata.
 
-gchd_transcoder_init() programs shared transcoder defaults, including:
+## Firmware
 
-- MPEG-TS/PES identifiers;
-- H.264 encoder defaults;
-- audio defaults;
-- output-path configuration.
+The original project expects an idle image and an encoder image. The kernel driver uses Linux firmware loading rather than reading files directly from the filesystem.
 
-It contains common setup rather than input-specific signal configuration.
+For firmware-related debugging, compare:
 
-### fops.c
-
-The standard V4L2/videobuf2 file operations:
-
-- open;
-- release;
-- read;
-- poll;
-- mmap;
-- ioctl.
-
-Most actual V4L2 behavior is in core.c; this file connects the V4L2 device to the videobuf2 file-operation helpers.
-
-### elgato_gchd.h
-
-Shared definitions used by all driver compilation units.
-
-Contains:
-
-- USB IDs and endpoint numbers;
-- firmware-related constants;
-- ring-buffer definitions;
-- struct gchd;
-- function declarations;
-- hardware-family definitions.
-
-If you need to understand the state carried around by the driver, start with struct gchd here.
-
-### Makefile
-
-Kernel module build description.
-
-The module is built from:
-
-    core.o
-    fops.o
-    usb.o
-    transcoder.o
-    input.o
-
-into the elgato_gchd.ko module.
-
-### dkms.conf
-
-DKMS package metadata.
-
-Defines:
-
-- package name/version;
-- module name;
-- installation location;
-- kernel build command;
-- clean command;
-- automatic installation.
-
-## Hardware families and firmware
-
-The driver treats the supported devices as two hardware families:
-
-| USB ID | Family | Firmware |
-| --- | --- | --- |
-| 0fd9:0044 | MB86H57/H58 | gchd/MB86H57_H58_IDLE + gchd/MB86H57_H58_ENC_H |
-| 0fd9:004e | MB86H57/H58 | gchd/MB86H57_H58_IDLE + gchd/MB86H57_H58_ENC_H |
-| 0fd9:0051 | MB86H57/H58 | gchd/MB86H57_H58_IDLE + gchd/MB86H57_H58_ENC_H |
-| 0fd9:005d | MB86M01 / HDNew | gchd/MB86M01_ASSP_NSEC_IDLE + gchd/MB86M01_ASSP_NSEC_ENC_H |
-
-The family is selected in usb.c by the gchd_ids USB ID table.
-
-The older three devices share the MB86H57/H58 protocol. The 005d device uses the newer HDNew/MB86M01 protocol, which is why several USB and mailbox operations have separate family-specific paths.
-
-The driver uses Linux request_firmware() rather than embedding firmware in the kernel module. The idle firmware is uploaded during gchd_hw_init(). The encoder firmware is selected by gchd_load_encoder_firmware().
-
-## V4L2 interface
-
-The driver exposes a standard V4L2 capture device.
-
-The main interface is implemented in core.c:
-
-- pixel format: H.264;
-- capture through videobuf2;
-- HDMI / Component / Composite inputs;
-- discrete frame sizes and intervals;
-- DV timing enumeration/query for HDMI and Component;
-- H.264 bitrate control;
-- H.264 profile control;
-- H.264 level control;
-- source-change events.
-
-The V4L2 device is created by gchd_v4l2_register() during USB probe. The module can therefore be installed/loaded without the capture device being connected. The /dev/video* node appears when a matching USB device is bound to the driver.
-
-## Building
-
-Install matching Linux kernel headers and DKMS.
-
-### DKMS
-
-    sudo dkms add ./drivers/elgato_gchd
-    sudo dkms install elgato-gchd/0.2.0
-
-### Direct kernel-module build
-
-    make -C /lib/modules/$(uname -r)/build M=$PWD/drivers/elgato_gchd modules
-
-The module is GPL-licensed because it uses GPL-only Linux kernel interfaces.
+```text
+original:  src/gchd.cpp -> checkFirmware() / configure.cpp -> dlfirm()
+kernel:    usb.c       -> firmware selection / gchd_load_firmware()
+```
 
 ## Debugging guide
 
 ### Device does not bind
 
-Start with:
+Start with the kernel USB ID table and `gchd_probe()`. If it binds but fails immediately, compare the early part of `GCHD::init()` and `configureDevice()` in the original project.
 
-1. [usb.c](./usb.c) — gchd_ids
-2. [usb.c](./usb.c) — gchd_probe()
-3. dmesg for USB-driver errors.
+### Firmware upload fails
 
-Supported IDs are 0fd9:0044, 0fd9:004e, 0fd9:0051, and 0fd9:005d.
+Compare the kernel firmware path with `src/gchd/commands.cpp` → `dlfirm()`. Verify the selected hardware family and the idle-versus-encoder firmware stage.
 
-### Device binds but initialization fails
+### State transition times out
 
-Follow:
+Compare the kernel state helper with `src/gchd/commands.cpp` → `scmd()`, `stateConfirmedScmd()`, and `completeStateChange()`. Check whether the driver is waiting for the same completion condition and acknowledging the same sticky state bit.
 
-    gchd_probe()
-      -> gchd_hw_init()
-           -> firmware/state/mailbox operations in usb.c
+### Mailbox operation hangs
 
-This is the path to investigate USB control-transfer errors, firmware upload failures, state-transition timeouts, and mailbox problems.
+Compare `gchd_mail_write()` / `gchd_mail_read()` with `mailWrite()` / `mailRead()`, including readiness handling and the HDNew-specific path.
 
-### /dev/video* exists but streaming fails
+### `/dev/video*` exists but streaming fails
 
-Follow:
+Start at the V4L2 stream-on path:
 
-    VIDIOC_STREAMON
-      -> gchd_start()
-           -> gchd_input_configure()
-           -> gchd_scmd()
-           -> gchd_state_cmd()
+```text
+VIDIOC_STREAMON
+    -> gchd_start()
+    -> input configuration
+    -> encoder/state start
+```
 
-The input configuration is in input.c, while low-level state/mailbox operations are in usb.c.
+Then compare the selected input path against the original `configureHDMI()`, `configureComponent()`, or `configureComposite()`.
 
 ### Streaming starts but no frames arrive
 
-Follow:
+Follow `gchd_rx()` → MPEG-TS parsing → PID `0x1011` → PES/frame buffering → videobuf2 delivery. At this point the hardware should already have completed the original init sequence and reached `SCMD_STATE_START`.
 
-    gchd_rx()
-      -> USB bulk IN 0x81
-      -> MPEG-TS packet assembly
-      -> gchd_ts()
-      -> video PID 0x1011
-      -> gchd_ring_push()
-      -> gchd_deliver()
+### Signal or mode detection is wrong
 
-In particular, check whether the device is producing PID 0x1011 and whether gchd_ts() is seeing valid MPEG-TS packets.
+Do not start by changing the V4L2 code. Compare the corresponding original input-specific implementation first. The original project contains the signal measurements, mode mapping, and hardware register programming that the kernel driver is intended to reproduce.
 
-### Signal is lost
+## Shutdown in the original project
 
-Signal presence is currently inferred from receiving video packets. See gchd_ts() and gchd_signal_check() in core.c.
+The reverse path is also useful when implementing or debugging disconnect/stream-stop handling.
 
-A source-change event is generated when the state changes, and the input is stopped after approximately 500 ms without video data.
+`GCHD::uninitDevice()` first checks the state. If the device is in `SCMD_STATE_START` or `SCMD_STATE_NULL`, it calls `stopStream(true)`.
 
-## Relationship to the original implementation
+`stopStream()` changes the output state to `SCMD_STATE_NULL`, waits for completion while draining USB data, then changes the device to `SCMD_STATE_STOP` and waits again. `uninitDevice()` then performs the remaining reset/disable sequence before the USB interface is released.
 
-The original [src/gchd/](../../src/gchd/) implementation remains the reference for the reverse-engineered device protocol, especially:
+This is why the original shutdown path should be treated as part of the protocol too; simply stopping the receive thread is not equivalent to putting the hardware back into a clean state.
 
-- device-specific USB/mailbox sequences;
-- signal detection;
-- HDMI/Component/Composite mode configuration;
-- encoder configuration;
-- calibration sequences.
+## Build
 
-When porting or debugging a hardware sequence, compare the corresponding kernel-driver function with the original C++ implementation.
+Install matching Linux kernel headers and DKMS.
 
-The intended architecture is to keep the capture path in the kernel rather than reintroducing a userspace capture helper.
+### DKMS
+
+```sh
+sudo dkms add ./drivers/elgato_gchd
+sudo dkms install elgato-gchd/0.2.0
+```
+
+### Direct kernel-module build
+
+```sh
+make -C /lib/modules/$(uname -r)/build M=$PWD/drivers/elgato_gchd modules
+```
 
 ## Current limitations
 
-The kernel USB control-transfer primitives, mailbox paths, state commands, firmware uploads, RAM buffering, and V4L2 plumbing are implemented.
-
-The remaining work is primarily around device-specific signal/mode behavior and hardware validation. In particular:
-
-- HDMI signal detection is not yet a complete translation of the original implementation;
-- the full per-mode calibration/configuration behavior is still being brought over;
-- V4L2 controls establish the Linux-facing interface, but do not yet necessarily program every encoder parameter into the hardware;
-- the branch should still be considered experimental until tested against the supported hardware revisions.
+- The kernel driver is still experimental and needs hardware validation.
+- HDMI signal detection is not yet a complete translation of the original implementation.
+- Full per-mode calibration/configuration behavior is still being brought over.
+- V4L2 controls establish the Linux-facing interface, but do not necessarily program every encoder parameter yet.
+- The original userspace project remains the reference when a hardware sequence is unclear or appears incomplete in the kernel port.
