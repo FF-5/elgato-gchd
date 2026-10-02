@@ -144,7 +144,8 @@ static void gchd_signal_check(struct gchd *d)
   v4l2_event_queue(&d->vdev, &ev);
   d->signal_present = false;
   gchd_input_stop(d);
-  pr_info("elgato_gchd: input %u signal lost; capture stopped; switch input to reinitialize\n",
+  pr_info("elgato_gchd: input %u signal lost; capture stopped; switch input to reinitialize
+",
           d->input);
  }
 }
@@ -632,7 +633,25 @@ MODULE_DEVICE_TABLE(usb, gchd_ids);
 static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
 {
  struct gchd*d;int r;d=kzalloc(sizeof(*d),GFP_KERNEL);if(!d)return-ENOMEM;
- d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;d->family=(enum gchd_family)id->driver_info;\n\t/*\n\t * The original libusb implementation explicitly re-applied\n\t * configuration 1 before touching the device.  The kernel has already\n\t * selected the active configuration during enumeration, so drivers must\n\t * not call usb_set_configuration() here.  Reset the active configuration\n\t * instead; this clears endpoint state and resets interface altsettings,\n\t * matching the relevant initialization effect without destroying the\n\t * interface we are probing.\n\t */\n\tr = usb_reset_configuration(d->udev);\n\tif (r) {\n\t\tdev_err(&i->dev, "failed to reset active USB configuration: %d\\n", r);\n\t\tgoto err;\n\t}\n\tdev_info(&i->dev, "active USB configuration reset before hardware init\\n");\n\tmutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
+ d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;d->family=(enum gchd_family)id->driver_info;
+\t/*
+\t * The original libusb implementation explicitly re-applied
+\t * configuration 1 before touching the device.  The kernel has already
+\t * selected the active configuration during enumeration, so drivers must
+\t * not call usb_set_configuration() here.  Reset the active configuration
+\t * instead; this clears endpoint state and resets interface altsettings,
+\t * matching the relevant initialization effect without destroying the
+\t * interface we are probing.
+\t */
+\tr = usb_reset_configuration(d->udev);
+\tif (r) {
+\t\tdev_err(&i->dev, "failed to reset active USB configuration: %d\
+", r);
+\t\tgoto err;
+\t}
+\tdev_info(&i->dev, "active USB configuration reset before hardware init\
+");
+\tmutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
  spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->input=0;d->input_width=1920;d->input_height=1080;d->input_fps_num=60;d->input_fps_den=1;d->bitrate=16000;d->h264_profile=V4L2_MPEG_VIDEO_H264_PROFILE_MAIN;d->h264_level=41;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
  if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;
  r=gchd_hw_init(d);if(r)goto errv4l2;d->hw_initialized=true;
