@@ -102,6 +102,15 @@ static int gchd_reg_write16(struct gchd *d, u16 index, u16 v)
  return gchd_ctrl_write(d, REG_REQ, 0x0900, index, &x, sizeof(x));
 }
 
+int gchd_raw_read16(struct gchd *d, u16 value, u16 index, u16 *v)
+{
+ __be16 x;
+ int r = gchd_ctrl_read(d, REG_REQ, value, index, &x, sizeof(x));
+ if (!r)
+  *v = be16_to_cpu(x);
+ return r;
+}
+
 static int gchd_req_read16(struct gchd *d, u16 value, u16 index, u16 *v)
 {
  __be16 x;
