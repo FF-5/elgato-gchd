@@ -247,6 +247,8 @@ static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
   */
  if (index == d->input && !d->signal_present)
   in->status = V4L2_IN_ST_NO_SIGNAL;
+ if (index < 2)
+  in->capabilities = V4L2_IN_CAP_DV_TIMINGS;
  return 0;
 }
 
@@ -307,6 +309,82 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
   }
  }
  return 0;
+}
+
+static int gchd_query_dv_timings(struct file *f, void *p,
+				     struct v4l2_dv_timings *t)
+{
+ struct gchd *d = video_drvdata(f);
+ u64 clock;
+
+ if (d->input == 2)
+  return -ENODATA;
+ if (!d->signal_present)
+  return -ENOLINK;
+
+ memset(t, 0, sizeof(*t));
+ t->type = V4L2_DV_BT_656_1120;
+ t->bt.width = d->input_width;
+ t->bt.height = d->input_height;
+ t->bt.interlaced = d->input_interlaced;
+ t->bt.polarities = 0;
+
+ if (d->input_width == 1920)
+  clock = d->input_interlaced ? 74250000ULL : 148500000ULL;
+ else if (d->input_width == 1280)
+  clock = 74250000ULL;
+ else if (d->input_height == 576)
+  clock = d->input_interlaced ? 13500000ULL : 27000000ULL;
+ else
+  clock = d->input_interlaced ? 13500000ULL : 27000000ULL;
+
+ t->bt.pixelclock = clock;
+ t->bt.hfrontporch = 88;
+ t->bt.hsync = 44;
+ t->bt.hbackporch = 148;
+ t->bt.vfrontporch = d->input_interlaced ? 2 : 4;
+ t->bt.vsync = d->input_interlaced ? 5 : 5;
+ t->bt.vbackporch = d->input_interlaced ? 15 : 36;
+
+ return 0;
+}
+
+static int gchd_enum_dv_timings(struct file *f, void *p,
+				 struct v4l2_enum_dv_timings *e)
+{
+ struct gchd *d = video_drvdata(f);
+ static const struct {
+  u32 width, height, fps, pixelclock;
+  bool interlaced;
+ } modes[] = {
+  {1920,1080,60,148500000,false},
+  {1920,1080,60,74250000,true},
+  {1280,720,60,74250000,false},
+  {720,576,50,27000000,false},
+  {720,576,50,13500000,true},
+  {720,480,60,27000000,false},
+  {720,480,60,13500000,true},
+ };
+ unsigned int n = 0, i;
+
+ if (d->input == 2)
+  return -ENODATA;
+
+ for (i = 0; i < ARRAY_SIZE(modes); ++i) {
+  if (!gchd_mode_allowed(d, &gchd_modes[i]))
+   continue;
+  if (n++ != e->index)
+   continue;
+  memset(&e->timings, 0, sizeof(e->timings));
+  e->timings.type = V4L2_DV_BT_656_1120;
+  e->timings.bt.width = modes[i].width;
+  e->timings.bt.height = modes[i].height;
+  e->timings.bt.interlaced = modes[i].interlaced;
+  e->timings.bt.pixelclock = modes[i].pixelclock;
+  return 0;
+ }
+
+ return -EINVAL;
 }
 
 static int gchd_querycap(struct file*f,void*p,struct v4l2_capability*c)
@@ -448,7 +526,9 @@ static const struct v4l2_ioctl_ops gchd_ioctl={
  .vidioc_enum_input=gchd_enuminput,
  .vidioc_g_input=gchd_ginput,.vidioc_s_input=gchd_sinput,
  .vidioc_g_fmt_vid_cap=gchd_gfmt,.vidioc_s_fmt_vid_cap=gchd_sfmt,
- .vidioc_try_fmt_vid_cap=gchd_tryfmt,
+.vidioc_try_fmt_vid_cap=gchd_tryfmt,
+ .vidioc_query_dv_timings=gchd_query_dv_timings,
+ .vidioc_enum_dv_timings=gchd_enum_dv_timings,
  .vidioc_reqbufs=vb2_ioctl_reqbufs,.vidioc_querybuf=vb2_ioctl_querybuf,
  .vidioc_qbuf=vb2_ioctl_qbuf,.vidioc_dqbuf=vb2_ioctl_dqbuf,
  .vidioc_streamon=vb2_ioctl_streamon,.vidioc_streamoff=vb2_ioctl_streamoff,
