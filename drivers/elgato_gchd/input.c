@@ -822,13 +822,13 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  }
 
  /* Exact source-routing enable order from configureDevice(). */
- r = gchd_do_enable(d, BIT(0), d->input == 2 ? BIT(0) : 0);
- if (r)
-  return r;
- r = gchd_do_enable(d, BIT(1), d->input != 0 ? BIT(1) : 0);
+ r = gchd_do_enable(d, BIT(8), d->input == 2 ? BIT(8) : 0);
  if (r)
   return r;
  r = gchd_do_enable(d, BIT(2), d->input != 0 ? BIT(2) : 0);
+ if (r)
+  return r;
+ r = gchd_do_enable(d, BIT(9), d->input != 0 ? BIT(9) : 0);
  if (r)
   return r;
 
