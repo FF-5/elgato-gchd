@@ -503,6 +503,37 @@ int gchd_hw_init(struct gchd *d)
  state &= 0x1f;
 
  if (state == 0) {
+  /*
+   * On HDNew, the first state read while the device is in boot state
+   * triggers a state transition.  The original driver waits for the
+   * corresponding interrupt and acknowledges the completion before the
+   * firmware download.  Without this handshake the firmware bulk OUT
+   * endpoint remains unserviced and the transfer hangs indefinitely.
+   */
+  if (d->family == GCHD_FAMILY_HDNEW) {
+   u16 completion = 0;
+   int tries;
+
+   r = gchd_interrupt_pend(d);
+   if (r)
+    return r;
+
+   for (tries = 0; tries < 1000; ++tries) {
+    r = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
+    if (r)
+     return r;
+    if (completion & 0x0004)
+     break;
+    usleep_range(1000, 2000);
+   }
+   if (tries == 1000)
+    return -ETIMEDOUT;
+
+   r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, 0x0004);
+   if (r)
+    return r;
+  }
+
   r = gchd_load_firmware(d, d->family == GCHD_FAMILY_HDNEW ? FW_IDLE_NEW : FW_IDLE_OLD);
   if (r)
    return r;
