@@ -53,7 +53,7 @@ static bool gchd_mode_allowed(const struct gchd *d,
  case 0: /* HDMI: 480p/576p/720p/1080i/1080p are supported by the original. */
   return (m->width == 1920 && m->height == 1080) ||
          (m->width == 1280 && m->height == 720) ||
-         (m->width == 720 &&
+         (m->width == 720 && !m->interlaced &&
           (m->height == 480 || m->height == 576));
  case 1: /* Component: progressive/interlaced HD plus PAL/NTSC interlaced. */
   return true;
@@ -171,7 +171,13 @@ static int gchd_rx(void *arg)
  while(!kthread_should_stop()&&!d->disconnected){
   ret=usb_bulk_msg(d->udev,usb_rcvbulkpipe(d->udev,GCHD_EP_IN),d->usb_buf,
                    GCHD_USB_BUFSIZE,&actual,1000);
-  if(ret==-ETIMEDOUT||ret==-EAGAIN)continue;if(ret)break;
+  if (ret == -ETIMEDOUT || ret == -EAGAIN) {
+   gchd_signal_check(d);
+   gchd_deliver(d);
+   continue;
+  }
+  if (ret)
+   break;
   for(pos=0;pos<actual;){
    size_t take=min_t(size_t,188-d->ts_partial_len,actual-pos);
    memcpy(d->ts_partial+d->ts_partial_len,d->usb_buf+pos,take);
