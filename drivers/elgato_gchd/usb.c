@@ -111,6 +111,11 @@ static int gchd_req_read16(struct gchd *d, u16 value, u16 index, u16 *v)
  return r;
 }
 
+int gchd_raw_read16(struct gchd *d, u16 value, u16 index, u16 *v)
+{
+ return gchd_req_read16(d, value, index, v);
+}
+
 static int gchd_load_firmware(struct gchd *d, const char *name);
 
 int gchd_load_encoder_firmware(struct gchd *d)
