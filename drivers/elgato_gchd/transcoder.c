@@ -172,32 +172,39 @@ int gchd_transcoder_final_configure(struct gchd *d)
  u8 video_format;
  u8 source_type = 0;
 
- /* Exact source-type mapping from the reference final transcoder stage.
-  * The kernel currently exposes the native 4:3 SD modes, so no SD-stretch
-  * override is applied here. */
+ /*
+  * Match the reference transcoderFinalConfigure() mapping:
+  * PAL 4:3 = 3, NTSC 4:3 = 0, and HD/other sources = 0.
+  * The kernel driver does not currently expose SD stretch modes.
+  */
  if (d->input_height == 576)
   source_type = 3;
  else if (d->input_height == 480)
   source_type = 0;
 
- switch (gchd_resolution(d)) {
- case GCHD_RES_1080:
-  video_format = 32;
-  if (d->input_interlaced)
-   video_format = 0;
-  break;
- case GCHD_RES_720:
+ /*
+  * v_format:
+  *   0 = 1080i60
+  *   2 = 720p60
+  *   4 = 480i60
+  *   5 = 576i50
+  *   8 = 480p60
+  *   9 = 576p50
+  *  32 = 1080p60
+  *
+  * As in the reference, bit 0 selects the 50 Hz variant.
+  */
+ if (d->input_height == 1080) {
+  video_format = d->input_interlaced ? 0 : 32;
+ } else if (d->input_height == 720) {
   if (d->input_interlaced)
    return -EINVAL;
   video_format = 2;
-  break;
- case GCHD_RES_PAL:
+ } else if (d->input_height == 576) {
   video_format = d->input_interlaced ? 5 : 9;
-  break;
- case GCHD_RES_NTSC:
+ } else if (d->input_height == 480) {
   video_format = d->input_interlaced ? 4 : 8;
-  break;
- default:
+ } else {
   return -EINVAL;
  }
 
