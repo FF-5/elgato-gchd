@@ -77,6 +77,7 @@ struct gchd {
 int gchd_hw_init(struct gchd *);
 int gchd_hw_shutdown(struct gchd *);
 int gchd_transcoder_init(struct gchd *);
+int gchd_transcoder_final_configure(struct gchd *);
 int gchd_mail_write(struct gchd *, u8, const u8 *, u8);
 int gchd_mail_read(struct gchd *, u8, u8 *, u8);
 int gchd_state_cmd(struct gchd *, u8, u8, u16, u16);
