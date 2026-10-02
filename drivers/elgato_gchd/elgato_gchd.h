@@ -61,6 +61,7 @@ struct gchd {
  bool streaming;
  bool disconnected;
  bool hw_initialized;
+ bool input_configured;
  u16 hw_enable_state;
  u16 hw_enable_register;
  u32 width, height, sizeimage;
