@@ -395,6 +395,7 @@ static int gchd_enum(struct file*f,void*p,struct v4l2_fmtdesc*x)
 {
  if (x->index) return -EINVAL;
  x->pixelformat=V4L2_PIX_FMT_H264;
+ x->flags = V4L2_FMT_FLAG_COMPRESSED;
  strscpy(x->description, "H.264", sizeof(x->description));
  return 0;
 }
