@@ -235,6 +235,12 @@ static int gchd_encoder_start(struct gchd *d)
  if (i == 1000)
   return -ETIMEDOUT;
 
+ /* configureDevice() calls enableAnalogInput() on every 0x27f97b pass,
+  * immediately before transcoderDefaultsInitialize(). */
+ r = gchd_enable_analog(d);
+ if (r)
+  return r;
+
  r = gchd_transcoder_init(d);
  if (r)
   return r;
@@ -259,6 +265,16 @@ static int gchd_encoder_start(struct gchd *d)
   if (r) return r;
  }
 
+ /* configureDevice() returns to the main 0x27f97b loop once after
+  * encoder firmware load, before entering the 0x5b polling loop. */
+ r = gchd_mail_write(d, 0x33,
+                     (u8[]){0xab,0xa9,0x0f,0xa4,0x55}, 5);
+ if (r) return r;
+ r = gchd_mail_read(d, 0x33, reply, 3);
+ if (r) return r;
+ r = gchd_enable_analog(d);
+ if (r) return r;
+
  /* Firmware can transiently return to 0x334455. */
  for (i = 0; i < 5; ++i) {
   r = gchd_mail_write(d, 0x33,
@@ -266,7 +282,7 @@ static int gchd_encoder_start(struct gchd *d)
   if (r) return r;
   r = gchd_mail_read(d, 0x33, reply, 3);
   if (r) return r;
-  r = gchd_do_enable(d, BIT(2), 0);
+  r = gchd_enable_analog(d);
   if (r) return r;
   state = ((u32)reply[0] << 16) | ((u32)reply[1] << 8) | reply[2];
   if ((state & 0xf8f0f0) == 0x78e040)
