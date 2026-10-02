@@ -653,7 +653,7 @@ static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
  spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->input=0;d->input_width=1920;d->input_height=1080;d->input_fps_num=60;d->input_fps_den=1;d->bitrate=16000;d->h264_profile=V4L2_MPEG_VIDEO_H264_PROFILE_MAIN;d->h264_level=41;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
  if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;
  r=gchd_hw_init(d);if(r)goto errv4l2;d->hw_initialized=true;
- r=gchd_transcoder_init(d);if(r)goto errhw;usb_set_intfdata(i,d);
+ usb_set_intfdata(i,d);
  d->rx_thread=kthread_run(gchd_rx,d,"gchd-rx");if(IS_ERR(d->rx_thread)){r=PTR_ERR(d->rx_thread);d->rx_thread=NULL;goto errhw;}return 0;
 errhw:gchd_hw_shutdown(d);d->hw_initialized=false;
 errv4l2:gchd_v4l2_unregister(d);errbuf:kfree(d->usb_buf);err:usb_put_dev(d->udev);kfree(d);return r;
