@@ -417,30 +417,65 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
  return 0;
 }
 
+static int gchd_complete_state_change(struct gchd *d, u16 current, u16 next)
+{
+ u16 state, completion;
+ int r, tries;
+ bool first = true;
+
+ for (;;) {
+  for (tries = 0; tries < 2000; ++tries) {
+   r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+   if (r)
+    return r;
+   state &= 0x1f;
+   if (state != current && state != next) {
+    if (first)
+     return state == next ? 0 : -EIO;
+    return -EIO;
+   }
+   first = false;
+
+   r = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
+   if (r)
+    return r;
+   /* This read is part of the original completion handshake. */
+   r = gchd_req_read16(d, 0x0900, 0x01b0, &completion);
+   if (r)
+    return r;
+   if (completion & 0x0004)
+    break;
+   usleep_range(1000, 2000);
+  }
+  if (tries == 2000)
+   return -ETIMEDOUT;
+
+  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+  if (r) return r;
+  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+  if (r) return r;
+  state &= 0x1f;
+
+  r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, 0x0004);
+  if (r) return r;
+  r = gchd_reg_write16(d, 0x01b0, 0x0000);
+  if (r) return r;
+
+  if (state == next)
+   return 0;
+  if (state != current)
+   return -EIO;
+ }
+}
+
 static int gchd_wait_state(struct gchd *d, u16 expected)
 {
- u16 completion, state;
- int r, tries;
-
- for (tries = 0; tries < 1000; ++tries) {
-  r = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
-  if (r)
-   return r;
-  if (completion & 0x0004)
-   break;
-  usleep_range(1000, 2000);
- }
- if (tries == 1000)
-  return -ETIMEDOUT;
-
- r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+ u16 state;
+ int r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
  if (r)
   return r;
  state &= 0x1f;
- r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, 0x0004);
- if (r)
-  return r;
- return state == expected ? 0 : -EIO;
+ return gchd_complete_state_change(d, state, expected);
 }
 
 int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
