@@ -399,6 +399,15 @@ static int gchd_tryfmt(struct file*f,void*p,struct v4l2_format*x)
  return 0;
 }
 
+static int gchd_subscribe_event(struct file *file, void *fh,
+                                    struct v4l2_event_subscription *sub)
+{
+ if (sub->type != V4L2_EVENT_SOURCE_CHANGE &&
+     sub->type != V4L2_EVENT_CTRL)
+  return -EINVAL;
+ return v4l2_event_subscribe(file->private_data, sub, 8, NULL);
+}
+
 static const struct v4l2_ioctl_ops gchd_ioctl={
  .vidioc_querycap=gchd_querycap,
  .vidioc_enum_fmt_vid_cap=gchd_enum,
@@ -411,7 +420,9 @@ static const struct v4l2_ioctl_ops gchd_ioctl={
  .vidioc_reqbufs=vb2_ioctl_reqbufs,.vidioc_querybuf=vb2_ioctl_querybuf,
  .vidioc_qbuf=vb2_ioctl_qbuf,.vidioc_dqbuf=vb2_ioctl_dqbuf,
  .vidioc_streamon=vb2_ioctl_streamon,.vidioc_streamoff=vb2_ioctl_streamoff,
- .vidioc_subscribe_event=v4l2_ctrl_subscribe_event
+ .vidioc_subscribe_event=gchd_subscribe_event,
+ .vidioc_unsubscribe_event=v4l2_event_unsubscribe,
+ .vidioc_dqevent=v4l2_event_dqevent
 };
 
 static int gchd_ctrl(struct v4l2_ctrl*c){return 0;}
