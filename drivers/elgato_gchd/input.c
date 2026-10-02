@@ -421,6 +421,110 @@ static int gchd_post_encoder_setup(struct gchd *d)
  return 0;
 }
 
+static int gchd_input_finalize(struct gchd *d)
+{
+ u8 reply[3];
+ u8 magic[5] = {0xab, 0xa9, 0x0f, 0xa4, 0x5b};
+ int r, i;
+
+ r = gchd_mail_write(d, 0x33, (u8[]){0xaa,0x8d,0x35}, 3);
+ if (r)
+  return r;
+
+ for (i = 0; i < 5; ++i) {
+  r = gchd_mail_write(d, 0x33, magic, sizeof(magic));
+  if (r)
+   return r;
+  r = gchd_mail_read(d, 0x33, reply, sizeof(reply));
+  if (r)
+   return r;
+  r = gchd_do_enable(d, BIT(2), BIT(2));
+  if (r)
+   return r;
+  if ((reply[0] & 0xf8) == 0x78 &&
+      (reply[1] & 0xf0) == 0xe0 &&
+      (reply[2] & 0xf0) == 0x40)
+   break;
+  usleep_range(10000, 20000);
+ }
+ if (i == 5)
+  return -ETIMEDOUT;
+
+ /*
+  * This is the final source-routing stage from configure.cpp.  The
+  * connector-specific setup above establishes the input path; these writes
+  * put the device into its streaming state without a userspace daemon.
+  */
+ r = gchd_scmd(d, 4, 0xa0, 0);
+ if (r)
+  return r;
+
+ if (d->input != 2) {
+  r = gchd_mail_write(d, 0x44, (u8[]){0x06,0x86}, 2);
+  if (r)
+   return r;
+ } else {
+  r = gchd_mail_write(d, 0x33, (u8[]){0x89,0x89,0xfd}, 3);
+  if (r)
+   return r;
+  r = gchd_mail_read(d, 0x33, reply, 1);
+  if (r)
+   return r;
+ }
+
+ r = gchd_mail_write(d, 0x33, (u8[]){0x89,0x89,0xf8}, 3);
+ if (r)
+  return r;
+ r = gchd_mail_read(d, 0x33, reply, 1);
+ if (r)
+  return r;
+
+ r = gchd_mail_write(d, 0x44,
+   d->input == 2 ? (u8[]){0x03,0x28} : (u8[]){0x03,0x2f}, 2);
+ if (r)
+  return r;
+
+ r = gchd_read_9dcd(d, 0x3f, reply);
+ if (r)
+  return r;
+
+ r = gchd_mail_write(d, 0x4e, (u8[]){0x00,0xcc}, 2);
+ if (r)
+  return r;
+ r = gchd_mail_write(d, 0x4e,
+   d->input == 2 ? (u8[]){0xb3,0x33} : (u8[]){0xb3,0xcc}, 2);
+ if (r)
+  return r;
+ r = gchd_read_9dcd(d, 0x3f, reply);
+ if (r)
+  return r;
+
+ r = gchd_mail_write(d, 0x4e, (u8[]){0x00,0xce}, 2);
+ if (r)
+  return r;
+ r = gchd_mail_write(d, 0x4e,
+   d->input == 2 ? (u8[]){0x27,0x33} : (u8[]){0x27,0xcc}, 2);
+ if (r)
+  return r;
+
+ if (d->input == 2) {
+  r = gchd_read_9dcd(d, 0x3f, reply);
+  if (r)
+   return r;
+  r = gchd_mail_write(d, 0x4e, (u8[]){0x00,0xcc}, 2);
+  if (r)
+   return r;
+  r = gchd_read_9dcd(d, 0x6e, reply);
+  if (r)
+   return r;
+  r = gchd_mail_write(d, 0x4e, (u8[]){0x51,0xcc}, 2);
+  if (r)
+   return r;
+ }
+
+ return 0;
+}
+
 int gchd_input_configure(struct gchd *d)
 {
  int r;
@@ -494,6 +598,10 @@ int gchd_input_configure(struct gchd *d)
   * does not depend on a userspace initialization helper.
   */
  r = gchd_post_encoder_calibration(d);
+ if (r)
+  return r;
+
+ r = gchd_input_finalize(d);
  if (r)
   return r;
 
