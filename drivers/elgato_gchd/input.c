@@ -880,8 +880,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
 
  r=gchd_color_space_exact(d); if(r)return r;
  r=gchd_transcoder_final_configure(d); if(r)return r;
- r=gchd_transcoder_init(d); if(r)return r;
- r=gchd_scmd(d,4,0xa0,0); if(r)return r;
+ r=gchd_scmd(d,4,0,0); if(r)return r;
  r=gchd_scmd(d,5,0,2); if(r)return r;
  return 0;
 #undef M3
@@ -899,6 +898,8 @@ int gchd_input_configure(struct gchd *d)
   r=gchd_configure_hdmi_exact(d); if(r)return r;
  } else if (d->input==2) {
   r=gchd_configure_composite_exact(d); if(r)return r;
+  d->input_configured=true;
+  return 0;
  } else {
   r=gchd_post_encoder_calibration(d); if(r)return r;
   r=gchd_post_encoder_sweep(d); if(r)return r;
