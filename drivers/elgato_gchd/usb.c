@@ -81,6 +81,12 @@ static int gchd_req_read16(struct gchd *d, u16 value, u16 index, u16 *v)
  return r;
 }
 
+int gchd_load_encoder_firmware(struct gchd *d)
+{
+ const char *name = d->family == GCHD_FAMILY_HDNEW ? FW_ENC_NEW : FW_ENC_OLD;
+ return gchd_load_firmware(d, name);
+}
+
 static int gchd_load_firmware(struct gchd *d, const char *name)
 {
  const struct firmware *fw;
@@ -107,6 +113,29 @@ static int gchd_load_firmware(struct gchd *d, const char *name)
  }
  release_firmware(fw);
  return r;
+}
+
+int gchd_slsi(struct gchd *d, u16 address, u16 data)
+{
+ __be16 x = cpu_to_be16(data);
+ return gchd_ctrl_write(d, REG_REQ, 0x0000, address, &x, sizeof(x));
+}
+
+int gchd_sparam(struct gchd *d, u16 address, u8 lsb, u8 bits, u16 data)
+{
+ u32 value = (u32)data, mask;
+ u32 shift = lsb;
+ __be32 buf[2];
+ if (!bits || bits > 16 || lsb + bits > 32)
+  return -EINVAL;
+ if (!(address & 2))
+  shift += 16;
+ mask = (1U << bits) - 1;
+ value <<= shift;
+ mask <<= shift;
+ buf[0] = cpu_to_be32(value);
+ buf[1] = cpu_to_be32(mask);
+ return gchd_ctrl_write(d, REG_REQ, 0x0001, address & ~3U, buf, sizeof(buf));
 }
 
 static int gchd_interrupt_pend(struct gchd *d)
