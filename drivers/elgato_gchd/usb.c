@@ -1,7 +1,9 @@
 #include <linux/firmware.h>
 #include <linux/delay.h>
 #include <linux/module.h>
+#include <linux/slab.h>
 #include "elgato_gchd.h"
+
 
 MODULE_FIRMWARE("gchd/MB86H57_H58_IDLE");
 MODULE_FIRMWARE("gchd/MB86H57_H58_ENC_H");
