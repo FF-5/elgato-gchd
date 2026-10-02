@@ -165,3 +165,61 @@ int gchd_transcoder_init(struct gchd *d)
 
 MODULE_DESCRIPTION("Elgato Game Capture HD transcoder setup");
 MODULE_LICENSE("GPL");
+
+int gchd_transcoder_final_configure(struct gchd *d)
+{
+ int r;
+ u16 fmt, ip;
+ u16 source_type = 0;
+ bool analog = d->input != 0;
+
+ if (d->input_height == 576)
+  source_type = 3;
+ else if (d->input_height == 480)
+  source_type = 0;
+
+ if (d->input_width == 1920)
+  fmt = d->input_interlaced ? 0 : 32;
+ else if (d->input_width == 1280)
+  fmt = 2;
+ else if (d->input_height == 576)
+  fmt = d->input_interlaced ? 5 : 9;
+ else
+  fmt = d->input_interlaced ? 4 : 8;
+
+ if (d->input_fps_num && d->input_fps_num == 50)
+  fmt |= 1;
+ ip = d->input_interlaced ? 0 : 2;
+
+ if ((r = gchd_sparam(d, 0x1126, 0, 13, VPID))) return r;
+ if ((r = gchd_sparam(d, 0x1266, 0, 13, VPID))) return r;
+ if ((r = gchd_sparam(d, 0x1128, 0, 13, APID))) return r;
+ if ((r = gchd_sparam(d, 0x1268, 0, 13, APID))) return r;
+ if ((r = gchd_sparam(d, 0x1130, 0, 8, VSID))) return r;
+ if ((r = gchd_sparam(d, 0x1270, 0, 8, VSID))) return r;
+ if ((r = gchd_sparam(d, 0x1132, 0, 8, ASID))) return r;
+ if ((r = gchd_sparam(d, 0x1272, 0, 8, ASID))) return r;
+ if ((r = gchd_sparam(d, 0x1100, 0, 16, 1))) return r;
+ if ((r = gchd_sparam(d, 0x1240, 0, 16, 1))) return r;
+
+ if ((r = gchd_sparam(d, 0x1520, 0, 8, source_type))) return r;
+ if ((r = gchd_sparam(d, 0x1502, 0, 8, fmt))) return r;
+ if ((r = gchd_sparam(d, 0x1504, 0, 2, ip))) return r;
+ if ((r = gchd_sparam(d, 0x1506, 0, 1, 1))) return r;
+ if ((r = gchd_sparam(d, 0x1a02, 0, 2, 0))) return r;
+ if ((r = gchd_sparam(d, 0x1a08, 3, 1, 1))) return r;
+ if ((r = gchd_sparam(d, 0x1a08, 4, 2, 2))) return r;
+ if ((r = gchd_sparam(d, 0x1a08, 6, 1, 1))) return r;
+ if ((r = gchd_sparam(d, 0x1a08, 7, 1, 1))) return r;
+
+ if ((r = gchd_sparam(d, 0x1002, 1, 1, 1))) return r;
+ if ((r = gchd_sparam(d, 0x1004, 4, 1, 1))) return r;
+ if ((r = gchd_sparam(d, 0x100a, 0, 4, 0))) return r;
+ if ((r = gchd_sparam(d, 0x100c, 0, 4, 0))) return r;
+ if ((r = gchd_sparam(d, 0x150e, 0, 1, 0))) return r;
+ if ((r = gchd_sparam(d, 0x1560, 0, 1, 1))) return r;
+
+ dev_dbg(&d->intf->dev, "transcoder final config: fmt=%u ip=%u analog=%u source=%u\\n",
+         fmt, ip, analog, source_type);
+ return 0;
+}
