@@ -225,9 +225,23 @@ static int gchd_interrupt_pend(struct gchd *d)
 {
  u8 status[3];
  int actual, r;
+ int tries = 0;
 
- r = usb_interrupt_msg(d->udev, usb_rcvintpipe(d->udev, GCHD_EP_INT),
-                       status, sizeof(status), &actual, 5000);
+ /*
+  * libusb's interrupt_transfer() is called with timeout 0 by the
+  * original driver, i.e. it waits indefinitely for the device event.
+  * The kernel helper can transiently return -EAGAIN while the device
+  * is bringing the interrupt endpoint back after configuration/reset,
+  * so retry rather than aborting hardware initialization.
+  */
+ do {
+  r = usb_interrupt_msg(d->udev, usb_rcvintpipe(d->udev, GCHD_EP_INT),
+                        status, sizeof(status), &actual, 0);
+  if (r != -EAGAIN)
+   break;
+  usleep_range(1000, 5000);
+ } while (++tries < 1000);
+
  if (r)
   dev_err(&d->intf->dev, "USB interrupt wait failed: %d\n", r);
  return r;
