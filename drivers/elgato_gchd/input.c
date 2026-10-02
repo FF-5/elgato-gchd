@@ -780,6 +780,17 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
 #undef R9
 }
 
+int gchd_setup_subblock_exact(struct gchd *d)
+{
+ return gchd_setup_subblock(d);
+}
+
+int gchd_color_space_exact(struct gchd *d)
+{
+ /* Current V4L2 path exposes YUV input; retain the reference YUV transaction. */
+ return gchd_color_yuv(d);
+}
+
 int gchd_input_configure(struct gchd *d)
 {
  int r;
