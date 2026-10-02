@@ -176,7 +176,7 @@ static int gchd_mode_regs(struct gchd *d)
 {
  int r;
  u16 w = d->input_width, h = d->input_height;
- u16 profile = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
+ u16 profile = 1; /* original v_h264_profile default: Main */
 
  if (w >= 1920) {
   if ((r = gchd_sparam(d, 0x152c, 0, 16, w))) return r;
