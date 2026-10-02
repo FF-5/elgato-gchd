@@ -210,16 +210,33 @@ static int gchd_encoder_start(struct gchd *d)
  r = gchd_do_enable(d, BIT(3), BIT(3));
  if (r) return r;
 
- r = gchd_mail_write(d, 0x33, magic, sizeof(magic));
- if (r) return r;
  for (i = 0; i < 50; ++i) {
+  r = gchd_mail_write(d, 0x33, magic, sizeof(magic));
+  if (r) return r;
+  r = gchd_mail_read(d, 0x33, reply, sizeof(reply));
+  if (r) return r;
+  if ((reply[0] & 0xf8) == 0x78 &&
+      (reply[1] & 0xf0) == 0xe0 &&
+      (reply[2] & 0xf0) == 0x40)
+   break;
+  usleep_range(10000, 20000);
+ }
+ if (i == 50)
+  return -ETIMEDOUT;
+
+ r = gchd_do_enable(d, BIT(3), BIT(3));
+ if (r) return r;
+
+ for (i = 0; i < 100; ++i) {
+  r = gchd_mail_write(d, 0x33, magic, sizeof(magic));
+  if (r) return r;
   r = gchd_mail_read(d, 0x33, reply, sizeof(reply));
   if (r) return r;
   if (reply[0] == 0x27 && reply[1] == 0xf9 && reply[2] == 0x7b)
    break;
-  usleep_range(20000, 30000);
+  usleep_range(10000, 20000);
  }
- if (i == 50)
+ if (i == 100)
   return -ETIMEDOUT;
 
  return gchd_do_enable(d, BIT(4), 0);
