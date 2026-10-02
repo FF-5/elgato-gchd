@@ -527,11 +527,19 @@ int gchd_hw_init(struct gchd *d)
    int tries;
 
    /*
-    * Reading the state register triggers the transition.  Poll its sticky
-    * completion bit first; only then drain the corresponding interrupt
-    * notification.  This ordering avoids depending on an interrupt URB
-    * being accepted before the device has produced the event.
+    * Preserve the original libusb ordering: the state transition is
+    * synchronized by consuming the interrupt notification first, then
+    * polling the sticky completion bit and acknowledging it.
+    *
+    * On EHCI this interrupt transfer can return -EAGAIN even though the
+    * control endpoint is working. gchd_interrupt_pend() deliberately treats
+    * that as an optional notification failure, while the completion register
+    * remains the authoritative synchronization point.
     */
+   r = gchd_interrupt_pend(d);
+   if (r)
+    return r;
+
    for (tries = 0; tries < 1000; ++tries) {
     r = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
     if (r)
@@ -542,10 +550,6 @@ int gchd_hw_init(struct gchd *d)
    }
    if (tries == 1000)
     return -ETIMEDOUT;
-
-   r = gchd_interrupt_pend(d);
-   if (r)
-    return r;
 
    r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, 0x0004);
    if (r)
