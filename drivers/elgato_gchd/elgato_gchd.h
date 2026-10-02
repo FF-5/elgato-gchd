@@ -86,6 +86,7 @@ int gchd_do_enable(struct gchd *, u16, u16);
 int gchd_send_enable_state(struct gchd *);
 int gchd_sparam(struct gchd *, u16, u8, u8, u16);
 int gchd_slsi(struct gchd *, u16, u16);
+int gchd_raw_read16(struct gchd *, u16, u16, u16 *);
 int gchd_load_encoder_firmware(struct gchd *);
 int gchd_input_configure(struct gchd *);
 int gchd_common_block_a(struct gchd *);
