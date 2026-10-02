@@ -93,7 +93,12 @@ static int gchd_rx(void *arg)
   ret=usb_bulk_msg(d->udev,usb_rcvbulkpipe(d->udev,GCHD_EP_IN),d->usb_buf,
                    GCHD_USB_BUFSIZE,&actual,1000);
   if(ret==-ETIMEDOUT||ret==-EAGAIN)continue;if(ret)break;
-  for(pos=0;pos+188<=actual;pos+=188)gchd_ts(d,d->usb_buf+pos,pes,&n);
+  for(pos=0;pos<actual;){
+   size_t take=min_t(size_t,188-d->ts_partial_len,actual-pos);
+   memcpy(d->ts_partial+d->ts_partial_len,d->usb_buf+pos,take);
+   d->ts_partial_len+=take;pos+=take;
+   if(d->ts_partial_len==188){gchd_ts(d,d->ts_partial,pes,&n);d->ts_partial_len=0;}
+  }
   gchd_deliver(d);
  }
  if(n)gchd_ring_push(&d->ring,pes,n);kfree(pes);return 0;
