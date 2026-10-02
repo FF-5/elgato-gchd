@@ -117,6 +117,58 @@ static void gchd_stop(struct vb2_queue*q)
  spin_lock_irqsave(&d->qlock,f);list_for_each_entry_safe(b,tmp,&d->queued,list){list_del(&b->list);vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);}spin_unlock_irqrestore(&d->qlock,f);}
 static const struct vb2_ops gchd_vb2_ops={.queue_setup=gchd_queue_setup,.buf_queue=gchd_buf_queue,.start_streaming=gchd_start,.stop_streaming=gchd_stop,.wait_prepare=vb2_ops_wait_prepare,.wait_finish=vb2_ops_wait_finish};
 
+static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
+{
+ struct gchd *d = video_drvdata(f);
+ if (in->index > 2) return -EINVAL;
+ memset(in, 0, sizeof(*in));
+ in->index = in->index;
+ if (in->index == 0) {
+  strscpy(in->name, "HDMI", sizeof(in->name));
+ } else if (in->index == 1) {
+  strscpy(in->name, "Component", sizeof(in->name));
+ } else {
+  strscpy(in->name, "Composite", sizeof(in->name));
+ }
+ in->type = V4L2_INPUT_TYPE_CAMERA;
+ if (in->index == d->input) in->status = 0;
+ return 0;
+}
+
+static int gchd_ginput(struct file *f, void *p, unsigned int *i)
+{
+ *i = video_drvdata(f)->input;
+ return 0;
+}
+
+static int gchd_sinput(struct file *f, void *p, unsigned int i)
+{
+ struct gchd *d = video_drvdata(f);
+ if (i > 2) return -EINVAL;
+ if (vb2_is_busy(&d->vbq)) return -EBUSY;
+ d->input = i;
+ switch (i) {
+ case 0:
+  d->input_width = 1920; d->input_height = 1080;
+  d->input_fps_num = 60; d->input_fps_den = 1;
+  d->input_interlaced = false;
+  break;
+ case 1:
+  d->input_width = 1920; d->input_height = 1080;
+  d->input_fps_num = 60; d->input_fps_den = 1;
+  d->input_interlaced = false;
+  break;
+ default:
+  d->input_width = 720; d->input_height = 480;
+  d->input_fps_num = 60; d->input_fps_den = 1;
+  d->input_interlaced = true;
+  break;
+ }
+ d->width = d->input_width;
+ d->height = d->input_height;
+ return 0;
+}
+
 static int gchd_querycap(struct file*f,void*p,struct v4l2_capability*c)
 {strscpy(c->driver,"elgato-gchd",sizeof(c->driver));strscpy(c->card,"Elgato Game Capture HD",sizeof(c->card));
  strscpy(c->bus_info,"usb",sizeof(c->bus_info));c->device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_STREAMING|V4L2_CAP_READWRITE;c->capabilities=c->device_caps|V4L2_CAP_DEVICE_CAPS;return 0;}
@@ -129,6 +181,7 @@ static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
  d->width=clamp_t(u32,x->fmt.pix.width,320,1920);d->height=clamp_t(u32,x->fmt.pix.height,240,1080);d->sizeimage=GCHD_MAX_FRAME;return gchd_gfmt(f,p,x);}
 static const struct v4l2_ioctl_ops gchd_ioctl={
  .vidioc_querycap=gchd_querycap,.vidioc_enum_fmt_vid_cap=gchd_enum,
+ .vidioc_enum_input=gchd_enuminput,.vidioc_g_input=gchd_ginput,.vidioc_s_input=gchd_sinput,
  .vidioc_g_fmt_vid_cap=gchd_gfmt,.vidioc_s_fmt_vid_cap=gchd_sfmt,.vidioc_try_fmt_vid_cap=gchd_sfmt,
  .vidioc_reqbufs=vb2_ioctl_reqbufs,.vidioc_querybuf=vb2_ioctl_querybuf,.vidioc_qbuf=vb2_ioctl_qbuf,
  .vidioc_dqbuf=vb2_ioctl_dqbuf,.vidioc_streamon=vb2_ioctl_streamon,.vidioc_streamoff=vb2_ioctl_streamoff,
@@ -169,7 +222,7 @@ static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
 {
  struct gchd*d;int r;d=kzalloc(sizeof(*d),GFP_KERNEL);if(!d)return-ENOMEM;
  d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;d->family=(enum gchd_family)id->driver_info;mutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
- spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
+ spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->input=0;d->input_width=1920;d->input_height=1080;d->input_fps_num=60;d->input_fps_den=1;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
  if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;
  r=gchd_hw_init(d);if(r)goto errv4l2;d->hw_initialized=true;usb_set_intfdata(i,d);
  d->rx_thread=kthread_run(gchd_rx,d,"gchd-rx");if(IS_ERR(d->rx_thread)){r=PTR_ERR(d->rx_thread);d->rx_thread=NULL;goto errhw;}return 0;
