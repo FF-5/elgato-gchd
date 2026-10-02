@@ -117,6 +117,14 @@ static int gchd_start(struct vb2_queue*q,unsigned int c)
  int r = gchd_input_configure(d);
  if (r)
   return r;
+ r = gchd_scmd(d, 4, 0xa0, 0);
+ if (r)
+  return r;
+ r = gchd_state_cmd(d, 5, 0, 0x0002, 0x0002);
+ if (r) {
+  gchd_input_stop(d);
+  return r;
+ }
  d->streaming = true;
  return 0;
 }
