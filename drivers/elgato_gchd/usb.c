@@ -540,6 +540,32 @@ int gchd_hw_init(struct gchd *d)
  u16 state;
  u32 magic;
  int r;
+ u32 version0, version1;
+
+ /* The reference driver reads the hardware revision before BANKSEL. */
+ r = gchd_ctrl_read(d, REG_REQ, 0x0800, 0x0094, &version0, sizeof(version0));
+ if (r)
+  return r;
+ r = gchd_ctrl_read(d, REG_REQ, 0x0800, 0x0098, &version1, sizeof(version1));
+ if (r)
+  return r;
+ if (!version0 && !version1) {
+  u8 version[4];
+  r = gchd_ctrl_read(d, REG_REQ, 0x0800, 0x0010, version, sizeof(version));
+  if (r)
+   return r;
+  r = gchd_ctrl_read(d, REG_REQ, 0x0800, 0x0014, version, sizeof(version));
+  if (r)
+   return r;
+  r = gchd_ctrl_read(d, REG_REQ, 0x0800, 0x0018, version, sizeof(version));
+  if (r)
+   return r;
+ } else {
+  u8 version[4];
+  r = gchd_ctrl_read(d, REG_REQ, 0x0800, 0x009c, version, sizeof(version));
+  if (r)
+   return r;
+ }
 
  r = gchd_reg_write16(d, BANKSEL_INDEX, 0);
  if (r)
