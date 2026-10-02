@@ -196,6 +196,7 @@ static int gchd_mode_regs(struct gchd *d)
 
 static int gchd_post_encoder_prefix(struct gchd *d);
 static int __maybe_unused gchd_post_encoder_sweep(struct gchd *d);
+static int __maybe_unused gchd_input_finalize(struct gchd *d);
 
 static int gchd_encoder_start(struct gchd *d)
 {
@@ -346,6 +347,9 @@ static int gchd_encoder_start(struct gchd *d)
  if (r) return r;
 
  r = gchd_post_encoder_sweep(d);
+ if (r) return r;
+
+ r = gchd_input_finalize(d);
  if (r) return r;
 
  return 0;
