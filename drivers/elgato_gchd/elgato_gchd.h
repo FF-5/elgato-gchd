@@ -82,6 +82,7 @@ int gchd_mail_read(struct gchd *, u8, u8 *, u8);
 int gchd_state_cmd(struct gchd *, u8, u8, u16, u16);
 int gchd_scmd(struct gchd *, u8, u8, u16);
 int gchd_do_enable(struct gchd *, u16, u16);
+int gchd_send_enable_state(struct gchd *);
 int gchd_sparam(struct gchd *, u16, u8, u8, u16);
 int gchd_slsi(struct gchd *, u16, u16);
 int gchd_load_encoder_firmware(struct gchd *);
