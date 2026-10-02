@@ -159,19 +159,7 @@ int gchd_transcoder_init(struct gchd *d)
  if (r)
   return r;
 
- /*
-  * SCMD_INIT(0) asks the device to accept the encoder firmware. The firmware
-  * load itself is a USB bulk transfer, exactly as in the original driver.
-  */
- r = gchd_scmd(d, 4, 0, 0);
- if (r)
-  return r;
-
- r = gchd_load_encoder_firmware(d);
- if (r)
-  return r;
-
- dev_info(&d->intf->dev, "transcoder defaults and encoder firmware loaded
+ dev_info(&d->intf->dev, "transcoder defaults loaded
 ");
  return 0;
 }
