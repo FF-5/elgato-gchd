@@ -161,7 +161,6 @@ static int gchd_load_firmware(struct gchd *d, const char *name)
     break;
    }
 
-   if (attempt == 0) {
     dev_info(&d->intf->dev,
              "firmware OUT ep 0x%02x maxpacket=%u speed=%u alt=%u\\n",
              GCHD_EP_OUT, usb_endpoint_maxp(&ep->desc), d->udev->speed,
