@@ -766,8 +766,8 @@ int gchd_input_configure(struct gchd *d)
   r=gchd_color_yuv(d); if(r)return r;
  }
  r=gchd_mode_regs(d); if(r)return r;
- r=gchd_scmd(d,0xa0,0,0); if(r)return r;
- r=gchd_scmd(d,0x00,0,1); if(r)return r;
+ r=gchd_scmd(d,4,0,0); if(r)return r;
+ r=gchd_scmd(d,5,0,2); if(r)return r;
  d->input_configured=true;
  return 0;
 }
