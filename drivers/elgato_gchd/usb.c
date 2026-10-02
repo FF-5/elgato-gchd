@@ -223,18 +223,26 @@ int gchd_sparam(struct gchd *d, u16 address, u8 lsb, u8 bits, u16 data)
 
 static int gchd_interrupt_pend(struct gchd *d)
 {
+ u8 status[3];
+ int actual, r;
+
  /*
-  * The original libusb driver consumes a 3-byte interrupt-IN packet here
-  * as a synchronization point, but all callers immediately poll the
-  * device's control/status registers for the actual completion state.
+  * The device raises this endpoint as part of the state/mail operation.
+  * By the time callers reach here the corresponding control-register
+  * completion bit has already been observed, so this transfer is only
+  * needed to drain the pending notification before the next operation.
   *
-  * On Linux/EHCI this device's interrupt endpoint can be rejected with
-  * -EAGAIN during the boot/configuration sequence. Treat the interrupt
-  * packet as optional and let the register polling below provide the
-  * synchronization instead. This also keeps the driver independent of
-  * the host controller's periodic interrupt scheduling.
+  * A short timeout is intentional: some EHCI implementations can reject
+  * the periodic transfer with -EAGAIN even though the control path works.
+  * That must not prevent hardware initialization.
   */
- return 0;
+ r = usb_interrupt_msg(d->udev, usb_rcvintpipe(d->udev, GCHD_EP_INT),
+                       status, sizeof(status), &actual, 100);
+ if (r == -EAGAIN || r == -ETIMEDOUT)
+  return 0;
+ if (r)
+  dev_warn(&d->intf->dev, "USB interrupt drain failed: %d\n", r);
+ return r;
 }
 
 static int gchd_mail_ready(struct gchd *d)
@@ -518,10 +526,12 @@ int gchd_hw_init(struct gchd *d)
    u16 completion = 0;
    int tries;
 
-   r = gchd_interrupt_pend(d);
-   if (r)
-    return r;
-
+   /*
+    * Reading the state register triggers the transition.  Poll its sticky
+    * completion bit first; only then drain the corresponding interrupt
+    * notification.  This ordering avoids depending on an interrupt URB
+    * being accepted before the device has produced the event.
+    */
    for (tries = 0; tries < 1000; ++tries) {
     r = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
     if (r)
@@ -532,6 +542,10 @@ int gchd_hw_init(struct gchd *d)
    }
    if (tries == 1000)
     return -ETIMEDOUT;
+
+   r = gchd_interrupt_pend(d);
+   if (r)
+    return r;
 
    r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, 0x0004);
    if (r)
