@@ -217,12 +217,19 @@ static int gchd_mail_write33(struct gchd *d, const u8 *data, u8 len)
 
 static int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
 {
- u8 b[4] = { command, mode, data >> 8, data };
+ u8 b_old[6] = { 0, 0, command, mode, data >> 8, data };
+ u8 b_new[4] = { command, mode, data >> 8, data };
  int r;
 
- r = gchd_ctrl_write(d, SCMD_REG, 0, 0, b, sizeof(b));
+ if (d->family == GCHD_FAMILY_HDNEW)
+  r = gchd_ctrl_write(d, SCMD_REG, 0, 0, b_new, sizeof(b_new));
+ else
+  r = gchd_ctrl_write(d, SCMD_REG, 0, 0, b_old, sizeof(b_old));
  if (r)
   return r;
+
+ if (d->family == GCHD_FAMILY_OLD)
+  return 0;
 
  if (command == SCMD_IDLE || command == SCMD_INIT ||
      command == SCMD_STATE_CHANGE) {
