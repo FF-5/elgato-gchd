@@ -1,5 +1,5 @@
 obj-m += elgato_gchd.o
-elgato_gchd-objs := core.o fops.o usb.o transcoder.o
+elgato_gchd-objs := core.o fops.o usb.o transcoder.o input.o
 KDIR ?= /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 all:
