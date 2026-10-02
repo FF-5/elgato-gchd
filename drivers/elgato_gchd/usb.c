@@ -467,13 +467,12 @@ int gchd_hw_shutdown(struct gchd *d)
  if (d->hw_enable_register & EB_ENCODER_TRIGGER)
   gchd_do_enable(d, EB_ENCODER_TRIGGER, 0);
 
- r = gchd_scmd(d, SCMD_RESET, 1, 0);
  if (d->hw_enable_register & EB_FIRMWARE_PROCESSOR)
   gchd_do_enable(d, EB_FIRMWARE_PROCESSOR, 0);
  gchd_reg_write16(d, ENABLE_STATE_INDEX, 0);
  d->hw_enable_state = 0;
- if (!r)
-  r = gchd_scmd(d, SCMD_IDLE, 0, 0);
+
+ r = gchd_scmd(d, SCMD_IDLE, 0, 0);
  if (!r)
   r = gchd_scmd(d, SCMD_RESET, 1, 0);
  return r;
