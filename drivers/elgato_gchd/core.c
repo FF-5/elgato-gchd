@@ -457,8 +457,45 @@ static const struct v4l2_ioctl_ops gchd_ioctl={
  .vidioc_dqevent=v4l2_event_dqevent
 };
 
-static int gchd_ctrl(struct v4l2_ctrl*c){return 0;}
-static const struct v4l2_ctrl_ops gchd_ctrl_ops={.s_ctrl=gchd_ctrl};
+static int gchd_ctrl(struct v4l2_ctrl *c)
+{
+ struct gchd *d = container_of(c->handler, struct gchd, ctrls);
+ u8 level;
+
+ if (d->streaming)
+  return -EBUSY;
+
+ switch (c->id) {
+ case V4L2_CID_MPEG_VIDEO_BITRATE:
+  d->bitrate = c->val / 1000;
+  if (d->bitrate < 1)
+   d->bitrate = 1;
+  break;
+ case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
+  if (c->val > V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)
+   return -EINVAL;
+  d->h264_profile = c->val;
+  break;
+ case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
+  switch (c->val) {
+  case V4L2_MPEG_VIDEO_H264_LEVEL_3_0: level = 30; break;
+  case V4L2_MPEG_VIDEO_H264_LEVEL_3_1: level = 31; break;
+  case V4L2_MPEG_VIDEO_H264_LEVEL_3_2: level = 32; break;
+  case V4L2_MPEG_VIDEO_H264_LEVEL_4_0: level = 40; break;
+  case V4L2_MPEG_VIDEO_H264_LEVEL_4_1: level = 41; break;
+  case V4L2_MPEG_VIDEO_H264_LEVEL_4_2: level = 42; break;
+  case V4L2_MPEG_VIDEO_H264_LEVEL_5_0: level = 50; break;
+  case V4L2_MPEG_VIDEO_H264_LEVEL_5_1: level = 51; break;
+  default: return -EINVAL;
+  }
+  d->h264_level = level;
+  break;
+ default:
+  return -EINVAL;
+ }
+ return 0;
+}
+static const struct v4l2_ctrl_ops gchd_ctrl_ops = { .s_ctrl = gchd_ctrl };
 
 int gchd_v4l2_register(struct gchd*d)
 {
@@ -492,7 +529,7 @@ static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
 {
  struct gchd*d;int r;d=kzalloc(sizeof(*d),GFP_KERNEL);if(!d)return-ENOMEM;
  d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;d->family=(enum gchd_family)id->driver_info;mutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
- spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->input=0;d->input_width=1920;d->input_height=1080;d->input_fps_num=60;d->input_fps_den=1;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
+ spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->input=0;d->input_width=1920;d->input_height=1080;d->input_fps_num=60;d->input_fps_den=1;d->bitrate=16000;d->h264_profile=V4L2_MPEG_VIDEO_H264_PROFILE_MAIN;d->h264_level=41;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
  if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;
  r=gchd_hw_init(d);if(r)goto errv4l2;d->hw_initialized=true;
  r=gchd_transcoder_init(d);if(r)goto errhw;usb_set_intfdata(i,d);
