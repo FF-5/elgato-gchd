@@ -315,6 +315,8 @@ static int gchd_post_encoder_calibration(struct gchd *d)
   r = gchd_read_9dcd(d, probes[i], &value);
   if (r) return r;
  }
+ r = gchd_mail_write(d, 0x4e, (u8[]){0x24, d->family == GCHD_FAMILY_HDNEW ? 0x8c : 0x8d}, 2);
+ if (r) return r;
  r = gchd_seq(d, block4e, ARRAY_SIZE(block4e));
  if (r) return r;
  for (i = 4; i < ARRAY_SIZE(probes); ++i) {
