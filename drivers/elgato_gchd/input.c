@@ -196,50 +196,105 @@ static int gchd_mode_regs(struct gchd *d)
 
 static int gchd_encoder_start(struct gchd *d)
 {
- static const u8 magic[] = {0xab,0xa9,0x0f,0xa4,0x55};
  u8 reply[3];
+ u8 magic[] = {0xab,0xa9,0x0f,0xa4,0x55};
  int r, i;
+ u32 state;
 
- r = gchd_do_enable(d, BIT(2) | BIT(1), BIT(2) | BIT(1));
- if (r) return r;
- r = gchd_scmd(d, 4, 0, 0);
- if (r) return r;
+ /*
+  * This is the encoder bring-up sequence from the original configureDevice().
+  * In particular, firmware load occurs after the 0x27f97b processor state and
+  * before the four post-firmware readbacks.
+  */
+ r = gchd_transcoder_init(d);
+ if (r)
+  return r;
+
+ r = gchd_scmd(d, 4, 0x00, 0x0000);
+ if (r)
+  return r;
+
  r = gchd_load_encoder_firmware(d);
- if (r) return r;
+ if (r)
+  return r;
+
+ {
+  u16 v;
+  r = gchd_raw_read16(d, 0x0000, 0x0010, &v);
+  if (r) return r;
+  r = gchd_raw_read16(d, 0x0000, 0x0012, &v);
+  if (r) return r;
+  r = gchd_raw_read16(d, 0x0000, 0x0014, &v);
+  if (r) return r;
+  r = gchd_raw_read16(d, 0x0000, 0x0016, &v);
+  if (r) return r;
+ }
+
+ /* Firmware can transiently return to 0x334455. */
+ for (i = 0; i < 5; ++i) {
+  r = gchd_mail_write(d, 0x33,
+                      (u8[]){0xab,0xa9,0x0f,0xa4,0x5b}, 5);
+  if (r) return r;
+  r = gchd_mail_read(d, 0x33, reply, 3);
+  if (r) return r;
+  r = gchd_do_enable(d, BIT(2), 0);
+  if (r) return r;
+  state = ((u32)reply[0] << 16) | ((u32)reply[1] << 8) | reply[2];
+  if ((state & 0xf8f0f0) == 0x78e040)
+   break;
+ }
 
  r = gchd_do_enable(d, BIT(3), BIT(3));
  if (r) return r;
 
- for (i = 0; i < 50; ++i) {
+ /* Turning on the encoder can temporarily return 0x334455. */
+ for (i = 0; i < 1000; ++i) {
   r = gchd_mail_write(d, 0x33, magic, sizeof(magic));
   if (r) return r;
-  r = gchd_mail_read(d, 0x33, reply, sizeof(reply));
+  r = gchd_mail_read(d, 0x33, reply, 3);
   if (r) return r;
-  if ((reply[0] & 0xf8) == 0x78 &&
-      (reply[1] & 0xf0) == 0xe0 &&
-      (reply[2] & 0xf0) == 0x40)
+  state = ((u32)reply[0] << 16) | ((u32)reply[1] << 8) | reply[2];
+  if (state == 0x27f97b)
    break;
-  usleep_range(10000, 20000);
  }
- if (i == 50)
+ if (i == 1000)
   return -ETIMEDOUT;
 
- r = gchd_do_enable(d, BIT(3), BIT(3));
+ r = gchd_mail_write(d, 0x33, (u8[]){0x28,0x28}, 2);
+ if (r) return r;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x29,0x89,0x5b}, 3);
+ if (r) return r;
+ r = gchd_mail_read(d, 0x33, reply, 1);
  if (r) return r;
 
- for (i = 0; i < 100; ++i) {
-  r = gchd_mail_write(d, 0x33, magic, sizeof(magic));
+ r = gchd_mail_write(d, 0x33, (u8[]){0xdd,0xce,0x3f,0xb2}, 4);
+ if (r) return r;
+ r = gchd_mail_read(d, 0x33, reply, 2);
+ if (r) return r;
+
+ r = gchd_do_enable(d, BIT(4), BIT(4));
+ if (r) return r;
+
+ for (i = 0; i < 1000; ++i) {
+  r = gchd_mail_write(d, 0x33, (u8[]){0x43,0x23,0x84}, 3);
   if (r) return r;
-  r = gchd_mail_read(d, 0x33, reply, sizeof(reply));
+  r = gchd_mail_read(d, 0x33, reply, 1);
   if (r) return r;
-  if (reply[0] == 0x27 && reply[1] == 0xf9 && reply[2] == 0x7b)
+  if (reply[0] == 0xf7)
    break;
-  usleep_range(10000, 20000);
  }
- if (i == 100)
+ if (i == 1000)
   return -ETIMEDOUT;
 
- return gchd_do_enable(d, BIT(4), 0);
+ r = gchd_do_enable(d, BIT(4), 0);
+ if (r) return r;
+
+ r = gchd_mail_write(d, 0x33, (u8[]){0x89,0x89,0xfb}, 3);
+ if (r) return r;
+ r = gchd_mail_read(d, 0x33, reply, 1);
+ if (r) return r;
+
+ return 0;
 }
 
 static int gchd_read_9dcd(struct gchd *d, u8 index, u8 *value)
@@ -584,12 +639,32 @@ int gchd_input_configure(struct gchd *d)
   return 0;
 
  /*
-  * The original driver performs extensive analog front-end calibration and
-  * signal probing here. These writes establish the corresponding input
-  * routing and encoder dimensions without depending on a userspace helper.
-  * Signal-specific calibration remains isolated so it can be extended
-  * without changing the V4L2 interface.
+  * Original ordering:
+  *   processor/encoder bring-up
+  *   common post-encoder blocks
+  *   56-byte sweep
+  *   final processor-state wait + source routing
+  *   input-specific configuration
+  *
+  * Do not move source-specific mailbox writes ahead of encoder bring-up.
   */
+ r = gchd_encoder_start(d);
+ if (r)
+  return r;
+
+ r = gchd_post_encoder_calibration(d);
+ if (r)
+  return r;
+
+ r = gchd_post_encoder_sweep(d);
+ if (r)
+  return r;
+
+ r = gchd_input_finalize(d);
+ if (r)
+  return r;
+
+ /* Source-specific configuration follows the common protocol. */
  if (d->input == 0) {
   static const struct gchd_mail_cmd seq[] = {
    {0x33,3,{0x94,0x41,0x37}},
@@ -610,9 +685,13 @@ int gchd_input_configure(struct gchd *d)
    {0x4e,2,{0x00,0xcc}},
    {0x4e,2,{0xb2,0xcc}},
    {0x4e,2,{0xb5,0xc4}},
-   {0x4e,2,{0x03,0x0c}},
+   {0x03,0,{0}},
   };
-  r = gchd_seq(d, seq, ARRAY_SIZE(seq));
+  /* Correct final Component command: port 0x4e, bytes 03 0c. */
+  static const struct gchd_mail_cmd component_tail = {0x4e,2,{0x03,0x0c}};
+  r = gchd_seq(d, seq, ARRAY_SIZE(seq) - 1);
+  if (!r)
+   r = gchd_seq(d, &component_tail, 1);
  } else {
   static const struct gchd_mail_cmd seq[] = {
    {0x33,3,{0x94,0x41,0x37}},
@@ -634,31 +713,6 @@ int gchd_input_configure(struct gchd *d)
  if (r) return r;
  r = gchd_mode_regs(d);
  if (r) return r;
-
- r = gchd_encoder_start(d);
- if (r)
-  return r;
-
- r = gchd_post_encoder_setup(d);
- if (r)
-  return r;
-
- /*
-  * The original configure.cpp continues with a device-side calibration
-  * sequence after the encoder handshake. Keep it in-kernel so the driver
-  * does not depend on a userspace initialization helper.
-  */
- r = gchd_post_encoder_calibration(d);
- if (r)
-  return r;
-
- r = gchd_post_encoder_sweep(d);
- if (r)
-  return r;
-
- r = gchd_input_finalize(d);
- if (r)
-  return r;
 
  d->input_configured = true;
  dev_info(&d->intf->dev, "input %u configured: %ux%u @ %u/%u\n",
