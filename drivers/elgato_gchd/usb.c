@@ -172,7 +172,7 @@ static int gchd_send_enable_state(struct gchd *d)
 {
  int r;
  u16 status;
- for (;;) {
+ for (int tries = 0; tries < 500; ++tries) {
   r = gchd_reg_write16(d, ENABLE_STATE_INDEX, d->hw_enable_state);
   if (r)
    return r;
@@ -235,7 +235,10 @@ int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
  if (r)
   return r;
 
- return gchd_reg_write16(d, ENABLE_STATE_INDEX, d->hw_enable_state);
+ r = gchd_reg_write16(d, ENABLE_STATE_INDEX, d->hw_enable_state);
+ if (r)
+  return r;
+ return gchd_mail_ready(d);
 }
 
 int gchd_mail_read(struct gchd *d, u8 port, u8 *data, u8 len)
