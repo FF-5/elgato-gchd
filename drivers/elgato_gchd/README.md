@@ -4,32 +4,37 @@ This directory contains the experimental native Linux kernel driver for the Elga
 
 The most important thing to understand when working on this driver is that the device protocol was reverse-engineered in the original libusb userspace implementation. The kernel driver is a port of that protocol, not the authoritative description of what the hardware is supposed to do.
 
-For that reason, this README describes the **hardware initialization and capture setup in terms of the original userspace project first**, and then points to the corresponding kernel implementation. If a kernel-side sequence is unclear, go back to `src/gchd/` and follow the original call chain before changing the DKMS driver.
+The README describes the hardware initialization and capture setup as a generalized protocol sequence expressed in DKMS terminology. The original userspace project remains the protocol/ordering reference, but implementation and debugging should start in the DKMS files.
 
 > **Status:** experimental / pre-hardware-validation. The kernel-side plumbing is in place, but some device-specific signal detection and mode/calibration behavior is still being brought over from the original implementation.
 
 ## Where to look
 
+The entries below deliberately point to the **kernel driver**, not the original userspace source. Use the original project only when you need to verify protocol ordering or the meaning of a low-level operation.
+
 | Question | Start here |
 | --- | --- |
-| What happens when the application starts? | `src/main.cpp` → `GCHD::checkDevice()` → `GCHD::init()` |
-| How is the USB device found? | `src/gchd.cpp` → `GCHD::openDevice()` |
-| How is firmware selected? | `src/gchd.cpp` → `GCHD::checkFirmware()` |
-| How is the USB interface claimed? | `src/gchd.cpp` → `GCHD::getInterface()` |
-| **How does hardware initialization actually work?** | `src/gchd/configure.cpp` → `GCHD::configureDevice()` |
-| Firmware upload and low-level state changes | `src/gchd/commands.cpp` → `dlfirm()`, `scmd()`, `completeStateChange()` |
-| Enable bits / processor / encoder activation | `src/gchd/commands.cpp` → `sendEnableState()`, `doEnable()` |
-| Mailbox protocol | `src/gchd/commands.cpp` → `mailWrite()`, `mailRead()` |
-| Common transcoder setup | `src/gchd/transcoder.cpp` → `transcoderDefaultsInitialize()` |
-| Encoder/output configuration | `src/gchd/transcoder.cpp` → `transcoderSetup()`, `transcoderFinalConfigure()` |
-| HDMI-specific setup | `src/gchd/configure_hdmi.cpp` → `configureHDMI()` |
-| Component-specific setup | `src/gchd/configure_component.cpp` → `configureComponent()` |
-| Composite-specific setup | `src/gchd/configure_composite.cpp` → `configureComposite()` |
-| Input settings and autodetection | `src/gchd/settings.cpp` + the three `configure_*` files |
-| Hardware register/bit definitions | `src/gchd_hardware.hpp` |
-| Userspace streaming after init | `src/streamer.cpp` / `src/gchd.cpp` → `GCHD::stream()` |
-| Kernel USB entry point | `drivers/elgato_gchd/usb.c` → `gchd_probe()` |
-| Kernel V4L2 streaming entry point | `drivers/elgato_gchd/core.c` → `gchd_start()` |
+| Where does kernel-side device initialization begin? | `drivers/elgato_gchd/usb.c` → `gchd_hw_init()` |
+| Where is the initial enable/state information saved? | `drivers/elgato_gchd/usb.c` → `gchd_hw_init()` → `d->hw_enable_state`, `d->hw_enable_register` |
+| Where is the boot completion handshake handled? | `drivers/elgato_gchd/usb.c` → `gchd_interrupt_pend()`, `STATE_COMPLETE_INDEX` handling |
+| Where is idle firmware loaded? | `drivers/elgato_gchd/usb.c` → `gchd_load_firmware()`, `FW_IDLE_OLD`, `FW_IDLE_NEW` |
+| Where are reset/idle state transitions performed? | `drivers/elgato_gchd/usb.c` → `gchd_state_cmd()`, `gchd_scmd()` |
+| Where is processor state checked/enabled? | `drivers/elgato_gchd/usb.c` → `gchd_processor_state()`, `gchd_enable_analog()`, `gchd_do_enable()` |
+| Where are common transcoder defaults initialized? | `drivers/elgato_gchd/transcoder.c` → `gchd_transcoder_init()` |
+| Where is the encoder processor started? | `drivers/elgato_gchd/input.c` → `gchd_encoder_start()` |
+| Where is encoder firmware loaded? | `drivers/elgato_gchd/input.c` → `gchd_load_encoder_firmware()` |
+| Where is mailbox communication implemented? | `drivers/elgato_gchd/usb.c` → `gchd_mail_write()`, `gchd_mail_read()` |
+| Where is input-specific configuration performed? | `drivers/elgato_gchd/input.c` → `gchd_input_configure()` |
+| Where are input-specific mailbox/register sequences issued? | `drivers/elgato_gchd/input.c` → `gchd_seq()` and the `d->input` branches |
+| Where are common sub-blocks configured? | `drivers/elgato_gchd/input.c` → `gchd_setup_subblock()` |
+| Where are color/mode registers programmed? | `drivers/elgato_gchd/input.c` → `gchd_color_yuv()`, `gchd_mode_regs()` |
+| Where is post-encoder setup/calibration performed? | `drivers/elgato_gchd/input.c` → `gchd_post_encoder_setup()`, `gchd_post_encoder_calibration()`, `gchd_post_encoder_sweep()` |
+| Where is the final input configuration state established? | `drivers/elgato_gchd/input.c` → `gchd_input_finalize()` |
+| Where does V4L2 stream-on enter hardware setup? | `drivers/elgato_gchd/core.c` → `gchd_start()` |
+| Where is the final capture/start state requested? | `drivers/elgato_gchd/core.c` / `usb.c` → `gchd_start()` → `gchd_state_cmd()` |
+| Where does USB capture begin? | `drivers/elgato_gchd/core.c` → `gchd_rx()` |
+| Where is MPEG-TS/PES processing performed? | `drivers/elgato_gchd/core.c` → `gchd_ts()`, `gchd_ring_push()`, `gchd_deliver()` |
+| Where is hardware shutdown implemented? | `drivers/elgato_gchd/usb.c` → `gchd_hw_shutdown()` |
 
 ## Hardware initialization and configuration
 
@@ -385,19 +390,19 @@ kernel:    usb.c       -> firmware selection / gchd_load_firmware()
 
 ### Device does not bind
 
-Start with the kernel USB ID table and `gchd_probe()`. If it binds but fails immediately, compare the early part of `GCHD::init()` and `configureDevice()` in the original project.
+Start with the kernel USB ID table and `drivers/elgato_gchd/core.c` → `gchd_probe()`. If it binds but fails immediately, trace the DKMS initialization path into `drivers/elgato_gchd/usb.c` → `gchd_hw_init()`.
 
 ### Firmware upload fails
 
-Compare the kernel firmware path with `src/gchd/commands.cpp` → `dlfirm()`. Verify the selected hardware family and the idle-versus-encoder firmware stage.
+Start at `drivers/elgato_gchd/usb.c` → `gchd_load_firmware()` / `gchd_load_encoder_firmware()`. Verify the selected hardware family and the idle-versus-encoder firmware stage.
 
 ### State transition times out
 
-Compare the kernel state helper with `src/gchd/commands.cpp` → `scmd()`, `stateConfirmedScmd()`, and `completeStateChange()`. Check whether the driver is waiting for the same completion condition and acknowledging the same sticky state bit.
+Start at `drivers/elgato_gchd/usb.c` → `gchd_state_cmd()` / `gchd_scmd()` and trace the completion/state-read helpers. Check whether the driver waits for the required completion condition and acknowledges the sticky state bit.
 
 ### Mailbox operation hangs
 
-Compare `gchd_mail_write()` / `gchd_mail_read()` with `mailWrite()` / `mailRead()`, including readiness handling and the HDNew-specific path.
+Start at `drivers/elgato_gchd/usb.c` → `gchd_mail_write()` / `gchd_mail_read()`, including readiness handling and the HDNew-specific path.
 
 ### `/dev/video*` exists but streaming fails
 
@@ -410,7 +415,7 @@ VIDIOC_STREAMON
     -> encoder/state start
 ```
 
-Then compare the selected input path against the original `configureHDMI()`, `configureComponent()`, or `configureComposite()`.
+Then inspect the selected `d->input` branch in `drivers/elgato_gchd/input.c` and trace its mode/color/configuration helpers. If something is missing, use the original project only as the protocol reference.
 
 ### Streaming starts but no frames arrive
 
@@ -418,7 +423,7 @@ Follow `gchd_rx()` → MPEG-TS parsing → PID `0x1011` → PES/frame buffering 
 
 ### Signal or mode detection is wrong
 
-Do not start by changing the V4L2 code. Compare the corresponding original input-specific implementation first. The original project contains the signal measurements, mode mapping, and hardware register programming that the kernel driver is intended to reproduce.
+Start in `drivers/elgato_gchd/input.c` → `gchd_input_configure()` and its input-specific branches, then follow the mode/color/register helpers. Use the original project only to verify the expected signal measurements, mode mapping, and ordering when the DKMS implementation is incomplete.
 
 ## Shutdown in the original project
 
