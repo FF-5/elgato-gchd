@@ -49,3 +49,13 @@ The existing src/gchd.cpp and src/gchd/ implementation remains the reference
 for the USB control/state machine. It needs to be translated from libusb
 control transfers and C++ configuration code to kernel USB APIs before
 the device can be expected to initialize reliably on a fresh plug-in.
+
+
+### Current hardware initialization status
+
+The kernel module now contains the common transcoder register layer used by the
+original driver, including the fixed MPEG-TS PID layout, H.264 defaults, audio
+defaults, and family-specific encoder firmware loading. The remaining hardware
+bring-up work is the input/signal-mode configuration (HDMI/component/composite),
+followed by enabling the encoder state only after a valid V4L2 mode has been
+selected.
