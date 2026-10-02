@@ -1,194 +1,232 @@
-# Game Capture HD Linux driver
+# Elgato Game Capture HD — Linux V4L2 / DKMS driver
 
-This project provides a userspace driver to natively support the Elgato Game
-Capture HD under Linux and Mac OS X. This is an unofficial driver and in no way
-supported by Elgato.
+This branch contains the Linux kernel V4L2/DKMS implementation of the
+Elgato Game Capture HD USB protocol.
 
-Use at your own risk! This software is experimental and not intended for
-production use.
+The protocol implementation is being ported from the original
+reverse-engineered userspace driver. The goal is **USB-transaction-level
+compatibility**, not merely equivalent video output.
 
-Official Groupchat at Gitter: https://gitter.im/tolga9009/elgato-gchd
+## Device support
 
+| USB VID:PID | Device | Status |
+|---|---|---|
+| 0fd9:0044 | Game Capture HD | supported target |
+| 0fd9:004e | Game Capture HD | supported target |
+| 0fd9:0051 | Game Capture HD | supported target |
+| 0fd9:005d | Game Capture HD | supported target |
+| 0fd9:005c | Game Capture HD60 | unsupported |
+| 0fd9:004f | Game Capture HD60 S | unsupported |
 
-### Supported devices
+Firmware is intentionally not redistributed. The kernel driver expects the
+same firmware images used by the original driver:
 
-* Elgato Game Capture HD
+- old hardware: `mb86h57_h58_idle.bin`
+- old hardware encoder: `mb86h57_h58_enc_h.bin`
+- HD New idle: `mb86m01_assp_nsec_idle.bin`
+- HD New encoder: `mb86m01_assp_nsec_enc_h.bin`
 
-### Unsupported devices
+## Protocol architecture
 
-* Elgato Game Capture HD60 (work in progress)
-* Elgato Game Capture HD60 S
-* Elgato Game Capture HD60 Pro
+The bring-up is ordered as follows:
 
-
-## Firmware
-
-This software needs Elgato Game Capture HD firmware files to work. Due to
-licensing issues, they're not part of this repository.
-
-You need to extract them yourself from the Windows "Game Capture" software,
-or the official Mac OS X drivers. Getting it from each is a different process.
-
-See https://github.com/tolga9009/elgato-gchd/wiki/Firmware
-
-**Note**: If you're a Mac OS X user, simply install the official drivers. You
-don't need to manually extract the firmware files.
-
-## Install
-
-1. Install the following dependencies. Please refer to your specific Linux
-distribution, as package names might differ.
-
-* libusb >= 1.0.20
-* cmake (make)
-* make (make)
-* qt5 (optional) - for GUI support (not usable, work in progress)
-
-2. Compile the driver:
-
-1. Either clone or download the Git repository and extract it.
-
-2. Open up a terminal inside the project's root directory.
-
-3. Create a new directory `build` in the project's root directory and
-navigate into it:
-
-```
-mkdir build
-cd build
-```
-
-4. Run CMake from inside the `build` directory to setup the make
-environment and compile the driver:
-
-```
-cmake ..
-make
-```
-
-5. The compiled executable `gchd` is located in `build/src`. If you have
-Qt5 installed on your system, the GUI `qgchd` will be located at
-`build/src/gui`.
-**Note**: you can copy the firmware files into these directories and test
-the application, without making any system-wide modifications.
-
-3. If the application works for you, you can optionally install it system-wide,
-running `make install` from within the `build` directory. This will install the
-executables to `/usr/bin`.
-
-
-## Usage
-
-### Commandline
-
-```
-Usage:
-./gchd [options] [<destination>]
-For `disk` and `fifo` output formats <destination> is a filename.
-For the `socket` output format, <destination> is [<ip address>][:<port>].
-
-The default for `fifo` is `/tmp/gchd.ts`.
-The default for `socket` is `0.0.0.0:57384`
-There is no default for `disk`, <destination> is required.
-
-Input Options:
--i, -input <input-source>
-Set input source to `hdmi`, `component`, `composite` or `auto` (default)
-With no input, or multiple input types `auto` may detect incorrectly.
-
--c, -color-space <color-space>
-Set the input color space to `yuv`, `rgb`, or `auto` (default).
-Only has meaning for hdmi and component input.
-
-Output Options:
--of, -output-format <format>
-Format is `disk`, `socket, or `fifo`. `disk` is default if a
-<destination> file is specified, otherwise the default is `fifo`
-
--or, -output-resolution <resolution>
-Output resolution can be `ntsc`, `pal`, `720`, `1080`, or `auto`.
-`auto` (default) matches input resolution. `480` and `576` can be used
-instead of `ntsc` and `pal`. You can also use <xres>x<yres>, IE 720x480.
-
--br, -bit-rate <mbit-rate>
-<mbit-rate> is either `auto` which will do relatively high quality output,
-or a bit rate number in mbps. You can do variable bit rate by specifying
-the bit rate in a [max]:[average]:[min] format.
-
-General Options:
--h, -?, -help
-Displays commonly used switches
-
--hh, -??, -full-help
-Displays extended help
+```text
+USB probe
+  |
+  +-- identify hardware family
+  +-- detach/claim interface 0
+  +-- select configuration 1
+  |
+  v
+idle firmware
+  |
+  v
+mailbox processor handshake
+  |
+  +-- enable-state transition
+  +-- firmware processor enable
+  +-- poll mailbox state
+  |
+  v
+transcoder defaults
+  |
+  v
+encoder initialization
+  |
+  +-- encoder firmware
+  +-- control-register readback
+  +-- encoder mailbox polling
+  +-- encoder enable
+  +-- trigger enable / completion polling
+  |
+  v
+input-specific configuration
+  |
+  +-- HDMI
+  |    +-- signal measurements
+  |    +-- resolution / scan / rate detection
+  |    +-- register-bank programming
+  |    +-- common protocol blocks
+  |    +-- color-space programming
+  |
+  +-- Component
+  |    +-- 0x9dcd signal measurements
+  |    +-- resolution / scan / rate detection
+  |    +-- mode-specific register programming
+  |    +-- common protocol blocks
+  |    +-- color-space programming
+  |
+  +-- Composite
+       +-- mailbox mode detection
+       +-- PAL/NTSC branch
+       +-- common protocol blocks
+       +-- color-space programming
+  |
+  v
+final transcoder configuration
+  |
+  v
+SCMD_INIT
+  |
+  v
+SCMD_STATE_CHANGE -> START
+  |
+  v
+bulk IN endpoint 0x81
 ```
 
-Options for `<input-source>` are `composite`, `component` and `hdmi`. Choose,
-whichever source you're using. Some resolutions are not available on all input
-sources. If you do not specify the input source, the driver will attempt
-to autodetect.
+## Mailbox and register model
 
-Options for `<color-space>` are `yuv` and `rgb`. Consoles and PCs output in
-either format and usually don't support switching Color Spaces. If this option
-is set incorrectly, your capture will either have a green or purple tint. The
-autodetection for this is not currently working.
+The original protocol uses several vendor control/mailbox paths. The kernel
+implementation preserves the logical transactions rather than translating
+them into a new device protocol.
 
-Options for `<format>` are `disk`, `fifo` and `socket`. Use `disk`, if you want
-to directly record to your harddrive. Else, FIFO will cover almost all use cases
-(default). Please note, that FIFOs won't grow in size, making them optimal for
-streaming and more controlled capturing on systems with limited amount of memory
-or SSDs. When set to `socket`, this driver will stream the output via UDP.
+Important protocol operations include:
 
-You can specify the UDP ip address and port to bind to for for udp streaming
-via the `<destination> field passed on the command line.
+- mailbox writes and reads on ports `0x33`, `0x44`, `0x4c`, and `0x4e`
+- `0x9dcd` indexed measurements
+- enable-state and enable-register transitions
+- SCMD commands
+- transcoder bitfield writes
+- repeated mailbox polling with protocol-specific masks
+- firmware transfers over bulk OUT endpoint `0x02`
+- capture data over bulk IN endpoint `0x81`
 
-Please note, UDP streaming is highly experimental at this point. Unicast works
-well, but Multicasting has performance issues, causing artifacts. Multicast IPs
-are in the range of `224.0.0.0` - `239.255.255.255` (RFC 5771).
+The source-specific configuration preserves the reference driver's branch
+ordering, including the waits used for signal lock and mailbox completion.
 
+## Input branches
 
-### General
+### HDMI
 
-This driver must be run as root, as it needs to access your Game Capture HD
-device. Under Linux, you can alternatively follow the directions at:
+The HDMI path measures the input through the `0x9dcd` registers, determines
+the supported resolution/scan mode, programs the corresponding `0x4e`
+register banks, executes the common protocol blocks, and programs the
+transcoder before issuing the START state transition.
 
-https://github.com/tolga9009/elgato-gchd/wiki/Configuring-the-Driver-to-be-Run-Without-Root-Permissions
+### Component
 
-This will make it accessible to non-root users.
+The Component path performs the reference `0x66/0x65` and `0x68/0x67`
+measurements, averages ten samples, waits for signal stabilization, detects:
 
-If no commandline options are set, the device will autodetect what source you
-have, HDMI, Component, or Composite. It will also autodetect the streamed
-resolution and colorspace. It will not however handle these changing on the fly.
-The detection for whether you are using HDMI/Component/Composite may malfunction
-in the following cases:
+- 1080p30
+- 1080i60
+- 720p60
+- 576p50
+- 576i50
+- 480p60
+- 480i60
 
-* There is no signal at all. It often will detect no signal as a signal of
-various types.
-* Multiple cables are connected between devices, IE: HDMI and Composite. Just
-being connected through to another device, even one that is off, can mess up
-the autodetection.
-* Multiple signals being sent simultaneously.
+It then follows the corresponding register-bank branches and completes the
+common protocol sequence before SCMD START.
 
-By default, a FIFO will be created at `/tmp/gchd.ts`. You can open it up using
-any media player, which supports reading from pipes (e.g. VLC or obs-studio).
-There will be a slight delay, which is a hardware limitation and can't be worked
-around.
+### Composite
 
-If you're done using this driver, close the file, stop the terminal using
-"Ctrl + C" and wait for the program to successfully terminate. The driver will
-reset your device. If you interrupt this step, it will leave your device in
-an undefined state and you will need to manually reset your device by
-reconnecting it.
+The Composite path uses the reference mailbox mode probe. The low nibble of
+the reply selects:
 
-Currently supported input sources:
+- `6` -> NTSC / 480i60
+- `7` -> PAL / 576i50
 
-* HDMI: 480p60 (NTSC), 576p60 (PAL), 720p60, 1080i60, 1080p60
-* Component: 480i60 (NTSC), 480p60 (NTSC), 576i50 (PAL), 576p50 (PAL), 720p60,
-1080i60, 1080p60
-* Composite: 480i60 (NTSC), 576i50 (PAL)
+It then follows the PAL/NTSC-specific register and common-block sequence.
 
+## Shutdown
 
-## License
+The shutdown path mirrors the reference ordering:
 
-This project is made available under the MIT License. For more information,
-please refer to the LICENSE file.
+```text
+stop stream
+  |
+  v
+0x44 / 0x33 shutdown preamble
+  |
+  v
+BANKSEL = 0
+  |
+  v
+read enable state
+  |
+  v
+disable transcoder output
+  |
+  v
+SCMD_INIT
+  |
+  v
+clear enable state
+  |
+  v
+disable firmware processor
+  |
+  v
+SCMD_IDLE
+  |
+  v
+SCMD_RESET
+```
+
+## Current verification status
+
+The implementation has been mechanically checked for balanced C braces and for
+remaining C++ constructs in the kernel protocol files.
+
+The following are ported into the kernel branch:
+
+- hardware-family detection
+- idle and encoder firmware sequencing
+- pre-encoder processor handshake
+- encoder mailbox polling
+- common protocol blocks A/B1/B2/B3/C
+- HDMI configuration sequence
+- Component configuration sequence
+- Composite configuration sequence
+- final transcoder configuration
+- SCMD initialization/start sequencing
+- shutdown/reset ordering
+
+**Not yet claimed as formally 1:1:** a real hardware usbmon comparison of every
+control and bulk transaction, and a successful out-of-tree kernel build on a
+target system. Those are the final verification steps before calling the
+implementation protocol-identical.
+
+## Source mapping
+
+The protocol port is derived from the original reverse-engineering sources:
+
+- `src/gchd/configure.cpp`
+- `src/gchd/configure_hdmi.cpp`
+- `src/gchd/configure_component.cpp`
+- `src/gchd/configure_composite.cpp`
+- `src/gchd/transcoder.cpp`
+- `src/gchd_hardware.hpp`
+
+Kernel implementation:
+
+- `drivers/elgato_gchd/usb.c`
+- `drivers/elgato_gchd/input.c`
+- `drivers/elgato_gchd/protocol_common.c`
+- `drivers/elgato_gchd/transcoder.c`
+
+The protocol documentation intentionally describes USB operations, states,
+branches, register banks, mailbox exchanges, waits, and final device states
+rather than exposing userspace C++ function names.
