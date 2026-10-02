@@ -203,7 +203,7 @@ int gchd_common_block_a(struct gchd *d)
  return 0;
 }
 
-int gchd_common_block_b1(struct gchd *d)
+int gchd_common_block_b1(struct gchd *d, bool mysteryParameter)
 {
 	GCHD_MW(d, 0x33, 0x99, 0x89, 0x89);
 	GCHD_MR(d, 0x33, 1); //EXPECTED {0x6e}
