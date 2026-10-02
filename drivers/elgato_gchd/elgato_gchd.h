@@ -64,6 +64,10 @@ struct gchd {
  u16 hw_enable_state;
  u16 hw_enable_register;
  u32 width, height, sizeimage;
+ u32 input;
+ u32 input_width, input_height;
+ u32 input_fps_num, input_fps_den;
+ bool input_interlaced;
 };
 
 int gchd_hw_init(struct gchd *);
