@@ -116,7 +116,7 @@ static int gchd_setup_subblock(struct gchd *d)
  return gchd_seq(d, ntsc_p, ARRAY_SIZE(ntsc_p));
 }
 
-static int gchd_color_yuv(struct gchd *d)
+static int __maybe_unused gchd_color_yuv(struct gchd *d)
 {
  static const struct gchd_mail_cmd component_prefix[] = {
   {0x4e,2,{0x0b,0x4c}}, {0x4e,2,{0x0c,0x4c}},
@@ -335,7 +335,7 @@ static int gchd_read_9dcd(struct gchd *d, u8 index, u8 *value)
  return gchd_mail_read(d, 0x33, value, 1);
 }
 
-static int gchd_post_encoder_calibration(struct gchd *d)
+static int __maybe_unused gchd_post_encoder_calibration(struct gchd *d)
 {
  static const struct gchd_mail_cmd common44[] = {
   {0x44,2,{0x02,0xc9}}, {0x44,2,{0x14,0xd2}}, {0x44,2,{0x3c,0x6b}},
@@ -420,7 +420,7 @@ static int gchd_post_encoder_calibration(struct gchd *d)
  return 0;
 }
 
-static int gchd_post_encoder_setup(struct gchd *d)
+static int __maybe_unused gchd_post_encoder_setup(struct gchd *d)
 {
  static const struct gchd_mail_cmd tail[] = {
   {0x33,1,{0x28}},
@@ -505,7 +505,7 @@ static int gchd_post_encoder_setup(struct gchd *d)
  return 0;
 }
 
-static int gchd_post_encoder_sweep(struct gchd *d)
+static int __maybe_unused gchd_post_encoder_sweep(struct gchd *d)
 {
  static const u8 addr[][2] = {
   {0x03,0x76},{0x3b,0x76},{0x73,0x76},{0xab,0x76},{0xe3,0x76},
@@ -556,7 +556,7 @@ static int gchd_post_encoder_sweep(struct gchd *d)
  return gchd_mail_write(d, 0x33, (u8[]){0xaa,0x8d,0x35}, 3);
 }
 
-static int gchd_input_finalize(struct gchd *d)
+static int __maybe_unused gchd_input_finalize(struct gchd *d)
 {
  u8 reply[3];
  u8 magic[5] = {0xab, 0xa9, 0x0f, 0xa4, 0x5b};
@@ -808,7 +808,7 @@ int gchd_color_space_exact(struct gchd *d)
   {0x4e,2,{0xa8,0xcd}},{0x4e,2,{0xa9,0xec}},
   {0x4e,2,{0xaa,0xcc}},
  };
- static const struct gchd_mail_cmd rgb[] = {
+ static const struct gchd_mail_cmd rgb[] __maybe_unused = {
   {0x4e,2,{0x92,0x8c}},{0x4e,2,{0x93,0xcb}},
   {0x4e,2,{0x94,0xca}},{0x4e,2,{0x95,0xce}},
   {0x4e,2,{0x96,0x22}},{0x4e,2,{0x97,0xb2}},
@@ -836,7 +836,7 @@ int gchd_color_space_exact(struct gchd *d)
 
 static int gchd_configure_composite_exact(struct gchd *d)
 {
- u8 v, reply;
+ u8 v;
  int r;
 #define M3(a,b,c) do { u8 x[]={a,b,c}; r=gchd_mail_write(d,0x33,x,3); if(r)return r; } while(0)
 #define MW(p,a,b) do { u8 x[]={a,b}; r=gchd_mail_write(d,p,x,2); if(r)return r; } while(0)
@@ -891,7 +891,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
 
 static int gchd_configure_component_exact(struct gchd *d)
 {
- u8 v, reply;
+ u8 v;
  u32 sum6867=0,sum6665=0,count6867=0,count6665=0;
  u32 value6867,value6665;
  int r,i,j;
