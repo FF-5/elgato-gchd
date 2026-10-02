@@ -164,6 +164,6 @@ errv4l2:gchd_v4l2_unregister(d);errbuf:kfree(d->usb_buf);err:usb_put_dev(d->udev
 }
 static void gchd_disconnect(struct usb_interface*i)
 {struct gchd*d=usb_get_intfdata(i);if(!d)return;usb_set_intfdata(i,NULL);d->disconnected=true;if(d->rx_thread)kthread_stop(d->rx_thread);
- gchd_v4l2_unregister(d);gchd_ring_free(&d->ring);kfree(d->usb_buf);usb_put_dev(d->udev);kfree(d);}
+ if(d->hw_initialized)gchd_hw_shutdown(d);gchd_v4l2_unregister(d);gchd_ring_free(&d->ring);kfree(d->usb_buf);usb_put_dev(d->udev);kfree(d);}
 static struct usb_driver gchd_usb={.name="elgato_gchd",.id_table=gchd_ids,.probe=gchd_probe,.disconnect=gchd_disconnect};
 module_usb_driver(gchd_usb);
