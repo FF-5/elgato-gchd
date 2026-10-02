@@ -194,6 +194,9 @@ static int gchd_mode_regs(struct gchd *d)
  return 0;
 }
 
+static int gchd_post_encoder_prefix(struct gchd *d);
+static int __maybe_unused gchd_post_encoder_sweep(struct gchd *d);
+
 static int gchd_encoder_start(struct gchd *d)
 {
  u8 reply[3];
