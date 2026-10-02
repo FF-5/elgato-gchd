@@ -631,93 +631,144 @@ static int gchd_input_finalize(struct gchd *d)
  return 0;
 }
 
+static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
+                                  u32 *sum6665, u32 *count6665, bool *rgb)
+{
+ u8 v;
+ u16 a, b;
+ int r;
+ r = gchd_mail_write(d, 0x4e, (u8[]){0x00,0xcc}, 2); if (r) return r;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x66}, 3); if (r) return r;
+ r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; b = (u16)v << 8;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x65}, 3); if (r) return r;
+ r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; b |= v;
+ *sum6665 += b; (*count6665)++;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x64}, 3); if (r) return r;
+ r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; a = (u16)v << 8;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x63}, 3); if (r) return r;
+ r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; a |= v;
+ *sum6463 += a; (*count6463)++;
+ r = gchd_mail_write(d, 0x4e, (u8[]){0x00,0xce}, 2); if (r) return r;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x34}, 3); if (r) return r;
+ r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r;
+ *rgb = !!(v & BIT(2));
+ return 0;
+}
+
+static int gchd_configure_hdmi_exact(struct gchd *d)
+{
+ u8 v, reply;
+ u32 sum6665=0, sum6463=0, count6665=0, count6463=0;
+ u32 value6665, value6463;
+ int r, i, j;
+
+#define MW(p,a,b) do { u8 __x[]={a,b}; r=gchd_mail_write(d,p,__x,2); if(r)return r; } while(0)
+#define M3(a,b,c) do { u8 __x[]={a,b,c}; r=gchd_mail_write(d,0x33,__x,3); if(r)return r; } while(0)
+#define R9(i) do { M3(0x9d,0xcd,i); r=gchd_mail_read(d,0x33,&v,1); if(r)return r; } while(0)
+
+ M3(0x94,0x41,0x37); M3(0x94,0x4a,0xaf); M3(0x94,0x4b,0xaf); R9(0x3f);
+ MW(0x4e,0x00,0xcc); R9(0x94); MW(0x4e,0xab,0x4c); R9(0x3f);
+ MW(0x4e,0x00,0xce); MW(0x4e,0x1b,0x33); R9(0x3f);
+ MW(0x4e,0x00,0xcc); R9(0x88); MW(0x4e,0xb7,0xce); MW(0x4e,0xb8,0xdc);
+ MW(0x4e,0xb8,0xcc); R9(0x3f); MW(0x4e,0x00,0xce); MW(0x4e,0x07,0x38);
+ MW(0x4e,0x07,0xc8); R9(0x3f); MW(0x4e,0x00,0xcc); MW(0x4e,0x51,0x45);
+ R9(0x88); MW(0x4e,0xb7,0xcc);
+ r=gchd_do_enable(d,0,0); if(r)return r;
+ R9(0x3f); MW(0x4e,0x00,0xce); R9(0x3e); MW(0x4e,0x01,0xad);
+ R9(0x3b); MW(0x4e,0x04,0xcd); MW(0x4e,0x06,0xc4); R9(0x36);
+ MW(0x4e,0x09,0xe4); R9(0x3f); MW(0x4e,0x00,0xcc); R9(0x6b);
+ MW(0x4e,0x54,0xec); R9(0x93); MW(0x4e,0xac,0x4c); R9(0x3f);
+ MW(0x4e,0x00,0x4c); R9(0x3f); MW(0x4e,0x00,0xcc); R9(0xf1);
+ MW(0x4e,0xce,0x4c); R9(0xf0); MW(0x4e,0xcf,0xce); R9(0x3f);
+
+ for (i=0;i<10;i++) {
+  sum6665=sum6463=count6665=count6463=0;
+  for (j=0;j<10;j++) {
+   r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->signal_present);
+   if(r)return r;
+  }
+  value6665=sum6665/count6665;
+  if (i >= 2 && (value6665 < 0xad43 || value6665 > 0xad57))
+   break;
+  msleep(200);
+ }
+ if (i==10) return -ETIMEDOUT;
+
+ if (d->input_width == 0) {
+  value6463=sum6463/count6463;
+  if (value6463 >= 0xb6cd && value6463 <= 0xb6e1) { d->input_width=1920; d->input_height=1080; d->input_interlaced=false; }
+  else if (value6463 >= 0xb077 && value6463 <= 0xb08b) { d->input_width=1920; d->input_height=1080; d->input_interlaced=true; }
+  else if (value6463 >= 0xb052 && value6463 <= 0xb066) { d->input_width=1280; d->input_height=720; d->input_interlaced=false; }
+  else if (value6463 >= 0xb0b5 && value6463 <= 0xb0cd) { d->input_width=720; d->input_height=480; d->input_interlaced=false; }
+  else return -EINVAL;
+  if (d->input_height==480 && value6665 >= 0xbb6b && value6665 <= 0xbb7f)
+   d->input_height=576;
+ }
+ if (!d->input_fps_num) {
+  d->input_fps_num = (d->input_height==576)?50:60; d->input_fps_den=1;
+ }
+
+ MW(0x4e,0x00,0xcc);
+ if (d->input_width==1920) { MW(0x4e,0xb2,0xc4); MW(0x4e,0xb5,0xd0); }
+ else if (d->input_width==1280) { MW(0x4e,0xb2,0xcc); MW(0x4e,0xb5,0xcc); }
+ else { MW(0x4e,0xb2,0xcf); MW(0x4e,0xb5,0xcc); }
+ MW(0x4e,0x00,0xce); MW(0x4e,0x1b,0x30);
+ MW(0x4e,0x1f,0xdc); R9(0x29); MW(0x4e,0x1f,0xcc); R9(0x3b);
+ MW(0x4e,0x04,0xcf); MW(0x4e,0x04,0xcd); R9(0x3f); MW(0x4e,0x00,0xcc);
+ MW(0x4e,0x40,0xcc); R9(0x3f); MW(0x4e,0x00,0xcd);
+ MW(0x4e,0x00,0xcc); MW(0x4e,0xb0,0xe8); MW(0x4e,0xb1,0x0c); MW(0x4e,0xad,0xc9);
+ R9(0x8f); MW(0x4e,0xb0,0xe9); R9(0x3f);
+ MW(0x4e,0x00,0xcc); MW(0x4e,0xab,0xcc);
+ M3(0x99,0x89,0xf5); r=gchd_mail_read(d,0x33,&reply,1); if(r)return r;
+ M3(0x99,0x89,0xfd); r=gchd_mail_read(d,0x33,&reply,1); if(r)return r;
+ M3(0x99,0x89,0xf5); r=gchd_mail_read(d,0x33,&reply,1); if(r)return r;
+ M3(0x99,0x89,0xfc); r=gchd_mail_read(d,0x33,&reply,1); if(r)return r;
+ M3(0x99,0x89,0xf3); r=gchd_mail_read(d,0x33,&reply,1); if(r)return r;
+ r=gchd_mail_write(d,0x4c,(u8[]){0x0c,0x89},2); if(r)return r;
+ M3(0x99,0x89,0xf5); r=gchd_mail_read(d,0x33,&reply,1); if(r)return r;
+ r=gchd_mail_write(d,0x4c,(u8[]){0x0e,0x65},2); if(r)return r;
+ r=gchd_mail_write(d,0x4c,(u8[]){0x0e,0x64},2); if(r)return r;
+
+ r=gchd_common_block_a(d); if(r)return r;
+ r=gchd_setup_subblock_exact(d); if(r)return r;
+ M3(0x99,0x89,0x6b); r=gchd_mail_read(d,0x33,&reply,1); if(r)return r;
+ r=gchd_mail_write(d,0x4c,(u8[]){0xc0,0x80},2); if(r)return r;
+ r=gchd_mail_write(d,0x4c,(u8[]){0xa2,0x77},2); if(r)return r;
+ M3(0x99,0x89,0x58); r=gchd_mail_read(d,0x33,&reply,1); if(r)return r;
+ r=gchd_mail_write(d,0x4c,(u8[]){0xc0,0x77},2); if(r)return r;
+
+ r=gchd_common_block_b1(d, d->input_width != 1920 && !d->input_interlaced); if(r)return r;
+ r=gchd_common_block_b2(d); if(r)return r;
+ r=gchd_common_block_b3(d); if(r)return r;
+ r=gchd_common_block_c(d); if(r)return r;
+ r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->signal_present); if(r)return r;
+
+ MW(0x4e,0x00,0xcc);
+ r=gchd_color_space_exact(d); if(r)return r;
+ return 0;
+#undef MW
+#undef M3
+#undef R9
+}
+
 int gchd_input_configure(struct gchd *d)
 {
  int r;
-
- if (d->input_configured)
-  return 0;
-
- /*
-  * Original ordering:
-  *   processor/encoder bring-up
-  *   common post-encoder blocks
-  *   56-byte sweep
-  *   final processor-state wait + source routing
-  *   input-specific configuration
-  *
-  * Do not move source-specific mailbox writes ahead of encoder bring-up.
-  */
- r = gchd_encoder_start(d);
- if (r)
-  return r;
-
- r = gchd_post_encoder_calibration(d);
- if (r)
-  return r;
-
- r = gchd_post_encoder_sweep(d);
- if (r)
-  return r;
-
- r = gchd_input_finalize(d);
- if (r)
-  return r;
-
- /* Source-specific configuration follows the common protocol. */
- if (d->input == 0) {
-  static const struct gchd_mail_cmd seq[] = {
-   {0x33,3,{0x94,0x41,0x37}},
-   {0x33,3,{0x94,0x4a,0xaf}},
-   {0x33,3,{0x94,0x4b,0xaf}},
-   {0x4e,2,{0x00,0xcc}},
-   {0x4e,2,{0xb2,0xc4}},
-   {0x4e,2,{0xb5,0xd0}},
-   {0x4e,2,{0x00,0xce}},
-   {0x4e,2,{0x1b,0x30}},
-  };
-  r = gchd_seq(d, seq, ARRAY_SIZE(seq));
- } else if (d->input == 1) {
-  static const struct gchd_mail_cmd seq[] = {
-   {0x33,3,{0x94,0x41,0x37}},
-   {0x33,3,{0x94,0x4a,0xaf}},
-   {0x33,3,{0x94,0x4b,0xaf}},
-   {0x4e,2,{0x00,0xcc}},
-   {0x4e,2,{0xb2,0xcc}},
-   {0x4e,2,{0xb5,0xc4}},
-   {0x03,0,{0}},
-  };
-  /* Correct final Component command: port 0x4e, bytes 03 0c. */
-  static const struct gchd_mail_cmd component_tail = {0x4e,2,{0x03,0x0c}};
-  r = gchd_seq(d, seq, ARRAY_SIZE(seq) - 1);
-  if (!r)
-   r = gchd_seq(d, &component_tail, 1);
+ if (d->input_configured) return 0;
+ r=gchd_encoder_start(d); if(r)return r;
+ if (d->input==0) {
+  r=gchd_configure_hdmi_exact(d); if(r)return r;
  } else {
-  static const struct gchd_mail_cmd seq[] = {
-   {0x33,3,{0x94,0x41,0x37}},
-   {0x33,3,{0x94,0x4a,0xaf}},
-   {0x33,3,{0x94,0x4b,0xaf}},
-   {0x33,3,{0x89,0x89,0xfa}},
-   {0x44,2,{0x07,0x8a}},
-   {0x44,2,{0x08,0x9b}},
-   {0x44,2,{0x09,0x7a}},
-  };
-  r = gchd_seq(d, seq, ARRAY_SIZE(seq));
+  r=gchd_post_encoder_calibration(d); if(r)return r;
+  r=gchd_post_encoder_sweep(d); if(r)return r;
+  r=gchd_input_finalize(d); if(r)return r;
+  r=gchd_setup_subblock_exact(d); if(r)return r;
+  r=gchd_color_yuv(d); if(r)return r;
  }
- if (r)
-  return r;
-
- r = gchd_setup_subblock(d);
- if (r) return r;
- r = gchd_color_yuv(d);
- if (r) return r;
- r = gchd_mode_regs(d);
- if (r) return r;
-
- d->input_configured = true;
- dev_info(&d->intf->dev, "input %u configured: %ux%u @ %u/%u\n",
-          d->input, d->input_width, d->input_height,
-          d->input_fps_num, d->input_fps_den);
+ r=gchd_mode_regs(d); if(r)return r;
+ r=gchd_scmd(d,0xa0,0,0); if(r)return r;
+ r=gchd_scmd(d,0x00,0,1); if(r)return r;
+ d->input_configured=true;
  return 0;
 }
 
