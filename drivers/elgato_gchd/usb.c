@@ -3,6 +3,9 @@
 #include <linux/module.h>
 #include "elgato_gchd.h"
 
+MODULE_FIRMWARE("gchd/mb86m01_assp_nsec_idle.bin");
+MODULE_FIRMWARE("gchd/mb86m01_assp_nsec_enc_h.bin");
+
 #define REQ_READ  0xc0
 #define REQ_WRITE 0x40
 
