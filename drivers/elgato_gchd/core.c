@@ -4,7 +4,7 @@
 #include <linux/timekeeping.h>
 #include "elgato_gchd.h"
 
-MODULE_DESCRIPTION("Elgato Game Capture HD 0fd9:005d V4L2 driver");
+MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("0.2.0");
@@ -12,6 +12,53 @@ MODULE_VERSION("0.2.0");
 static unsigned long ring_bytes = GCHD_RING_BYTES;
 module_param(ring_bytes, ulong, 0644);
 MODULE_PARM_DESC(ring_bytes, "Maximum encoded video bytes retained in RAM");
+
+struct gchd_mode {
+ u32 width;
+ u32 height;
+ u32 fps_num;
+ u32 fps_den;
+ bool interlaced;
+};
+
+static const struct gchd_mode gchd_modes[] = {
+ {1920, 1080, 60, 1, false},
+ {1920, 1080, 60, 1, true},
+ {1280,  720, 60, 1, false},
+ { 720,  576, 50, 1, true},
+ { 720,  480, 60, 1, true},
+};
+
+static const struct gchd_mode *gchd_find_mode(u32 width, u32 height,
+                                                bool interlaced)
+{
+ unsigned int i;
+
+ for (i = 0; i < ARRAY_SIZE(gchd_modes); ++i)
+  if (gchd_modes[i].width == width &&
+      gchd_modes[i].height == height &&
+      gchd_modes[i].interlaced == interlaced)
+   return &gchd_modes[i];
+
+ return NULL;
+}
+
+static bool gchd_mode_allowed(const struct gchd *d,
+                              const struct gchd_mode *m)
+{
+ switch (d->input) {
+ case 0: /* HDMI: 480p/576p/720p/1080i/1080p are supported by the original. */
+  return !m->interlaced ||
+         (m->width == 1920 && m->height == 1080);
+ case 1: /* Component: progressive/interlaced HD plus PAL/NTSC interlaced. */
+  return true;
+ case 2: /* Composite: SD interlaced only. */
+  return m->interlaced && m->width == 720 &&
+         (m->height == 480 || m->height == 576);
+ default:
+  return false;
+ }
+}
 
 int gchd_ring_push(struct gchd_ring *r, const u8 *data, size_t len)
 {
@@ -88,7 +135,7 @@ static void gchd_deliver(struct gchd *d)
 static int gchd_rx(void *arg)
 {
  struct gchd *d=arg; u8 *pes; size_t n=0; int ret,actual,pos;
- pes=kmalloc(GCHD_MAX_FRAME,GFP_KERNEL);if(!pes)return -ENOMEM;
+ pes=kmalloc(GCHD_MAX_FRAME,GFP_KERNEL);if(!pes)return-ENOMEM;
  while(!kthread_should_stop()&&!d->disconnected){
   ret=usb_bulk_msg(d->udev,usb_rcvbulkpipe(d->udev,GCHD_EP_IN),d->usb_buf,
                    GCHD_USB_BUFSIZE,&actual,1000);
@@ -132,24 +179,35 @@ static void gchd_stop(struct vb2_queue*q)
 {struct gchd*d=vb2_get_drv_priv(q);struct gchd_buffer*b,*tmp;unsigned long f;d->streaming=false;
  gchd_input_stop(d);
  spin_lock_irqsave(&d->qlock,f);list_for_each_entry_safe(b,tmp,&d->queued,list){list_del(&b->list);vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);}spin_unlock_irqrestore(&d->qlock,f);}
-static const struct vb2_ops gchd_vb2_ops={.queue_setup=gchd_queue_setup,.buf_queue=gchd_buf_queue,.start_streaming=gchd_start,.stop_streaming=gchd_stop,.wait_prepare=vb2_ops_wait_prepare,.wait_finish=vb2_ops_wait_finish};
+
+static const struct vb2_ops gchd_vb2_ops={
+ .queue_setup=gchd_queue_setup,.buf_queue=gchd_buf_queue,.start_streaming=gchd_start,
+ .stop_streaming=gchd_stop,.wait_prepare=vb2_ops_wait_prepare,.wait_finish=vb2_ops_wait_finish
+};
 
 static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
 {
  struct gchd *d = video_drvdata(f);
  unsigned int index = in->index;
+
  if (index > 2) return -EINVAL;
  memset(in, 0, sizeof(*in));
  in->index = index;
- if (in->index == 0) {
+ if (index == 0) {
   strscpy(in->name, "HDMI", sizeof(in->name));
- } else if (in->index == 1) {
+ } else if (index == 1) {
   strscpy(in->name, "Component", sizeof(in->name));
  } else {
   strscpy(in->name, "Composite", sizeof(in->name));
  }
  in->type = V4L2_INPUT_TYPE_CAMERA;
- if (in->index == d->input) in->status = V4L2_IN_ST_NO_SIGNAL;
+
+ /*
+  * Do not claim V4L2_IN_ST_NO_SIGNAL here. Signal detection is device-side
+  * and is not yet fully exposed through the V4L2 status ioctl path.
+  */
+ if (index == d->input)
+  in->status = 0;
  return 0;
 }
 
@@ -162,9 +220,12 @@ static int gchd_ginput(struct file *f, void *p, unsigned int *i)
 static int gchd_sinput(struct file *f, void *p, unsigned int i)
 {
  struct gchd *d = video_drvdata(f);
+
  if (i > 2) return -EINVAL;
  if (vb2_is_busy(&d->vbq)) return -EBUSY;
+
  d->input = i;
+ d->input_configured = false;
  switch (i) {
  case 0:
   d->input_width = 1920; d->input_height = 1080;
@@ -190,20 +251,129 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
 static int gchd_querycap(struct file*f,void*p,struct v4l2_capability*c)
 {strscpy(c->driver,"elgato-gchd",sizeof(c->driver));strscpy(c->card,"Elgato Game Capture HD",sizeof(c->card));
  strscpy(c->bus_info,"usb",sizeof(c->bus_info));c->device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_STREAMING|V4L2_CAP_READWRITE;c->capabilities=c->device_caps|V4L2_CAP_DEVICE_CAPS;return 0;}
-static int gchd_enum(struct file*f,void*p,struct v4l2_fmtdesc*x){if(x->index)return-EINVAL;x->pixelformat=V4L2_PIX_FMT_H264;return 0;}
+
+static int gchd_enum(struct file*f,void*p,struct v4l2_fmtdesc*x)
+{
+ if (x->index) return -EINVAL;
+ x->pixelformat=V4L2_PIX_FMT_H264;
+ strscpy(x->description, "H.264", sizeof(x->description));
+ return 0;
+}
+
+static int gchd_enum_framesizes(struct file *f, void *p,
+                                struct v4l2_frmsizeenum *s)
+{
+ struct gchd *d = video_drvdata(f);
+ unsigned int i, n = 0;
+
+ if (s->pixel_format != V4L2_PIX_FMT_H264)
+  return -EINVAL;
+
+ for (i = 0; i < ARRAY_SIZE(gchd_modes); ++i) {
+  if (!gchd_mode_allowed(d, &gchd_modes[i]))
+   continue;
+  if (n++ == s->index) {
+   s->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+   s->discrete.width = gchd_modes[i].width;
+   s->discrete.height = gchd_modes[i].height;
+   return 0;
+  }
+ }
+ return -EINVAL;
+}
+
+static int gchd_enum_frameintervals(struct file *f, void *p,
+                                    struct v4l2_frmivalenum *v)
+{
+ struct gchd *d = video_drvdata(f);
+ const struct gchd_mode *m;
+
+ if (v->pixel_format != V4L2_PIX_FMT_H264)
+  return -EINVAL;
+
+ m = gchd_find_mode(v->width, v->height,
+                    v->height == 1080 && d->input_interlaced);
+ if (!m || !gchd_mode_allowed(d, m) || v->index != 0)
+  return -EINVAL;
+
+ v->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+ v->discrete.numerator = m->fps_den;
+ v->discrete.denominator = m->fps_num;
+ return 0;
+}
+
 static int gchd_gfmt(struct file*f,void*p,struct v4l2_format*x)
-{struct gchd*d=video_drvdata(f);x->fmt.pix.width=d->width;x->fmt.pix.height=d->height;x->fmt.pix.pixelformat=V4L2_PIX_FMT_H264;
- x->fmt.pix.field=V4L2_FIELD_NONE;x->fmt.pix.sizeimage=d->sizeimage;x->fmt.pix.colorspace=V4L2_COLORSPACE_REC709;return 0;}
+{
+ struct gchd*d=video_drvdata(f);
+ x->fmt.pix.width=d->width;x->fmt.pix.height=d->height;
+ x->fmt.pix.pixelformat=V4L2_PIX_FMT_H264;
+ x->fmt.pix.field=d->input_interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+ x->fmt.pix.sizeimage=d->sizeimage;
+ x->fmt.pix.colorspace=V4L2_COLORSPACE_REC709;
+ return 0;
+}
+
 static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
-{struct gchd*d=video_drvdata(f);if(vb2_is_busy(&d->vbq)||x->fmt.pix.pixelformat!=V4L2_PIX_FMT_H264)return-EINVAL;
- d->width=clamp_t(u32,x->fmt.pix.width,320,1920);d->height=clamp_t(u32,x->fmt.pix.height,240,1080);d->sizeimage=GCHD_MAX_FRAME;return gchd_gfmt(f,p,x);}
+{
+ struct gchd*d=video_drvdata(f);
+ const struct gchd_mode *m;
+ bool interlaced = x->fmt.pix.field == V4L2_FIELD_INTERLACED;
+
+ if (vb2_is_busy(&d->vbq) || x->fmt.pix.pixelformat!=V4L2_PIX_FMT_H264)
+  return-EINVAL;
+
+ m = gchd_find_mode(x->fmt.pix.width, x->fmt.pix.height, interlaced);
+ if (!m || !gchd_mode_allowed(d, m))
+  return -EINVAL;
+
+ d->width=m->width;
+ d->height=m->height;
+ d->input_width=m->width;
+ d->input_height=m->height;
+ d->input_fps_num=m->fps_num;
+ d->input_fps_den=m->fps_den;
+ d->input_interlaced=m->interlaced;
+ d->input_configured=false;
+ d->sizeimage=GCHD_MAX_FRAME;
+
+ return gchd_gfmt(f,p,x);
+}
+
+static int gchd_tryfmt(struct file*f,void*p,struct v4l2_format*x)
+{
+ struct gchd*d=video_drvdata(f);
+ const struct gchd_mode *m;
+ bool interlaced = x->fmt.pix.field == V4L2_FIELD_INTERLACED;
+
+ if (x->fmt.pix.pixelformat != V4L2_PIX_FMT_H264)
+  return -EINVAL;
+
+ m = gchd_find_mode(x->fmt.pix.width, x->fmt.pix.height, interlaced);
+ if (!m || !gchd_mode_allowed(d, m))
+  return -EINVAL;
+
+ x->fmt.pix.width=m->width;
+ x->fmt.pix.height=m->height;
+ x->fmt.pix.field=m->interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+ x->fmt.pix.sizeimage=GCHD_MAX_FRAME;
+ x->fmt.pix.colorspace=V4L2_COLORSPACE_REC709;
+ return 0;
+}
+
 static const struct v4l2_ioctl_ops gchd_ioctl={
- .vidioc_querycap=gchd_querycap,.vidioc_enum_fmt_vid_cap=gchd_enum,
- .vidioc_enum_input=gchd_enuminput,.vidioc_g_input=gchd_ginput,.vidioc_s_input=gchd_sinput,
- .vidioc_g_fmt_vid_cap=gchd_gfmt,.vidioc_s_fmt_vid_cap=gchd_sfmt,.vidioc_try_fmt_vid_cap=gchd_sfmt,
- .vidioc_reqbufs=vb2_ioctl_reqbufs,.vidioc_querybuf=vb2_ioctl_querybuf,.vidioc_qbuf=vb2_ioctl_qbuf,
- .vidioc_dqbuf=vb2_ioctl_dqbuf,.vidioc_streamon=vb2_ioctl_streamon,.vidioc_streamoff=vb2_ioctl_streamoff,
- .vidioc_subscribe_event=v4l2_ctrl_subscribe_event};
+ .vidioc_querycap=gchd_querycap,
+ .vidioc_enum_fmt_vid_cap=gchd_enum,
+ .vidioc_enum_framesizes=gchd_enum_framesizes,
+ .vidioc_enum_frameintervals=gchd_enum_frameintervals,
+ .vidioc_enum_input=gchd_enuminput,
+ .vidioc_g_input=gchd_ginput,.vidioc_s_input=gchd_sinput,
+ .vidioc_g_fmt_vid_cap=gchd_gfmt,.vidioc_s_fmt_vid_cap=gchd_sfmt,
+ .vidioc_try_fmt_vid_cap=gchd_tryfmt,
+ .vidioc_reqbufs=vb2_ioctl_reqbufs,.vidioc_querybuf=vb2_ioctl_querybuf,
+ .vidioc_qbuf=vb2_ioctl_qbuf,.vidioc_dqbuf=vb2_ioctl_dqbuf,
+ .vidioc_streamon=vb2_ioctl_streamon,.vidioc_streamoff=vb2_ioctl_streamoff,
+ .vidioc_subscribe_event=v4l2_ctrl_subscribe_event
+};
 
 static int gchd_ctrl(struct v4l2_ctrl*c){return 0;}
 static const struct v4l2_ctrl_ops gchd_ctrl_ops={.s_ctrl=gchd_ctrl};
