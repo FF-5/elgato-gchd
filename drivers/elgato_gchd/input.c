@@ -834,6 +834,62 @@ int gchd_color_space_exact(struct gchd *d)
  return gchd_seq(d,yuv,ARRAY_SIZE(yuv));
 }
 
+static int gchd_configure_composite_exact(struct gchd *d)
+{
+ u8 v, reply;
+ int r;
+#define M3(a,b,c) do { u8 x[]={a,b,c}; r=gchd_mail_write(d,0x33,x,3); if(r)return r; } while(0)
+#define MW(p,a,b) do { u8 x[]={a,b}; r=gchd_mail_write(d,p,x,2); if(r)return r; } while(0)
+#define MR1(p) do { r=gchd_mail_read(d,p,&v,1); if(r)return r; } while(0)
+#define R9(a) do { M3(0x9d,0xcd,a); MR1(0x33); } while(0)
+
+ M3(0x94,0x41,0x37); M3(0x94,0x4a,0xaf); M3(0x94,0x4b,0xaf);
+ M3(0x89,0x89,0xfa); MR1(0x33);
+ v &= 0x0f;
+ if (v == 6) { d->input_width=720; d->input_height=480; d->input_fps_num=60; d->input_fps_den=1; }
+ else if (v == 7) { d->input_width=720; d->input_height=576; d->input_fps_num=50; d->input_fps_den=1; }
+ else if (!d->input_height) return -EINVAL;
+
+ if (d->input_height==480) {
+  MW(0x44,0x07,0x8a); MW(0x44,0x08,0x9b); MW(0x44,0x09,0x7a); MW(0x44,0x28,0x88);
+  M3(0x89,0x89,0xfd); MR1(0x33); MW(0x44,0x06,0x08);
+ }
+ M3(0x89,0x89,0xe7); MR1(0x33);
+ if (d->input_height==576) { M3(0x89,0x89,0xf1); MR1(0x33); MW(0x4c,0x04,0x95); }
+
+ r=gchd_setup_subblock_exact(d); if(r)return r;
+ r=gchd_common_block_b1(d,false); if(r)return r;
+
+ M3(0x99,0x89,0xf5); MR1(0x33); M3(0x99,0x89,0xfd); MR1(0x33);
+ M3(0x99,0x89,0xf5); MR1(0x33); M3(0x99,0x89,0xfc); MR1(0x33);
+ M3(0x99,0x89,0xf3); MR1(0x33);
+ MW(0x4c,0x0c,0x89); MW(0x4c,0x0d,0xc8);
+ M3(0x99,0x89,0xf5); MR1(0x33);
+ {
+  u8 mask=v&0x10;
+  MW(0x4c,0x0e,mask|0x65); MW(0x4c,0x0e,mask|0x64);
+ }
+
+ r=gchd_common_block_a(d); if(r)return r;
+ r=gchd_setup_subblock_exact(d); if(r)return r;
+ r=gchd_common_block_b1(d,false); if(r)return r;
+ r=gchd_common_block_b2(d); if(r)return r;
+ r=gchd_common_block_b3(d); if(r)return r;
+ r=gchd_common_block_c(d); if(r)return r;
+ r=gchd_common_block_b3(d); if(r)return r;
+
+ r=gchd_color_space_exact(d); if(r)return r;
+ r=gchd_transcoder_final_configure(d); if(r)return r;
+ r=gchd_transcoder_init(d); if(r)return r;
+ r=gchd_scmd(d,4,0xa0,0); if(r)return r;
+ r=gchd_scmd(d,5,0,2); if(r)return r;
+ return 0;
+#undef M3
+#undef MW
+#undef MR1
+#undef R9
+}
+
 int gchd_input_configure(struct gchd *d)
 {
  int r;
@@ -841,6 +897,8 @@ int gchd_input_configure(struct gchd *d)
  r=gchd_encoder_start(d); if(r)return r;
  if (d->input==0) {
   r=gchd_configure_hdmi_exact(d); if(r)return r;
+ } else if (d->input==2) {
+  r=gchd_configure_composite_exact(d); if(r)return r;
  } else {
   r=gchd_post_encoder_calibration(d); if(r)return r;
   r=gchd_post_encoder_sweep(d); if(r)return r;
