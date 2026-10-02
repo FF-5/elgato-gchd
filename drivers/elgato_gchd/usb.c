@@ -183,6 +183,7 @@ static int gchd_send_enable_state(struct gchd *d)
    return 0;
   usleep_range(1000, 2000);
  }
+ return -ETIMEDOUT;
 }
 
 int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
