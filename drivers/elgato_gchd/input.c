@@ -1,4 +1,5 @@
 #include <linux/module.h>
+#include <linux/delay.h>
 #include "elgato_gchd.h"
 
 struct gchd_mail_cmd {
@@ -46,6 +47,10 @@ static int gchd_setup_subblock(struct gchd *d)
   {0x4c,2,{0xa3,0x77}},
  };
  int r = gchd_seq(d, common, ARRAY_SIZE(common));
+ u8 status[1];
+
+ if (r) return r;
+ r = gchd_mail_read(d, 0x33, status, sizeof(status));
  if (r) return r;
  if (d->input == 0)
   return gchd_seq(d, hdmi, ARRAY_SIZE(hdmi));
@@ -54,6 +59,12 @@ static int gchd_setup_subblock(struct gchd *d)
 
 static int gchd_color_yuv(struct gchd *d)
 {
+ static const struct gchd_mail_cmd component_prefix[] = {
+  {0x4e,2,{0x0b,0x4c}}, {0x4e,2,{0x0c,0x4c}},
+  {0x4e,2,{0x0d,0x4c}}, {0x4e,2,{0x08,0x4c}},
+  {0x4e,2,{0x09,0x4c}}, {0x4e,2,{0x0a,0x4c}},
+  {0x4e,2,{0x1e,0x98}}, {0x4e,2,{0x1f,0xc9}},
+ };
  static const struct gchd_mail_cmd seq[] = {
   {0x4e,2,{0x92,0xaa}}, {0x4e,2,{0x93,0xdc}},
   {0x4e,2,{0x94,0xcc}}, {0x4e,2,{0x95,0xcc}},
@@ -69,6 +80,11 @@ static int gchd_color_yuv(struct gchd *d)
   {0x4e,2,{0xa8,0xcd}}, {0x4e,2,{0xa9,0xec}},
   {0x4e,2,{0xaa,0xcc}},
  };
+ if (d->input == 1) {
+  int r = gchd_seq(d, component_prefix, ARRAY_SIZE(component_prefix));
+  if (r)
+   return r;
+ }
  return gchd_seq(d, seq, ARRAY_SIZE(seq));
 }
 
