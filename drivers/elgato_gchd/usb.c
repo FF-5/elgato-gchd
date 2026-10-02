@@ -120,7 +120,9 @@ int gchd_load_encoder_firmware(struct gchd *d)
 static int gchd_load_firmware(struct gchd *d, const char *name)
 {
  const struct firmware *fw;
+ void *buf;
  size_t off = 0;
+ size_t chunk = d->family == GCHD_FAMILY_HDNEW ? 32768 : 16384;
  int r, actual;
 
  r = request_firmware(&fw, name, &d->intf->dev);
@@ -129,11 +131,23 @@ static int gchd_load_firmware(struct gchd *d, const char *name)
   return r;
  }
 
+ /*
+  * request_firmware() does not guarantee that fw->data is physically
+  * contiguous or DMA-suitable. usb_bulk_msg() submits a URB directly
+  * from the supplied buffer, so use kmalloc memory for the transfer.
+  */
+ buf = kmalloc(chunk, GFP_KERNEL);
+ if (!buf) {
+  release_firmware(fw);
+  return -ENOMEM;
+ }
+
  while (off < fw->size) {
-  size_t chunk = d->family == GCHD_FAMILY_HDNEW ? 32768 : 16384;
   size_t n = min_t(size_t, chunk, fw->size - off);
+
+  memcpy(buf, fw->data + off, n);
   r = usb_bulk_msg(d->udev, usb_sndbulkpipe(d->udev, GCHD_EP_OUT),
-                   (void *)(fw->data + off), n, &actual, 5000);
+                   buf, n, &actual, 5000);
   if (r || actual != (int)n) {
    r = r ? r : -EIO;
    dev_err(&d->intf->dev, "firmware transfer failed at %zu: %d\n", off, r);
@@ -141,6 +155,8 @@ static int gchd_load_firmware(struct gchd *d, const char *name)
   }
   off += n;
  }
+
+ kfree(buf);
  release_firmware(fw);
  return r;
 }
