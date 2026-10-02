@@ -159,28 +159,32 @@ static int gchd_load_firmware(struct gchd *d, const char *name)
    break;
   }
 
-  dev_info(&d->intf->dev,
-           "firmware OUT ep 0x%02x maxpacket=%u speed=%u alt=%u\n",
-           GCHD_EP_OUT, usb_endpoint_maxp(&ep->desc), d->udev->speed,
-           d->intf->cur_altsetting->desc.bAlternateSetting);
+  dev_dbg(&d->intf->dev,
+          "firmware chunk offset=%zu size=%zu OUT ep 0x%02x maxpacket=%u\n",
+          off, n, GCHD_EP_OUT, usb_endpoint_maxp(&ep->desc));
 
   for (attempt = 0; attempt < 5; ++attempt) {
    actual = 0;
    r = usb_bulk_msg(d->udev, usb_sndbulkpipe(d->udev, GCHD_EP_OUT),
                     buf, n, &actual, 0);
-   if (r != -EAGAIN)
+   if (!r)
     break;
-   usleep_range(1000, 5000);
-  }
 
-  if (r == -EPIPE) {
-   int clear_r = usb_clear_halt(d->udev,
-                                usb_sndbulkpipe(d->udev, GCHD_EP_OUT));
-   if (!clear_r) {
-    actual = 0;
-    r = usb_bulk_msg(d->udev, usb_sndbulkpipe(d->udev, GCHD_EP_OUT),
-                     buf, n, &actual, 0);
+   /*
+    * EHCI/USB virtualization can abort a bulk URB with -ETIMEDOUT even
+    * though the device has accepted the preceding firmware chunks.  Treat
+    * this like the existing -EAGAIN transient case and retry the exact same
+    * chunk.  Clear a stalled endpoint before retrying when possible.
+    */
+   if (r == -EPIPE) {
+    int clear_r = usb_clear_halt(d->udev,
+                                 usb_sndbulkpipe(d->udev, GCHD_EP_OUT));
+    if (clear_r && clear_r != -EPIPE)
+     break;
+   } else if (r != -EAGAIN && r != -ETIMEDOUT) {
+    break;
    }
+   usleep_range(2000, 5000);
   }
 
   if (r || actual != (int)n) {
