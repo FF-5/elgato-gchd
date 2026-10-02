@@ -287,13 +287,21 @@ static int gchd_enum_frameintervals(struct file *f, void *p,
 {
  struct gchd *d = video_drvdata(f);
  const struct gchd_mode *m;
+ unsigned int i;
 
  if (v->pixel_format != V4L2_PIX_FMT_H264)
   return -EINVAL;
 
- m = gchd_find_mode(v->width, v->height,
-                    v->height == 1080 && d->input_interlaced);
- if (!m || !gchd_mode_allowed(d, m) || v->index != 0)
+ m = NULL;
+ for (i = 0; i < ARRAY_SIZE(gchd_modes); ++i) {
+  if (gchd_modes[i].width == v->width &&
+      gchd_modes[i].height == v->height &&
+      gchd_mode_allowed(d, &gchd_modes[i])) {
+   m = &gchd_modes[i];
+   break;
+  }
+ }
+ if (!m || v->index != 0)
   return -EINVAL;
 
  v->type = V4L2_FRMIVAL_TYPE_DISCRETE;
