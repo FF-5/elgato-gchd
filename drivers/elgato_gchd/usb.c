@@ -266,7 +266,7 @@ static int gchd_mail_ready(struct gchd *d)
  return -ETIMEDOUT;
 }
 
-static int gchd_send_enable_state(struct gchd *d)
+int gchd_send_enable_state(struct gchd *d)
 {
  int r;
  u16 status;
