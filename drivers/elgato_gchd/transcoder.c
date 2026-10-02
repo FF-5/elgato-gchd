@@ -202,10 +202,11 @@ int gchd_transcoder_final_configure(struct gchd *d)
  if ((r = gchd_sparam(d, 0x1100, 0, 16, 1))) return r;
  if ((r = gchd_sparam(d, 0x1240, 0, 16, 1))) return r;
 
- if ((r = gchd_sparam(d, 0x1520, 0, 8, source_type))) return r;
+ if ((r = gchd_sparam(d, 0x1504, 8, 3, source_type))) return r;
  if ((r = gchd_sparam(d, 0x1502, 0, 8, fmt))) return r;
- if ((r = gchd_sparam(d, 0x1504, 0, 2, ip))) return r;
- if ((r = gchd_sparam(d, 0x1506, 0, 1, 1))) return r;
+ if ((r = gchd_sparam(d, 0x1512, 8, 7, ip))) return r;
+ if ((r = gchd_sparam(d, 0x1504, 0, 2, 2))) return r;
+ if ((r = gchd_sparam(d, 0x1002, 4, 1, 1))) return r;
  if ((r = gchd_sparam(d, 0x1a02, 0, 2, 0))) return r;
  if ((r = gchd_sparam(d, 0x1a08, 3, 1, 1))) return r;
  if ((r = gchd_sparam(d, 0x1a08, 4, 2, 2))) return r;
