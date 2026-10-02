@@ -188,8 +188,9 @@ static int gchd_mode_regs(struct gchd *d)
   if ((r = gchd_sparam(d, 0x152c, 0, 16, 720))) return r;
   if ((r = gchd_sparam(d, 0x152e, 0, 16, 480))) return r;
  }
- if ((r = gchd_sparam(d, 0x1526, 0, 8, 41))) return r;
- if ((r = gchd_sparam(d, 0x1526, 8, 8, profile))) return r;
+ if ((r = gchd_sparam(d, 0x1526, 0, 8, d->h264_level ? d->h264_level : 41))) return r;
+ if ((r = gchd_sparam(d, 0x1526, 8, 8, d->h264_profile ? d->h264_profile : profile))) return r;
+ if ((r = gchd_sparam(d, 0x1532, 0, 16, d->bitrate ? d->bitrate : 16000))) return r;
  return 0;
 }
 
