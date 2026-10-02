@@ -111,7 +111,7 @@ static int gchd_req_read16(struct gchd *d, u16 value, u16 index, u16 *v)
  return r;
 }
 
-int gchd_raw_read16(struct gchd *d, u16 value, u16 index, u16 *v)
+static int gchd_raw_read16(struct gchd *d, u16 value, u16 index, u16 *v)
 {
  return gchd_req_read16(d, value, index, v);
 }
@@ -417,7 +417,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
  return 0;
 }
 
-static int gchd_complete_state_change(struct gchd *d, u16 current, u16 next)
+static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 next)
 {
  u16 state, completion;
  int r, tries;
@@ -429,7 +429,7 @@ static int gchd_complete_state_change(struct gchd *d, u16 current, u16 next)
    if (r)
     return r;
    state &= 0x1f;
-   if (state != current && state != next) {
+   if (state != current_state && state != next) {
     if (first)
      return state == next ? 0 : -EIO;
     return -EIO;
@@ -466,7 +466,7 @@ static int gchd_complete_state_change(struct gchd *d, u16 current, u16 next)
 
   if (state == next)
    return 0;
-  if (state != current)
+  if (state != current_state)
    return -EIO;
  }
 }
