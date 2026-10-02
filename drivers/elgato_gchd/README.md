@@ -20,14 +20,9 @@ The driver contains no Qt GUI and does not require a userspace capture daemon.
 
 ### Important limitation
 
-The original repository performs a substantial proprietary/device-specific
-initialization sequence, including firmware loading and transcoder/input setup,
-through libusb. That sequence has not yet been fully ported to kernel USB
-control transfers in this branch. Consequently this is the first driver layer,
-not yet a drop-in replacement for the original working userspace implementation.
+The kernel driver now contains the verified USB control-transfer primitives, HDNew mailbox/interrupt handling, state commands, enable-state handling, and request_firmware() uploads for the two HDNew firmware images. The full original transcoder/input configuration state machine is still not fully ported, so this is not yet a drop-in replacement for the original working userspace implementation.
 
-The V4L2 controls currently establish the Linux-facing interface; their hardware
-programming callbacks are intentionally isolated for the next porting step.
+The V4L2 controls establish the Linux-facing interface, but their hardware programming is still pending the remaining transcoder/input port.
 
 ### Build
 
