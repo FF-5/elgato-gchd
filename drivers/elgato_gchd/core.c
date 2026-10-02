@@ -120,9 +120,10 @@ static const struct vb2_ops gchd_vb2_ops={.queue_setup=gchd_queue_setup,.buf_que
 static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
 {
  struct gchd *d = video_drvdata(f);
- if (in->index > 2) return -EINVAL;
+ unsigned int index = in->index;
+ if (index > 2) return -EINVAL;
  memset(in, 0, sizeof(*in));
- in->index = in->index;
+ in->index = index;
  if (in->index == 0) {
   strscpy(in->name, "HDMI", sizeof(in->name));
  } else if (in->index == 1) {
@@ -131,7 +132,7 @@ static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
   strscpy(in->name, "Composite", sizeof(in->name));
  }
  in->type = V4L2_INPUT_TYPE_CAMERA;
- if (in->index == d->input) in->status = 0;
+ if (in->index == d->input) in->status = V4L2_IN_ST_NO_SIGNAL;
  return 0;
 }
 
