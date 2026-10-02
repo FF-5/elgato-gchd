@@ -567,6 +567,14 @@ int gchd_hw_init(struct gchd *d)
    return r;
  } else {
   u8 version[4];
+  /* readVersion() first probes registers 0 and 1, then reads the same
+   * two registers again as part of the version buffer, followed by 2. */
+  r = gchd_ctrl_read(d, REG_REQ, 0x0800, 0x0094, version, sizeof(version));
+  if (r)
+   return r;
+  r = gchd_ctrl_read(d, REG_REQ, 0x0800, 0x0098, version, sizeof(version));
+  if (r)
+   return r;
   r = gchd_ctrl_read(d, REG_REQ, 0x0800, 0x009c, version, sizeof(version));
   if (r)
    return r;
