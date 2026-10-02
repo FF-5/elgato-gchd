@@ -7,7 +7,7 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD 0fd9:005d V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.1.0");
+MODULE_VERSION("0.2.0");
 
 static unsigned long ring_bytes = GCHD_RING_BYTES;
 module_param(ring_bytes, ulong, 0644);
