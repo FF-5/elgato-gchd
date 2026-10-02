@@ -2,6 +2,7 @@
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/usb/ch9.h>
 #include "elgato_gchd.h"
 
 
@@ -148,12 +149,45 @@ static int gchd_load_firmware(struct gchd *d, const char *name)
   size_t n = min_t(size_t, chunk, fw->size - off);
 
   memcpy(buf, fw->data + off, n);
-  r = usb_bulk_msg(d->udev, usb_sndbulkpipe(d->udev, GCHD_EP_OUT),
-                   buf, n, &actual, 5000);
-  if (r || actual != (int)n) {
-   r = r ? r : -EIO;
-   dev_err(&d->intf->dev, "firmware transfer failed at %zu: %d\n", off, r);
-   break;
+  /* The original userspace driver waits indefinitely for firmware writes. */
+  {
+   struct usb_host_endpoint *ep;
+   int attempt;
+
+   ep = usb_pipe_endpoint(d->udev, usb_sndbulkpipe(d->udev, GCHD_EP_OUT));
+   if (!ep) {
+    dev_err(&d->intf->dev, "firmware endpoint 0x%02x is missing\\n",
+            GCHD_EP_OUT);
+    r = -ENODEV;
+    break;
+   }
+
+   for (attempt = 0; attempt < 5; ++attempt) {
+    actual = 0;
+    r = usb_bulk_msg(d->udev, usb_sndbulkpipe(d->udev, GCHD_EP_OUT),
+                     buf, n, &actual, 0);
+    if (r != -EAGAIN)
+     break;
+    usleep_range(1000, 5000);
+   }
+
+   if (r == -EPIPE) {
+    int clear_r = usb_clear_halt(d->udev,
+                                 usb_sndbulkpipe(d->udev, GCHD_EP_OUT));
+    if (!clear_r) {
+     actual = 0;
+     r = usb_bulk_msg(d->udev, usb_sndbulkpipe(d->udev, GCHD_EP_OUT),
+                      buf, n, &actual, 0);
+    }
+   }
+
+   if (r || actual != (int)n) {
+    dev_err(&d->intf->dev,
+            "firmware transfer failed at %zu: %d (actual=%d requested=%zu)\\n",
+            off, r ? r : -EIO, actual, n);
+    r = r ? r : -EIO;
+    break;
+   }
   }
   off += n;
  }
