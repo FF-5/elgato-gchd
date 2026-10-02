@@ -149,7 +149,7 @@ int gchd_v4l2_register(struct gchd*d)
  memset(&d->vbq,0,sizeof(d->vbq));d->vbq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE;d->vbq.io_modes=VB2_MMAP|VB2_READ;
  d->vbq.drv_priv=d;d->vbq.ops=&gchd_vb2_ops;d->vbq.mem_ops=&vb2_vmalloc_memops;d->vbq.lock=&d->lock;
  r=vb2_queue_init(&d->vbq);if(r)goto err;
- strscpy(d->vdev.name,"Elgato Game Capture HD",sizeof(d->vdev.name));d->vdev.v4l2_dev=&d->v4l2_dev;
+ strscpy(d->vdev.name,d->family == GCHD_FAMILY_HDNEW ? "Elgato Game Capture HD (HDNew)" : "Elgato Game Capture HD",sizeof(d->vdev.name));d->vdev.v4l2_dev=&d->v4l2_dev;
  d->vdev.fops=&vb2_fops;d->vdev.ioctl_ops=&gchd_ioctl;d->vdev.queue=&d->vbq;d->vdev.lock=&d->lock;
  d->vdev.ctrl_handler=&d->ctrls;d->vdev.device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_STREAMING|V4L2_CAP_READWRITE;video_set_drvdata(&d->vdev,d);
  r=video_register_device(&d->vdev,VFL_TYPE_VIDEO,-1);if(r)goto err;return 0;
@@ -157,11 +157,18 @@ err:v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);retur
 }
 void gchd_v4l2_unregister(struct gchd*d){video_unregister_device(&d->vdev);v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);}
 
-static const struct usb_device_id gchd_ids[]={{USB_DEVICE(GCHD_VID,GCHD_PID)},{}};MODULE_DEVICE_TABLE(usb,gchd_ids);
+static const struct usb_device_id gchd_ids[] = {
+ { USB_DEVICE(GCHD_VID, GCHD_PID_0), .driver_info = GCHD_FAMILY_OLD },
+ { USB_DEVICE(GCHD_VID, GCHD_PID_1), .driver_info = GCHD_FAMILY_OLD },
+ { USB_DEVICE(GCHD_VID, GCHD_PID_2), .driver_info = GCHD_FAMILY_OLD },
+ { USB_DEVICE(GCHD_VID, GCHD_PID_3), .driver_info = GCHD_FAMILY_HDNEW },
+ { }
+};
+MODULE_DEVICE_TABLE(usb, gchd_ids);
 static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
 {
  struct gchd*d;int r;d=kzalloc(sizeof(*d),GFP_KERNEL);if(!d)return-ENOMEM;
- d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;mutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
+ d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;d->family=(enum gchd_family)id->driver_info;mutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
  spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
  if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;
  r=gchd_hw_init(d);if(r)goto errv4l2;d->hw_initialized=true;usb_set_intfdata(i,d);
