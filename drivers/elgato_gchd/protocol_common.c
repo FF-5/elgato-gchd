@@ -20,14 +20,6 @@ static int gchd_mail_read_discard(struct gchd *d, u8 port, u8 len)
  return gchd_mail_read(d, port, buf, len);
 }
 
-static int gchd_read_9dcd(struct gchd *d, u8 index, u8 *value)
-{
- u8 cmd[3]={0x9d,0xcd,index};
- int r=gchd_mail_write(d,0x33,cmd,3);
- if (r) return r;
- return gchd_mail_read(d,0x33,value,1);
-}
-
 static int gchd_poll_9989ed(struct gchd *d)
 {
  u8 cmd[3]={0x99,0x89,0xed}, v;
@@ -159,7 +151,7 @@ int gchd_common_block_a(struct gchd *d)
 	GCHD_READ_EC(d, 32); //EXPECTED {0x6e, 0x6e, 0x6e, 0x76, 0xe2, 0x64, 0xbe, 0xe4, 0x4e, 0x8e, 0x43, 0x7e, 0x7e, 0x50, 0xf8, 0x6e, 0xce, 0x34, 0x6e, 0x6e, 0x6e, 0x76, 0x6e, 0x6e, 0x6e, 0x6e, 0x6e, 0x6e, 0x6e, 0x6e, 0x6e, 0x28}
 
 	if ( d->family == GCHD_FAMILY_OLD ) {
-		configureCommonBlockC(); //Think this is just a driver choice to move it to just doing it at the end on newer model
+		gchd_common_block_c(d);
 	}
 	GCHD_MW(d, 0x4c, 0x0f, 0x88);
 	GCHD_MW(d, 0x4c, 0x10, 0x89);
