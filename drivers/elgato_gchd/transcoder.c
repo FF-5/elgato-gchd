@@ -169,58 +169,67 @@ MODULE_LICENSE("GPL");
 int gchd_transcoder_final_configure(struct gchd *d)
 {
  int r;
- u16 fmt, ip;
- u16 source_type = 0;
- bool analog = d->input != 0;
+ u8 video_format;
+ u8 source_type = 0;
 
+ /* Exact source-type mapping from the reference final transcoder stage.
+  * The kernel currently exposes the native 4:3 SD modes, so no SD-stretch
+  * override is applied here. */
  if (d->input_height == 576)
   source_type = 3;
  else if (d->input_height == 480)
   source_type = 0;
 
- if (d->input_width == 1920)
-  fmt = d->input_interlaced ? 0 : 32;
- else if (d->input_width == 1280)
-  fmt = 2;
- else if (d->input_height == 576)
-  fmt = d->input_interlaced ? 5 : 9;
- else
-  fmt = d->input_interlaced ? 4 : 8;
+ switch (gchd_resolution(d)) {
+ case GCHD_RES_1080:
+  video_format = 32;
+  if (d->input_interlaced)
+   video_format = 0;
+  break;
+ case GCHD_RES_720:
+  if (d->input_interlaced)
+   return -EINVAL;
+  video_format = 2;
+  break;
+ case GCHD_RES_PAL:
+  video_format = d->input_interlaced ? 5 : 9;
+  break;
+ case GCHD_RES_NTSC:
+  video_format = d->input_interlaced ? 4 : 8;
+  break;
+ default:
+  return -EINVAL;
+ }
 
- if (d->input_fps_num && d->input_fps_num == 50)
-  fmt |= 1;
- ip = d->input_interlaced ? 0 : 2;
+ if (d->input_fps_num == 50)
+  video_format |= 1;
+ else if (d->input_fps_num != 30 && d->input_fps_num != 60)
+  return -EINVAL;
 
- if ((r = gchd_sparam(d, 0x1126, 0, 13, VPID))) return r;
- if ((r = gchd_sparam(d, 0x1266, 0, 13, VPID))) return r;
- if ((r = gchd_sparam(d, 0x1128, 0, 13, APID))) return r;
- if ((r = gchd_sparam(d, 0x1268, 0, 13, APID))) return r;
- if ((r = gchd_sparam(d, 0x1130, 0, 8, VSID))) return r;
- if ((r = gchd_sparam(d, 0x1270, 0, 8, VSID))) return r;
- if ((r = gchd_sparam(d, 0x1132, 0, 8, ASID))) return r;
- if ((r = gchd_sparam(d, 0x1272, 0, 8, ASID))) return r;
- if ((r = gchd_sparam(d, 0x1100, 0, 16, 1))) return r;
- if ((r = gchd_sparam(d, 0x1240, 0, 16, 1))) return r;
+ r = gchd_sparam(d, 0x1100, 0, 16, VPID); if (r) return r;
+ r = gchd_sparam(d, 0x1240, 0, 16, VPID); if (r) return r;
+ r = gchd_sparam(d, 0x1128, 0, 13, APID); if (r) return r;
+ r = gchd_sparam(d, 0x1268, 0, 13, APID); if (r) return r;
+ r = gchd_sparam(d, 0x1130, 0, 8, VSID); if (r) return r;
+ r = gchd_sparam(d, 0x1270, 0, 8, VSID); if (r) return r;
+ r = gchd_sparam(d, 0x1132, 0, 8, ASID); if (r) return r;
+ r = gchd_sparam(d, 0x1272, 0, 8, ASID); if (r) return r;
+ r = gchd_sparam(d, 0x1504, 8, 3, source_type); if (r) return r;
+ r = gchd_sparam(d, 0x1502, 0, 8, video_format); if (r) return r;
+ r = gchd_sparam(d, 0x1512, 8, 7,
+                 d->input_interlaced ? 0 : 2); if (r) return r;
+ r = gchd_sparam(d, 0x1002, 1, 1, 0); if (r) return r;
+ r = gchd_sparam(d, 0x1002, 4, 1, 1); if (r) return r;
+ r = gchd_sparam(d, 0x1a02, 0, 2, 0); if (r) return r;
+ r = gchd_sparam(d, 0x1a08, 3, 1, 1); if (r) return r;
+ r = gchd_sparam(d, 0x1a08, 4, 2, 2); if (r) return r;
+ r = gchd_sparam(d, 0x1a08, 6, 1, 1); if (r) return r;
+ r = gchd_sparam(d, 0x1a08, 7, 1, 1); if (r) return r;
+ r = gchd_sparam(d, 0x1504, 0, 2, 2); if (r) return r;
 
- if ((r = gchd_sparam(d, 0x1504, 8, 3, source_type))) return r;
- if ((r = gchd_sparam(d, 0x1502, 0, 8, fmt))) return r;
- if ((r = gchd_sparam(d, 0x1512, 8, 7, ip))) return r;
- if ((r = gchd_sparam(d, 0x1504, 0, 2, 2))) return r;
- if ((r = gchd_sparam(d, 0x1002, 4, 1, 1))) return r;
- if ((r = gchd_sparam(d, 0x1a02, 0, 2, 0))) return r;
- if ((r = gchd_sparam(d, 0x1a08, 3, 1, 1))) return r;
- if ((r = gchd_sparam(d, 0x1a08, 4, 2, 2))) return r;
- if ((r = gchd_sparam(d, 0x1a08, 6, 1, 1))) return r;
- if ((r = gchd_sparam(d, 0x1a08, 7, 1, 1))) return r;
+ /* These are emitted twice by the reference implementation. */
+ r = gchd_sparam(d, 0x1002, 4, 1, 1); if (r) return r;
+ r = gchd_sparam(d, 0x1002, 4, 1, 1); if (r) return r;
 
- if ((r = gchd_sparam(d, 0x1002, 1, 1, 1))) return r;
- if ((r = gchd_sparam(d, 0x1004, 4, 1, 1))) return r;
- if ((r = gchd_sparam(d, 0x100a, 0, 4, 0))) return r;
- if ((r = gchd_sparam(d, 0x100c, 0, 4, 0))) return r;
- if ((r = gchd_sparam(d, 0x150e, 0, 1, 0))) return r;
- if ((r = gchd_sparam(d, 0x1560, 0, 1, 1))) return r;
-
- dev_dbg(&d->intf->dev, "transcoder final config: fmt=%u ip=%u analog=%u source=%u\\n",
-         fmt, ip, analog, source_type);
  return 0;
 }
