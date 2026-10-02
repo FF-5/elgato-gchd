@@ -2,6 +2,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/timekeeping.h>
+#include <linux/jiffies.h>
 #include "elgato_gchd.h"
 
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
@@ -103,6 +104,14 @@ static void gchd_ts(struct gchd *d,const u8 *p,u8 *pes,size_t *n)
  u16 pid; unsigned int off=4,afc; bool start;
  if(p[0]!=0x47)return;
  pid=((p[1]&0x1f)<<8)|p[2]; if(pid!=0x1011)return;
+ d->last_video_jiffies = jiffies;
+ if (!d->signal_present) {
+  struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
+  ev.id = d->input;
+  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
+  v4l2_event_queue(&d->vdev, &ev);
+  d->signal_present = true;
+ }
  start=!!(p[1]&0x40); afc=(p[3]>>4)&3; if(!afc||afc==2)return;
  if(afc==3){off+=1+p[4];if(off>=188)return;}
  if(start){
@@ -113,6 +122,25 @@ static void gchd_ts(struct gchd *d,const u8 *p,u8 *pes,size_t *n)
  }
  if(off<188 && *n<GCHD_MAX_FRAME){size_t m=min_t(size_t,188-off,GCHD_MAX_FRAME-*n);
   memcpy(pes+*n,p+off,m);*n+=m;}
+}
+
+static void gchd_signal_check(struct gchd *d)
+{
+ if (!d->signal_present &&
+     time_after(jiffies, d->last_video_jiffies + msecs_to_jiffies(500)))
+  return;
+
+ if (d->signal_present &&
+     time_after(jiffies, d->last_video_jiffies + msecs_to_jiffies(500))) {
+  struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
+  ev.id = d->input;
+  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
+  v4l2_event_queue(&d->vdev, &ev);
+  d->signal_present = false;
+  pr_info("elgato_gchd: input %u signal lost; waiting for input reconfiguration
+",
+          d->input);
+ }
 }
 
 static void gchd_deliver(struct gchd *d)
@@ -146,6 +174,7 @@ static int gchd_rx(void *arg)
    d->ts_partial_len+=take;pos+=take;
    if(d->ts_partial_len==188){gchd_ts(d,d->ts_partial,pes,&n);d->ts_partial_len=0;}
   }
+  gchd_signal_check(d);
   gchd_deliver(d);
  }
  if(n)gchd_ring_push(&d->ring,pes,n);kfree(pes);return 0;
@@ -206,8 +235,8 @@ static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
   * Do not claim V4L2_IN_ST_NO_SIGNAL here. Signal detection is device-side
   * and is not yet fully exposed through the V4L2 status ioctl path.
   */
- if (index == d->input)
-  in->status = 0;
+ if (index == d->input && !d->signal_present)
+  in->status = V4L2_IN_ST_NO_SIGNAL;
  return 0;
 }
 
@@ -226,6 +255,8 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
 
  d->input = i;
  d->input_configured = false;
+ d->signal_present = false;
+ d->last_video_jiffies = jiffies;
  switch (i) {
  case 0:
   d->input_width = 1920; d->input_height = 1080;
