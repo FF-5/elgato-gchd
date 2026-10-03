@@ -556,6 +556,7 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
  switch (c->id) {
  case V4L2_CID_MPEG_VIDEO_BITRATE:
   d->bitrate = c->val / 1000;
+  d->bitrate_forced = true;
   if (d->bitrate < 1)
    d->bitrate = 1;
   break;
@@ -577,6 +578,7 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
   default: return -EINVAL;
   }
   d->h264_level = level;
+  d->h264_level_forced = true;
   break;
  default:
   return -EINVAL;
@@ -619,7 +621,7 @@ static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
  d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;d->family=(enum gchd_family)id->driver_info;
 	/* USB enumeration has already selected configuration 1. */
 	mutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
- spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->input=0;d->input_forced=false;d->input_width=0;d->input_height=0;d->input_fps_num=0;d->input_fps_den=0;d->bitrate=16000;d->h264_profile=V4L2_MPEG_VIDEO_H264_PROFILE_MAIN;d->h264_level=41;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
+ spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->input=0;d->input_forced=false;d->bitrate_forced=false;d->h264_level_forced=false;d->input_width=0;d->input_height=0;d->input_fps_num=0;d->input_fps_den=0;d->bitrate=40000;d->h264_profile=V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;d->h264_level=41;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
  if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;
  r=gchd_hw_init(d);if(r)goto errhw;d->hw_initialized=true;
  usb_set_intfdata(i,d);
