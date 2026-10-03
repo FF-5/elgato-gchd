@@ -1,45 +1,28 @@
-remote: Enumerating objects: 15, done.
-remote: Counting objects: 100% (15/15), done.
-remote: Compressing objects: 100% (8/8), done.
-remote: Total 10 (delta 6), reused 0 (delta 0), pack-reused 0 (from 0)
-Unpacking objects: 100% (10/10), 1.71 KiB | 47.00 KiB/s, done.
-From https://github.com/FF-5/elgato-gchd
-   43ccb8c..2b5c8a7  v4l2-dkms-driver -> origin/v4l2-dkms-driver
-Updating 43ccb8c..2b5c8a7
-Fast-forward
- drivers/elgato_gchd/errors.txt   | 36 +++++++++++++++---------------------
- drivers/elgato_gchd/transcoder.c |  2 +-
- 2 files changed, 16 insertions(+), 22 deletions(-)
-make -C /lib/modules/6.8.0-146-generic/build M=/home/ff5/elgato-gchd/drivers/elgato_gchd clean
-make[1]: Entering directory '/usr/src/linux-headers-6.8.0-146-generic'
-make[1]: Leaving directory '/usr/src/linux-headers-6.8.0-146-generic'
-make -C /lib/modules/6.8.0-146-generic/build M=/home/ff5/elgato-gchd/drivers/elgato_gchd modules
-make[1]: Entering directory '/usr/src/linux-headers-6.8.0-146-generic'
-warning: the compiler differs from the one used to build the kernel
-  The kernel was built by: x86_64-linux-gnu-gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-  You are using:           gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/core.o
-  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/fops.o
-  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/usb.o
-  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.o
-/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c: In function ‘gchd_transcoder_defaults’:
-/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:105:78: error: expected ‘)’ before ‘return’
-  105 | ranscoder_table_write(d, 0x1010, gchd_sit, sizeof(gchd_sit))) return r;
-      |                                                              ^~~~~~~
-      |                                                              )
-/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:105:2: note: ‘-Wmisleading-indentation’ is disabled from this point onwards, since column-tracking was disabled due to the size of the code/headers
-  105 |  if ((r = gchd_transcoder_table_write(d, 0x1010, gchd_sit, sizeof(gchd_sit))) return r;
-      |  ^~
-/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:105:2: note: adding ‘-flarge-source-files’ will allow for more column-tracking support, at the expense of compilation time and memory
-/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:396:1: error: expected declaration or statement at end of input
-  396 | }
-      | ^
-/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c: At top level:
-/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:56:12: warning: ‘gchd_transcoder_defaults’ defined but not used [-Wunused-function]
-   56 | static int gchd_transcoder_defaults(struct gchd *d)
-      |            ^~~~~~~~~~~~~~~~~~~~~~~~
-make[3]: *** [scripts/Makefile.build:243: /home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.o] Error 1
-make[2]: *** [/usr/src/linux-headers-6.8.0-146-generic/Makefile:1946: /home/ff5/elgato-gchd/drivers/elgato_gchd] Error 2
-make[1]: *** [Makefile:240: __sub-make] Error 2
-make[1]: Leaving directory '/usr/src/linux-headers-6.8.0-146-generic'
-make: *** [Makefile:6: all] Error 2
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo modprobe usbmon
+sudo cat /sys/kernel/debug/usb/usbmon/2u > /tmp/gchd-usbmon.txt &
+MONPID=$!
+echo $MONPID
+[sudo] password for ff5:           
+[1] 5773
+5773
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg | tail -30
+[ 3586.155023] usb 1-1: new high-speed USB device number 2 using ehci-pci
+[ 3586.575072] usb 1-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
+[ 3586.575085] usb 1-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 3586.575089] usb 1-1: Product: GameCapture HD
+[ 3586.575092] usb 1-1: Manufacturer: Elgato
+[ 3586.575095] usb 1-1: SerialNumber: 04107F1267
+[ 3607.314490] elgato_gchd 1-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[ 3607.316800] elgato_gchd 1-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[ 3607.320264] elgato_gchd 1-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[ 3607.323704] elgato_gchd 1-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[ 3607.327240] elgato_gchd 1-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[ 3607.330677] elgato_gchd 1-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[ 3607.334316] elgato_gchd 1-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[ 3607.337707] elgato_gchd 1-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[ 3607.341273] elgato_gchd 1-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[ 3607.344864] elgato_gchd 1-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[ 3607.348351] elgato_gchd 1-1:1.0: firmware chunk offset=327680 size=4016 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo tail -100 /tmp/gchd-usbmon.txt
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo head -300 /tmp/gchd-usbmon.txt
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo tail -100 /tmp/gchd-usbmon.txt
