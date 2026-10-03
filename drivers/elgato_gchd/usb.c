@@ -277,6 +277,8 @@ static int gchd_mail_ready(struct gchd *d)
   r = gchd_req_read16(d, 0x0900, MAIL_READY_INDEX, &status);
   if (r)
    return r;
+  d->special_detect_mask &= (status >> 8 & 3) |
+                            (((status >> 10) & 3) != 0 ? BIT(3) : 0);
   if (status & BIT(0))
    return 0;
  }
@@ -703,16 +705,6 @@ int gchd_hw_init(struct gchd *d)
  r = gchd_processor_state(d, &magic);
  if (r)
   return r;
-
- /*
-  * The userspace reference leaves the device several milliseconds of
-  * userspace scheduling time between the initial ignored 0x55 probe and
-  * the first state query.  On the HDNew hardware this is significant:
-  * the DKMS path can otherwise issue the second query too soon and get
-  * 0x000000 forever.  The reference trace shows ~17.6 ms here, so keep
-  * a conservative 20 ms settling interval.
-  */
- msleep(20);
 
  bool first_time = true;
 
