@@ -689,6 +689,10 @@ int gchd_hw_init(struct gchd *d)
    r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001c, &dummy, sizeof(dummy)); if (r) return r;
    r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001e, &dummy, sizeof(dummy)); if (r) return r;
   }
+ } else {
+  r = gchd_state_cmd(d, SCMD_RESET, 0, 0, 0x10);
+  if (r)
+   return r;
  }
 
  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
