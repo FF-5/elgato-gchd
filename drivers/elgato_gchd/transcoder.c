@@ -216,7 +216,7 @@ int gchd_transcoder_setup(struct gchd *d)
  u32 auto_average_bitrate;
  u32 auto_min_bitrate;
 
- auto_bitrate = min_t(u32, 31250U * width, 40000U);
+ auto_bitrate = min_t(u32, (31250U * width) / 1000U, 40000U);
  auto_max_bitrate = min_t(u32, (auto_bitrate * 9U) / 10U, 40000U);
  auto_average_bitrate = min_t(u32, auto_bitrate / 2U, 40000U);
  auto_min_bitrate = min_t(u32, (auto_bitrate * 35U) / 100U, 40000U);
@@ -237,19 +237,29 @@ int gchd_transcoder_setup(struct gchd *d)
 
  if (d->h264_profile == V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE)
   anchor = 1;
- if (d->h264_level_forced)
+ if (d->h264_level_forced) {
   level = d->h264_level;
- else if ((u32)bitrate <= 64) level = 10;
- else if ((u32)bitrate <= 192) level = 11;
- else if ((u32)bitrate <= 384) level = 12;
- else if ((u32)bitrate <= 768) level = 13;
- else if ((u32)bitrate <= 2000) level = 20;
- else if ((u32)bitrate <= 4000) level = 21;
- else if ((u32)bitrate <= 10000) level = 30;
- else if ((u32)bitrate <= 14000) level = 31;
- else if ((u32)bitrate <= 20000) level = 32;
- else if ((u32)bitrate <= 50000) level = 41;
- else level = 52;
+ } else {
+  u32 frame_mb = (width * height) / (16U * 16U);
+  u32 mbps = frame_mb * fps;
+  if (mbps <= 1485 && frame_mb <= 99 && bitrate <= 64) level = 10;
+  else if (mbps <= 3000 && frame_mb <= 396 && bitrate <= 192) level = 11;
+  else if (mbps <= 6000 && frame_mb <= 396 && bitrate <= 384) level = 12;
+  else if (mbps <= 11880 && frame_mb <= 396 && bitrate <= 768) level = 13;
+  else if (mbps <= 11880 && frame_mb <= 396 && bitrate <= 2000) level = 20;
+  else if (mbps <= 19800 && frame_mb <= 792 && bitrate <= 4000) level = 21;
+  else if (mbps <= 20250 && frame_mb <= 1620 && bitrate <= 4000) level = 22;
+  else if (mbps <= 40500 && frame_mb <= 1620 && bitrate <= 10000) level = 30;
+  else if (mbps <= 108000 && frame_mb <= 3600 && bitrate <= 14000) level = 31;
+  else if (mbps <= 216000 && frame_mb <= 5120 && bitrate <= 20000) level = 32;
+  else if (mbps <= 245760 && frame_mb <= 8192 && bitrate <= 20000) level = 40;
+  else if (mbps <= 245760 && frame_mb <= 8192 && bitrate <= 50000) level = 41;
+  else if (mbps <= 522240 && frame_mb <= 8704 && bitrate <= 50000) level = 42;
+  else if (mbps <= 589824 && frame_mb <= 22080 && bitrate <= 135000) level = 50;
+  else if (mbps <= 983040 && frame_mb <= 36864 && bitrate <= 240000) level = 51;
+  else if (mbps <= 2073600 && frame_mb <= 36864 && bitrate <= 240000) level = 52;
+  else level = 41;
+ }
 
  u32 system_rate = (1075U * ((u32)bitrate + audio)) / 1000U + 256U;
  u16 colour = d->input == 0 ? 1 : 6;
