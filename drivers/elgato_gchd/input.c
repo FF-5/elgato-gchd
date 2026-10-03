@@ -746,12 +746,7 @@ static int gchd_post_encoder_state(struct gchd *d)
 static int __maybe_unused gchd_input_finalize(struct gchd *d)
 {
  u8 reply[3];
- u8 magic[5] = {0xab, 0xa9, 0x0f, 0xa4, 0x5b};
- int r, i;
-
- /* The preceding 56-byte sweep ends with the reference's
-  * 0xaa 0x8d 0x35 command, so do not emit it a second time here. */
-
+ int r;
 
  /*
   * This is the final source-routing stage from configure.cpp.  The
