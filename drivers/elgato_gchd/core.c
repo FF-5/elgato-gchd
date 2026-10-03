@@ -633,22 +633,7 @@ static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
 {
  struct gchd*d;int r;d=kzalloc(sizeof(*d),GFP_KERNEL);if(!d)return-ENOMEM;
  d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;d->family=(enum gchd_family)id->driver_info;
-	/*
-	 * The original libusb implementation explicitly re-applied
-	 * configuration 1 before touching the device.  The kernel has already
-	 * selected the active configuration during enumeration, so drivers must
-	 * not call usb_set_configuration() here.  Reset the active configuration
-	 * instead; this clears endpoint state and resets interface altsettings,
-	 * matching the relevant initialization effect without destroying the
-	 * interface we are probing.
-	 */
-	r = usb_reset_configuration(d->udev);
-	if (r) {
-		dev_err(&i->dev, "failed to reset active USB configuration: %d\n", r);
-		goto err;
-	}
-	dev_info(&i->dev, "active USB configuration reset before hardware init\
-");
+	/* USB enumeration has already selected configuration 1. */
 	mutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
  spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->input=0;d->input_width=1920;d->input_height=1080;d->input_fps_num=60;d->input_fps_den=1;d->bitrate=16000;d->h264_profile=V4L2_MPEG_VIDEO_H264_PROFILE_MAIN;d->h264_level=41;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
  if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;
