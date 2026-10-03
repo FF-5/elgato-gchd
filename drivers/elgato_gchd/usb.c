@@ -287,13 +287,23 @@ int gchd_send_enable_state(struct gchd *d)
 {
  int r;
  u16 status;
+
  for (int tries = 0; tries < 500; ++tries) {
   r = gchd_reg_write16(d, ENABLE_STATE_INDEX, d->hw_enable_state);
   if (r)
    return r;
+
   r = gchd_reg_read16(d, MAIL_READY_INDEX, &status);
   if (r)
    return r;
+
+  /*
+   * Match GCHD::sendEnableState(): every successful status read narrows
+   * the cable/source detection mask before we wait for MAIL_REQUEST_READY.
+   */
+  d->special_detect_mask &= (status >> 8 & 3) |
+                            (((status >> 10) & 3) != 0 ? BIT(3) : 0);
+
   if (status & BIT(0))
    return 0;
  }
@@ -678,18 +688,40 @@ int gchd_hw_init(struct gchd *d)
    if (r)
     return r;
   } else {
-   r = gchd_state_cmd(d, SCMD_RESET, 0, 0, 0x10);
+   /*
+    * Match completeStateChange(0, 0) on the old devices. Reading the
+    * state register is itself the state-change trigger when the device is
+    * still in state 0, so the completion handshake must be consumed before
+    * the idle firmware is loaded.
+    */
+   r = gchd_complete_state_change(d, 0, 0);
    if (r)
     return r;
   }
+
+  /*
+   * configureDevice() refreshes both enable registers after loading idle
+   * firmware. Keep the cached pair in sync for subsequent doEnable() calls.
+   */
+  r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
+  if (r)
+   return r;
+  r = gchd_reg_read16(d, ENABLE_INDEX, &d->hw_enable_register);
+  if (r)
+   return r;
  }
 
  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
  if (r)
   return r;
 
- /* Match configureDevice(): perform the initial ignored mailbox read,
-  * then repeat the processor-state query until 0x27f97b is reached. */
+ /*
+  * Match configureDevice() exactly here:
+  *   specialDetectMask_ = 0xffff;
+  *   one ignored 0x55 mailbox read;
+  *   then repeat the same 0x55 query until 0x27f97b.
+  */
+ d->special_detect_mask = 0xffff;
  r = gchd_processor_state(d, &magic);
  if (r)
   return r;
@@ -698,14 +730,8 @@ int gchd_hw_init(struct gchd *d)
   r = gchd_processor_state(d, &magic);
   if (r)
    return r;
-  if (magic == 0x27f97b) {
-   /* configureDevice() enables analog once the processor reaches 0x27f97b.
-    * Our default source is HDMI, so clear that bit immediately afterwards. */
-   r = gchd_enable_analog(d);
-   if (r)
-    return r;
+  if (magic == 0x27f97b)
    break;
-  }
   if (magic == 0x334455) {
    r = gchd_send_enable_state(d);
    if (r)
