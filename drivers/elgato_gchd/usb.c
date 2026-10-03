@@ -669,9 +669,15 @@ int gchd_hw_init(struct gchd *d)
   }
 
   /*
-   * configureDevice() refreshes both enable registers and then reads the
-   * eight firmware-identification words on both device families.
+   * configureDevice() refreshes the saved enable-state snapshot after
+   * loading idle firmware.  mailWrite() restores this exact snapshot;
+   * the pre-firmware value is only useful for the already-running path.
    */
+  r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->saved_enable_state);
+  if (r)
+   return r;
+
+  /* Refresh the mutable hardware state separately. */
   r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
   if (r)
    return r;
