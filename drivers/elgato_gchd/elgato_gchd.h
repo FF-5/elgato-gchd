@@ -66,6 +66,7 @@ struct gchd {
  bool signal_present;
  bool rgb_input;
  unsigned long last_video_jiffies;
+ u16 saved_enable_state;
  u16 hw_enable_state;
  u16 hw_enable_register;
  u16 special_detect_mask;
