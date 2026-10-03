@@ -704,27 +704,117 @@ int gchd_hw_init(struct gchd *d)
  if (r)
   return r;
 
- for (tries = 0; tries < 1000; ++tries) {
+ bool first_time = true;
+
+ for (tries = 0; tries < 2000; ++tries) {
   r = gchd_processor_state(d, &magic);
   if (r)
    return r;
-  if (magic == 0x27f97b)
-   break;
-  if (magic == 0x334455) {
+
+  switch (magic) {
+  case 0x334455:
+   /*
+    * Exact configureDevice() processor bring-up:
+    * sendEnableState(), enableAnalogInput(), then enable the firmware
+    * processor. sendEnableState() also updates special_detect_mask.
+    */
    r = gchd_send_enable_state(d);
    if (r)
     return r;
-   /* During processor bring-up the reference unconditionally enables the
-    * analog path before the processor reaches 0x27f97b. */
-   r = gchd_do_enable(d, EB_ANALOG_INPUT, EB_ANALOG_INPUT);
+
+   r = gchd_do_enable(d, EB_ANALOG_INPUT,
+                      d->input == 0 ? 0 : EB_ANALOG_INPUT);
    if (r)
     return r;
-   r = gchd_do_enable(d, EB_FIRMWARE_PROCESSOR, EB_FIRMWARE_PROCESSOR);
+
+   r = gchd_do_enable(d, EB_FIRMWARE_PROCESSOR,
+                      EB_FIRMWARE_PROCESSOR);
    if (r)
     return r;
+   break;
+
+  case 0x27f97b:
+   /*
+    * The first 0x27f97b is NOT the end of initialization.  It is the
+    * userspace driver's source-selection/transcoder initialization point.
+    */
+   if (first_time) {
+    bool hdmi_signal_found = !!(d->special_detect_mask & BIT(3));
+    u16 cable_type = d->special_detect_mask & 3;
+    bool signal_found;
+
+    if (cable_type == 0)
+     signal_found = hdmi_signal_found;
+    else
+     signal_found = true;
+
+    if (!d->input_forced) {
+     /*
+      * Match the userspace autodetect mapping:
+      *   3 -> Composite
+      *   2 -> Component
+      *   0 -> HDMI
+      * no signal -> HDMI fallback
+      */
+     if (!signal_found)
+      d->input = 0;
+     else if (cable_type == 3)
+      d->input = 2;
+     else if (cable_type == 2)
+      d->input = 1;
+     else
+      d->input = 0;
+    }
+
+    /*
+     * Userspace always calls enableAnalogInput() here, even for HDMI.
+     * Keep the same operation rather than optimizing it away.
+     */
+    r = gchd_enable_analog(d);
+    if (r)
+     return r;
+
+    r = gchd_transcoder_init(d);
+    if (r)
+     return r;
+
+    r = gchd_scmd(d, SCMD_INIT, 0x00, 0x0000);
+    if (r)
+     return r;
+
+    r = gchd_load_encoder_firmware(d);
+    if (r)
+     return r;
+
+    /*
+     * configureDevice() reads these four words after encoder firmware
+     * loading. They are deliberately retained even though their values
+     * are not consumed by the kernel driver.
+     */
+    {
+     u16 dummy;
+     r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0010,
+                        &dummy, sizeof(dummy)); if (r) return r;
+     r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0012,
+                        &dummy, sizeof(dummy)); if (r) return r;
+     r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0014,
+                        &dummy, sizeof(dummy)); if (r) return r;
+     r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0016,
+                        &dummy, sizeof(dummy)); if (r) return r;
+    }
+
+    first_time = false;
+   } else {
+    /*
+     * This is the second 0x27f97b.  Only now does configureDevice()
+     * leave this state machine and proceed to the 0x5b phase.
+     */
+    break;
+   }
+   break;
   }
  }
- if (tries == 1000)
+ if (tries == 2000)
   return -ETIMEDOUT;
 
  dev_info(&d->intf->dev, "device idle, processor state 0x%06x\\n", magic);
