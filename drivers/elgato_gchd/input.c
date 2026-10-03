@@ -1241,9 +1241,17 @@ int gchd_input_configure(struct gchd *d)
  if (d->input_configured)
   return 0;
 
+ dev_info(&d->intf->dev,
+          "capture setup: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
+          d->input, d->input_width, d->input_height, d->input_fps_num,
+          d->input_fps_den, d->input_interlaced);
+
  r = gchd_encoder_start(d);
- if (r)
+ if (r) {
+  dev_err(&d->intf->dev, "capture setup: encoder start failed: %d\n", r);
   return r;
+ }
+ dev_info(&d->intf->dev, "capture setup: encoder start completed\n");
 
  if (d->input == 0)
   r = gchd_configure_hdmi_exact(d);
@@ -1251,24 +1259,42 @@ int gchd_input_configure(struct gchd *d)
   r = gchd_configure_composite_exact(d);
  else
   r = gchd_configure_component_exact(d);
- if (r)
+ if (r) {
+  dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\n", r);
   return r;
+ }
+ dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
 
  /* Match the userspace tail common to HDMI, Component and Composite. */
  r = gchd_transcoder_final_configure(d);
- if (r)
+ if (r) {
+  dev_err(&d->intf->dev, "capture setup: transcoder final configuration failed: %d\n", r);
   return r;
+ }
+ dev_info(&d->intf->dev, "capture setup: transcoder final configuration completed\n");
+
  r = gchd_transcoder_setup(d);
- if (r)
+ if (r) {
+  dev_err(&d->intf->dev, "capture setup: transcoder setup failed: %d\n", r);
   return r;
+ }
+ dev_info(&d->intf->dev, "capture setup: transcoder setup completed\n");
+
  r = gchd_scmd(d, 4, 0xa0, 0);
- if (r)
+ if (r) {
+  dev_err(&d->intf->dev, "capture setup: SCMD_INIT failed: %d\n", r);
   return r;
+ }
+ dev_info(&d->intf->dev, "capture setup: SCMD_INIT submitted\n");
+
  r = gchd_state_cmd(d, 5, 0, 0x0002, 0x0002);
- if (r)
+ if (r) {
+  dev_err(&d->intf->dev, "capture setup: START transition failed: %d\n", r);
   return r;
+ }
 
  d->input_configured = true;
+ dev_info(&d->intf->dev, "capture setup: START transition completed\n");
  return 0;
 }
 
