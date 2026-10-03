@@ -521,8 +521,7 @@ int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
 
 int gchd_enable_analog(struct gchd *d)
 {
- u16 value = d->input ? EB_ANALOG_INPUT : 0;
- return gchd_do_enable(d, EB_ANALOG_INPUT, value);
+ return gchd_do_enable(d, EB_ANALOG_INPUT, EB_ANALOG_INPUT);
 }
 
 static int gchd_processor_state(struct gchd *d, u32 *magic)
@@ -687,8 +686,14 @@ int gchd_hw_init(struct gchd *d)
   r = gchd_processor_state(d, &magic);
   if (r)
    return r;
-  if (magic == 0x27f97b)
+  if (magic == 0x27f97b) {
+   /* configureDevice() enables analog once the processor reaches 0x27f97b.
+    * Our default source is HDMI, so clear that bit immediately afterwards. */
+   r = gchd_enable_analog(d);
+   if (r)
+    return r;
    break;
+  }
   if (magic == 0x334455) {
    r = gchd_send_enable_state(d);
    if (r)
