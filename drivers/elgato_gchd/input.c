@@ -1131,8 +1131,8 @@ static int gchd_configure_component_exact(struct gchd *d)
 #define M3(a,b,c) do { u8 x[]={a,b,c}; r=gchd_mail_write(d,0x33,x,3); if(r)return r; } while(0)
 #define MW(a,b) do { u8 x[]={a,b}; r=gchd_mail_write(d,0x4e,x,2); if(r)return r; } while(0)
 #define MW4C(a,b) do { u8 x[]={a,b}; r=gchd_mail_write(d,0x4c,x,2); if(r)return r; } while(0)
-#define MR1() do { r=gchd_mail_read(d,0x33,&v,1); if(r)return r; } while(0)
-#define R9(a) do { M3(0x9d,0xcd,a); MR1(); } while(0)
+#define MRC1() do { r=gchd_mail_read(d,0x33,&v,1); if(r)return r; } while(0)
+#define R9(a) do { M3(0x9d,0xcd,a); MRC1(); } while(0)
 
  M3(0x94,0x41,0x37); M3(0x94,0x4a,0xaf); M3(0x94,0x4b,0xaf);
  R9(0x3f); MW(0x00,0xcc); R9(0x94); MW(0xab,0x4c); R9(0x3f);
@@ -1148,11 +1148,11 @@ static int gchd_configure_component_exact(struct gchd *d)
   sum6867=sum6665=count6867=count6665=0;
   for (j=0;j<10;j++) {
    u8 a,b;
-   M3(0x9d,0xcd,0x66); MR1(); a=v;
-   M3(0x9d,0xcd,0x65); MR1(); b=v;
+   M3(0x9d,0xcd,0x66); MRC1(); a=v;
+   M3(0x9d,0xcd,0x65); MRC1(); b=v;
    sum6665 += ((u32)a<<8)|b; count6665++;
-   M3(0x9d,0xcd,0x68); MR1(); a=v;
-   M3(0x9d,0xcd,0x67); MR1(); b=v;
+   M3(0x9d,0xcd,0x68); MRC1(); a=v;
+   M3(0x9d,0xcd,0x67); MRC1(); b=v;
    sum6867 += ((u32)a<<8)|b; count6867++;
   }
   value6665=sum6665/count6665;
@@ -1268,9 +1268,9 @@ static int gchd_configure_component_exact(struct gchd *d)
  r=gchd_setup_subblock_exact(d); if(r)return r;
  r=gchd_common_block_b1(d,false); if(r)return r;
 
- M3(0x99,0x89,0xf5); MR1(); M3(0x99,0x89,0xfd); MR1();
- M3(0x99,0x89,0xf5); MR1(); M3(0x99,0x89,0xfc); MR1(); M3(0x99,0x89,0xf3); MR1();
- MW4C(0x0c,0x89); MW4C(0x0d,0xc8); M3(0x99,0x89,0xf5); MR1();
+ M3(0x99,0x89,0xf5); MRC1(); M3(0x99,0x89,0xfd); MRC1();
+ M3(0x99,0x89,0xf5); MRC1(); M3(0x99,0x89,0xfc); MRC1(); M3(0x99,0x89,0xf3); MRC1();
+ MW4C(0x0c,0x89); MW4C(0x0d,0xc8); M3(0x99,0x89,0xf5); MRC1();
  MW4C(0x0e,(u8)((v&0x10)|0x65)); MW4C(0x0e,(u8)((v&0x10)|0x64));
 
  r=gchd_common_block_a(d); if(r)return r;
@@ -1288,7 +1288,7 @@ static int gchd_configure_component_exact(struct gchd *d)
 #undef M3
 #undef MW
 #undef MW4C
-#undef MR1
+#undef MRC1
 #undef R9
 }
 
