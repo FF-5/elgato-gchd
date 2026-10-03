@@ -165,13 +165,24 @@ int gchd_transcoder_setup(struct gchd *d)
  u16 audio = 384;
  u16 gop = (fps + 10) / 5;
  u16 anchor = 3;
- u8 profile = d->h264_profile ? d->h264_profile : 1;
+ u8 profile;
  u8 level = d->h264_level ? d->h264_level : 41;
+
+ /*
+  * V4L2 profile values are API enum values; the Fujitsu encoder uses
+  * 1=High and 2=Main.  The userspace driver maps Baseline to Main too.
+  */
+ if (d->h264_profile == V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)
+  profile = 1;
+ else
+  profile = 2;
+
+ if (d->h264_profile == V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE)
+  anchor = 1;
  u32 system_rate = (1075U * ((u32)bitrate + audio)) / 1000U + 256U;
  u16 colour = d->input == 0 ? 1 : 6;
  u8 vformat;
 
- if (profile == 0) anchor = 1;
  if (height == 1080) vformat = d->input_interlaced ? 0 : 32;
  else if (height == 720) vformat = 2;
  else if (height == 576) vformat = d->input_interlaced ? 5 : 9;
