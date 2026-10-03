@@ -701,6 +701,7 @@ int gchd_hw_init(struct gchd *d)
   return -ETIMEDOUT;
 
  dev_info(&d->intf->dev, "device idle, processor state 0x%06x\\n", magic);
+ return 0;
 }
 
 int gchd_hw_shutdown(struct gchd *d)
