@@ -100,7 +100,7 @@ static int gchd_transcoder_defaults(struct gchd *d)
  if ((r = BF(0x113e, 8, 8, sizeof(gchd_sit)))) return r;
  if ((r = BF(0x100c, 4, 4, 2))) return r;
  if ((r = BF(0x100c, 12, 4, 3))) return r;
- if ((r = gchd_transcoder_table_write(d, 0x1144, gchd_pat, sizeof(gchd_pat))) return r;
+ if ((r = gchd_transcoder_table_write(d, 0x1144, gchd_pat, sizeof(gchd_pat))) ) return r;
  if ((r = gchd_transcoder_table_write(d, 0x1174, gchd_pmt, sizeof(gchd_pmt))) return r;
  if ((r = gchd_transcoder_table_write(d, 0x1010, gchd_sit, sizeof(gchd_sit))) return r;
  if ((r = BF(0x1278, 8, 8, sizeof(gchd_pat)))) return r;
