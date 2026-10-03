@@ -349,6 +349,11 @@ static int gchd_encoder_start(struct gchd *d)
  r = gchd_post_encoder_sweep(d);
  if (r) return r;
 
+ r = gchd_transcoder_setup(d);
+ if (r) return r;
+ r = gchd_transcoder_output_enable(d, true);
+ if (r) return r;
+
  r = gchd_input_finalize(d);
  if (r) return r;
 
