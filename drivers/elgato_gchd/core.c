@@ -646,7 +646,7 @@ static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
  usb_set_intfdata(i,d);
  return 0;
 errhw:gchd_hw_shutdown(d);d->hw_initialized=false;
-errv4l2:gchd_v4l2_unregister(d);errbuf:kfree(d->usb_buf);err:usb_put_dev(d->udev);kfree(d);return r;
+gchd_v4l2_unregister(d);errbuf:kfree(d->usb_buf);err:usb_put_dev(d->udev);kfree(d);return r;
 }
 static void gchd_disconnect(struct usb_interface*i)
 {struct gchd*d=usb_get_intfdata(i);if(!d)return;usb_set_intfdata(i,NULL);d->disconnected=true;if(d->rx_thread)kthread_stop(d->rx_thread);
