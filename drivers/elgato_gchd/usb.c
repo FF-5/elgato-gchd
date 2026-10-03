@@ -233,14 +233,21 @@ int gchd_sparam(struct gchd *d, u16 address, u8 lsb, u8 bits, u16 data)
 
 static int gchd_interrupt_pend(struct gchd *d)
 {
- u8 status[3];
+ u8 *status;
  int actual, r;
 
+ status = kmalloc(3, GFP_KERNEL);
+ if (!status)
+  return -ENOMEM;
+
  r = usb_interrupt_msg(d->udev, usb_rcvintpipe(d->udev, GCHD_EP_INT),
-                        status, sizeof(status), &actual, 0);
+                        status, 3, &actual, 0);
+
+ kfree(status);
+
  if (r)
   return r;
- if (actual != sizeof(status))
+ if (actual != 3)
   return -EIO;
  return 0;
 }
@@ -584,13 +591,6 @@ int gchd_hw_init(struct gchd *d)
  state &= 0x1f;
 
  if (state == 0) {
-  /*
-   * On HDNew, the first state read while the device is in boot state
-   * triggers a state transition.  The original driver waits for the
-   * corresponding interrupt and acknowledges the completion before the
-   * firmware download.  Without this handshake the firmware bulk OUT
-   * endpoint remains unserviced and the transfer hangs indefinitely.
-   */
   if (d->family == GCHD_FAMILY_HDNEW) {
    u16 completion = 0;
    int tries;
@@ -599,11 +599,6 @@ int gchd_hw_init(struct gchd *d)
     * Preserve the original libusb ordering: the state transition is
     * synchronized by consuming the interrupt notification first, then
     * polling the sticky completion bit and acknowledging it.
-    *
-    * On EHCI this interrupt transfer can return -EAGAIN even though the
-    * control endpoint is working. gchd_interrupt_pend() deliberately treats
-    * that as an optional notification failure, while the completion register
-    * remains the authoritative synchronization point.
     */
    r = gchd_interrupt_pend(d);
    if (r)
@@ -629,20 +624,10 @@ int gchd_hw_init(struct gchd *d)
   if (r)
    return r;
 
-  /*
-   * Keep the post-firmware sequence tight, as in the original implementation:
-   * the next register write follows the completed firmware bulk transfer.
-   */
   r = gchd_reg_write16(d, 0x0070, 4);
   if (r)
    return r;
 
-  /*
-   * Match the original post-firmware initialization sequence.  The two
-   * enable-register reads refresh the saved hardware state, and the eight
-   * bank-0 reads are part of the device's startup handshake.  In particular,
-   * do not issue SCMD_IDLE until these reads have completed.
-   */
   if (d->family == GCHD_FAMILY_HDNEW) {
    u16 dummy;
 
@@ -677,11 +662,11 @@ int gchd_hw_init(struct gchd *d)
    r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001e, &dummy, sizeof(dummy));
    if (r)
     return r;
+  } else {
+   r = gchd_state_cmd(d, SCMD_RESET, 0, 0, 0x10);
+   if (r)
+    return r;
   }
- } else {
-  r = gchd_state_cmd(d, SCMD_RESET, 0, 0, 0x10);
-  if (r)
-   return r;
  }
 
  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
@@ -713,8 +698,6 @@ int gchd_hw_shutdown(struct gchd *d)
  if (!d->udev)
   return 0;
 
- /* Reference shutdown preamble: select the transcoder bank only after the
-  * source path has been stopped, then disable the encoder output. */
  r = gchd_mail_write(d, 0x44, (u8[]){0x06,0x86}, 2);
  if (r) return r;
  r = gchd_mail_write(d, 0x33, (u8[]){0x89,0x89,0xf8}, 3);
@@ -729,15 +712,12 @@ int gchd_hw_shutdown(struct gchd *d)
  r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
  if (r) return r;
 
- /* Disable amck_mode (transcoder output). */
  r = gchd_sparam(d, 0x1a08, 3, 1, 0);
  if (r) return r;
 
  r = gchd_scmd(d, SCMD_INIT, 0xa0, 0x0000);
  if (r) return r;
 
- /* Clear all enable-state bits, then explicitly release the firmware
-  * processor bit as the reference implementation does. */
  r = gchd_reg_write16(d, ENABLE_STATE_INDEX, 0);
  if (r) return r;
  d->hw_enable_state = 0;
