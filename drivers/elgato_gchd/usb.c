@@ -46,15 +46,23 @@ MODULE_FIRMWARE("gchd/MB86M01_ASSP_NSEC_ENC_H");
 static int gchd_ctrl_read(struct gchd *d, u8 req, u16 value, u16 index,
                           void *buf, u16 len)
 {
+ unsigned long page;
  void *tmp;
  int r;
 
  if (!len)
   return 0;
 
- tmp = kmalloc(len, GFP_KERNEL);
- if (!tmp)
+ /*
+  * libusb's synchronous Linux backend uses USBDEVFS_CONTROL, whose
+  * kernel implementation allocates a full page for the control data
+  * buffer before calling usb_control_msg(). Match that transfer-buffer
+  * layout rather than using a len-sized kmalloc buffer.
+  */
+ page = __get_free_page(GFP_KERNEL);
+ if (!page)
   return -ENOMEM;
+ tmp = (void *)page;
 
  r = usb_control_msg(d->udev, usb_rcvctrlpipe(d->udev, 0),
                      req, REQ_READ, value, index, tmp, len, 0);
@@ -63,27 +71,35 @@ static int gchd_ctrl_read(struct gchd *d, u8 req, u16 value, u16 index,
  else if (r >= 0)
   r = -EIO;
 
- kfree(tmp);
+ free_page(page);
  return r < 0 ? r : 0;
 }
 
 static int gchd_ctrl_write(struct gchd *d, u8 req, u16 value, u16 index,
                            const void *buf, u16 len)
 {
+ unsigned long page;
  void *tmp;
  int r;
 
  if (!len)
   return 0;
 
- tmp = kmemdup(buf, len, GFP_KERNEL);
- if (!tmp)
+ /*
+  * Match USBDEVFS_CONTROL/libusb's page-sized synchronous control
+  * transfer buffer. Only the first len bytes are part of the USB
+  * data stage, so the wire-visible request is unchanged.
+  */
+ page = __get_free_page(GFP_KERNEL);
+ if (!page)
   return -ENOMEM;
+ tmp = (void *)page;
+ memcpy(tmp, buf, len);
 
  r = usb_control_msg(d->udev, usb_sndctrlpipe(d->udev, 0),
                      req, REQ_WRITE, value, index, tmp, len, 0);
- kfree(tmp);
 
+ free_page(page);
  return r < 0 ? r : (r == len ? 0 : -EIO);
 }
 
