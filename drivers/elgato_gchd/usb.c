@@ -656,13 +656,6 @@ int gchd_hw_init(struct gchd *d)
   if (d->family == GCHD_FAMILY_HDNEW) {
    u16 dummy;
 
-   r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
-   if (r)
-    return r;
-   r = gchd_reg_read16(d, ENABLE_INDEX, &d->hw_enable_register);
-   if (r)
-    return r;
-
    r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0010, &dummy, sizeof(dummy));
    if (r)
     return r;
@@ -700,8 +693,8 @@ int gchd_hw_init(struct gchd *d)
   }
 
   /*
-   * configureDevice() refreshes both enable registers after loading idle
-   * firmware. Keep the cached pair in sync for subsequent doEnable() calls.
+   * configureDevice() refreshes both enable registers and then reads the
+   * eight firmware-identification words on both device families.
    */
   r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
   if (r)
@@ -709,6 +702,18 @@ int gchd_hw_init(struct gchd *d)
   r = gchd_reg_read16(d, ENABLE_INDEX, &d->hw_enable_register);
   if (r)
    return r;
+
+  {
+   u16 dummy;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0010, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0012, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0014, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0016, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0018, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001a, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001c, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001e, &dummy, sizeof(dummy)); if (r) return r;
+  }
  }
 
  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
