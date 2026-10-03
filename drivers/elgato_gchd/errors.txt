@@ -1,581 +1,576 @@
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo kill $MONPID
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg | tail -100
-[17630.594690] usb 1-1: new high-speed USB device number 16 using ehci-pci
-[17631.025199] usb 1-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
-[17631.025216] usb 1-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
-[17631.025222] usb 1-1: Product: GameCapture HD
-[17631.025227] usb 1-1: Manufacturer: Elgato
-[17631.025231] usb 1-1: SerialNumber: 04107F1267
-[17635.785007] elgato_gchd 1-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17635.787411] elgato_gchd 1-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17635.791032] elgato_gchd 1-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17635.794740] elgato_gchd 1-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17635.798378] elgato_gchd 1-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17635.802062] elgato_gchd 1-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17635.805724] elgato_gchd 1-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17635.809424] elgato_gchd 1-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17635.812980] elgato_gchd 1-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17635.816676] elgato_gchd 1-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17635.820213] elgato_gchd 1-1:1.0: firmware chunk offset=327680 size=4016 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17635.897941] elgato_gchd 1-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
-[17635.899303] elgato_gchd 1-1:1.0: SCMD interrupt completed: command=0x01
-[17637.095465] elgato_gchd 1-1:1.0: transcoder defaults loaded
-[17637.098110] elgato_gchd 1-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 00 00 00
-[17637.099403] elgato_gchd 1-1:1.0: SCMD interrupt completed: command=0x04
-[17637.114518] elgato_gchd 1-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.117015] elgato_gchd 1-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.120570] elgato_gchd 1-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.124263] elgato_gchd 1-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.127734] elgato_gchd 1-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.131371] elgato_gchd 1-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.134980] elgato_gchd 1-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.138436] elgato_gchd 1-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.141974] elgato_gchd 1-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.145491] elgato_gchd 1-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.149002] elgato_gchd 1-1:1.0: firmware chunk offset=327680 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.152498] elgato_gchd 1-1:1.0: firmware chunk offset=360448 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.156102] elgato_gchd 1-1:1.0: firmware chunk offset=393216 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.159768] elgato_gchd 1-1:1.0: firmware chunk offset=425984 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.163312] elgato_gchd 1-1:1.0: firmware chunk offset=458752 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.166893] elgato_gchd 1-1:1.0: firmware chunk offset=491520 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.170437] elgato_gchd 1-1:1.0: firmware chunk offset=524288 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.173975] elgato_gchd 1-1:1.0: firmware chunk offset=557056 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.177441] elgato_gchd 1-1:1.0: firmware chunk offset=589824 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.181081] elgato_gchd 1-1:1.0: firmware chunk offset=622592 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.184935] elgato_gchd 1-1:1.0: firmware chunk offset=655360 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.188397] elgato_gchd 1-1:1.0: firmware chunk offset=688128 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.191973] elgato_gchd 1-1:1.0: firmware chunk offset=720896 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.195474] elgato_gchd 1-1:1.0: firmware chunk offset=753664 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.198968] elgato_gchd 1-1:1.0: firmware chunk offset=786432 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.202487] elgato_gchd 1-1:1.0: firmware chunk offset=819200 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.206056] elgato_gchd 1-1:1.0: firmware chunk offset=851968 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.209487] elgato_gchd 1-1:1.0: firmware chunk offset=884736 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.213033] elgato_gchd 1-1:1.0: firmware chunk offset=917504 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.216864] elgato_gchd 1-1:1.0: firmware chunk offset=950272 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.220378] elgato_gchd 1-1:1.0: firmware chunk offset=983040 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.223954] elgato_gchd 1-1:1.0: firmware chunk offset=1015808 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.227623] elgato_gchd 1-1:1.0: firmware chunk offset=1048576 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.231277] elgato_gchd 1-1:1.0: firmware chunk offset=1081344 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.234877] elgato_gchd 1-1:1.0: firmware chunk offset=1114112 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.238390] elgato_gchd 1-1:1.0: firmware chunk offset=1146880 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.242047] elgato_gchd 1-1:1.0: firmware chunk offset=1179648 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.245556] elgato_gchd 1-1:1.0: firmware chunk offset=1212416 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.249243] elgato_gchd 1-1:1.0: firmware chunk offset=1245184 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.252708] elgato_gchd 1-1:1.0: firmware chunk offset=1277952 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.256306] elgato_gchd 1-1:1.0: firmware chunk offset=1310720 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.259861] elgato_gchd 1-1:1.0: firmware chunk offset=1343488 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.263430] elgato_gchd 1-1:1.0: firmware chunk offset=1376256 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.267049] elgato_gchd 1-1:1.0: firmware chunk offset=1409024 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.270532] elgato_gchd 1-1:1.0: firmware chunk offset=1441792 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17637.274100] elgato_gchd 1-1:1.0: firmware chunk offset=1474560 size=26224 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[17702.195393] elgato_gchd 1-1:1.0: processor-state timeout after encoder init: last magic=0x27f97b first_time=0
-[17702.279344] elgato_gchd 1-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
-[17702.280808] elgato_gchd 1-1:1.0: SCMD interrupt completed: command=0x04
-[17702.301486] elgato_gchd 1-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
-[17702.305454] elgato_gchd 1-1:1.0: SCMD interrupt completed: command=0x01
-[17703.653282] elgato_gchd 1-1:1.0: SCMD timeout: command=0x01 mode=0x00 data=0x0000 readback=0x0400 polls=500
-[17703.653476] elgato_gchd: probe of 1-1:1.0 failed with error -110
-[17703.653527] usbcore: registered new interface driver elgato_gchd
+[18351.857386] workqueue: hub_event hogged CPU for >10000us 16 times, consider switching to WQ_UNBOUND
+[18351.972723] usb 1-1: new high-speed USB device number 17 using ehci-pci
+[18352.429623] usb 1-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
+[18352.429636] usb 1-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[18352.429640] usb 1-1: Product: GameCapture HD
+[18352.429643] usb 1-1: Manufacturer: Elgato
+[18352.429646] usb 1-1: SerialNumber: 04107F1267
+[18357.681692] elgato_gchd 1-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18357.684137] elgato_gchd 1-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18357.687607] elgato_gchd 1-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18357.691008] elgato_gchd 1-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18357.694492] elgato_gchd 1-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18357.697926] elgato_gchd 1-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18357.701316] elgato_gchd 1-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18357.704826] elgato_gchd 1-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18357.708208] elgato_gchd 1-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18357.711811] elgato_gchd 1-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18357.715210] elgato_gchd 1-1:1.0: firmware chunk offset=327680 size=4016 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18357.792905] elgato_gchd 1-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
+[18357.794168] elgato_gchd 1-1:1.0: SCMD interrupt completed: command=0x01
+[18359.108599] elgato_gchd 1-1:1.0: transcoder defaults loaded
+[18359.111267] elgato_gchd 1-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 00 00 00
+[18359.112592] elgato_gchd 1-1:1.0: SCMD interrupt completed: command=0x04
+[18359.129523] elgato_gchd 1-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.132284] elgato_gchd 1-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.135976] elgato_gchd 1-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.139603] elgato_gchd 1-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.143235] elgato_gchd 1-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.146966] elgato_gchd 1-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.150565] elgato_gchd 1-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.154128] elgato_gchd 1-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.157842] elgato_gchd 1-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.161656] elgato_gchd 1-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.165331] elgato_gchd 1-1:1.0: firmware chunk offset=327680 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.168966] elgato_gchd 1-1:1.0: firmware chunk offset=360448 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.172612] elgato_gchd 1-1:1.0: firmware chunk offset=393216 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.176363] elgato_gchd 1-1:1.0: firmware chunk offset=425984 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.179996] elgato_gchd 1-1:1.0: firmware chunk offset=458752 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.183631] elgato_gchd 1-1:1.0: firmware chunk offset=491520 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.187221] elgato_gchd 1-1:1.0: firmware chunk offset=524288 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.190938] elgato_gchd 1-1:1.0: firmware chunk offset=557056 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.194552] elgato_gchd 1-1:1.0: firmware chunk offset=589824 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.198175] elgato_gchd 1-1:1.0: firmware chunk offset=622592 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.201922] elgato_gchd 1-1:1.0: firmware chunk offset=655360 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.205625] elgato_gchd 1-1:1.0: firmware chunk offset=688128 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.209190] elgato_gchd 1-1:1.0: firmware chunk offset=720896 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.212921] elgato_gchd 1-1:1.0: firmware chunk offset=753664 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.216598] elgato_gchd 1-1:1.0: firmware chunk offset=786432 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.220077] elgato_gchd 1-1:1.0: firmware chunk offset=819200 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.223730] elgato_gchd 1-1:1.0: firmware chunk offset=851968 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.227272] elgato_gchd 1-1:1.0: firmware chunk offset=884736 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.231001] elgato_gchd 1-1:1.0: firmware chunk offset=917504 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.234704] elgato_gchd 1-1:1.0: firmware chunk offset=950272 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.238279] elgato_gchd 1-1:1.0: firmware chunk offset=983040 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.241897] elgato_gchd 1-1:1.0: firmware chunk offset=1015808 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.245443] elgato_gchd 1-1:1.0: firmware chunk offset=1048576 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.249075] elgato_gchd 1-1:1.0: firmware chunk offset=1081344 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.252637] elgato_gchd 1-1:1.0: firmware chunk offset=1114112 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.256198] elgato_gchd 1-1:1.0: firmware chunk offset=1146880 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.259973] elgato_gchd 1-1:1.0: firmware chunk offset=1179648 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.263628] elgato_gchd 1-1:1.0: firmware chunk offset=1212416 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.267131] elgato_gchd 1-1:1.0: firmware chunk offset=1245184 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.270724] elgato_gchd 1-1:1.0: firmware chunk offset=1277952 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.274285] elgato_gchd 1-1:1.0: firmware chunk offset=1310720 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.277901] elgato_gchd 1-1:1.0: firmware chunk offset=1343488 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.281492] elgato_gchd 1-1:1.0: firmware chunk offset=1376256 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.285212] elgato_gchd 1-1:1.0: firmware chunk offset=1409024 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.288904] elgato_gchd 1-1:1.0: firmware chunk offset=1441792 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.292476] elgato_gchd 1-1:1.0: firmware chunk offset=1474560 size=26224 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[18359.340197] elgato_gchd 1-1:1.0: device idle, processor state 0x27f97b
+[18359.340316] usbcore: registered new interface driver elgato_gchd
 [1]+  Terminated              sudo cat /sys/kernel/debug/usb/usbmon/1u > /tmp/gchd-usbmon.txt
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo tail -500 /tmp/gchd-usbmon.txt
-ffff893b2c024cc0 1319299259 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319301825 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319301862 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319304448 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319304525 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319307095 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319307131 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319309720 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319309800 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319312318 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319312347 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319314944 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319314983 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319317625 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319317710 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319320323 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319320364 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319322957 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319323033 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319325607 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319325645 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319328208 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319328285 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319330834 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319330869 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319333621 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319333701 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319336249 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319336286 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319338857 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319338882 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319341516 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319341596 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319344132 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319344171 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319346799 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319346879 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319349415 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319349466 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319352086 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319352168 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319354727 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319354763 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319357247 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319357267 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319359875 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319359917 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319362572 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319362608 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319365209 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319365288 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319367856 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319367905 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319370460 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319370539 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319373058 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319373116 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319375694 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319375772 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319378371 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319378415 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319380995 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319381034 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319383623 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319383729 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319386234 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319386272 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319388921 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319388945 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319391645 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319391724 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319394252 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319394332 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319396918 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319396999 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319399528 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319399567 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319402278 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319402316 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319404923 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319405003 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319407651 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319407690 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319410425 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319410505 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319413032 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319413079 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319415779 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319415862 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319418439 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319418476 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319421168 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319421249 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319423910 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319423949 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319426670 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319426707 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319429282 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319429363 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319431918 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319431957 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319434611 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319434692 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319437227 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319437266 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319439886 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319439956 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319442532 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319442574 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319445163 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319445248 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319447921 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319447964 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319450694 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319450731 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319453414 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319453495 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319456003 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319456043 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319458759 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319458839 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319461367 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319461406 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319463954 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319464057 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319466726 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319466763 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319469328 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319469366 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319471981 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319472058 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319474740 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319474776 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319477363 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319477440 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319479983 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319480019 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319482803 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319482887 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319485508 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319485577 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319488272 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319488355 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319491001 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319491039 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319493736 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319493816 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319496391 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319496430 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319499051 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319499152 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319501856 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319501895 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319504541 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319504578 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319507255 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319507337 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319509900 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319509944 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319512514 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319512599 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319515160 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319515192 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319517782 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319517870 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319520288 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319520304 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319523109 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319523153 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319525799 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319525882 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319528380 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319528403 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319531410 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319531444 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319534096 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319534182 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319536751 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319536789 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319539412 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319539480 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319542171 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319542210 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319544908 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319544990 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319547742 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319547780 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319550378 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024cc0 1319550418 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024cc0 1319553045 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319553131 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319555881 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319556077 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319558567 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319558705 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319561337 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319561471 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319564042 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319564182 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319566864 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319567001 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319569503 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319569637 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319572147 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319572284 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319574877 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319575017 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319577582 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319577717 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319580232 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319580379 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319582872 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319583016 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319585475 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319585615 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319588241 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319588384 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319590888 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319591135 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319593711 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319593780 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319596414 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319596574 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319599140 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319599227 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319601758 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319601843 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319604402 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319604579 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319607046 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319607154 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319609748 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319609825 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319612452 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319612583 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319615156 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319615306 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319617760 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319617900 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319620412 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319620558 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319623103 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319623172 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319625801 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319625933 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319628569 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319628710 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319631304 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319631407 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319633884 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319633945 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319636563 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319636719 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319639372 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319639513 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319641980 C Ci:1:016:0 0 2 = 0400
-ffff893afd415840 1319642126 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893afd415840 1319644761 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319644810 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319647426 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319647469 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319650123 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319650170 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319652816 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319652860 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319655578 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319655623 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319658294 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319658337 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319661126 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319661170 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319663763 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319663808 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319666501 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319666599 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319669134 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319669177 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319671794 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319671838 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319674568 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319674613 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319677303 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319677346 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319680009 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319680055 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319682726 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319682768 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319685387 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319685448 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319688048 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319688105 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319690776 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319690844 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319693458 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319693504 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319696119 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319696153 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319698883 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319698929 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319701811 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319701866 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319704510 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319704555 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319707241 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319707283 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319709908 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319709932 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319712692 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319712737 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319715374 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319715419 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319718183 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319718227 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319720956 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319721001 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319723704 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319723744 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319726351 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319726395 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319729078 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319729123 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319731776 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319731821 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319734533 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319734576 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319737171 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319737216 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319739717 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319739760 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319742286 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319742318 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319744969 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319745014 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319747604 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319747645 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319750246 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319750289 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319752883 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319752928 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319755669 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319755713 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319758360 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319758404 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319761183 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319761228 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319763768 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319763813 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319766575 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319766618 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319769244 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319769278 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319771957 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319772000 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319774656 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319774698 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319777364 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319777406 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319780121 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319780165 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319782892 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319782934 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319785710 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319785755 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319788356 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319788401 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319791046 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319791119 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319793697 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319793743 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319796303 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319796347 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319798996 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319799043 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319801629 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319801672 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319804340 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319804398 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319806954 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319806996 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319809670 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319809714 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319812184 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319812226 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319814846 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319814890 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319817457 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319817493 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319820105 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319820152 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319822741 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319822785 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319825330 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319825376 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319827983 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319828028 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319830651 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319830693 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319833256 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319833301 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319835819 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319835880 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319838526 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319838570 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319841134 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319841179 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319843736 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319843779 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319846463 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319846505 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319849125 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319849168 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319851841 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319851886 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319854573 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319854616 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319857278 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319857331 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319859870 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319859914 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319862496 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319862540 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319865161 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319865202 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319867900 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319867949 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319870664 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319870708 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319873404 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319873448 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319876135 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319876179 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319878830 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319878873 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319881531 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319881576 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319884285 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319884329 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319886945 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319886990 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319889630 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319889675 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319892263 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319892307 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319894861 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319894905 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319897637 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319897683 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319900224 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319900269 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319902936 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319902979 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319905706 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319905751 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319908310 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319908366 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319910999 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319911041 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319913803 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319913848 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319916547 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319916592 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319919234 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319919276 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319921930 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319921975 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319924658 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319924701 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319927406 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319927449 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319930078 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319930123 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319932803 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319932842 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319935629 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319935672 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319938287 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319938332 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319941009 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319941054 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319943771 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319943836 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319946505 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319946550 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319949255 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319949299 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319951885 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319951934 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319954653 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319954687 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319957484 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319957530 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319960184 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319960226 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319962875 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319962917 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319965629 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319965671 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319968312 C Ci:1:016:0 0 2 = 0400
-ffff893b2c024e40 1319968346 S Ci:1:016:0 s c0 bc 0800 0014 0002 2 <
-ffff893b2c024e40 1319971050 C Ci:1:016:0 0 2 = 0400
+ffff893b2c024a80 1974949167 S Co:1:017:0 s 40 bc 0001 1004 0008 8 = 00000000 00010000
+ffff893b2c024a80 1974951742 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974951776 S Co:1:017:0 s 40 bc 0001 1004 0008 8 = 00000000 60000000
+ffff893b2c024a80 1974954437 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974954482 S Co:1:017:0 s 40 bc 0001 1004 0008 8 = 00000000 18000000
+ffff893b2c024a80 1974957213 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974957257 S Co:1:017:0 s 40 bc 0001 1004 0008 8 = 00000000 04000000
+ffff893b2c024a80 1974959927 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974959971 S Co:1:017:0 s 40 bc 0001 1004 0008 8 = 01000000 03000000
+ffff893b2c024a80 1974962537 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974962594 S Co:1:017:0 s 40 bc 0001 1004 0008 8 = 00000000 00800000
+ffff893b2c024a80 1974965350 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974965394 S Co:1:017:0 s 40 bc 0001 1004 0008 8 = 00040000 007f0000
+ffff893b2c024a80 1974968040 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974968109 S Co:1:017:0 s 40 bc 0001 1004 0008 8 = 00000000 00008000
+ffff893b2c024a80 1974970682 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974970726 S Co:1:017:0 s 40 bc 0001 1004 0008 8 = 00000000 00000400
+ffff893b2c024a80 1974973339 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974973383 S Co:1:017:0 s 40 bc 0001 1004 0008 8 = 00000000 00000080
+ffff893b2c024a80 1974975998 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974976065 S Co:1:017:0 s 40 bc 0001 1100 0008 8 = 00000000 00000004
+ffff893b2c024a80 1974978612 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974978656 S Co:1:017:0 s 40 bc 0001 1240 0008 8 = 00000000 00000004
+ffff893b2c024a80 1974981340 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974981384 S Co:1:017:0 s 40 bc 0001 1100 0008 8 = 00000002 00000003
+ffff893b2c024a80 1974984070 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974984113 S Co:1:017:0 s 40 bc 0001 1240 0008 8 = 00000002 00000003
+ffff893b2c024a80 1974986773 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974986817 S Co:1:017:0 s 40 bc 0001 1104 0008 8 = 61a80000 ffff0000
+ffff893b2c024a80 1974989438 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974989481 S Co:1:017:0 s 40 bc 0001 1244 0008 8 = 1f400000 ffff0000
+ffff893b2c024a80 1974992211 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974992255 S Co:1:017:0 s 40 bc 0001 1104 0008 8 = 00000000 0000ffff
+ffff893b2c024a80 1974994930 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974994974 S Co:1:017:0 s 40 bc 0001 1244 0008 8 = 00000000 0000ffff
+ffff893b2c024a80 1974997556 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1974997613 S Co:1:017:0 s 40 bc 0001 1124 0008 8 = 00001011 00001fff
+ffff893b2c024a80 1975000263 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975000302 S Co:1:017:0 s 40 bc 0001 1264 0008 8 = 00001011 00001fff
+ffff893b2c024a80 1975002982 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975003013 S Co:1:017:0 s 40 bc 0001 1128 0008 8 = 010f0000 1fff0000
+ffff893b2c024a80 1975005647 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975005685 S Co:1:017:0 s 40 bc 0001 1268 0008 8 = 010f0000 1fff0000
+ffff893b2c024a80 1975008330 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975008371 S Co:1:017:0 s 40 bc 0001 112c 0008 8 = 01100000 1fff0000
+ffff893b2c024a80 1975011026 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975011086 S Co:1:017:0 s 40 bc 0001 126c 0008 8 = 01100000 1fff0000
+ffff893b2c024a80 1975013782 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975013820 S Co:1:017:0 s 40 bc 0001 112c 0008 8 = 00000100 00001fff
+ffff893b2c024a80 1975016415 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975016454 S Co:1:017:0 s 40 bc 0001 126c 0008 8 = 00000100 00001fff
+ffff893b2c024a80 1975019175 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975019214 S Co:1:017:0 s 40 bc 0001 1134 0008 8 = 001f0000 1fff0000
+ffff893b2c024a80 1975021903 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975021942 S Co:1:017:0 s 40 bc 0001 1138 0008 8 = 10000000 ff000000
+ffff893b2c024a80 1975024513 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975024551 S Co:1:017:0 s 40 bc 0001 1138 0008 8 = 00320000 00ff0000
+ffff893b2c024a80 1975027255 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975027284 S Co:1:017:0 s 40 bc 0001 113c 0008 8 = 00000a00 0000ff00
+ffff893b2c024a80 1975029966 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975030001 S Co:1:017:0 s 40 bc 0001 100c 0008 8 = 00200000 00f00000
+ffff893b2c024a80 1975032646 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975032683 S Co:1:017:0 s 40 bc 0001 100c 0008 8 = 30000000 f0000000
+ffff893b2c024a80 1975035253 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975035290 S Co:1:017:0 s 40 bc 0000 1144 0002 2 = 00b0
+ffff893b2c024a80 1975037896 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975037929 S Co:1:017:0 s 40 bc 0000 1146 0002 2 = 1100
+ffff893b2c024a80 1975040467 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975040494 S Co:1:017:0 s 40 bc 0000 1148 0002 2 = 0001
+ffff893b2c024a80 1975043122 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975043155 S Co:1:017:0 s 40 bc 0000 114a 0002 2 = 0000
+ffff893b2c024a80 1975045868 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975045901 S Co:1:017:0 s 40 bc 0000 114c 0002 2 = 0001
+ffff893b2c024a80 1975048496 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975048529 S Co:1:017:0 s 40 bc 0000 114e 0002 2 = e110
+ffff893b2c024a80 1975051090 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975051118 S Co:1:017:0 s 40 bc 0000 1150 0002 2 = 0000
+ffff893b2c024a80 1975053782 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975053801 S Co:1:017:0 s 40 bc 0000 1152 0002 2 = e01f
+ffff893b2c024a80 1975056484 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975056533 S Co:1:017:0 s 40 bc 0000 1174 0002 2 = 02b0
+ffff893b2c024a80 1975059125 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975059163 S Co:1:017:0 s 40 bc 0000 1176 0002 2 = 3300
+ffff893b2c024a80 1975061738 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975061769 S Co:1:017:0 s 40 bc 0000 1178 0002 2 = 0101
+ffff893b2c024a80 1975064194 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975064222 S Co:1:017:0 s 40 bc 0000 117a 0002 2 = 0000
+ffff893b2c024a80 1975066873 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975066901 S Co:1:017:0 s 40 bc 0000 117c 0002 2 = e000
+ffff893b2c024a80 1975069478 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975069506 S Co:1:017:0 s 40 bc 0000 117e 0002 2 = f00c
+ffff893b2c024a80 1975072148 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975072192 S Co:1:017:0 s 40 bc 0000 1180 0002 2 = 0504
+ffff893b2c024a80 1975074906 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975074950 S Co:1:017:0 s 40 bc 0000 1182 0002 2 = 4844
+ffff893b2c024a80 1975077462 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975077505 S Co:1:017:0 s 40 bc 0000 1184 0002 2 = 4d56
+ffff893b2c024a80 1975080176 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975080222 S Co:1:017:0 s 40 bc 0000 1186 0002 2 = 8804
+ffff893b2c024a80 1975082967 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975083009 S Co:1:017:0 s 40 bc 0000 1188 0002 2 = 0fff
+ffff893b2c024a80 1975085742 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975085784 S Co:1:017:0 s 40 bc 0000 118a 0002 2 = fcfc
+ffff893b2c024a80 1975088395 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975088440 S Co:1:017:0 s 40 bc 0000 118c 0002 2 = 1be0
+ffff893b2c024a80 1975091026 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975091069 S Co:1:017:0 s 40 bc 0000 118e 0002 2 = 11f0
+ffff893b2c024a80 1975093655 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975093699 S Co:1:017:0 s 40 bc 0000 1190 0002 2 = 1405
+ffff893b2c024a80 1975096296 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975096341 S Co:1:017:0 s 40 bc 0000 1192 0002 2 = 0848
+ffff893b2c024a80 1975099019 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975099063 S Co:1:017:0 s 40 bc 0000 1194 0002 2 = 444d
+ffff893b2c024a80 1975101573 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975101629 S Co:1:017:0 s 40 bc 0000 1196 0002 2 = 56ff
+ffff893b2c024a80 1975104247 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975104291 S Co:1:017:0 s 40 bc 0000 1198 0002 2 = 1b44
+ffff893b2c024a80 1975106910 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975106953 S Co:1:017:0 s 40 bc 0000 119a 0002 2 = 3f28
+ffff893b2c024a80 1975109525 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975109569 S Co:1:017:0 s 40 bc 0000 119c 0002 2 = 042a
+ffff893b2c024a80 1975112264 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975112306 S Co:1:017:0 s 40 bc 0000 119e 0002 2 = 027e
+ffff893b2c024a80 1975115044 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975115086 S Co:1:017:0 s 40 bc 0000 11a0 0002 2 = ff03
+ffff893b2c024a80 1975117648 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975117693 S Co:1:017:0 s 40 bc 0000 11a2 0002 2 = e10f
+ffff893b2c024a80 1975120428 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975120473 S Co:1:017:0 s 40 bc 0000 11a4 0002 2 = f000
+ffff893b2c024a80 1975123175 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975123219 S Co:1:017:0 s 40 bc 0000 1010 0002 2 = 7ff0
+ffff893b2c024a80 1975125815 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975126350 S Co:1:017:0 s 40 bc 0000 1012 0002 2 = 0bff
+ffff893b2c024a80 1975128495 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975128527 S Co:1:017:0 s 40 bc 0000 1014 0002 2 = ff01
+ffff893b2c024a80 1975131210 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975131253 S Co:1:017:0 s 40 bc 0000 1016 0002 2 = 0000
+ffff893b2c024a80 1975133897 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975133942 S Co:1:017:0 s 40 bc 0000 1018 0002 2 = f000
+ffff893b2c024a80 1975136521 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975136565 S Co:1:017:0 s 40 bc 0001 1278 0008 8 = 10000000 ff000000
+ffff893b2c024a80 1975139158 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975139200 S Co:1:017:0 s 40 bc 0001 1278 0008 8 = 00320000 00ff0000
+ffff893b2c024a80 1975141895 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975141939 S Co:1:017:0 s 40 bc 0001 127c 0008 8 = 00000a00 0000ff00
+ffff893b2c024a80 1975144597 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975144639 S Co:1:017:0 s 40 bc 0000 1284 0002 2 = 00b0
+ffff893b2c024a80 1975147231 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975147273 S Co:1:017:0 s 40 bc 0000 1286 0002 2 = 1100
+ffff893b2c024a80 1975150000 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975150088 S Co:1:017:0 s 40 bc 0000 1288 0002 2 = 0001
+ffff893b2c024a80 1975152703 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975152745 S Co:1:017:0 s 40 bc 0000 128a 0002 2 = 0000
+ffff893b2c024a80 1975155430 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975155475 S Co:1:017:0 s 40 bc 0000 128c 0002 2 = 0001
+ffff893b2c024a80 1975158082 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975158127 S Co:1:017:0 s 40 bc 0000 128e 0002 2 = e110
+ffff893b2c024a80 1975160784 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975160837 S Co:1:017:0 s 40 bc 0000 1290 0002 2 = 0000
+ffff893b2c024a80 1975163397 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975163441 S Co:1:017:0 s 40 bc 0000 1292 0002 2 = e01f
+ffff893b2c024a80 1975166008 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975166054 S Co:1:017:0 s 40 bc 0000 12b4 0002 2 = 02b0
+ffff893b2c024a80 1975168624 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975168671 S Co:1:017:0 s 40 bc 0000 12b6 0002 2 = 3300
+ffff893b2c024a80 1975171301 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975171345 S Co:1:017:0 s 40 bc 0000 12b8 0002 2 = 0101
+ffff893b2c024a80 1975174019 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975174063 S Co:1:017:0 s 40 bc 0000 12ba 0002 2 = 0000
+ffff893b2c024a80 1975176799 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975176843 S Co:1:017:0 s 40 bc 0000 12bc 0002 2 = e000
+ffff893b2c024a80 1975179365 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975179397 S Co:1:017:0 s 40 bc 0000 12be 0002 2 = f00c
+ffff893b2c024a80 1975182040 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975182085 S Co:1:017:0 s 40 bc 0000 12c0 0002 2 = 0504
+ffff893b2c024a80 1975184662 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975184706 S Co:1:017:0 s 40 bc 0000 12c2 0002 2 = 4844
+ffff893b2c024a80 1975187443 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975187485 S Co:1:017:0 s 40 bc 0000 12c4 0002 2 = 4d56
+ffff893b2c024a80 1975190212 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975190257 S Co:1:017:0 s 40 bc 0000 12c6 0002 2 = 8804
+ffff893b2c024a80 1975192930 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975192975 S Co:1:017:0 s 40 bc 0000 12c8 0002 2 = 0fff
+ffff893b2c024a80 1975195690 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975195733 S Co:1:017:0 s 40 bc 0000 12ca 0002 2 = fcfc
+ffff893b2c024a80 1975198463 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975198508 S Co:1:017:0 s 40 bc 0000 12cc 0002 2 = 1be0
+ffff893b2c024a80 1975201185 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975201230 S Co:1:017:0 s 40 bc 0000 12ce 0002 2 = 11f0
+ffff893b2c024a80 1975203894 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975203936 S Co:1:017:0 s 40 bc 0000 12d0 0002 2 = 1405
+ffff893b2c024a80 1975206677 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975206723 S Co:1:017:0 s 40 bc 0000 12d2 0002 2 = 0848
+ffff893b2c024a80 1975209448 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975209492 S Co:1:017:0 s 40 bc 0000 12d4 0002 2 = 444d
+ffff893b2c024a80 1975212222 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975212264 S Co:1:017:0 s 40 bc 0000 12d6 0002 2 = 56ff
+ffff893b2c024a80 1975214922 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975214967 S Co:1:017:0 s 40 bc 0000 12d8 0002 2 = 1b44
+ffff893b2c024a80 1975217692 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975217742 S Co:1:017:0 s 40 bc 0000 12da 0002 2 = 3f28
+ffff893b2c024a80 1975220472 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975220514 S Co:1:017:0 s 40 bc 0000 12dc 0002 2 = 042a
+ffff893b2c024a80 1975223215 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975223259 S Co:1:017:0 s 40 bc 0000 12de 0002 2 = 027e
+ffff893b2c024a80 1975225942 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975225987 S Co:1:017:0 s 40 bc 0000 12e0 0002 2 = ff03
+ffff893b2c024a80 1975228650 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975228691 S Co:1:017:0 s 40 bc 0000 12e2 0002 2 = e10f
+ffff893b2c024a80 1975231437 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975231487 S Co:1:017:0 s 40 bc 0000 12e4 0002 2 = f000
+ffff893b2c024a80 1975234198 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975234230 S Co:1:017:0 s 40 bc 0000 1370 0002 2 = 7ff0
+ffff893b2c024a80 1975236937 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975236980 S Co:1:017:0 s 40 bc 0000 1372 0002 2 = 0bff
+ffff893b2c024a80 1975239688 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975239732 S Co:1:017:0 s 40 bc 0000 1374 0002 2 = ff01
+ffff893b2c024a80 1975242433 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975242478 S Co:1:017:0 s 40 bc 0000 1376 0002 2 = 0000
+ffff893b2c024a80 1975245199 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975245241 S Co:1:017:0 s 40 bc 0000 1378 0002 2 = f000
+ffff893b2c024a80 1975247926 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975247971 S Co:1:017:0 s 40 bc 0001 1274 0008 8 = 001f0000 1fff0000
+ffff893b2c024a80 1975250656 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975250697 S Co:1:017:0 s 40 bc 0001 1268 0008 8 = 00001111 00001fff
+ffff893b2c024a80 1975253437 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975253481 S Co:1:017:0 s 40 bc 0001 1130 0008 8 = 00e00000 00ff0000
+ffff893b2c024a80 1975256235 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975256280 S Co:1:017:0 s 40 bc 0001 1270 0008 8 = 00e00000 00ff0000
+ffff893b2c024a80 1975258917 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975258961 S Co:1:017:0 s 40 bc 0001 1130 0008 8 = 000000c0 000000ff
+ffff893b2c024a80 1975261689 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975261732 S Co:1:017:0 s 40 bc 0001 1270 0008 8 = 000000c0 000000ff
+ffff893b2c024a80 1975264460 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975264505 S Co:1:017:0 s 40 bc 0001 113c 0008 8 = 00000000 00ff0000
+ffff893b2c024a80 1975267222 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975267266 S Co:1:017:0 s 40 bc 0001 127c 0008 8 = 00000000 00ff0000
+ffff893b2c024a80 1975269922 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975269955 S Co:1:017:0 s 40 bc 0001 113c 0008 8 = 00000000 000000ff
+ffff893b2c024a80 1975272679 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975272725 S Co:1:017:0 s 40 bc 0001 127c 0008 8 = 00000000 000000ff
+ffff893b2c024a80 1975275413 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975275455 S Co:1:017:0 s 40 bc 0001 1140 0008 8 = 00000000 00ff0000
+ffff893b2c024a80 1975278218 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975278261 S Co:1:017:0 s 40 bc 0001 1280 0008 8 = 00000000 00ff0000
+ffff893b2c024a80 1975280936 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975280982 S Co:1:017:0 s 40 bc 0001 1140 0008 8 = 00000000 000003ff
+ffff893b2c024a80 1975283681 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975283725 S Co:1:017:0 s 40 bc 0001 1280 0008 8 = 00000000 000003ff
+ffff893b2c024a80 1975286432 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975286475 S Co:1:017:0 s 40 bc 0001 1710 0008 8 = 10000000 30000000
+ffff893b2c024a80 1975289145 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975289190 S Co:1:017:0 s 40 bc 0001 1500 0008 8 = 00000400 00000400
+ffff893b2c024a80 1975291977 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975292021 S Co:1:017:0 s 40 bc 0001 1500 0008 8 = 00000004 000000ff
+ffff893b2c024a80 1975294687 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975294729 S Co:1:017:0 s 40 bc 0001 1504 0008 8 = 00020000 00030000
+ffff893b2c024a80 1975297457 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975297502 S Co:1:017:0 s 40 bc 0001 1510 0008 8 = 00000000 03000000
+ffff893b2c024a80 1975300204 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975300249 S Co:1:017:0 s 40 bc 0001 1510 0008 8 = 00000000 00200000
+ffff893b2c024a80 1975302937 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975302981 S Co:1:017:0 s 40 bc 0001 1510 0008 8 = 00100000 00100000
+ffff893b2c024a80 1975305620 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975305653 S Co:1:017:0 s 40 bc 0001 1510 0008 8 = 00000000 00080000
+ffff893b2c024a80 1975308303 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975308348 S Co:1:017:0 s 40 bc 0001 1510 0008 8 = 00000000 00040000
+ffff893b2c024a80 1975311059 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975311102 S Co:1:017:0 s 40 bc 0001 1510 0008 8 = 00010000 00030000
+ffff893b2c024a80 1975313803 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975313847 S Co:1:017:0 s 40 bc 0001 1518 0008 8 = 00000000 00ff0000
+ffff893b2c024a80 1975316548 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975316607 S Co:1:017:0 s 40 bc 0001 1518 0008 8 = 0f000000 ff000000
+ffff893b2c024a80 1975319316 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975319358 S Co:1:017:0 s 40 bc 0001 1518 0008 8 = 00000000 0000ffff
+ffff893b2c024a80 1975322051 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975322096 S Co:1:017:0 s 40 bc 0001 151c 0008 8 = 00000000 ffff0000
+ffff893b2c024a80 1975324800 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975324845 S Co:1:017:0 s 40 bc 0001 1524 0008 8 = 00000029 000000ff
+ffff893b2c024a80 1975327551 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975327608 S Co:1:017:0 s 40 bc 0001 1524 0008 8 = 00000100 0000ff00
+ffff893b2c024a80 1975330285 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975330349 S Co:1:017:0 s 40 bc 0001 152c 0008 8 = 07800000 ffff0000
+ffff893b2c024a80 1975333049 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975333094 S Co:1:017:0 s 40 bc 0001 152c 0008 8 = 00000438 0000ffff
+ffff893b2c024a80 1975335803 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975335846 S Co:1:017:0 s 40 bc 0001 1530 0008 8 = 00003e80 0000ffff
+ffff893b2c024a80 1975338515 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975338560 S Co:1:017:0 s 40 bc 0001 1534 0008 8 = 36b00000 ffff0000
+ffff893b2c024a80 1975341263 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975341307 S Co:1:017:0 s 40 bc 0001 1534 0008 8 = 00001f40 0000ffff
+ffff893b2c024a80 1975343888 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975343952 S Co:1:017:0 s 40 bc 0001 1538 0008 8 = 00000000 ffff0000
+ffff893b2c024a80 1975346508 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975346553 S Co:1:017:0 s 40 bc 0001 1570 0008 8 = 00010000 00010000
+ffff893b2c024a80 1975349305 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975349350 S Co:1:017:0 s 40 bc 0001 1570 0008 8 = 08000000 08000000
+ffff893b2c024a80 1975352013 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975352063 S Co:1:017:0 s 40 bc 0001 1570 0008 8 = 40000000 40000000
+ffff893b2c024a80 1975354709 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975354755 S Co:1:017:0 s 40 bc 0001 1570 0008 8 = 80000000 80000000
+ffff893b2c024a80 1975357472 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975357519 S Co:1:017:0 s 40 bc 0001 157c 0008 8 = 08000000 08000000
+ffff893b2c024a80 1975360184 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975360229 S Co:1:017:0 s 40 bc 0001 157c 0008 8 = 40000000 40000000
+ffff893b2c024a80 1975362953 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975362999 S Co:1:017:0 s 40 bc 0001 157c 0008 8 = 80000000 80000000
+ffff893b2c024a80 1975365682 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975365736 S Co:1:017:0 s 40 bc 0001 157c 0008 8 = 00000000 00000001
+ffff893b2c024a80 1975368371 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975368411 S Co:1:017:0 s 40 bc 0001 157c 0008 8 = 00000050 00000070
+ffff893b2c024a80 1975371035 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975371081 S Co:1:017:0 s 40 bc 0001 157c 0008 8 = 00001000 00001000
+ffff893b2c024a80 1975373610 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975373651 S Co:1:017:0 s 40 bc 0001 1580 0008 8 = 00010000 00ff0000
+ffff893b2c024a80 1975376197 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975376238 S Co:1:017:0 s 40 bc 0001 1580 0008 8 = 10000000 10000000
+ffff893b2c024a80 1975378979 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975379041 S Co:1:017:0 s 40 bc 0001 1580 0008 8 = 00000001 000000ff
+ffff893b2c024a80 1975381617 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975381662 S Co:1:017:0 s 40 bc 0001 1580 0008 8 = 00000100 0000ff00
+ffff893b2c024a80 1975384264 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975384307 S Co:1:017:0 s 40 bc 0001 1584 0008 8 = 00000000 ffff0000
+ffff893b2c024a80 1975386860 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975386905 S Co:1:017:0 s 40 bc 0001 1584 0008 8 = 00000000 0000ffff
+ffff893b2c024a80 1975389512 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975389570 S Co:1:017:0 s 40 bc 0001 1588 0008 8 = 00000000 ffff0000
+ffff893b2c024a80 1975392135 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975392177 S Co:1:017:0 s 40 bc 0001 1a00 0008 8 = 00000000 00000003
+ffff893b2c024a80 1975394759 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975394804 S Co:1:017:0 s 40 bc 0001 1a04 0008 8 = 01800000 ffff0000
+ffff893b2c024a80 1975397373 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975397418 S Co:1:017:0 s 40 bc 0001 1a04 0008 8 = 00000000 00000001
+ffff893b2c024a80 1975399967 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975400009 S Co:1:017:0 s 40 bc 0001 1a08 0008 8 = 00080000 00080000
+ffff893b2c024a80 1975402700 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975402745 S Co:1:017:0 s 40 bc 0001 1a08 0008 8 = 00200000 00300000
+ffff893b2c024a80 1975405347 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975405384 S Co:1:017:0 s 40 bc 0001 1a08 0008 8 = 00400000 00400000
+ffff893b2c024a80 1975408100 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975408141 S Co:1:017:0 s 40 bc 0001 1a08 0008 8 = 00800000 00800000
+ffff893b2c024a80 1975410787 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975410831 S Co:1:017:0 s 40 bc 0001 1a14 0008 8 = 00000000 00000001
+ffff893b2c024a80 1975413376 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975413421 S Co:1:017:0 s 40 bc 0001 1a14 0008 8 = 00000000 00000006
+ffff893b2c024a80 1975416169 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975416212 S Co:1:017:0 s 40 bc 0001 1a14 0008 8 = 00000000 00000008
+ffff893b2c024a80 1975418873 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975418917 S Co:1:017:0 s 40 bc 0001 1a14 0008 8 = 00000010 00000010
+ffff893b2c024a80 1975421513 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975421557 S Co:1:017:0 s 40 bc 0001 1a14 0008 8 = 00000000 00000060
+ffff893b2c024a80 1975424209 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975424252 S Co:1:017:0 s 40 bc 0001 1008 0008 8 = 00000000 0000000f
+ffff893b2c024a80 1975426890 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975426935 S Co:1:017:0 s 40 bc 0001 1008 0008 8 = 00000010 000000f0
+ffff893b2c024a80 1975429512 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975429557 S Co:1:017:0 s 40 bc 0001 1008 0008 8 = 00000000 00000f00
+ffff893b2c024a80 1975432120 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975432149 S Co:1:017:0 s 40 bc 0001 1008 0008 8 = 00000000 0000f000
+ffff893b2c024a80 1975434875 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975434920 S Co:1:017:0 s 40 bc 0001 100c 0008 8 = 00000000 000f0000
+ffff893b2c024a80 1975437511 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975437556 S Co:1:017:0 s 40 bc 0001 100c 0008 8 = 00200000 00f00000
+ffff893b2c024a80 1975440299 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975440340 S Co:1:017:0 s 40 bc 0001 100c 0008 8 = 00000000 0f000000
+ffff893b2c024a80 1975443017 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975443062 S Co:1:017:0 s 40 bc 0001 100c 0008 8 = 30000000 f0000000
+ffff893b2c024a80 1975445608 C Co:1:017:0 0 8 >
+ffff893b2c024a80 1975445664 S Co:1:017:0 s 40 b8 0000 0000 0004 4 = 04000000
+ffff893b2c024a80 1975448277 C Co:1:017:0 0 4 >
+ffff893b2c024a80 1975448329 S Ii:1:017:3 -115:1 3 <
+ffff893b2c024a80 1975449612 C Ii:1:017:3 0:1 3 = 100000
+ffff893b2c024a80 1975449655 S Ci:1:017:0 s c0 bc 0800 0014 0002 2 <
+ffff893b2c024a80 1975452437 C Ci:1:017:0 0 2 = 0400
+ffff893b2c024a80 1975466601 S Bo:1:017:2 -115 32768 = 4d423841 43303331 00000000 000000a0 00380000 00000001 0016e450 6f3eaf9d
+ffff893b2c024a80 1975469289 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975469347 S Bo:1:017:2 -115 32768 = 459390c7 ad7361ee 357e708c 82400226 c79c8040 e1be18ee ddf45ddf a8263b1f
+ffff893b2c024a80 1975472978 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975473040 S Bo:1:017:2 -115 32768 = f82b3de5 7e78521d b2df26ab 5c3b4d2e c555fed1 101ab81e 5bf248a7 67907ef9
+ffff893b2c024a80 1975476609 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975476666 S Bo:1:017:2 -115 32768 = 86ba10bc f8dbd01d aa18a492 fbae6543 be4f17a1 94e7db00 e2bd3d47 16421d11
+ffff893b2c024a80 1975480239 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975480299 S Bo:1:017:2 -115 32768 = 85131719 13adea05 12dc0e43 91461cdf be9897a0 539e115a e0286384 f0136c55
+ffff893b2c024a80 1975483972 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975484030 S Bo:1:017:2 -115 32768 = d16371df 8d4fcd21 ce92ba93 17874aec 7e1172c2 b8d8125b d660a546 c13a7eed
+ffff893b2c024a80 1975487552 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975487629 S Bo:1:017:2 -115 32768 = 2bba7566 34d911b2 48322512 920fb880 14ad43a3 1d381ff5 017dd30f ec5efe26
+ffff893b2c024a80 1975491135 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975491192 S Bo:1:017:2 -115 32768 = c9d779bb 2ba58163 8b7bae5c 764e7db6 5bc9ef5f 7f2648ce 39f0dec8 8bf3bdad
+ffff893b2c024a80 1975494847 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975494906 S Bo:1:017:2 -115 32768 = 4e0e0fd6 7d0a496e d511a7e0 cec45bca a04d921f 354ae81c 14a9f377 0b8537a4
+ffff893b2c024a80 1975498661 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975498720 S Bo:1:017:2 -115 32768 = 4a258885 3ffc784f 4fe057a2 dbe61866 1641a789 bb7bc884 ac81a912 b0288a6b
+ffff893b2c024a80 1975502335 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975502395 S Bo:1:017:2 -115 32768 = 55e85959 b9d37625 54e5960f 10024d2c f01acaca a040a3b5 ebdb7e1d 5dc62ad9
+ffff893b2c024a80 1975505973 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975506030 S Bo:1:017:2 -115 32768 = c6c67b45 c02d5f3d b07e0720 6c149605 23b494f8 d7863c35 125f1641 0c1d3222
+ffff893b2c024a80 1975509616 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975509676 S Bo:1:017:2 -115 32768 = b0be6abd 3edea79d 2036b52d 0d33f0bb e715ade9 bbcca2b1 5b52e1bb 7c73ce1c
+ffff893b2c024a80 1975513358 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975513431 S Bo:1:017:2 -115 32768 = 70ff6f20 cf70510c 741bc89a 8912d5b2 c0285994 218e2c29 2397beeb 5b2d42b7
+ffff893b2c024a80 1975517009 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975517061 S Bo:1:017:2 -115 32768 = 9fb59404 4c983772 80fc35b9 be46c51a e6c321eb 798b46a5 3cb7a40a 01a3b0fa
+ffff893b2c024a80 1975520648 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975520695 S Bo:1:017:2 -115 32768 = 4a275e66 87d9040e c1ac05b9 45c05555 17f5eef8 ac0ac462 858a224b ac891c92
+ffff893b2c024a80 1975524228 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975524285 S Bo:1:017:2 -115 32768 = 25c2d040 048cfff4 00f6979e e00a6f16 5696ea3e 5690205f b6f84d89 3516d697
+ffff893b2c024a80 1975527945 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975528003 S Bo:1:017:2 -115 32768 = 6023fbbe e9917ec6 b363e23b 69c95ce6 f40259c2 41f0b38f 489d0579 2045e75a
+ffff893b2c024a80 1975531544 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975531617 S Bo:1:017:2 -115 32768 = 735ad409 35dcf6e6 e6690c40 00040de1 01ff55e4 77c84ea6 fa787a9b fc50a41e
+ffff893b2c024a80 1975535183 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975535240 S Bo:1:017:2 -115 32768 = 48e7ae51 3e898960 68d54945 ca5bc1ef f74200b9 ef4d1c5a 335ce8f4 aa4b100b
+ffff893b2c024a80 1975538926 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975538987 S Bo:1:017:2 -115 32768 = ca8da8c2 3e72fa1c e5bb061c 61dd1b52 d3f1e662 e37656b9 04aac02f e156871c
+ffff893b2c024a80 1975542611 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975542691 S Bo:1:017:2 -115 32768 = 302064e7 aebe92ac a2bd6cae 1ab59d24 d6a42592 d19aa99e d4c137e1 4c3835d3
+ffff893b2c024a80 1975546196 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975546255 S Bo:1:017:2 -115 32768 = 2a4392d4 192d728c 16588cda eda8f7bc 87a52bda 15d635f1 587b10d1 436f4c7b
+ffff893b2c024a80 1975549928 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975549986 S Bo:1:017:2 -115 32768 = 46ee0a05 e9836907 9cdf9b99 343bbb48 76bda731 595ddfe6 3d0bc11d c73bb88a
+ffff893b2c024a80 1975553603 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975553664 S Bo:1:017:2 -115 32768 = 29497b8a 241fabba 694df2f7 4c65acb2 a6b6d498 24bd2091 bef3cdc3 863f71df
+ffff893b2c024a80 1975557085 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975557142 S Bo:1:017:2 -115 32768 = 00712cbc 506dcf73 6a3da0bf 027600bd 32883148 d9c09b90 47286fc0 1b20477d
+ffff893b2c024a80 1975560734 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975560796 S Bo:1:017:2 -115 32768 = 9d62139f 3d67b63c 5e485997 f0338abc ae284276 fb203f0c b5baa3d9 a149d7b4
+ffff893b2c024a80 1975564280 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975564338 S Bo:1:017:2 -115 32768 = 035bc2ba f295d682 eef7c842 459af1e6 44f968a6 6c21d821 e4d1bb48 ceefe50d
+ffff893b2c024a80 1975568019 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975568067 S Bo:1:017:2 -115 32768 = f2a42acb e3a77eb7 a7372857 2a677c39 b05b7a78 7d563ed8 218bf5c8 2d3e59fb
+ffff893b2c024a80 1975571712 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975571771 S Bo:1:017:2 -115 32768 = a9ae8ecb ff3e5f4b 18e6c0a9 aee9d31a 9ddad2d9 de5fe966 22fb0e5e 97c8ad1e
+ffff893b2c024a80 1975575284 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975575345 S Bo:1:017:2 -115 32768 = 7f2f2797 8a15f346 87e81052 0449e8f1 beae1af4 c83e4d14 368e5a5a 498f489a
+ffff893b2c024a80 1975578906 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975578963 S Bo:1:017:2 -115 32768 = 7663cc8e 831f9f62 ba81eed8 79905025 5c4e8045 d4a40ee0 fff03d64 4a558390
+ffff893b2c024a80 1975582448 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975582510 S Bo:1:017:2 -115 32768 = 013172ee 86d83fb6 fbc0d910 0b7e12bc fe722f37 4bacbf38 6fb28cf6 78aa0d61
+ffff893b2c024a80 1975586082 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975586142 S Bo:1:017:2 -115 32768 = 04a22f9e 76871f97 9fc04d07 e154b8a2 85bc474b b4198137 97d8ce99 90e9d117
+ffff893b2c024a80 1975589644 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975589703 S Bo:1:017:2 -115 32768 = d7b165ab dbe01981 4ba70572 6628fca9 f299ccbb 3b31511b 24a9d06f 8f79a994
+ffff893b2c024a80 1975593218 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975593265 S Bo:1:017:2 -115 32768 = 11d3226a d9d7e11e 64429194 2c529d1b 52ae5410 d59fcf85 d815bcbd 9ab8bd76
+ffff893b2c024a80 1975596979 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975597040 S Bo:1:017:2 -115 32768 = 2c6c5b3f 2154ead9 15da54bd 3a10a2d1 7251bff8 b6408d6e 7bcee7d4 48a17a39
+ffff893b2c024a80 1975600635 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975600695 S Bo:1:017:2 -115 32768 = 7a1928d3 f37cc593 4ae5b2b4 26f25b78 73e03e9a ea63c953 f536c3e9 82d2dc1f
+ffff893b2c024a80 1975604137 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975604198 S Bo:1:017:2 -115 32768 = 1aa3edf6 bfd4972b 1aa3edf6 bfd4972b 1aa3edf6 bfd4972b 1aa3edf6 bfd4972b
+ffff893b2c024a80 1975607734 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975607791 S Bo:1:017:2 -115 32768 = e020a7f8 5170f55b ea4a3279 6bdf3c8a b08e46f5 f5daed3d 9a6c8a05 24f72017
+ffff893b2c024a80 1975611292 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975611353 S Bo:1:017:2 -115 32768 = 96484c0a 04e4daef a835e578 73b288ba de2c1a64 0ce4fc45 dfe7dd59 555dc92c
+ffff893b2c024a80 1975614911 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975614968 S Bo:1:017:2 -115 32768 = 522da892 fe693da0 736fde09 1d40091d d074ac06 95e90ec9 425fba55 cbf50e2e
+ffff893b2c024a80 1975618512 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975618560 S Bo:1:017:2 -115 32768 = 763ff695 bfd7bd00 92938b32 5691aebb cdc94288 96d15f7d f9878077 43e08db8
+ffff893b2c024a80 1975622215 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975622280 S Bo:1:017:2 -115 32768 = 814281d7 8b3765de c30fa280 1256c789 e4f96159 aec7c88e 3379d77f 66bc0a6a
+ffff893b2c024a80 1975625911 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975625972 S Bo:1:017:2 -115 32768 = 1865b88b bffb3968 55224cc8 909b1ee7 47544f1a 212e9109 4c6a4e54 8b8795d2
+ffff893b2c024a80 1975629487 C Bo:1:017:2 0 32768 >
+ffff893b2c024a80 1975629543 S Bo:1:017:2 -115 26224 = 6d0d822e e3d15d8e 1f67e581 8f522c6d d29abfa4 adb59d21 f94b05db a82ddea4
+ffff893b2c024a80 1975633078 C Bo:1:017:2 0 26224 >
+ffff893b2c024a80 1975633214 S Ci:1:017:0 s c0 bc 0000 0010 0002 2 <
+ffff893b2c024a80 1975635967 C Ci:1:017:0 0 2 = 2013
+ffff893b2c024a80 1975636011 S Ci:1:017:0 s c0 bc 0000 0012 0002 2 <
+ffff893b2c024a80 1975638682 C Ci:1:017:0 0 2 = 1210
+ffff893b2c024a80 1975638726 S Ci:1:017:0 s c0 bc 0000 0014 0002 2 <
+ffff893b2c024a80 1975641430 C Ci:1:017:0 0 2 = 1880
+ffff893b2c024a80 1975641473 S Ci:1:017:0 s c0 bc 0000 0016 0002 2 <
+ffff893b2c024a80 1975644252 C Ci:1:017:0 0 2 = 2030
+ffff893b2c024a80 1975644297 S Co:1:017:0 s 40 bc 0800 00c0 0006 6 = aba90fa4 5500
+ffff893b2c024a80 1975647003 C Co:1:017:0 0 6 >
+ffff893b2c024a80 1975647048 S Co:1:017:0 s 40 b9 0000 0000 0004 4 = 09006605
+ffff893b2c024a80 1975649747 C Co:1:017:0 0 4 >
+ffff893b2c024a80 1975649790 S Ii:1:017:3 -115:1 3 <
+ffff893b2c024a80 1975650963 C Ii:1:017:3 0:1 3 = 100000
+ffff893b2c024a80 1975651002 S Ci:1:017:0 s c0 bc 0800 0016 0002 2 <
+ffff893b2c024a80 1975653791 C Ci:1:017:0 0 2 = 0900
+ffff893b2c024a80 1975653832 S Ci:1:017:0 s c0 bc 0900 001c 0002 2 <
+ffff893b2c024a80 1975656552 C Ci:1:017:0 0 2 = 2f7f
+ffff893b2c024a80 1975656605 S Ci:1:017:0 s c0 bc 0800 23be 0002 2 <
+ffff893b2c024a80 1975659299 C Ci:1:017:0 0 2 = 0000
+ffff893b2c024a80 1975659392 S Co:1:017:0 s 40 bc 0900 0014 0002 2 = d086
+ffff893b2c024a80 1975662067 C Co:1:017:0 0 2 >
+ffff893b2c024a80 1975662111 S Ci:1:017:0 s c0 bc 0900 001c 0002 2 <
+ffff893b2c024a80 1975664752 C Ci:1:017:0 0 2 = 2f7f
+ffff893b2c024a80 1975664796 S Co:1:017:0 s 40 b9 0000 0000 0004 4 = 09016603
+ffff893b2c024a80 1975667527 C Co:1:017:0 0 4 >
+ffff893b2c024a80 1975667568 S Ii:1:017:3 -115:1 3 <
+ffff893b2c024a80 1975668865 C Ii:1:017:3 0:1 3 = 100000
+ffff893b2c024a80 1975668896 S Ci:1:017:0 s c0 bc 0800 0016 0002 2 <
+ffff893b2c024a80 1975671683 C Ci:1:017:0 0 2 = 0900
+ffff893b2c024a80 1975671727 S Ci:1:017:0 s c0 bc 0900 001c 0002 2 <
+ffff893b2c024a80 1975674388 C Ci:1:017:0 0 2 = 2f7f
+ffff893b2c024a80 1975674421 S Ci:1:017:0 s c0 bc 0800 23be 0006 6 <
+ffff893b2c024a80 1975677214 C Ci:1:017:0 0 6 = 000027f9 7b00
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ 
