@@ -1,6 +1,7 @@
 #include <linux/kthread.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <linux/timekeeping.h>
 #include <linux/jiffies.h>
 #include "elgato_gchd.h"
@@ -29,7 +30,7 @@ static const struct gchd_mode gchd_modes[] = {
  { 720,  576, 50, 1, false},
  { 720, 576, 50, 1, true},
  { 720,  480, 60, 1, false},
- { 720,  480, 60, 1, true},
+ { 720, 480, 60, 1, true},
 };
 
 static const struct gchd_mode *gchd_find_mode(u32 width, u32 height,
@@ -50,14 +51,14 @@ static bool gchd_mode_allowed(const struct gchd *d,
                               const struct gchd_mode *m)
 {
  switch (d->input) {
- case 0: /* HDMI: 480p/576p/720p/1080i/1080p are supported by the original. */
+ case 0:
   return (m->width == 1920 && m->height == 1080) ||
          (m->width == 1280 && m->height == 720) ||
          (m->width == 720 && !m->interlaced &&
           (m->height == 480 || m->height == 576));
- case 1: /* Component: progressive/interlaced HD plus PAL/NTSC interlaced. */
+ case 1:
   return true;
- case 2: /* Composite: SD interlaced only. */
+ case 2:
   return m->interlaced && m->width == 720 &&
          (m->height == 480 || m->height == 576);
  default:
@@ -69,11 +70,11 @@ int gchd_ring_push(struct gchd_ring *r, const u8 *data, size_t len)
 {
  unsigned long flags; u8 *copy; struct gchd_frame *f; unsigned int tail;
  if (!len || len > GCHD_MAX_FRAME) return -EMSGSIZE;
- copy = kmemdup(data, len, GFP_KERNEL); if (!copy) return -ENOMEM;
+ copy = kvmemdup(data, len, GFP_KERNEL); if (!copy) return -ENOMEM;
  spin_lock_irqsave(&r->lock, flags);
  while (r->count && (r->count >= GCHD_RING_FRAMES || r->bytes + len > ring_bytes)) {
   tail=(r->head+GCHD_RING_FRAMES-r->count)%GCHD_RING_FRAMES;
-  kfree(r->frames[tail].data); r->bytes-=r->frames[tail].len;
+  kvfree(r->frames[tail].data); r->bytes-=r->frames[tail].len;
   r->frames[tail].data=NULL; r->frames[tail].len=0; r->count--;
  }
  f=&r->frames[r->head]; f->data=copy; f->len=len; f->sequence=++r->sequence;
@@ -97,7 +98,7 @@ void gchd_ring_free(struct gchd_ring *r)
 {
  unsigned long flags; unsigned int i;
  spin_lock_irqsave(&r->lock,flags);
- for(i=0;i<GCHD_RING_FRAMES;i++){ kfree(r->frames[i].data); r->frames[i].data=NULL; r->frames[i].len=0; }
+ for(i=0;i<GCHD_RING_FRAMES;i++){ kvfree(r->frames[i].data); r->frames[i].data=NULL; r->frames[i].len=0; }
  r->count=0; r->bytes=0; spin_unlock_irqrestore(&r->lock,flags);
 }
 
@@ -155,7 +156,7 @@ static void gchd_deliver(struct gchd *d)
  if(!d->streaming)return;
  f=gchd_ring_pop(&d->ring); if(!f)return;
  spin_lock_irqsave(&d->qlock,flags);
- if(list_empty(&d->queued)){spin_unlock_irqrestore(&d->qlock,flags);kfree(f->data);kfree(f);return;}
+ if(list_empty(&d->queued)){spin_unlock_irqrestore(&d->qlock,flags);kvfree(f->data);kfree(f);return;}
  b=list_first_entry(&d->queued,struct gchd_buffer,list);list_del(&b->list);
  spin_unlock_irqrestore(&d->qlock,flags);
  dst=vb2_plane_vaddr(&b->vb.vb2_buf,0);
@@ -163,13 +164,13 @@ static void gchd_deliver(struct gchd *d)
  else {memcpy(dst,f->data,f->len);vb2_set_plane_payload(&b->vb.vb2_buf,0,f->len);
   b->vb.sequence=f->sequence;b->vb.vb2_buf.timestamp=ktime_get_ns();
   vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_DONE);}
- kfree(f->data);kfree(f);
+ kvfree(f->data);kfree(f);
 }
 
 static int gchd_rx(void *arg)
 {
  struct gchd *d=arg; u8 *pes; size_t n=0; int ret,actual,pos;
- pes=kmalloc(GCHD_MAX_FRAME,GFP_KERNEL);if(!pes)return-ENOMEM;
+ pes=kvmalloc(GCHD_MAX_FRAME,GFP_KERNEL);if(!pes)return-ENOMEM;
  while(!kthread_should_stop()&&!d->disconnected){
   ret=usb_bulk_msg(d->udev,usb_rcvbulkpipe(d->udev,GCHD_EP_IN),d->usb_buf,
                    GCHD_USB_BUFSIZE,&actual,1000);
@@ -191,7 +192,7 @@ static int gchd_rx(void *arg)
  }
  if (n)
   gchd_ring_push(&d->ring, pes, n);
- kfree(pes);
+ kvfree(pes);
  return 0;
 }
 
@@ -265,10 +266,6 @@ static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
  }
  in->type = V4L2_INPUT_TYPE_CAMERA;
 
- /*
-  * Do not claim V4L2_IN_ST_NO_SIGNAL here. Signal detection is device-side
-  * and is not yet fully exposed through the V4L2 status ioctl path.
-  */
  if (index == d->input && !d->signal_present)
   in->status = V4L2_IN_ST_NO_SIGNAL;
  if (index < 2)
