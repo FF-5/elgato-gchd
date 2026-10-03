@@ -201,56 +201,14 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d);
 static int gchd_encoder_start(struct gchd *d)
 {
  u8 reply[3];
- u8 magic[] = {0xab,0xa9,0x0f,0xa4,0x55};
  int r, i;
  u32 state;
 
  /*
-  * This is the encoder bring-up sequence from the original configureDevice().
-  * In particular, firmware load occurs after the 0x27f97b processor state and
-  * before the four post-firmware readbacks.
+  * hw_init() has already completed the processor-state machine through the
+  * second 0x27f97b.  configureDevice() enters the encoder bring-up here,
+  * starting with the 0x5b polling phase.
   */
- /* hw_init() already performs configureDevice()'s processor-state loop
-  * and stops at its first 0x27f97b result. */
- r = gchd_enable_analog(d);
- if (r)
-  return r;
-
- r = gchd_transcoder_init(d);
- if (r)
-  return r;
-
- r = gchd_scmd(d, 4, 0x00, 0x0000);
- if (r)
-  return r;
-
- r = gchd_load_encoder_firmware(d);
- if (r)
-  return r;
-
- {
-  u16 v;
-  r = gchd_raw_read16(d, 0x0000, 0x0010, &v);
-  if (r) return r;
-  r = gchd_raw_read16(d, 0x0000, 0x0012, &v);
-  if (r) return r;
-  r = gchd_raw_read16(d, 0x0000, 0x0014, &v);
-  if (r) return r;
-  r = gchd_raw_read16(d, 0x0000, 0x0016, &v);
-  if (r) return r;
- }
-
- /* configureDevice() returns to the main 0x27f97b loop once after
-  * encoder firmware load, before entering the 0x5b polling loop. */
- r = gchd_mail_write(d, 0x33,
-                     (u8[]){0xab,0xa9,0x0f,0xa4,0x55}, 5);
- if (r) return r;
- r = gchd_mail_read(d, 0x33, reply, 3);
- if (r) return r;
- r = gchd_enable_analog(d);
- if (r) return r;
-
- /* Firmware can transiently return to 0x334455. */
  for (i = 0; i < 5; ++i) {
   r = gchd_mail_write(d, 0x33,
                       (u8[]){0xab,0xa9,0x0f,0xa4,0x5b}, 5);
@@ -267,9 +225,13 @@ static int gchd_encoder_start(struct gchd *d)
  r = gchd_do_enable(d, BIT(3), BIT(3));
  if (r) return r;
 
- /* Turning on the encoder can temporarily return 0x334455. */
+ /*
+  * Turning on the encoder can temporarily return to 0x334455.  Keep polling
+  * until the processor is back at 0x27f97b, as configureDevice() does.
+  */
  for (i = 0; i < 1000; ++i) {
-  r = gchd_mail_write(d, 0x33, magic, sizeof(magic));
+  r = gchd_mail_write(d, 0x33,
+                      (u8[]){0xab,0xa9,0x0f,0xa4,0x55}, 5);
   if (r) return r;
   r = gchd_mail_read(d, 0x33, reply, 3);
   if (r) return r;
