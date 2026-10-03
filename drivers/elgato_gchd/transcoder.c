@@ -258,7 +258,7 @@ int gchd_transcoder_setup(struct gchd *d)
   else if (mbps <= 589824 && frame_mb <= 22080 && bitrate <= 135000) level = 50;
   else if (mbps <= 983040 && frame_mb <= 36864 && bitrate <= 240000) level = 51;
   else if (mbps <= 2073600 && frame_mb <= 36864 && bitrate <= 240000) level = 52;
-  else level = 41;
+  else return -EINVAL;
  }
 
  u32 system_rate = (1075U * ((u32)bitrate + audio)) / 1000U + 256U;
@@ -273,7 +273,7 @@ int gchd_transcoder_setup(struct gchd *d)
  if (fps == 50) vformat |= 1;
 
 #define P(a,l,b,v) do { r=gchd_sparam(d,(a),(l),(b),(v)); if(r) return r; } while(0)
- if (d->family == GCHD_FAMILY_HDNEW) { P(0x1574,0,5,3); }
+ if (d->family == GCHD_FAMILY_HDNEW) { P(0x1574,15,1,0); P(0x1574,0,5,3); }
  P(0x1104,0,16,system_rate); P(0x1106,0,16,0);
  P(0x1510,5,1,1); P(0x1518,0,8,anchor); P(0x1518,8,8,gop);
  P(0x1510,3,1,0); P(0x1514,8,3,0); P(0x1510,0,2,0);
@@ -284,7 +284,7 @@ int gchd_transcoder_setup(struct gchd *d)
  P(0x1526,0,8,level); P(0x1526,8,8,profile);
  P(0x1a02,0,2,0); P(0x1a16,0,1,0); P(0x1a16,1,2,0); P(0x1a16,3,1,0); P(0x1a16,4,1,1); P(0x1a16,5,2,0); P(0x1a04,0,16,audio);
  P(0x1580,12,1,1); P(0x1580,0,8,colour); P(0x1582,8,8,1); P(0x1582,0,8,colour); P(0x157e,0,1,0); P(0x157e,12,1,1); P(0x157e,4,3,5);
- if (d->family == GCHD_FAMILY_HDNEW) { P(0x1674,0,5,3); }
+ if (d->family == GCHD_FAMILY_HDNEW) { P(0x1674,15,1,0); P(0x1674,0,5,3); }
  P(0x1244,0,16,system_rate); P(0x1246,0,16,0);
  P(0x1610,5,1,1); P(0x1618,0,8,anchor); P(0x1618,8,8,gop); P(0x1610,3,1,0); P(0x1614,8,3,0); P(0x1610,0,2,0);
  P(0x1632,0,16,bitrate); P(0x1634,0,16,auto_max_bitrate); P(0x1636,0,16,auto_average_bitrate); P(0x1638,0,16,auto_min_bitrate); P(0x163a,0,16,0);
