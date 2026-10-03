@@ -236,18 +236,17 @@ static int gchd_interrupt_pend(struct gchd *d)
  u8 status[3];
  int actual, r;
 
- /*
-  * The device raises this endpoint as part of the state/mail operation.
-  * By the time callers reach here the corresponding control-register
-  * completion bit has already been observed, so this transfer is only
-  * needed to drain the pending notification before the next operation.
-  *
-  * A short timeout is intentional: some EHCI implementations can reject
-  * the periodic transfer with -EAGAIN even though the control path works.
-  * That must not prevent hardware initialization.
-  */
- r = usb_interrupt_msg(d->udev, usb_rcvintpipe(d->udev, GCHD_EP_INT),
-                       status, sizeof(status), &actual, 0);
+ /* libusb_interrupt_transfer(..., timeout=0) blocks indefinitely.  The
+  * kernel synchronous helper has the same blocking semantics, but EHCI can
+  * transiently reject the interrupt URB with -EAGAIN while scheduling it.
+  * Retry that submission failure; no device transaction occurred yet. */
+ for (;;) {
+  r = usb_interrupt_msg(d->udev, usb_rcvintpipe(d->udev, GCHD_EP_INT),
+                        status, sizeof(status), &actual, 0);
+  if (r != -EAGAIN)
+   break;
+  usleep_range(1000, 2000);
+ }
  if (r)
   return r;
  if (actual != sizeof(status))
