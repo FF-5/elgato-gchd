@@ -473,36 +473,26 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
  }
 }
 
-static int gchd_wait_state(struct gchd *d, u16 expected)
-{
- u16 state;
- int r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
- if (r)
-  return r;
- state &= 0x1f;
- return gchd_complete_state_change(d, state, expected);
-}
-
 int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
                           u16 expected)
 {
- u16 current;
+ u16 current_state;
  int r;
 
  /*
   * Match stateConfirmedScmd(): read the current state before issuing
   * the command, then complete the transition from that state.
   */
- r = gchd_req_read16(d, 0x0800, STATE_INDEX, &current);
+ r = gchd_req_read16(d, 0x0800, STATE_INDEX, &current_state);
  if (r)
   return r;
- current &= 0x1f;
+ current_state &= 0x1f;
 
  r = gchd_scmd(d, command, mode, data);
  if (r)
   return r;
 
- return gchd_complete_state_change(d, current, expected);
+ return gchd_complete_state_change(d, current_state, expected);
 }
 
 int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
