@@ -834,7 +834,6 @@ static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
  r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r;
  *rgb = !!(v & BIT(2));
  return 0;
- return 0;
 }
 
 static int gchd_configure_hdmi_exact(struct gchd *d)
@@ -875,6 +874,7 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
   msleep(200);
  }
  if (i==10) return -ETIMEDOUT;
+ d->signal_present = true;
 
  if (d->input_width == 0) {
   value6463=sum6463/count6463;
