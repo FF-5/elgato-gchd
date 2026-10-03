@@ -518,7 +518,7 @@ int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
 
 int gchd_enable_analog(struct gchd *d)
 {
- return gchd_do_enable(d, EB_ANALOG_INPUT, 0);
+ return gchd_do_enable(d, EB_ANALOG_INPUT, EB_ANALOG_INPUT);
 }
 
 static int gchd_processor_state(struct gchd *d, u32 *magic)
