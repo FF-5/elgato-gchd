@@ -923,7 +923,7 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
  r=gchd_common_block_b2(d); if(r)return r;
  r=gchd_common_block_b3(d); if(r)return r;
  r=gchd_common_block_c(d); if(r)return r;
- r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->signal_present); if(r)return r;
+ r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->rgb_input); if(r)return r;
 
  MW(0x4e,0x00,0xcc);
  r=gchd_color_space_exact(d); if(r)return r;
@@ -1000,9 +1000,32 @@ static int gchd_configure_composite_exact(struct gchd *d)
  M3(0x94,0x41,0x37); M3(0x94,0x4a,0xaf); M3(0x94,0x4b,0xaf);
  M3(0x89,0x89,0xfa); MRP(0x33);
  v &= 0x0f;
- if (v == 6) { d->input_width=720; d->input_height=480; d->input_fps_num=60; d->input_fps_den=1; }
- else if (v == 7) { d->input_width=720; d->input_height=576; d->input_fps_num=50; d->input_fps_den=1; }
- else if (!d->input_height) return -EINVAL;
+ if (v == 6) { d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60; d->input_fps_den=1; }
+ else if (v == 7) { d->input_width=720; d->input_height=576; d->input_interlaced=true; d->input_fps_num=50; d->input_fps_den=1; }
+ else if (!d->input_height) {
+  u8 x;
+  gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x3f},3);
+  gchd_mail_read(d,0x33,&x,1);
+  gchd_mail_write(d,0x4e,(u8[]){0x00,0xcc},2);
+  gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x94},3);
+  gchd_mail_read(d,0x33,&x,1);
+  gchd_mail_write(d,0x4e,(u8[]){0xab,0x4c},2);
+  gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x3f},3);
+  gchd_mail_read(d,0x33,&x,1);
+  gchd_mail_write(d,0x4e,(u8[]){0x00,0xce},2);
+  gchd_mail_write(d,0x4e,(u8[]){0x1b,0x33},2);
+  gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x3f},3);
+  gchd_mail_read(d,0x33,&x,1);
+  gchd_mail_write(d,0x4e,(u8[]){0x00,0xcc},2);
+  gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x88},3);
+  gchd_mail_read(d,0x33,&x,1);
+  gchd_mail_write(d,0x4e,(u8[]){0xb7,0xce},2);
+  gchd_mail_write(d,0x4e,(u8[]){0xb8,0xdc},2);
+  gchd_mail_write(d,0x4e,(u8[]){0xb8,0xcc},2);
+  gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x3f},3);
+  gchd_mail_read(d,0x33,&x,1);
+  return -EINVAL;
+ }
 
  if (d->input_height==480) {
   MW(0x44,0x07,0x8a); MW(0x44,0x08,0x9b); MW(0x44,0x09,0x7a); MW(0x44,0x28,0x88);
