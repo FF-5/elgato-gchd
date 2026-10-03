@@ -681,6 +681,7 @@ int gchd_hw_init(struct gchd *d)
   return r;
 
  for (tries = 0; tries < 1000; ++tries) {
+  r = gchd_processor_state(d, &magic);
   if (r)
    return r;
   if (magic == 0x27f97b) {
