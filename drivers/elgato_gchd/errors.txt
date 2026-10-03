@@ -1,15 +1,15 @@
 remote: Enumerating objects: 15, done.
 remote: Counting objects: 100% (15/15), done.
 remote: Compressing objects: 100% (8/8), done.
-remote: Total 10 (delta 5), reused 0 (delta 0), pack-reused 0 (from 0)
-Unpacking objects: 100% (10/10), 2.55 KiB | 113.00 KiB/s, done.
+remote: Total 10 (delta 6), reused 0 (delta 0), pack-reused 0 (from 0)
+Unpacking objects: 100% (10/10), 1.71 KiB | 47.00 KiB/s, done.
 From https://github.com/FF-5/elgato-gchd
-   fc1e54f..43ccb8c  v4l2-dkms-driver -> origin/v4l2-dkms-driver
-Updating fc1e54f..43ccb8c
+   43ccb8c..2b5c8a7  v4l2-dkms-driver -> origin/v4l2-dkms-driver
+Updating 43ccb8c..2b5c8a7
 Fast-forward
- drivers/elgato_gchd/errors.txt   | 55 +++++++++++++++++++++++++++++++++++++---
+ drivers/elgato_gchd/errors.txt   | 36 +++++++++++++++---------------------
  drivers/elgato_gchd/transcoder.c |  2 +-
- 2 files changed, 52 insertions(+), 5 deletions(-)
+ 2 files changed, 16 insertions(+), 22 deletions(-)
 make -C /lib/modules/6.8.0-146-generic/build M=/home/ff5/elgato-gchd/drivers/elgato_gchd clean
 make[1]: Entering directory '/usr/src/linux-headers-6.8.0-146-generic'
 make[1]: Leaving directory '/usr/src/linux-headers-6.8.0-146-generic'
@@ -23,14 +23,14 @@ warning: the compiler differs from the one used to build the kernel
   CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/usb.o
   CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.o
 /home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c: In function ‘gchd_transcoder_defaults’:
-/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:104:78: error: expected ‘)’ before ‘return’
-  104 | ranscoder_table_write(d, 0x1174, gchd_pmt, sizeof(gchd_pmt))) return r;
+/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:105:78: error: expected ‘)’ before ‘return’
+  105 | ranscoder_table_write(d, 0x1010, gchd_sit, sizeof(gchd_sit))) return r;
       |                                                              ^~~~~~~
       |                                                              )
-/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:104:2: note: ‘-Wmisleading-indentation’ is disabled from this point onwards, since column-tracking was disabled due to the size of the code/headers
-  104 |  if ((r = gchd_transcoder_table_write(d, 0x1174, gchd_pmt, sizeof(gchd_pmt))) return r;
+/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:105:2: note: ‘-Wmisleading-indentation’ is disabled from this point onwards, since column-tracking was disabled due to the size of the code/headers
+  105 |  if ((r = gchd_transcoder_table_write(d, 0x1010, gchd_sit, sizeof(gchd_sit))) return r;
       |  ^~
-/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:104:2: note: adding ‘-flarge-source-files’ will allow for more column-tracking support, at the expense of compilation time and memory
+/home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:105:2: note: adding ‘-flarge-source-files’ will allow for more column-tracking support, at the expense of compilation time and memory
 /home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.c:396:1: error: expected declaration or statement at end of input
   396 | }
       | ^
