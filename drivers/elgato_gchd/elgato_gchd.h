@@ -76,6 +76,7 @@ struct gchd {
 };
 
 int gchd_enable_analog(struct gchd *);
+int gchd_load_encoder_firmware(struct gchd *);
 int gchd_hw_init(struct gchd *);
 int gchd_hw_shutdown(struct gchd *);
 int gchd_transcoder_init(struct gchd *);
