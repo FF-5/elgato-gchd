@@ -533,11 +533,39 @@ int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
   return r;
  current_state &= 0x1f;
 
+ if (command == SCMD_STATE_CHANGE && expected == 0x02) {
+  u16 enable_state = 0xffff, enable = 0xffff, completion = 0xffff;
+  int er1, er2, er3;
+
+  er1 = gchd_req_read16(d, 0x0900, ENABLE_STATE_INDEX, &enable_state);
+  er2 = gchd_req_read16(d, 0x0900, ENABLE_INDEX, &enable);
+  er3 = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
+  dev_info(&d->intf->dev,
+           "START before SCMD: state=0x%04x enable_state=0x%04x (r=%d) enable=0x%04x (r=%d) completion=0x%04x (r=%d) saved=0x%04x hw_state=0x%04x hw_enable=0x%04x\n",
+           current_state, enable_state, er1, enable, er2, completion, er3,
+           d->saved_enable_state, d->hw_enable_state, d->hw_enable_register);
+ }
+
  r = gchd_scmd(d, command, mode, data);
  if (r)
   return r;
 
- return gchd_complete_state_change(d, current_state, expected);
+ r = gchd_complete_state_change(d, current_state, expected);
+ if (r && command == SCMD_STATE_CHANGE && expected == 0x02) {
+  u16 state = 0xffff, enable_state = 0xffff, enable = 0xffff;
+  u16 completion = 0xffff;
+  int sr, er1, er2, er3;
+
+  sr = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+  er1 = gchd_req_read16(d, 0x0900, ENABLE_STATE_INDEX, &enable_state);
+  er2 = gchd_req_read16(d, 0x0900, ENABLE_INDEX, &enable);
+  er3 = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
+  dev_err(&d->intf->dev,
+          "START failed: ret=%d state=0x%04x (r=%d) enable_state=0x%04x (r=%d) enable=0x%04x (r=%d) completion=0x%04x (r=%d) saved=0x%04x hw_state=0x%04x hw_enable=0x%04x\n",
+          r, state, sr, enable_state, er1, enable, er2, completion, er3,
+          d->saved_enable_state, d->hw_enable_state, d->hw_enable_register);
+ }
+ return r;
 }
 
 int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
