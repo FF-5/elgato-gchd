@@ -638,7 +638,16 @@ static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
 {
  struct gchd*d;int r;d=kzalloc(sizeof(*d),GFP_KERNEL);if(!d)return-ENOMEM;
  d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;d->family=(enum gchd_family)id->driver_info;
-	/* USB enumeration has already selected configuration 1. */
+	/*
+	 * The working userspace selects configuration 1 before claiming
+	 * interface 0. usbcore has already selected config 1 before probe,
+	 * so reset the current configuration instead of changing it here.
+	 */
+	usb_lock_device(d->udev);
+	r = usb_reset_configuration(d->udev);
+	usb_unlock_device(d->udev);
+	if (r)
+		goto err;
 	mutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
  spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->input=0;d->input_width=1920;d->input_height=1080;d->input_fps_num=60;d->input_fps_den=1;d->bitrate=16000;d->h264_profile=V4L2_MPEG_VIDEO_H264_PROFILE_MAIN;d->h264_level=41;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
  if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;
