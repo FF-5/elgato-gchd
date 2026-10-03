@@ -1,10 +1,4 @@
-ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo modprobe usbmon
-sudo cat /sys/kernel/debug/usb/usbmon/2u > /tmp/gchd-usbmon.txt &
-MONPID=$!
-echo $MONPID
-[sudo] password for ff5:           
-[1] 5773
-5773
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo kill $MONPID
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg | tail -30
 [ 3586.155023] usb 1-1: new high-speed USB device number 2 using ehci-pci
 [ 3586.575072] usb 1-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
@@ -23,6 +17,9 @@ ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg | tail -30
 [ 3607.341273] elgato_gchd 1-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
 [ 3607.344864] elgato_gchd 1-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
 [ 3607.348351] elgato_gchd 1-1:1.0: firmware chunk offset=327680 size=4016 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo tail -100 /tmp/gchd-usbmon.txt
+[ 3671.312442] ehci-pci 0000:00:0b.0: qh 000000002203f3c4 should be inactive!
+[ 3732.735729] elgato_gchd: probe of 1-1:1.0 failed with error -110
+[ 3732.735787] usbcore: registered new interface driver elgato_gchd
+[1]+  Terminated              sudo cat /sys/kernel/debug/usb/usbmon/2u > /tmp/gchd-usbmon.txt
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo head -300 /tmp/gchd-usbmon.txt
-ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo tail -100 /tmp/gchd-usbmon.txt
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ 
