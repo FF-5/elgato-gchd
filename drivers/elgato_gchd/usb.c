@@ -431,8 +431,13 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
  if (d->family == GCHD_FAMILY_OLD)
   return 0;
 
- if (command == SCMD_IDLE || command == SCMD_INIT ||
-     command == SCMD_STATE_CHANGE) {
+ /*
+  * Match the reference userspace driver's HDNew SCMD protocol: mode 0xa0
+  * suppresses the interrupt/readback handshake (notably SCMD_INIT).
+  */
+ if ((command == SCMD_IDLE || command == SCMD_INIT ||
+      command == SCMD_STATE_CHANGE) &&
+     (mode & 0xa0) != 0xa0) {
   u16 rb = 0;
   int tries;
 
