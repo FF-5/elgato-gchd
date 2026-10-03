@@ -688,10 +688,6 @@ int gchd_hw_init(struct gchd *d)
  if (r)
   return r;
 
- /* Match the working userspace timing: allow the device to settle after
-  * the state transition before issuing the first processor mailbox command. */
- usleep_range(100, 200);
-
  /* Match configureDevice(): perform the initial ignored mailbox read,
   * then repeat the processor-state query until 0x27f97b is reached. */
  r = gchd_processor_state(d, &magic);
