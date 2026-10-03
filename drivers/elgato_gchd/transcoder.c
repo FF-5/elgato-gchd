@@ -155,7 +155,7 @@ static int gchd_transcoder_defaults(struct gchd *d)
 /* Exact configure.cpp transcoderSetup() parameter stage.  The V4L2 driver
  * currently exposes one encoder profile/rate tuple, so the corresponding
  * source values are derived from the active capture mode. */
-static int gchd_transcoder_setup(struct gchd *d)
+int gchd_transcoder_setup(struct gchd *d)
 {
  int r;
  u16 width = d->input_width;
