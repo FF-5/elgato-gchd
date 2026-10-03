@@ -164,9 +164,14 @@ int gchd_transcoder_setup(struct gchd *d)
  u32 auto_bitrate;
  u16 bitrate;
  u16 audio = 320;
- u8 auto_level;
+ u32 auto_max_bitrate;
+ u32 auto_average_bitrate;
+ u32 auto_min_bitrate;
 
  auto_bitrate = min_t(u32, 31250U * width, 40000U);
+ auto_max_bitrate = min_t(u32, (auto_bitrate * 9U) / 10U, 40000U);
+ auto_average_bitrate = min_t(u32, auto_bitrate / 2U, 40000U);
+ auto_min_bitrate = min_t(u32, (auto_bitrate * 35U) / 100U, 40000U);
  bitrate = d->bitrate_forced ? d->bitrate : (u16)auto_bitrate;
  u16 gop = (fps + 10) / 5;
  u16 anchor = 3;
@@ -213,8 +218,8 @@ int gchd_transcoder_setup(struct gchd *d)
  if (d->family == GCHD_FAMILY_HDNEW) { P(0x1574,0,5,3); }
  P(0x1104,0,16,system_rate); P(0x1106,0,16,0);
  P(0x1510,5,1,1); P(0x1518,0,8,anchor); P(0x1518,8,8,gop);
- P(0x1510,3,1,0); P(0x1514,8,3,0); P(0x1510,0,2,1);
- P(0x1532,0,16,bitrate); P(0x1534,0,16,bitrate); P(0x1536,0,16,bitrate); P(0x1538,0,16,0);
+ P(0x1510,3,1,0); P(0x1514,8,3,0); P(0x1510,0,2,0);
+ P(0x1532,0,16,bitrate); P(0x1534,0,16,auto_max_bitrate); P(0x1536,0,16,auto_average_bitrate); P(0x1538,0,16,auto_min_bitrate);
  P(0x152c,0,16,width); P(0x152e,0,16,height); P(0x1002,1,1,0);
  P(0x1584,0,16,0); P(0x1586,0,16,0); P(0x1588,0,16,0);
  P(0x151a,0,16,0); P(0x151c,0,16,0);
@@ -223,8 +228,8 @@ int gchd_transcoder_setup(struct gchd *d)
  P(0x1580,12,1,1); P(0x1580,0,8,colour); P(0x1582,8,8,1); P(0x1582,0,8,colour); P(0x157e,0,1,0); P(0x157e,12,1,1); P(0x157e,4,3,5);
  if (d->family == GCHD_FAMILY_HDNEW) { P(0x1674,0,5,3); }
  P(0x1244,0,16,system_rate); P(0x1246,0,16,0);
- P(0x1610,5,1,1); P(0x1618,0,8,anchor); P(0x1618,8,8,gop); P(0x1610,3,1,0); P(0x1614,8,3,0); P(0x1610,0,2,1);
- P(0x1632,0,16,bitrate); P(0x1634,0,16,bitrate); P(0x1636,0,16,bitrate); P(0x1638,0,16,0); P(0x163a,0,16,0);
+ P(0x1610,5,1,1); P(0x1618,0,8,anchor); P(0x1618,8,8,gop); P(0x1610,3,1,0); P(0x1614,8,3,0); P(0x1610,0,2,0);
+ P(0x1632,0,16,bitrate); P(0x1634,0,16,auto_max_bitrate); P(0x1636,0,16,auto_average_bitrate); P(0x1638,0,16,auto_min_bitrate); P(0x163a,0,16,0);
  P(0x162c,0,16,width); P(0x162e,0,16,height); P(0x161c,0,16,0); P(0x1626,0,8,31); P(0x1626,8,8,profile);
  P(0x1684,0,16,0); P(0x1686,0,16,0); P(0x1688,0,16,1);
  P(0x1a36,0,1,0); P(0x1a36,1,2,0); P(0x1a36,3,1,0); P(0x1a36,4,1,1); P(0x1a36,5,2,0); P(0x1a24,0,16,audio);
