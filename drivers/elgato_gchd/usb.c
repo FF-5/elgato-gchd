@@ -672,10 +672,8 @@ int gchd_hw_init(struct gchd *d)
  if (r)
   return r;
 
- /* Match configureDevice(): the first mailbox transaction after
-  * SCMD_IDLE is the processor-state confirmation, followed by the
-  * normal polling loop. Keep its result as the current state rather
-  * than treating it as an unrelated/ignored transaction. */
+ /* Match configureDevice(): perform the initial ignored mailbox read,
+  * then repeat the processor-state query until 0x27f97b is reached. */
  r = gchd_processor_state(d, &magic);
  if (r)
   return r;
