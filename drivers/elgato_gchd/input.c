@@ -172,28 +172,6 @@ static int __maybe_unused gchd_color_yuv(struct gchd *d)
  return gchd_seq(d, seq, ARRAY_SIZE(seq));
 }
 
-static int gchd_mode_regs(struct gchd *d)
-{
- int r;
- u16 w = d->input_width, h = d->input_height;
- u16 profile = 1; /* original v_h264_profile default: Main */
-
- if (w >= 1920) {
-  if ((r = gchd_sparam(d, 0x152c, 0, 16, w))) return r;
-  if ((r = gchd_sparam(d, 0x152e, 0, 16, h))) return r;
- } else if (w >= 1280) {
-  if ((r = gchd_sparam(d, 0x152c, 0, 16, 1280))) return r;
-  if ((r = gchd_sparam(d, 0x152e, 0, 16, 720))) return r;
- } else {
-  if ((r = gchd_sparam(d, 0x152c, 0, 16, 720))) return r;
-  if ((r = gchd_sparam(d, 0x152e, 0, 16, 480))) return r;
- }
- if ((r = gchd_sparam(d, 0x1526, 0, 8, d->h264_level ? d->h264_level : 41))) return r;
- if ((r = gchd_sparam(d, 0x1526, 8, 8, d->h264_profile ? d->h264_profile : profile))) return r;
- if ((r = gchd_sparam(d, 0x1532, 0, 16, d->bitrate ? d->bitrate : 16000))) return r;
- return 0;
-}
-
 static int gchd_post_encoder_prefix(struct gchd *d);
 static int __maybe_unused gchd_post_encoder_sweep(struct gchd *d);
 static int gchd_post_encoder_state(struct gchd *d);
