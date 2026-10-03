@@ -521,7 +521,8 @@ int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
 
 int gchd_enable_analog(struct gchd *d)
 {
- return gchd_do_enable(d, EB_ANALOG_INPUT, EB_ANALOG_INPUT);
+ u16 value = d->input ? EB_ANALOG_INPUT : 0;
+ return gchd_do_enable(d, EB_ANALOG_INPUT, value);
 }
 
 static int gchd_processor_state(struct gchd *d, u32 *magic)
@@ -698,7 +699,9 @@ int gchd_hw_init(struct gchd *d)
    r = gchd_send_enable_state(d);
    if (r)
     return r;
-   r = gchd_enable_analog(d);
+   /* During processor bring-up the reference unconditionally enables the
+    * analog path before the processor reaches 0x27f97b. */
+   r = gchd_do_enable(d, EB_ANALOG_INPUT, EB_ANALOG_INPUT);
    if (r)
     return r;
    r = gchd_do_enable(d, EB_FIRMWARE_PROCESSOR, EB_FIRMWARE_PROCESSOR);
