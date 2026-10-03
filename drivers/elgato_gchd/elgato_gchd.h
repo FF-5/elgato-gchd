@@ -64,6 +64,8 @@ struct gchd {
  unsigned long last_video_jiffies;
  u16 hw_enable_state;
  u16 hw_enable_register;
+ u16 special_detect_mask;
+ bool input_forced;
  u32 width, height, sizeimage;
  u32 input;
  u32 input_width, input_height;
