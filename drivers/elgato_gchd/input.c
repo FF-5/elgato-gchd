@@ -839,7 +839,6 @@ static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
 static int gchd_configure_default_input(struct gchd *d)
 {
  u8 v, reply;
- u32 sum6665=0, sum6463=0, count6665=0, count6463=0;
  int r;
 
 #define MW(p,a,b) do { u8 __x[]={a,b}; r=gchd_mail_write(d,p,__x,2); if(r)return r; } while(0)
