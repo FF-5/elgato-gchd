@@ -380,7 +380,7 @@ int gchd_mail_read(struct gchd *d, u8 port, u8 *data, u8 len)
  if (d->family == GCHD_FAMILY_OLD)
   return gchd_ctrl_read(d, MAIL_REG, (u16)port << 8, 0, data, len);
 
- r = gchd_ctrl_write(d, REG_REQ, 0x0000, HDNEW_MAIL_CONFIG_INDEX,
+ r = gchd_ctrl_write(d, 0xb9, 0x0000, HDNEW_MAIL_CONFIG_INDEX,
                      cfg, sizeof(cfg));
  if (r)
   return r;
