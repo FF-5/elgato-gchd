@@ -541,7 +541,7 @@ int gchd_hw_init(struct gchd *d)
 {
  u16 state;
  u32 magic;
- int r;
+ int r, tries;
  u32 version0, version1;
 
  /* The reference driver reads the hardware revision before BANKSEL. */
@@ -673,21 +673,34 @@ int gchd_hw_init(struct gchd *d)
  if (r)
   return r;
 
+ /* Match configureDevice(): perform the initial ignored mailbox read,
+  * then repeat the processor-state query until 0x27f97b is reached. */
  r = gchd_processor_state(d, &magic);
  if (r)
   return r;
 
- if (magic == 0x334455) {
-  r = gchd_enable_analog(d);
+ for (tries = 0; tries < 1000; ++tries) {
+  r = gchd_processor_state(d, &magic);
   if (r)
    return r;
-  r = gchd_do_enable(d, EB_FIRMWARE_PROCESSOR, EB_FIRMWARE_PROCESSOR);
-  if (r)
-   return r;
+  if (magic == 0x27f97b)
+   break;
+  if (magic == 0x334455) {
+   r = gchd_send_enable_state(d);
+   if (r)
+    return r;
+   r = gchd_enable_analog(d);
+   if (r)
+    return r;
+   r = gchd_do_enable(d, EB_FIRMWARE_PROCESSOR, EB_FIRMWARE_PROCESSOR);
+   if (r)
+    return r;
+  }
  }
+ if (tries == 1000)
+  return -ETIMEDOUT;
 
- dev_info(&d->intf->dev, "device idle, processor state 0x%06x\n", magic);
- return 0;
+ dev_info(&d->intf->dev, "device idle, processor state 0x%06x\\n", magic);
 }
 
 int gchd_hw_shutdown(struct gchd *d)
