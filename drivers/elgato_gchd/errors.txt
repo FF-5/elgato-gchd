@@ -1,34 +1,4 @@
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg | tail -30
-[15483.561876]  driver_attach+0x1e/0x30
-[15483.561881]  bus_add_driver+0x14e/0x290
-[15483.561886]  driver_register+0x5e/0x130
-[15483.561892]  usb_register_driver+0x83/0x170
-[15483.561897]  ? __pfx_gchd_usb_init+0x10/0x10 [elgato_gchd]
-[15483.561909]  gchd_usb_init+0x23/0xff0 [elgato_gchd]
-[15483.561919]  do_one_initcall+0x5e/0x340
-[15483.561929]  do_init_module+0x97/0x290
-[15483.561934]  load_module+0xb5f/0xca0
-[15483.561942]  init_module_from_file+0x96/0x100
-[15483.561946]  ? init_module_from_file+0x96/0x100
-[15483.561953]  idempotent_init_module+0x11c/0x310
-[15483.561960]  __x64_sys_finit_module+0x64/0xd0
-[15483.561965]  x64_sys_call+0x2019/0x25a0
-[15483.561969]  do_syscall_64+0x87/0x180
-[15483.561974]  ? count_memcg_events.constprop.0+0x2a/0x50
-[15483.561981]  ? handle_mm_fault+0xad/0x380
-[15483.561987]  ? arch_exit_to_user_mode_prepare.isra.0+0x1a/0xe0
-[15483.561993]  ? irqentry_exit_to_user_mode+0x38/0x1e0
-[15483.561999]  ? irqentry_exit+0x43/0x50
-[15483.562003]  ? exc_page_fault+0x94/0x1b0
-[15483.562007]  entry_SYSCALL_64_after_hwframe+0x78/0x80
-[15483.562014] RIP: 0033:0x79bf62d2752d
-[15483.562034] RSP: 002b:00007ffdcb7649f8 EFLAGS: 00000246 ORIG_RAX: 0000000000000139
-[15483.562039] RAX: ffffffffffffffda RBX: 00005856d52a5750 RCX: 000079bf62d2752d
-[15483.562042] RDX: 0000000000000000 RSI: 00005856cd586e52 RDI: 0000000000000003
-[15483.562045] RBP: 00007ffdcb764ab0 R08: 0000000000000040 R09: 0000000000004100
-[15483.562048] R10: 000079bf62e04b20 R11: 0000000000000246 R12: 00005856cd586e52
-[15483.562050] R13: 0000000000000000 R14: 00005856d52a5700 R15: 0000000000000000
-[15483.562056]  </TASK>
-ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo head -300 /tmp/gchd-usbmon.txt
-ffff8b28cab89cc0 3183374130 C Ii:2:001:1 0:2048 2 = 0200
-ffff8b28cab89cc0 3183374158 S Ii:2:001:1 -115:2048 4 <
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo tail -100 /tmp/gchd-usbmon.txt
+ffff8b28cab89cc0 3470170346 C Ii:2:001:1 0:2048 2 = 0200
+ffff8b28cab89cc0 3470170369 S Ii:2:001:1 -115:2048 4 <
