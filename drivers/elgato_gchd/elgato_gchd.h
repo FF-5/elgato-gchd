@@ -74,6 +74,7 @@ struct gchd {
  u8 h264_level;
 };
 
+int gchd_enable_analog(struct gchd *);
 int gchd_hw_init(struct gchd *);
 int gchd_hw_shutdown(struct gchd *);
 int gchd_transcoder_init(struct gchd *);
