@@ -1030,7 +1030,11 @@ static int gchd_configure_composite_exact(struct gchd *d)
  r=gchd_common_block_c(d); if(r)return r;
  r=gchd_common_block_b3(d); if(r)return r;
 
- r=gchd_color_space_exact(d); if(r)return r;
+ /*
+  * Composite userspace does not invoke configureColorSpace() here.
+  * Its YUV selection is carried in the transcoder settings; adding the
+  * component/HDMI color-space mailbox sequence changes the protocol order.
+  */
  return 0;
 #undef M3
 #undef MW
