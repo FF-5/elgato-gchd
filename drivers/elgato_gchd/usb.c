@@ -263,7 +263,6 @@ static int gchd_mail_ready(struct gchd *d)
    return r;
   if (status & BIT(0))
    return 0;
-  usleep_range(1000, 2000);
  }
  return -ETIMEDOUT;
 }
@@ -281,7 +280,6 @@ int gchd_send_enable_state(struct gchd *d)
    return r;
   if (status & BIT(0))
    return 0;
-  usleep_range(1000, 2000);
  }
  return -ETIMEDOUT;
 }
@@ -412,8 +410,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
     return r;
    if ((rb >> 8) == command)
     return 0;
-   usleep_range(1000, 2000);
-  }
+   }
   return -ETIMEDOUT;
  }
  return 0;
@@ -450,8 +447,7 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
    }
    if (completion & 0x0004)
     break;
-   usleep_range(1000, 2000);
-  }
+   }
   if (tries == 2000)
    return -ETIMEDOUT;
 
@@ -614,8 +610,7 @@ int gchd_hw_init(struct gchd *d)
      return r;
     if (completion & 0x0004)
      break;
-    usleep_range(1000, 2000);
-   }
+     }
    if (tries == 1000)
     return -ETIMEDOUT;
 
