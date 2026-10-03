@@ -653,34 +653,7 @@ int gchd_hw_init(struct gchd *d)
   if (r)
    return r;
 
-  if (d->family == GCHD_FAMILY_HDNEW) {
-   u16 dummy;
-
-   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0010, &dummy, sizeof(dummy));
-   if (r)
-    return r;
-   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0012, &dummy, sizeof(dummy));
-   if (r)
-    return r;
-   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0014, &dummy, sizeof(dummy));
-   if (r)
-    return r;
-   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0016, &dummy, sizeof(dummy));
-   if (r)
-    return r;
-   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x0018, &dummy, sizeof(dummy));
-   if (r)
-    return r;
-   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001a, &dummy, sizeof(dummy));
-   if (r)
-    return r;
-   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001c, &dummy, sizeof(dummy));
-   if (r)
-    return r;
-   r = gchd_ctrl_read(d, REG_REQ, 0x0000, 0x001e, &dummy, sizeof(dummy));
-   if (r)
-    return r;
-  } else {
+  if (d->family != GCHD_FAMILY_HDNEW) {
    /*
     * Match completeStateChange(0, 0) on the old devices. Reading the
     * state register is itself the state-change trigger when the device is
