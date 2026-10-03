@@ -677,10 +677,8 @@ int gchd_hw_init(struct gchd *d)
   if (r)
    return r;
 
-  /* Refresh the mutable hardware state separately. */
-  r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
-  if (r)
-   return r;
+  /* The reference reads ENABLE_STATE only once here; reuse that value. */
+  d->hw_enable_state = d->saved_enable_state;
   r = gchd_reg_read16(d, ENABLE_INDEX, &d->hw_enable_register);
   if (r)
    return r;
