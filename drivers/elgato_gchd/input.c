@@ -1053,9 +1053,6 @@ static int gchd_configure_composite_exact(struct gchd *d)
  r=gchd_common_block_b3(d); if(r)return r;
 
  r=gchd_color_space_exact(d); if(r)return r;
- r=gchd_transcoder_final_configure(d); if(r)return r;
- r=gchd_scmd(d,4,0,0); if(r)return r;
- r=gchd_scmd(d,5,0,2); if(r)return r;
  return 0;
 #undef M3
 #undef MW
@@ -1222,9 +1219,6 @@ static int gchd_configure_component_exact(struct gchd *d)
  MW(0x0f,0xe4);
  r=gchd_common_block_c(d); if(r)return r;
 
- r=gchd_transcoder_final_configure(d); if(r)return r;
- r=gchd_scmd(d,4,0,0); if(r)return r;
- r=gchd_scmd(d,5,0,2); if(r)return r;
  return 0;
 #undef M3
 #undef MW
@@ -1236,24 +1230,38 @@ static int gchd_configure_component_exact(struct gchd *d)
 int gchd_input_configure(struct gchd *d)
 {
  int r;
- if (d->input_configured) return 0;
- r=gchd_encoder_start(d); if(r)return r;
- if (d->input==0) {
-  r=gchd_configure_hdmi_exact(d); if(r)return r;
- } else if (d->input==2) {
-  r=gchd_configure_composite_exact(d); if(r)return r;
-  d->input_configured=true;
+
+ if (d->input_configured)
   return 0;
- } else {
-  r=gchd_configure_component_exact(d); if(r)return r;
-  d->input_configured=true;
-  return 0;
- }
- r=gchd_mode_regs(d); if(r)return r;
- r=gchd_transcoder_final_configure(d); if(r)return r;
- r=gchd_scmd(d,4,0,0); if(r)return r;
- r=gchd_scmd(d,5,0,2); if(r)return r;
- d->input_configured=true;
+
+ r = gchd_encoder_start(d);
+ if (r)
+  return r;
+
+ if (d->input == 0)
+  r = gchd_configure_hdmi_exact(d);
+ else if (d->input == 2)
+  r = gchd_configure_composite_exact(d);
+ else
+  r = gchd_configure_component_exact(d);
+ if (r)
+  return r;
+
+ /* Match the userspace tail common to HDMI, Component and Composite. */
+ r = gchd_transcoder_final_configure(d);
+ if (r)
+  return r;
+ r = gchd_transcoder_setup(d);
+ if (r)
+  return r;
+ r = gchd_scmd(d, 4, 0xa0, 0);
+ if (r)
+  return r;
+ r = gchd_state_cmd(d, 5, 0, 0x0002, 0x0002);
+ if (r)
+  return r;
+
+ d->input_configured = true;
  return 0;
 }
 
