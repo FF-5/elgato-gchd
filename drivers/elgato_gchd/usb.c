@@ -425,7 +425,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
      (command == SCMD_IDLE || command == SCMD_INIT ||
       command == SCMD_STATE_CHANGE))
   dev_info(&d->intf->dev,
-           "SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=%02x %02x %02x %02x\\n",
+           "SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=%02x %02x %02x %02x\n",
            b_new[0], b_new[1], b_new[2], b_new[3]);
 
  if (d->family == GCHD_FAMILY_OLD)
@@ -440,7 +440,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
   if (r)
    return r;
   dev_info(&d->intf->dev,
-           "SCMD interrupt completed: command=0x%02x\\n", command);
+           "SCMD interrupt completed: command=0x%02x\n", command);
   for (tries = 0; tries < 500; ++tries) {
    r = gchd_req_read16(d, 0x0800, HDNEW_SCMD_READBACK_INDEX, &rb);
    if (r)
@@ -449,7 +449,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
     return 0;
   }
   dev_err(&d->intf->dev,
-          "SCMD timeout: command=0x%02x mode=0x%02x data=0x%04x readback=0x%04x polls=%d\\n",
+          "SCMD timeout: command=0x%02x mode=0x%02x data=0x%04x readback=0x%04x polls=%d\n",
           command, mode, data, rb, tries);
   return -ETIMEDOUT;
  }
@@ -490,7 +490,7 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
    }
   if (tries == 2000) {
    dev_err(&d->intf->dev,
-           "state-change timeout: current=0x%02x expected=0x%02x state=0x%04x completion=0x%04x\\n",
+           "state-change timeout: current=0x%02x expected=0x%02x state=0x%04x completion=0x%04x\n",
            current_state, next, state, completion);
    return -ETIMEDOUT;
   }
@@ -842,12 +842,12 @@ int gchd_hw_init(struct gchd *d)
  }
  if (tries == 2000) {
   dev_err(&d->intf->dev,
-          "processor-state timeout after encoder init: last magic=0x%06x first_time=%u\\n",
+          "processor-state timeout after encoder init: last magic=0x%06x first_time=%u\n",
           magic, first_time);
   return -ETIMEDOUT;
  }
 
- dev_info(&d->intf->dev, "device idle, processor state 0x%06x\\n", magic);
+ dev_info(&d->intf->dev, "device idle, processor state 0x%06x\n", magic);
  return 0;
 }
 
