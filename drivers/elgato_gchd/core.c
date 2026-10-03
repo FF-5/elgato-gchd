@@ -224,18 +224,6 @@ static int gchd_start(struct vb2_queue*q,unsigned int c)
   gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
   return r;
  }
- r = gchd_scmd(d, 4, 0xa0, 0);
- if (r) {
-  gchd_input_stop(d);
-  gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
-  return r;
- }
- r = gchd_state_cmd(d, 5, 0, 0x0002, 0x0002);
- if (r) {
-  gchd_input_stop(d);
-  gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
-  return r;
- }
  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
  if (IS_ERR(d->rx_thread)) {
   r = PTR_ERR(d->rx_thread);
@@ -327,16 +315,6 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
   int r = gchd_input_configure(d);
   if (r)
    return r;
-  r = gchd_scmd(d, 4, 0xa0, 0);
-  if (r) {
-   gchd_input_stop(d);
-   return r;
-  }
-  r = gchd_state_cmd(d, 5, 0, 0x0002, 0x0002);
-  if (r) {
-   gchd_input_stop(d);
-   return r;
-  }
  }
  return 0;
 }
