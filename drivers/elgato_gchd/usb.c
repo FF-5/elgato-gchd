@@ -843,10 +843,11 @@ int gchd_hw_init(struct gchd *d)
     first_time = false;
    } else {
     /*
-     * This is the second 0x27f97b.  Only now does configureDevice()
+     * This is the second 0x27f97b. Only now does configureDevice()
      * leave this state machine and proceed to the 0x5b phase.
+     * A break here would only exit the switch, not the polling loop.
      */
-    break;
+    goto processor_state_ready;
    }
    break;
   }
@@ -858,6 +859,7 @@ int gchd_hw_init(struct gchd *d)
   return -ETIMEDOUT;
  }
 
+processor_state_ready:
  dev_info(&d->intf->dev, "device idle, processor state 0x%06x\n", magic);
  return 0;
 }
