@@ -556,7 +556,18 @@ int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
  r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
  if (r)
   return r;
- return gchd_reg_read16(d, ENABLE_INDEX, &d->hw_enable_register);
+ r = gchd_reg_read16(d, ENABLE_INDEX, &d->hw_enable_register);
+ if (r)
+  return r;
+
+ /*
+  * doEnable() in the userspace reference updates the saved enable-state
+  * snapshot after reading back the hardware. Mailbox writes restore this
+  * snapshot, so leaving it stale would undo the processor-enable bits on
+  * the next mailbox transaction.
+  */
+ d->saved_enable_state = d->hw_enable_state;
+ return 0;
 }
 
 int gchd_enable_analog(struct gchd *d)
