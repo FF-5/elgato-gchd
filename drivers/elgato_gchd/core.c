@@ -619,6 +619,9 @@ static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
 {
  struct gchd*d;int r;d=kzalloc(sizeof(*d),GFP_KERNEL);if(!d)return-ENOMEM;
  d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;d->family=(enum gchd_family)id->driver_info;
+ /* Match userspace libusb_set_configuration(1): reset the active USB configuration. */
+ r=usb_reset_configuration(d->udev);
+ if(r)goto err;
 	/* USB enumeration has already selected configuration 1. */
 	mutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
  spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->input=0;d->input_forced=false;d->bitrate_forced=false;d->h264_level_forced=false;d->input_width=0;d->input_height=0;d->input_fps_num=0;d->input_fps_den=0;d->bitrate=40000;d->h264_profile=V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;d->h264_level=41;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
