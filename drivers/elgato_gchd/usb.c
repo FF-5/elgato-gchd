@@ -236,17 +236,8 @@ static int gchd_interrupt_pend(struct gchd *d)
  u8 status[3];
  int actual, r;
 
- /* libusb_interrupt_transfer(..., timeout=0) blocks indefinitely.  The
-  * kernel synchronous helper has the same blocking semantics, but EHCI can
-  * transiently reject the interrupt URB with -EAGAIN while scheduling it.
-  * Retry that submission failure; no device transaction occurred yet. */
- for (;;) {
-  r = usb_interrupt_msg(d->udev, usb_rcvintpipe(d->udev, GCHD_EP_INT),
+ r = usb_interrupt_msg(d->udev, usb_rcvintpipe(d->udev, GCHD_EP_INT),
                         status, sizeof(status), &actual, 0);
-  if (r != -EAGAIN)
-   break;
-  usleep_range(1000, 2000);
- }
  if (r)
   return r;
  if (actual != sizeof(status))
