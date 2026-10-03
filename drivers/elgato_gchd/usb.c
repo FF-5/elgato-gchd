@@ -421,6 +421,13 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
  if (r)
   return r;
 
+ if (d->family == GCHD_FAMILY_HDNEW &&
+     (command == SCMD_IDLE || command == SCMD_INIT ||
+      command == SCMD_STATE_CHANGE))
+  dev_info(&d->intf->dev,
+           "SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=%02x %02x %02x %02x\\n",
+           b_new[0], b_new[1], b_new[2], b_new[3]);
+
  if (d->family == GCHD_FAMILY_OLD)
   return 0;
 
@@ -432,6 +439,8 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
   r = gchd_interrupt_pend(d);
   if (r)
    return r;
+  dev_info(&d->intf->dev,
+           "SCMD interrupt completed: command=0x%02x\\n", command);
   for (tries = 0; tries < 500; ++tries) {
    r = gchd_req_read16(d, 0x0800, HDNEW_SCMD_READBACK_INDEX, &rb);
    if (r)
