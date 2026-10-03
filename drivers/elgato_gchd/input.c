@@ -834,6 +834,7 @@ static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
  r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r;
  *rgb = !!(v & BIT(2));
  return 0;
+ return 0;
 }
 
 static int gchd_configure_hdmi_exact(struct gchd *d)
@@ -865,7 +866,7 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
  for (i=0;i<10;i++) {
   sum6665=sum6463=count6665=count6463=0;
   for (j=0;j<10;j++) {
-   r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->signal_present);
+   r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->rgb_input);
    if(r)return r;
   }
   value6665=sum6665/count6665;
@@ -980,9 +981,10 @@ int gchd_color_space_exact(struct gchd *d)
   r=gchd_seq(d,prefix,ARRAY_SIZE(prefix));
   if(r)return r;
  }
- /* The current kernel control surface has no RGB selector.  The reference
-  * default is YUV, while the exact RGB table is kept here for a future
-  * explicit color-space control. */
+ /* HDMI autodetect selects RGB/YUV from the same status bit used by
+  * userspace. Component and Composite remain YUV by default. */
+ if (d->input == 0 && d->rgb_input)
+  return gchd_seq(d,rgb,ARRAY_SIZE(rgb));
  return gchd_seq(d,yuv,ARRAY_SIZE(yuv));
 }
 
