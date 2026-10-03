@@ -151,6 +151,67 @@ static int gchd_transcoder_defaults(struct gchd *d)
  * behind the V4L2 input/mode controls rather than executed by a userspace
  * process. Until a mode is selected, the encoder is left stopped.
  */
+
+/* Exact configure.cpp transcoderSetup() parameter stage.  The V4L2 driver
+ * currently exposes one encoder profile/rate tuple, so the corresponding
+ * source values are derived from the active capture mode. */
+static int gchd_transcoder_setup(struct gchd *d)
+{
+ int r;
+ u16 width = d->input_width;
+ u16 height = d->input_height;
+ u16 fps = d->input_fps_num ? d->input_fps_num : 60;
+ u16 bitrate = d->bitrate ? d->bitrate : 16000;
+ u16 audio = 384;
+ u16 gop = (fps + 10) / 5;
+ u16 anchor = 3;
+ u8 profile = d->h264_profile ? d->h264_profile : 1;
+ u8 level = d->h264_level ? d->h264_level : 41;
+ u32 system_rate = (1075U * ((u32)bitrate + audio)) / 1000U + 256U;
+ u16 colour = d->input == 0 ? 1 : 6;
+ u8 vformat;
+
+ if (profile == 0) anchor = 1;
+ if (height == 1080) vformat = d->input_interlaced ? 0 : 32;
+ else if (height == 720) vformat = 2;
+ else if (height == 576) vformat = d->input_interlaced ? 5 : 9;
+ else if (height == 480) vformat = d->input_interlaced ? 4 : 8;
+ else return -EINVAL;
+ if (fps == 50) vformat |= 1;
+
+#define P(a,l,b,v) do { r=gchd_sparam(d,(a),(l),(b),(v)); if(r) return r; } while(0)
+ if (d->family == GCHD_FAMILY_HDNEW) { P(0x1574,0,5,3); }
+ P(0x1104,0,16,system_rate); P(0x1106,0,16,0);
+ P(0x1510,5,1,1); P(0x1518,0,8,anchor); P(0x1518,8,8,gop);
+ P(0x1510,3,1,0); P(0x1514,8,3,0); P(0x1510,0,2,1);
+ P(0x1532,0,16,bitrate); P(0x1534,0,16,bitrate); P(0x1536,0,16,bitrate); P(0x1538,0,16,0);
+ P(0x152c,0,16,width); P(0x152e,0,16,height); P(0x1002,1,1,(fps == 50 || fps == 60));
+ P(0x1584,0,16,0); P(0x1586,0,16,0); P(0x1588,0,16,1);
+ P(0x151a,0,16,0); P(0x151c,0,16,0);
+ P(0x1526,0,8,level); P(0x1526,8,8,profile);
+ P(0x1a02,0,2,0); P(0x1a16,0,1,0); P(0x1a16,1,2,0); P(0x1a16,3,1,0); P(0x1a16,4,1,1); P(0x1a16,5,2,0); P(0x1a04,0,16,audio);
+ P(0x1580,12,1,1); P(0x1580,0,8,colour); P(0x1582,8,8,1); P(0x1582,0,8,colour); P(0x157e,0,1,0); P(0x157e,12,1,1); P(0x157e,4,3,5);
+ if (d->family == GCHD_FAMILY_HDNEW) { P(0x1674,0,5,3); }
+ P(0x1244,0,16,system_rate); P(0x1246,0,16,0);
+ P(0x1610,5,1,1); P(0x1618,0,8,anchor); P(0x1618,8,8,gop); P(0x1610,3,1,0); P(0x1614,8,3,0); P(0x1610,0,2,1);
+ P(0x1632,0,16,bitrate); P(0x1634,0,16,bitrate); P(0x1636,0,16,bitrate); P(0x1638,0,16,0); P(0x163a,0,16,0);
+ P(0x162c,0,16,width); P(0x162e,0,16,height); P(0x161c,0,16,0); P(0x1626,0,8,31); P(0x1626,8,8,profile);
+ P(0x1684,0,16,0); P(0x1686,0,16,0); P(0x1688,0,16,1);
+ P(0x1a36,0,1,0); P(0x1a36,1,2,0); P(0x1a36,3,1,0); P(0x1a36,4,1,1); P(0x1a36,5,2,0); P(0x1a24,0,16,audio);
+ P(0x1680,12,1,1); P(0x1680,0,8,colour); P(0x1682,8,8,1); P(0x1682,0,8,colour); P(0x167e,0,1,0); P(0x167e,12,1,1); P(0x167e,4,3,5);
+ P(0x100a,4,4,1); P(0x100c,12,4,3); P(0x100a,0,4,0); P(0x100c,4,4,2); P(0x100a,8,4,0); P(0x100c,0,4,0); P(0x100c,8,4,0);
+ P(0x1504,8,3,(height==576)?3:0); P(0x1502,0,8,vformat); P(0x1512,8,7,d->input_interlaced ? 0 : 2); P(0x1002,4,1,1); P(0x1002,4,1,1);
+ P(0x1a02,0,2,0); P(0x1a08,0,1,0); P(0x1a08,1,1,0); P(0x1a08,2,1,0); P(0x1a08,3,1,1); P(0x1a08,4,2,2); P(0x1a08,6,1,1); P(0x1a08,7,1,1); P(0x1a08,8,3,0); P(0x1a08,11,2,0); P(0x1a08,13,1,0); P(0x1a08,14,1,0); P(0x1a08,15,1,0); P(0x1a0c,0,16,0);
+ P(0x158a,12,1,0); P(0x168a,12,1,0); P(0x1570,0,1,1); P(0x1670,0,1,1);
+#undef P
+ return 0;
+}
+
+int gchd_transcoder_output_enable(struct gchd *d, bool value)
+{
+ return gchd_sparam(d, 0x1a08, 3, 1, value ? 1 : 0);
+}
+
 int gchd_transcoder_init(struct gchd *d)
 {
  int r;
