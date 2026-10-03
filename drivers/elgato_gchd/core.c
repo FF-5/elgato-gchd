@@ -236,6 +236,14 @@ static int gchd_start(struct vb2_queue*q,unsigned int c)
   gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
   return r;
  }
+ d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+ if (IS_ERR(d->rx_thread)) {
+  r = PTR_ERR(d->rx_thread);
+  d->rx_thread = NULL;
+  gchd_input_stop(d);
+  gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
+  return r;
+ }
  d->streaming = true;
  return 0;
 }
@@ -636,7 +644,7 @@ static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
  if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;
  r=gchd_hw_init(d);if(r)goto errv4l2;d->hw_initialized=true;
  usb_set_intfdata(i,d);
- d->rx_thread=kthread_run(gchd_rx,d,"gchd-rx");if(IS_ERR(d->rx_thread)){r=PTR_ERR(d->rx_thread);d->rx_thread=NULL;goto errhw;}return 0;
+ return 0;
 errhw:gchd_hw_shutdown(d);d->hw_initialized=false;
 errv4l2:gchd_v4l2_unregister(d);errbuf:kfree(d->usb_buf);err:usb_put_dev(d->udev);kfree(d);return r;
 }
