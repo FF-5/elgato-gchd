@@ -519,7 +519,7 @@ int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
  return gchd_reg_read16(d, ENABLE_INDEX, &d->hw_enable_register);
 }
 
-static int gchd_enable_analog(struct gchd *d)
+int gchd_enable_analog(struct gchd *d)
 {
  return gchd_do_enable(d, EB_ANALOG_INPUT, 0);
 }
