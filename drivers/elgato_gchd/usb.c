@@ -362,7 +362,7 @@ int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
  if (r)
   return r;
 
- r = gchd_reg_write16(d, ENABLE_STATE_INDEX, d->hw_enable_state);
+ r = gchd_reg_write16(d, ENABLE_STATE_INDEX, d->saved_enable_state);
  if (r)
   return r;
  return gchd_mail_ready(d);
@@ -609,9 +609,10 @@ int gchd_hw_init(struct gchd *d)
  if (r)
   return r;
 
- r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
+ r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->saved_enable_state);
  if (r)
   return r;
+ d->hw_enable_state = d->saved_enable_state;
 
  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
  if (r)
