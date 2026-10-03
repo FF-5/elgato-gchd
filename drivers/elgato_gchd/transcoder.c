@@ -161,12 +161,17 @@ int gchd_transcoder_setup(struct gchd *d)
  u16 width = d->input_width;
  u16 height = d->input_height;
  u16 fps = d->input_fps_num ? d->input_fps_num : 60;
- u16 bitrate = d->bitrate ? d->bitrate : 16000;
- u16 audio = 384;
+ u32 auto_bitrate;
+ u16 bitrate;
+ u16 audio = 320;
+ u8 auto_level;
+
+ auto_bitrate = min_t(u32, 31250U * width, 40000U);
+ bitrate = d->bitrate_forced ? d->bitrate : (u16)auto_bitrate;
  u16 gop = (fps + 10) / 5;
  u16 anchor = 3;
  u8 profile;
- u8 level = d->h264_level ? d->h264_level : 41;
+ u8 level;
 
  /*
   * V4L2 profile values are API enum values; the Fujitsu encoder uses
@@ -179,6 +184,20 @@ int gchd_transcoder_setup(struct gchd *d)
 
  if (d->h264_profile == V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE)
   anchor = 1;
+ if (d->h264_level_forced)
+  level = d->h264_level;
+ else if ((u32)bitrate <= 64) level = 10;
+ else if ((u32)bitrate <= 192) level = 11;
+ else if ((u32)bitrate <= 384) level = 12;
+ else if ((u32)bitrate <= 768) level = 13;
+ else if ((u32)bitrate <= 2000) level = 20;
+ else if ((u32)bitrate <= 4000) level = 21;
+ else if ((u32)bitrate <= 10000) level = 30;
+ else if ((u32)bitrate <= 14000) level = 31;
+ else if ((u32)bitrate <= 20000) level = 32;
+ else if ((u32)bitrate <= 50000) level = 41;
+ else level = 52;
+
  u32 system_rate = (1075U * ((u32)bitrate + audio)) / 1000U + 256U;
  u16 colour = d->input == 0 ? 1 : 6;
  u8 vformat;
@@ -196,8 +215,8 @@ int gchd_transcoder_setup(struct gchd *d)
  P(0x1510,5,1,1); P(0x1518,0,8,anchor); P(0x1518,8,8,gop);
  P(0x1510,3,1,0); P(0x1514,8,3,0); P(0x1510,0,2,1);
  P(0x1532,0,16,bitrate); P(0x1534,0,16,bitrate); P(0x1536,0,16,bitrate); P(0x1538,0,16,0);
- P(0x152c,0,16,width); P(0x152e,0,16,height); P(0x1002,1,1,(fps == 50 || fps == 60));
- P(0x1584,0,16,0); P(0x1586,0,16,0); P(0x1588,0,16,1);
+ P(0x152c,0,16,width); P(0x152e,0,16,height); P(0x1002,1,1,0);
+ P(0x1584,0,16,0); P(0x1586,0,16,0); P(0x1588,0,16,0);
  P(0x151a,0,16,0); P(0x151c,0,16,0);
  P(0x1526,0,8,level); P(0x1526,8,8,profile);
  P(0x1a02,0,2,0); P(0x1a16,0,1,0); P(0x1a16,1,2,0); P(0x1a16,3,1,0); P(0x1a16,4,1,1); P(0x1a16,5,2,0); P(0x1a04,0,16,audio);
