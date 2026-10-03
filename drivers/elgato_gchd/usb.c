@@ -426,7 +426,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
 
  if (command == SCMD_IDLE || command == SCMD_INIT ||
      command == SCMD_STATE_CHANGE) {
-  u16 rb;
+  u16 rb = 0;
   int tries;
 
   r = gchd_interrupt_pend(d);
@@ -438,7 +438,10 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
     return r;
    if ((rb >> 8) == command)
     return 0;
-   }
+  }
+  dev_err(&d->intf->dev,
+          "SCMD timeout: command=0x%02x mode=0x%02x data=0x%04x readback=0x%04x polls=%d\\n",
+          command, mode, data, rb, tries);
   return -ETIMEDOUT;
  }
  return 0;
@@ -476,8 +479,12 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
    if (completion & 0x0004)
     break;
    }
-  if (tries == 2000)
+  if (tries == 2000) {
+   dev_err(&d->intf->dev,
+           "state-change timeout: current=0x%02x expected=0x%02x state=0x%04x completion=0x%04x\\n",
+           current_state, next, state, completion);
    return -ETIMEDOUT;
+  }
 
   r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
   if (r) return r;
@@ -824,8 +831,12 @@ int gchd_hw_init(struct gchd *d)
    break;
   }
  }
- if (tries == 2000)
+ if (tries == 2000) {
+  dev_err(&d->intf->dev,
+          "processor-state timeout after encoder init: last magic=0x%06x first_time=%u\\n",
+          magic, first_time);
   return -ETIMEDOUT;
+ }
 
  dev_info(&d->intf->dev, "device idle, processor state 0x%06x\\n", magic);
  return 0;
