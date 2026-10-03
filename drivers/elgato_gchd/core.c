@@ -643,9 +643,7 @@ static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
 	 * interface 0. usbcore has already selected config 1 before probe,
 	 * so reset the current configuration instead of changing it here.
 	 */
-	usb_lock_device(d->udev);
 	r = usb_reset_configuration(d->udev);
-	usb_unlock_device(d->udev);
 	if (r)
 		goto err;
 	mutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
