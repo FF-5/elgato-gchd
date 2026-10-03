@@ -196,19 +196,13 @@ static int gchd_mode_regs(struct gchd *d)
 
 static int gchd_post_encoder_prefix(struct gchd *d);
 static int __maybe_unused gchd_post_encoder_sweep(struct gchd *d);
-static int __maybe_unused gchd_input_finalize(struct gchd *d);
-
-static int gchd_encoder_start(struct gchd *d)
+static int gchd_post_encoder_state(struct gchd *d);
+static int gchd_post_encoder_state(struct gchd *d)
 {
  u8 reply[3];
+ u8 magic[5] = {0xab,0xa9,0x0f,0xa4,0x5b};
  int r, i;
- u32 state;
 
- /*
-  * hw_init() has already completed the processor-state machine through the
-  * second 0x27f97b.  configureDevice() enters the encoder bring-up here,
-  * starting with the 0x5b polling phase.
-  */
  for (i = 0; i < 5; ++i) {
   r = gchd_mail_write(d, 0x33,
                       (u8[]){0xab,0xa9,0x0f,0xa4,0x5b}, 5);
@@ -280,6 +274,9 @@ static int gchd_encoder_start(struct gchd *d)
  if (r) return r;
 
  r = gchd_post_encoder_sweep(d);
+ if (r) return r;
+
+ r = gchd_post_encoder_state(d);
  if (r) return r;
 
  r = gchd_transcoder_setup(d);
@@ -739,6 +736,23 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  }
  if (i == 5)
   return -ETIMEDOUT;
+ return 0;
+}
+
+static int __maybe_unused gchd_input_finalize(struct gchd *d);
+
+static int gchd_encoder_start(struct gchd *d)
+{
+ u8 reply[3];
+ int r, i;
+ u32 state;
+
+ /*
+  * hw_init() has already completed the processor-state machine through the
+  * second 0x27f97b.  configureDevice() enters the encoder bring-up here,
+  * starting with the 0x5b polling phase.
+  */
+
 
  /*
   * This is the final source-routing stage from configure.cpp.  The
