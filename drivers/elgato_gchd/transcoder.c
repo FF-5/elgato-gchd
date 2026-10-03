@@ -19,6 +19,40 @@
 
 #define BF(addr, lsb, bits, val) gchd_sparam(d, (addr), (lsb), (bits), (val))
 
+static int gchd_transcoder_table_write(struct gchd *d, u16 address,
+                                       const u8 *data, size_t len)
+{
+ size_t i;
+ int r;
+
+ for (i = 0; i < len; i += 2) {
+  u16 value = (u16)data[i] << 8;
+  if (i + 1 < len)
+   value |= data[i + 1];
+  r = gchd_slsi(d, address + i, value);
+  if (r)
+   return r;
+ }
+ return 0;
+}
+
+/* The userspace PSI builders leave the CRC to the transcoder hardware. */
+static const u8 gchd_pat[] = {
+ 0x00,0xb0,0x11,0x00,0x00,0x01,0x00,0x00,
+ 0x00,0x01,0xe1,0x10,0x00,0x00,0xe0,0x1f
+};
+static const u8 gchd_sit[] = {
+ 0x7f,0xf0,0x0b,0xff,0xff,0x01,0x00,0x00,0xf0,0x00
+};
+static const u8 gchd_pmt[] = {
+ 0x02,0xb0,0x33,0x00,0x01,0x01,0x00,0x00,
+ 0xe0,0x00,0xf0,0x0c,0x05,0x04,0x48,0x44,0x4d,0x56,
+ 0x88,0x04,0x0f,0xff,0xfc,0xfc,
+ 0x1b,0xe0,0x11,0xf0,0x14,0x05,0x08,0x48,0x44,0x4d,0x56,
+ 0xff,0x1b,0x44,0x3f,0x28,0x04,0x2a,0x02,0x7e,0xff,
+ 0x03,0xe1,0x0f,0xf0,0x00
+};
+
 static int gchd_transcoder_defaults(struct gchd *d)
 {
  int r;
@@ -61,6 +95,20 @@ static int gchd_transcoder_defaults(struct gchd *d)
  if ((r = BF(0x112e, 0, 13, PCRPID))) return r;
  if ((r = BF(0x126e, 0, 13, PCRPID))) return r;
  if ((r = BF(0x1134, 0, 13, SITPID))) return r;
+ if ((r = BF(0x1138, 8, 8, sizeof(gchd_pat)))) return r;
+ if ((r = BF(0x1138, 0, 8, sizeof(gchd_pmt)))) return r;
+ if ((r = BF(0x113e, 8, 8, sizeof(gchd_sit)))) return r;
+ if ((r = BF(0x100c, 4, 4, 2))) return r;
+ if ((r = BF(0x100c, 12, 4, 3))) return r;
+ if ((r = gchd_transcoder_table_write(d, 0x1144, gchd_pat, sizeof(gchd_pat))) return r;
+ if ((r = gchd_transcoder_table_write(d, 0x1174, gchd_pmt, sizeof(gchd_pmt))) return r;
+ if ((r = gchd_transcoder_table_write(d, 0x1010, gchd_sit, sizeof(gchd_sit))) return r;
+ if ((r = BF(0x1138, 8, 8, sizeof(gchd_pat)))) return r;
+ if ((r = BF(0x1138, 0, 8, sizeof(gchd_pmt)))) return r;
+ if ((r = BF(0x113e, 8, 8, sizeof(gchd_sit)))) return r;
+ if ((r = gchd_transcoder_table_write(d, 0x1284, gchd_pat, sizeof(gchd_pat))) return r;
+ if ((r = gchd_transcoder_table_write(d, 0x12b4, gchd_pmt, sizeof(gchd_pmt))) return r;
+ if ((r = gchd_transcoder_table_write(d, 0x1370, gchd_sit, sizeof(gchd_sit))) return r;
  if ((r = BF(0x1274, 0, 13, SITPID))) return r;
  if ((r = BF(0x126a, 0, 13, THUMBPID))) return r;
  if ((r = BF(0x1130, 0, 8, VSID))) return r;
