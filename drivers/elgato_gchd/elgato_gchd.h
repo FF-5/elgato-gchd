@@ -61,6 +61,8 @@ struct gchd {
  bool hw_initialized;
  bool input_configured;
  bool input_forced;
+ bool bitrate_forced;
+ bool h264_level_forced;
  bool signal_present;
  bool rgb_input;
  unsigned long last_video_jiffies;
