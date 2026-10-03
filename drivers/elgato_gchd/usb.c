@@ -704,6 +704,16 @@ int gchd_hw_init(struct gchd *d)
  if (r)
   return r;
 
+ /*
+  * The userspace reference leaves the device several milliseconds of
+  * userspace scheduling time between the initial ignored 0x55 probe and
+  * the first state query.  On the HDNew hardware this is significant:
+  * the DKMS path can otherwise issue the second query too soon and get
+  * 0x000000 forever.  The reference trace shows ~17.6 ms here, so keep
+  * a conservative 20 ms settling interval.
+  */
+ msleep(20);
+
  bool first_time = true;
 
  for (tries = 0; tries < 2000; ++tries) {
