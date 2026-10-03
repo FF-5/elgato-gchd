@@ -722,8 +722,7 @@ int gchd_hw_init(struct gchd *d)
    if (r)
     return r;
 
-   r = gchd_do_enable(d, EB_ANALOG_INPUT,
-                      d->input == 0 ? 0 : EB_ANALOG_INPUT);
+   r = gchd_do_enable(d, EB_ANALOG_INPUT, EB_ANALOG_INPUT);
    if (r)
     return r;
 
