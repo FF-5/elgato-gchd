@@ -153,7 +153,7 @@ static void gchd_signal_check(struct gchd *d)
   v4l2_event_queue(&d->vdev, &ev);
   WRITE_ONCE(d->signal_present, false);
   /* RX must not issue control transfers or attempt to stop itself here. */
-  if (READ_ONCE(d->streaming))
+  if (READ_ONCE(d->streaming) && READ_ONCE(d->detect_requested))
    schedule_delayed_work(&d->detect_work, 0);
   pr_info("elgato_gchd: input %u signal lost; scheduling redetection\n",
           d->input);
@@ -385,10 +385,10 @@ static void gchd_stop(struct vb2_queue *q)
  unsigned long flags;
  int r;
 
- cancel_delayed_work_sync(&d->detect_work);
  WRITE_ONCE(d->detect_requested, false);
- mutex_lock(&d->lifecycle_lock);
  WRITE_ONCE(d->streaming, false);
+ cancel_delayed_work_sync(&d->detect_work);
+ mutex_lock(&d->lifecycle_lock);
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
@@ -465,6 +465,7 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  if (vb2_is_busy(&d->vbq) && !resume)
   return -EBUSY;
 
+ WRITE_ONCE(d->detect_requested, false);
  cancel_delayed_work_sync(&d->detect_work);
  mutex_lock(&d->lifecycle_lock);
  if (d->disconnected) {
