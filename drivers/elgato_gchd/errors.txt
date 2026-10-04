@@ -1,113 +1,213 @@
-ff5@ff5-VirtualBox:~$ ffmpeg -hide_banner -loglevel info   -i /tmp/elgato_gchd.ts   -an -vf format=yuyv422   -f v4l2 /dev/video10
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 1 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 2 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-[h264 @ 0x615235168800] non-existing PPS 0 referenced
-    Last message repeated 1 times
-[h264 @ 0x615235168800] decode_slice_header error
-[h264 @ 0x615235168800] no frame!
-Input #0, mpegts, from '/tmp/elgato_gchd.ts':
-  Duration: N/A, start: 0.500000, bitrate: N/A
-  Program 1 
-  Stream #0:0[0x1011]: Video: h264 (High) (HDMV / 0x564D4448), yuv420p(tv, smpte170m/smpte170m/bt709, top first), 720x480 [SAR 10:11 DAR 15:11], 29.97 fps, 59.94 tbr, 90k tbn
-  Stream #0:1[0x10f]: Audio: mp2 ([3][0][0][0] / 0x0003), 48000 Hz, stereo, fltp, 320 kb/s
-Stream mapping:
-  Stream #0:0 -> #0:0 (h264 (native) -> rawvideo (native))
-Press [q] to stop, [?] for help
-[h264 @ 0x615235253e40] Missing reference picture, default is 2147483647
-    Last message repeated 1 times
-[h264 @ 0x6152351b92c0] Missing reference picture, default is 2147483647
-    Last message repeated 1 times
-[h264 @ 0x615235172fc0] Missing reference picture, default is 2147483647
-Output #0, video4linux2,v4l2, to '/dev/video10':
-  Metadata:
-    encoder         : Lavf60.16.100
-  Stream #0:0: Video: rawvideo (YUY2 / 0x32595559), yuyv422(tv, smpte170m/smpte170m/bt709, top coded first (swapped)), 720x480 [SAR 10:11 DAR 15:11], q=2-31, 165722 kb/s, 29.97 fps, 29.97 tbn
-    Metadata:
-      encoder         : Lavc60.31.102 rawvideo
-frame=    6 fps=0.0 q=-0.0 size=N/A time=00:00:00.30 bitrate=N/A dup=13 drop=0 sframe=   57 fps=0.0 q=-0.0 size=N/A time=00:00:01.90 bitrate=N/A dup=13 drop=0 sframe=   77 fps= 71 q=-0.0 size=N/A time=00:00:02.53 bitrate=N/A dup=13 drop=0 sframe=   92 fps= 58 q=-0.0 size=N/A time=00:00:03.03 bitrate=N/A dup=13 drop=0 sframe=  106 fps= 51 q=-0.0 size=N/A time=00:00:03.53 bitrate=N/A dup=13 drop=0 sframe=  122 fps= 46 q=-0.0 size=N/A time=00:00:04.07 bitrate=N/A dup=13 drop=0 sframe=  138 fps= 44 q=-0.0 size=N/A time=00:00:04.60 bitrate=N/A dup=13 drop=0 sframe=  154 fps= 42 q=-0.0 size=N/A time=00:00:05.10 bitrate=N/A dup=13 drop=0 sframe=  169 fps= 40 q=-0.0 size=N/A time=00:00:05.63 bitrate=N/A dup=13 drop=0 sframe=  185 fps= 39 q=-0.0 size=N/A time=00:00:06.13 bitrate=N/A dup=13 drop=0 sframe=  200 fps= 39 q=-0.0 size=N/A time=00:00:06.63 bitrate=N/A dup=13 drop=0 sframe=  215 fps= 38 q=-0.0 size=N/A time=00:00:07.14 bitrate=N/A dup=13 drop=0 sframe=  230 fps= 37 q=-0.0 size=N/A time=00:00:07.64 bitrate=N/A dup=13 drop=0 sframe=  245 fps= 37 q=-0.0 size=N/A time=00:00:08.14 bitrate=N/A dup=13 drop=0 sframe=  261 fps= 36 q=-0.0 size=N/A time=00:00:08.67 bitrate=N/A dup=13 drop=0 sframe=  276 fps= 36 q=-0.0 size=N/A time=00:00:09.17 bitrate=N/A dup=13 drop=0 sframe=  291 fps= 35 q=-0.0 size=N/A time=00:00:09.67 bitrate=N/A dup=13 drop=0 sframe=  307 fps= 35 q=-0.0 size=N/A time=00:00:10.21 bitrate=N/A dup=13 drop=0 sframe=  323 fps= 35 q=-0.0 size=N/A time=00:00:10.74 bitrate=N/A dup=13 drop=0 sframe=  338 fps= 35 q=-0.0 size=N/A time=00:00:11.24 bitrate=N/A dup=13 drop=0 sframe=  353 fps= 34 q=-0.0 size=N/A time=00:00:11.74 bitrate=N/A dup=13 drop=0 sframe=  368 fps= 34 q=-0.0 size=N/A time=00:00:12.24 bitrate=N/A dup=13 drop=0 sframe=  383 fps= 34 q=-0.0 size=N/A time=00:00:12.74 bitrate=N/A dup=13 drop=0 sframe=  398 fps= 34 q=-0.0 size=N/A time=00:00:13.24 bitrate=N/A dup=13 drop=0 sframe=  413 fps= 34 q=-0.0 size=N/A time=00:00:13.74 bitrate=N/A dup=13 drop=0 sframe=  428 fps= 33 q=-0.0 size=N/A time=00:00:14.24 bitrate=N/A dup=13 drop=0 sframe=  444 fps= 33 q=-0.0 size=N/A time=00:00:14.78 bitrate=N/A dup=13 drop=0 sframe=  459 fps= 33 q=-0.0 size=N/A time=00:00:15.28 bitrate=N/A dup=13 drop=0 sframe=  474 fps= 33 q=-0.0 size=N/A time=00:00:15.78 bitrate=N/A dup=13 drop=0 sframe=  489 fps= 33 q=-0.0 size=N/A time=00:00:16.28 bitrate=N/A dup=13 drop=0 sframe=  503 fps= 33 q=-0.0 size=N/A time=00:00:16.78 bitrate=N/A dup=13 drop=0 sframe=  519 fps= 33 q=-0.0 size=N/A time=00:00:17.28 bitrate=N/A dup=13 drop=0 sframe=  534 fps= 33 q=-0.0 size=N/A time=00:00:17.78 bitrate=N/A dup=13 drop=0 sframe=  549 fps= 33 q=-0.0 size=N/A time=00:00:18.28 bitrate=N/A dup=13 drop=0 sframe=  564 fps= 32 q=-0.0 size=N/A time=00:00:18.81 bitrate=N/A dup=13 drop=0 sframe=  581 fps= 32 q=-0.0 size=N/A time=00:00:19.35 bitrate=N/A dup=13 drop=0 sframe=  596 fps= 32 q=-0.0 size=N/A time=00:00:19.85 bitrate=N/A dup=13 drop=0 sframe=  611 fps= 32 q=-0.0 size=N/A time=00:00:20.35 bitrate=N/A dup=13 drop=0 sframe=  626 fps= 32 q=-0.0 size=N/A time=00:00:20.85 bitrate=N/A dup=13 drop=0 sframe=  641 fps= 32 q=-0.0 size=N/A time=00:00:21.35 bitrate=N/A dup=13 drop=0 sframe=  656 fps= 32 q=-0.0 size=N/A time=00:00:21.85 bitrate=N/A dup=13 drop=0 sframe=  671 fps= 32 q=-0.0 size=N/A time=00:00:22.35 bitrate=N/A dup=13 drop=0 sframe=  687 fps= 32 q=-0.0 size=N/A time=00:00:22.88 bitrate=N/A dup=13 drop=0 sframe=  703 fps= 32 q=-0.0 size=N/A time=00:00:23.42 bitrate=N/A dup=13 drop=0 sframe=  717 fps= 32 q=-0.0 size=N/A time=00:00:23.92 bitrate=N/A dup=13 drop=0 sframe=  734 fps= 32 q=-0.0 size=N/A time=00:00:24.45 bitrate=N/A dup=13 drop=0 sframe=  749 fps= 32 q=-0.0 size=N/A time=00:00:24.99 bitrate=N/A dup=13 drop=0 sframe=  765 fps= 32 q=-0.0 size=N/A time=00:00:25.49 bitrate=N/A dup=13 drop=0 sframe=  781 fps= 32 q=-0.0 size=N/A time=00:00:26.02 bitrate=N/A dup=13 drop=0 sframe=  795 fps= 32 q=-0.0 size=N/A time=00:00:26.52 bitrate=N/A dup=13 drop=0 sframe=  812 fps= 32 q=-0.0 size=N/A time=00:00:27.06 bitrate=N/A dup=13 drop=0 sframe=  828 fps= 32 q=-0.0 size=N/A time=00:00:27.59 bitrate=N/A dup=13 drop=0 sframe=  843 fps= 32 q=-0.0 size=N/A time=00:00:28.12 bitrate=N/A dup=13 drop=0 sframe=  858 fps= 32 q=-0.0 size=N/A time=00:00:28.62 bitrate=N/A dup=13 drop=0 sframe=  873 fps= 32 q=-0.0 size=N/A time=00:00:29.09 bitrate=N/A dup=13 drop=0 sframe=  888 fps= 32 q=-0.0 size=N/A time=00:00:29.59 bitrate=N/A dup=13 drop=0 sframe=  903 fps= 32 q=-0.0 size=N/A time=00:00:30.09 bitrate=N/A dup=13 drop=0 sframe=  918 fps= 31 q=-0.0 size=N/A time=00:00:30.59 bitrate=N/A dup=13 drop=0 sframe=  934 fps= 31 q=-0.0 size=N/A time=00:00:31.13 bitrate=N/A dup=13 drop=0 sframe=  949 fps= 31 q=-0.0 size=N/A time=00:00:31.63 bitrate=N/A dup=13 drop=0 sframe=  963 fps= 31 q=-0.0 size=N/A time=00:00:32.13 bitrate=N/A dup=13 drop=0 sframe=  979 fps= 31 q=-0.0 size=N/A time=00:00:32.63 bitrate=N/A dup=13 drop=0 sframe=  993 fps= 31 q=-0.0 size=N/A time=00:00:33.13 bitrate=N/A dup=13 drop=0 sframe= 1009 fps= 31 q=-0.0 size=N/A time=00:00:33.66 bitrate=N/A dup=13 drop=0 sframe= 1024 fps= 31 q=-0.0 size=N/A time=00:00:34.13 bitrate=N/A dup=13 drop=0 sframe= 1039 fps= 31 q=-0.0 size=N/A time=00:00:34.63 bitrate=N/A dup=13 drop=0 sframe= 1054 fps= 31 q=-0.0 size=N/A time=00:00:35.13 bitrate=N/A dup=13 drop=0 sframe= 1069 fps= 31 q=-0.0 size=N/A time=00:00:35.66 bitrate=N/A dup=13 drop=0 sframe= 1085 fps= 31 q=-0.0 size=N/A time=00:00:36.16 bitrate=N/A dup=13 drop=0 s
+Composite sample analysis at high quality:
+H.264 SPS/PPS/IDR Extraction Report
+Source: high_q.ts
+Elementary stream: H.264 Annex B
+Video: 720x480, High profile
+
+NAL units parsed from extracted video stream: 4696
+SPS NAL units (type 7): 51
+PPS NAL units (type 8): 51
+IDR NAL units (type 5): 51
+Unique SPS payloads: 1
+Unique PPS payloads: 1
+IDR payload total (excluding start codes): 2334246 bytes
+Extracted file size (including 4-byte start codes): 2341182 bytes
+Extracted file SHA-256: c2255681abb832b6d3d95a33653e0bffdb4623eec5ea1732213cd15ca505e82d
+
+SPS #1: 55 bytes (NAL header included)
+Hex: 2764001fad00db02d1e581fa8300832000007d20001d4c1c0000030157528000337f9b9e306000000aba9400019bfc9cf181da08844a58
+
+PPS #1: 69 bytes (NAL header included)
+Hex: 28fa4029ce51c715141012263041054512088cc47366882510c9218a592888514e5c9a14a4d8de4c513267132184666c48c48851142242909c9e4fafc9fd7e4faf2726a4c0
+
+Selected NAL inventory (1-based in extracted output):
+    1. SPS type=7 size=55 bytes source_offset=6 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+    2. PPS type=8 size=69 bytes source_offset=65 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+    3. IDR type=5 size=44281 bytes source_offset=160 sha256=3c4853caffe1794a0ad81a1ca91ad1783e8689c2b8279d91a584e4a85cce038c
+    4. SPS type=7 size=55 bytes source_offset=656918 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+    5. PPS type=8 size=69 bytes source_offset=656977 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+    6. IDR type=5 size=48318 bytes source_offset=657072 sha256=fde6113ae9120cb015f2adf11943fb6d1ca450b7da3d3883e67447aec329022e
+    7. SPS type=7 size=55 bytes source_offset=1313823 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+    8. PPS type=8 size=69 bytes source_offset=1313882 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+    9. IDR type=5 size=48412 bytes source_offset=1313977 sha256=eea5d69ce1abce8c31b6e8ee603d5fec3c6fe25a0566d952b8c983055d3b6adc
+   10. SPS type=7 size=55 bytes source_offset=1970728 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   11. PPS type=8 size=69 bytes source_offset=1970787 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   12. IDR type=5 size=47829 bytes source_offset=1970882 sha256=e89663c6abf74558999a1160febaa39201a0a9330a4ede59bf733117b3eafcf4
+   13. SPS type=7 size=55 bytes source_offset=2627634 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   14. PPS type=8 size=69 bytes source_offset=2627693 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   15. IDR type=5 size=48358 bytes source_offset=2627788 sha256=06ec3e97967715b6a095d123eab6aa64577db86591c4680956ded2a320994ea1
+   16. SPS type=7 size=55 bytes source_offset=3284539 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   17. PPS type=8 size=69 bytes source_offset=3284598 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   18. IDR type=5 size=47571 bytes source_offset=3284693 sha256=aa12282d92710d129a4f2e402f741f7107fff78e58e44c130ae0e15a2d8f9492
+   19. SPS type=7 size=55 bytes source_offset=3941444 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   20. PPS type=8 size=69 bytes source_offset=3941503 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   21. IDR type=5 size=48017 bytes source_offset=3941598 sha256=e96c71a85b66f62542d30c1b5a8f76f4976579daac7e25da93719e15daa7a76c
+   22. SPS type=7 size=55 bytes source_offset=4598350 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   23. PPS type=8 size=69 bytes source_offset=4598409 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   24. IDR type=5 size=48123 bytes source_offset=4598504 sha256=71628334e83e9e8f47de52b10cf7c165c97596363c13a4c059873427b01ad464
+   25. SPS type=7 size=55 bytes source_offset=5255255 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   26. PPS type=8 size=69 bytes source_offset=5255314 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   27. IDR type=5 size=47906 bytes source_offset=5255409 sha256=e290e20998012146ab6d88f2b8b2d489be26e820856cb9257483d11e7c3ac1aa
+   28. SPS type=7 size=55 bytes source_offset=5912160 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   29. PPS type=8 size=69 bytes source_offset=5912219 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   30. IDR type=5 size=47815 bytes source_offset=5912314 sha256=3e4e51d51f694890036b3382a957e375a78a5a6f6aee2f5e0e5aa550a6e3b048
+   31. SPS type=7 size=55 bytes source_offset=6569066 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   32. PPS type=8 size=69 bytes source_offset=6569125 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   33. IDR type=5 size=48281 bytes source_offset=6569220 sha256=e4c60401fbebd4e7d7de425f757b1b5b2c1c669a0bd5a8bdf43e50e35e5bdf7a
+   34. SPS type=7 size=55 bytes source_offset=7225971 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   35. PPS type=8 size=69 bytes source_offset=7226030 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   36. IDR type=5 size=48150 bytes source_offset=7226125 sha256=d92bacd4e8c7d57e44bf765772e9c2ce38c5c70e101cedcd4fc31886ee9ed1c8
+   37. SPS type=7 size=55 bytes source_offset=7882876 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   38. PPS type=8 size=69 bytes source_offset=7882935 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   39. IDR type=5 size=47785 bytes source_offset=7883030 sha256=d691261e58bafdf5f87d8cb1ad81e604f471260b24f3d40f61942bc59dc82701
+   40. SPS type=7 size=55 bytes source_offset=8539782 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   41. PPS type=8 size=69 bytes source_offset=8539841 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   42. IDR type=5 size=47783 bytes source_offset=8539936 sha256=9d6a94fea9a55f3f359aa0e40d29396ee5648e2c408fb70f8155390c9b3efde7
+   43. SPS type=7 size=55 bytes source_offset=9196687 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   44. PPS type=8 size=69 bytes source_offset=9196746 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   45. IDR type=5 size=48119 bytes source_offset=9196841 sha256=3826aed53e384f8be41c7c1b5a883766cd6d94575e7a555e467406bce853cb1e
+   46. SPS type=7 size=55 bytes source_offset=9853592 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   47. PPS type=8 size=69 bytes source_offset=9853651 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   48. IDR type=5 size=47837 bytes source_offset=9853746 sha256=bfdc44e40936a14598952f95817c161c52b2fc2cc906fd03ba9c8a81cf0ff8a4
+   49. SPS type=7 size=55 bytes source_offset=10510498 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   50. PPS type=8 size=69 bytes source_offset=10510557 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   51. IDR type=5 size=48028 bytes source_offset=10510652 sha256=819126cd0f68ff622c529962571252aad8825e41138c1899ce8a780ba7e58f35
+   52. SPS type=7 size=55 bytes source_offset=11167403 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   53. PPS type=8 size=69 bytes source_offset=11167462 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   54. IDR type=5 size=47597 bytes source_offset=11167557 sha256=e3a3fd5857720d40894658c411224685adcbc2502202b14b23b3fd6530a7b2a8
+   55. SPS type=7 size=55 bytes source_offset=11824308 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   56. PPS type=8 size=69 bytes source_offset=11824367 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   57. IDR type=5 size=47184 bytes source_offset=11824462 sha256=1acd6d9a52f6bd5bbd959dc018069a6f8ffc2fb1c999862a24213a6146e16371
+   58. SPS type=7 size=55 bytes source_offset=12481213 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   59. PPS type=8 size=69 bytes source_offset=12481272 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   60. IDR type=5 size=47624 bytes source_offset=12481367 sha256=22531b60c23ef31937cee8859de3a07cf4d888d2ac0021894dda0f733ef456c9
+   61. SPS type=7 size=55 bytes source_offset=13138119 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   62. PPS type=8 size=69 bytes source_offset=13138178 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   63. IDR type=5 size=47804 bytes source_offset=13138273 sha256=4ba2e95f882da806e2466613bd0297ef82e4a6254f6aeeefe3886696b7d082d9
+   64. SPS type=7 size=55 bytes source_offset=13795024 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   65. PPS type=8 size=69 bytes source_offset=13795083 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   66. IDR type=5 size=47559 bytes source_offset=13795178 sha256=1402d06471bf2c78ddc3148690e59a38f2035a33e177fcb5a1aa8415ecf89823
+   67. SPS type=7 size=55 bytes source_offset=14451929 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   68. PPS type=8 size=69 bytes source_offset=14451988 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   69. IDR type=5 size=47965 bytes source_offset=14452083 sha256=df45f01923145b19ad37e16bae4944d61941d64c80b1023ed382192999f870e9
+   70. SPS type=7 size=55 bytes source_offset=15108835 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   71. PPS type=8 size=69 bytes source_offset=15108894 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   72. IDR type=5 size=47868 bytes source_offset=15108989 sha256=eda1238ad5d2c4b7d6830277195492d39988aa05be1bc6ca59517cda624fdbf2
+   73. SPS type=7 size=55 bytes source_offset=15765740 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   74. PPS type=8 size=69 bytes source_offset=15765799 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   75. IDR type=5 size=47293 bytes source_offset=15765894 sha256=b8a579fe439f8ebb3eeb62062772e3ea10486c2df714eaba87109f5fb58d5ea8
+   76. SPS type=7 size=55 bytes source_offset=16422645 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   77. PPS type=8 size=69 bytes source_offset=16422704 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   78. IDR type=5 size=47914 bytes source_offset=16422799 sha256=9281a1969a64065f6b67ecdce8d721dc7933b4fe125d86ab502fb8ae8b82bc9f
+   79. SPS type=7 size=55 bytes source_offset=17079551 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   80. PPS type=8 size=69 bytes source_offset=17079610 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   81. IDR type=5 size=47962 bytes source_offset=17079705 sha256=105d478a1c9a499201255436baa58188e30b7ff9ca8fadba8cebcb8d7139f969
+   82. SPS type=7 size=55 bytes source_offset=17736456 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   83. PPS type=8 size=69 bytes source_offset=17736515 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   84. IDR type=5 size=47802 bytes source_offset=17736610 sha256=c6e92543c6ded44a9703497efb48c01763ff7a9fa0b6ea75b793de06b392d315
+   85. SPS type=7 size=55 bytes source_offset=18393361 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   86. PPS type=8 size=69 bytes source_offset=18393420 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   87. IDR type=5 size=47717 bytes source_offset=18393515 sha256=754533113f9bfeb53e8946a3fa40f38dc5c880daafc3fdb4ce355603b6d06183
+   88. SPS type=7 size=55 bytes source_offset=19050267 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   89. PPS type=8 size=69 bytes source_offset=19050326 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   90. IDR type=5 size=47759 bytes source_offset=19050421 sha256=65c0a409c1ba7228878db4dd3a188bc38a1488f6fda96d877d5e7801d31a54ea
+   91. SPS type=7 size=55 bytes source_offset=19707172 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   92. PPS type=8 size=69 bytes source_offset=19707231 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   93. IDR type=5 size=47429 bytes source_offset=19707326 sha256=76e0e895c7d69ef01794472b8f3416484f327989a7b6243bba95985091e3cc49
+   94. SPS type=7 size=55 bytes source_offset=20364077 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   95. PPS type=8 size=69 bytes source_offset=20364136 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   96. IDR type=5 size=47168 bytes source_offset=20364231 sha256=c67db289eda73d34b6a3d12368fefefa093c4d686cc54f807bc4113473048449
+   97. SPS type=7 size=55 bytes source_offset=21020983 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+   98. PPS type=8 size=69 bytes source_offset=21021042 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+   99. IDR type=5 size=47027 bytes source_offset=21021137 sha256=97792a88561d08f06bc4d751210a1ab421b832e0bc5110c5794c06d9ba7db2e3
+  100. SPS type=7 size=55 bytes source_offset=21677888 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  101. PPS type=8 size=69 bytes source_offset=21677947 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  102. IDR type=5 size=47575 bytes source_offset=21678042 sha256=867701be199cda2083b2a270d15d8985d679cbe82d6399624e03d6433b004a9e
+  103. SPS type=7 size=55 bytes source_offset=22334793 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  104. PPS type=8 size=69 bytes source_offset=22334852 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  105. IDR type=5 size=47828 bytes source_offset=22334947 sha256=a3d2b33569224ff44c08b52e6ff88507a2e2785857174c39b356c542aec905b4
+  106. SPS type=7 size=55 bytes source_offset=22991699 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  107. PPS type=8 size=69 bytes source_offset=22991758 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  108. IDR type=5 size=46849 bytes source_offset=22991853 sha256=101ea670086f37464661a8e826f9249b589d03b42304c1b2a5b5bc13a346ed20
+  109. SPS type=7 size=55 bytes source_offset=23648604 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  110. PPS type=8 size=69 bytes source_offset=23648663 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  111. IDR type=5 size=47438 bytes source_offset=23648758 sha256=086f4f718d811ac54f4851ac45d9c3e94133f6ef6f7823cce6e30c44468b2d91
+  112. SPS type=7 size=55 bytes source_offset=24305509 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  113. PPS type=8 size=69 bytes source_offset=24305568 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  114. IDR type=5 size=47731 bytes source_offset=24305663 sha256=26a4df5c4e8cf53763cc46d6539083d12afe2f4d9a49298d914a07d977e77ea2
+  115. SPS type=7 size=55 bytes source_offset=24962414 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  116. PPS type=8 size=69 bytes source_offset=24962473 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  117. IDR type=5 size=47319 bytes source_offset=24962568 sha256=8aadd4b99bdda8323ef1ab23d48bb9c2eafbaf1596f54294256049ac47322329
+  118. SPS type=7 size=55 bytes source_offset=25619320 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  119. PPS type=8 size=69 bytes source_offset=25619379 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  120. IDR type=5 size=47626 bytes source_offset=25619474 sha256=e744292c6bcdfabac62e2fd1bdf89575a72fff3c9ff423da88d5ebb7e20c9f11
+  121. SPS type=7 size=55 bytes source_offset=26276225 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  122. PPS type=8 size=69 bytes source_offset=26276284 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  123. IDR type=5 size=47606 bytes source_offset=26276379 sha256=4fb58df36701ee4d78fe6468a506df56724317e857c546ff7b9dd53641301b1e
+  124. SPS type=7 size=55 bytes source_offset=26933130 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  125. PPS type=8 size=69 bytes source_offset=26933189 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  126. IDR type=5 size=47354 bytes source_offset=26933284 sha256=69caa7af647f16b728e86e836157850cdedc1c05cd1fba16b35e91d30e387a82
+  127. SPS type=7 size=55 bytes source_offset=27590036 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  128. PPS type=8 size=69 bytes source_offset=27590095 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  129. IDR type=5 size=47797 bytes source_offset=27590190 sha256=336f3b79fe00bca548763dd1c45414ac337961ad60bc00865dbfca974ac4a149
+  130. SPS type=7 size=55 bytes source_offset=28246941 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  131. PPS type=8 size=69 bytes source_offset=28247000 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  132. IDR type=5 size=47099 bytes source_offset=28247095 sha256=642622c0dcf08660af306b6bf13f5920be8091310ca13ea4a1505909bcc75b03
+  133. SPS type=7 size=55 bytes source_offset=28903846 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  134. PPS type=8 size=69 bytes source_offset=28903905 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  135. IDR type=5 size=47271 bytes source_offset=28904000 sha256=7679edbfe499212563dba9b5b3150e2433f751a17fa6af5491b17f5634f029fe
+  136. SPS type=7 size=55 bytes source_offset=29560752 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  137. PPS type=8 size=69 bytes source_offset=29560811 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  138. IDR type=5 size=47641 bytes source_offset=29560906 sha256=8174fb7e89bdb6d85f953cdb496fb595d2765ed4fe359fe74f14a0d55f716c1a
+  139. SPS type=7 size=55 bytes source_offset=30217657 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  140. PPS type=8 size=69 bytes source_offset=30217716 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  141. IDR type=5 size=47408 bytes source_offset=30217811 sha256=531cac9cc7873aa97d30459432f47e8ad2fe2a3c80bcd1330054f341f6f09750
+  142. SPS type=7 size=55 bytes source_offset=30874562 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  143. PPS type=8 size=69 bytes source_offset=30874621 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  144. IDR type=5 size=46970 bytes source_offset=30874716 sha256=b811c3f4c23102202e12533f6ea6b5fca4b3114ce40094b123cbddff0a3ec755
+  145. SPS type=7 size=55 bytes source_offset=31531468 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  146. PPS type=8 size=69 bytes source_offset=31531527 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  147. IDR type=5 size=47569 bytes source_offset=31531622 sha256=ba0c796af45cd69d2cb3a04bc265b69238f2a367b205fba359693d0cc0ac2814
+  148. SPS type=7 size=55 bytes source_offset=32251156 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  149. PPS type=8 size=69 bytes source_offset=32251215 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  150. IDR type=5 size=621 bytes source_offset=32251310 sha256=263982297ef0eea12d65b58b17a3a2d79ae3ba5cc3baee77b1e483849329d787
+  151. SPS type=7 size=55 bytes source_offset=32845278 sha256=3906d67339d6a384ad0e7c81632092eb90069b560be8af08748f9961943723a1
+  152. PPS type=8 size=69 bytes source_offset=32845337 sha256=b61ce98ca1360e46797c30b86e58839ec32dd2af7b67409aa5db09473b95317d
+  153. IDR type=5 size=259 bytes source_offset=32845432 sha256=50181adb483e689b3d0a4d6d98cb4e02d302e03f7140c0fbb391d171c8eb7a86
+
+HDMI analysis at low quality:
+Source: hdmi_sample.ts
+Video elementary stream: H.264 Annex B; 3160602 bytes
+NAL units parsed: 505
+SPS occurrences: 20; unique SPS: 1
+PPS occurrences: 20; unique PPS: 1
+IDR NAL units: 20; total IDR payload bytes (excluding start codes): 2561812
+Extracted combined file: hdmi_sample_sps_pps_idr.h264 (2563212 bytes), containing every SPS/PPS/IDR NAL in stream order with 4-byte start codes.
+
+SPS #1: NAL size=53 bytes, SHA256=40ba6662fddbbb07381a27c48bda97b1357234293c556bfaad7453d17f91649d
+Hex (NAL header included, start code excluded): 27640028ad00db01e0089f9701f501010140000003004000000f3a30003d090007a1283c60d18001e848003d0941e303b4110894b0
+
+PPS #1: NAL size=5 bytes, SHA256=6b5dcca2a5f51528871dd45d11155047a3d61edcfae3c88fff3dd66819fe37fc
+Hex (NAL header included, start code excluded): 28fe029cb0
+
+IDR NAL listing (stream offset in elementary stream, NAL size bytes, SHA256):
+1: offset=95, size=106537, sha256=d010506219d1ecc680f8b288a0ae760f38c06bacef1ab69dbf182938a95e14d2
+2: offset=172560, size=107777, sha256=f052accb911e141f917a17b4c414344fae6af8c20b91f7b99cd9f5394d1aabb2
+3: offset=325817, size=116190, sha256=bb7830e018d06d92635fa7112a363d575a25d0bd73c8a86d1afc246dbf317297
+4: offset=475412, size=130230, sha256=094a9050c20e6418d28223b55cc3e698f089ea3f87577e7a604404cf1d904054
+5: offset=634539, size=131019, sha256=26ade9c585bce00fdabd6e47a81620deab2eac24ecda04183639e641cad3a8b9
+6: offset=793351, size=131240, sha256=be962e2116848173d67c4a6e4f714c568fd3e681339a84a11ec8005a6c8a1c66
+7: offset=952356, size=131261, sha256=383f1a850587d42947f532a83d3d5f0e62142f666d6dba585e093d0b061f9657
+8: offset=1111365, size=131304, sha256=8ac6cef706f9caae372a6e723e48ad223661edae0cec7550767e3bc92c348d1b
+9: offset=1270406, size=131327, sha256=e24ca1f380cb27ebc495f6c8b89f78a44691a069591ba7a95bfc3ade2e46faf2
+10: offset=1429440, size=131332, sha256=95bb89b9fedd8b338ce3231a165fbc993418810c889c2de0b5e113535b7f27c7
+11: offset=1588484, size=131352, sha256=6d18b51fb555fa19ab5f56a7857130cf61b87c46461994d462ba59c48477ab1d
+12: offset=1747518, size=131349, sha256=264d2a23a7a1778c0916e1f5a9e05dbeaa6b12d8727bb52b2fb853542bcdaf69
+13: offset=1906571, size=131361, sha256=3f1329cca928fc067ff2c693d4d2340948c19f0a54ac2df2f1da5d0c60624cb8
+14: offset=2065606, size=131360, sha256=f94026e1dffeaf9993687834dffb58707205639f5eb44bf15352e4fed88d274b
+15: offset=2224663, size=131360, sha256=fdfa86193102328db9ca15c09e3eefd98f36177faa06dfa9526763491aec8793
+16: offset=2383706, size=131360, sha256=4ab4d84bba0dec1575854ac5f5d12bd256b3fc35df7b6336515b16c61b7dae29
+17: offset=2542760, size=131362, sha256=8aa7d51a4f9d8343bac953e888f11b338ae73b32144d2074b98e7d2c831c50b8
+18: offset=2701792, size=131359, sha256=a794d06f3aa84709fed5a7b6836e5f267aa164058f03d7f95b6f58a6c390f8a6
+19: offset=2860835, size=131370, sha256=ca331970b23e9f25f9a7dcdb09fc755e532e76b878c83429aa993e7fcf3064cc
+20: offset=3019862, size=131362, sha256=26491c4c3f9279b943085111ff0388d70e5cb47b1edc1c0100f8a8374f19f4a8
