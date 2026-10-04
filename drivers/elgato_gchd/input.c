@@ -1366,7 +1366,7 @@ int gchd_input_configure(struct gchd *d)
 
 int gchd_input_configure_idle(struct gchd *d)
 {
- return gchd_input_configure_mode(d, false);
+ return gchd_input_configure_mode(d);
 }
 
 int gchd_input_start(struct gchd *d)
