@@ -67,6 +67,8 @@ struct gchd {
  bool disconnected;
  bool hw_initialized;
  bool input_configured;
+ bool encoder_started;
+ bool input_prepared;
  bool input_forced;
  bool mode_forced;
  bool bitrate_forced;
@@ -109,6 +111,7 @@ int gchd_load_encoder_firmware(struct gchd *);
 int gchd_input_configure(struct gchd *);
 int gchd_input_start(struct gchd *);
 int gchd_input_configure_idle(struct gchd *);
+int gchd_input_detect_signal(struct gchd *);
 int gchd_common_block_a(struct gchd *);
 int gchd_common_block_b1(struct gchd *, bool);
 int gchd_common_block_b2(struct gchd *);
