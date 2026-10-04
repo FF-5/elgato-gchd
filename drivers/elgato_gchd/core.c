@@ -222,41 +222,66 @@ static void gchd_detect_workfn(struct work_struct *work)
  if (d->disconnected || !READ_ONCE(d->detect_requested))
   goto out;
 
- /* Join the only bulk-IN reader before control/mailbox operations. */
+ /* Only the RX thread may own bulk-IN while START is active. */
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
   r = gchd_stream_stop(d);
   if (r) {
    dev_warn(&d->intf->dev,
-            "redetection: stream stop failed: %d; retrying later\n", r);
+            "redetection: stream stop failed: %d; retrying later\\n", r);
+   goto retry;
+  }
+
+  /*
+   * Signal was lost during capture. Tear down the configured encoder and
+   * restore the same IDLE baseline used by the reference userspace setup.
+   */
+  gchd_input_stop(d);
+  r = gchd_hw_init(d);
+  if (r) {
+   dev_warn(&d->intf->dev,
+            "redetection: hardware reinitialization failed: %d\\n", r);
    goto retry;
   }
  }
 
- gchd_ring_free(&d->ring);
- d->ts_partial_len = 0;
- WRITE_ONCE(d->signal_present, false);
+ if (d->input_prepared && !d->input_configured) {
+  /* Short async probe: one timing-register sample, no encoder restart. */
+  r = gchd_input_detect_signal(d);
+  if (r == -ENOLINK)
+   goto retry;
+  if (r) {
+   dev_warn(&d->intf->dev, "signal probe failed: %d\\n", r);
+   goto retry;
+  }
+ }
 
- /*
-  * VIDIOC_S_FMT describes the format requested by the application; it is not
-  * evidence of the signal arriving at the physical connector. Always clear
-  * it before probing so hardware timing, not guvcview's preferred 1080p mode,
-  * determines the encoder/transcoder configuration.
-  */
- d->input_width = 0;
- d->input_height = 0;
- d->input_fps_num = 0;
- d->input_fps_den = 0;
- d->input_interlaced = false;
- d->mode_forced = false;
- if (d->input_configured)
-  gchd_input_stop(d);
- r = gchd_input_configure_idle(d);
- if (r && r != -ENOLINK)
-  dev_warn(&d->intf->dev, "redetection: input setup failed: %d\n", r);
+ if (!d->input_configured) {
+  /*
+   * This call runs the userspace-equivalent connector setup only after a
+   * signal has been found by the short probe. On the first attempt it also
+   * prepares the receiver and may return -ENOLINK, leaving it prepared.
+   */
+  if (!d->input_prepared) {
+   d->input_width = 0;
+   d->input_height = 0;
+   d->input_fps_num = 0;
+   d->input_fps_den = 0;
+   d->input_interlaced = false;
+   d->mode_forced = false;
+  }
 
- if (!r && READ_ONCE(d->signal_present)) {
+  r = gchd_input_configure_idle(d);
+  if (r) {
+   if (r != -ENOLINK)
+    dev_warn(&d->intf->dev,
+             "redetection: input configuration failed: %d\\n", r);
+   goto retry;
+  }
+ }
+
+ if (READ_ONCE(d->signal_present)) {
   struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
 
   d->width = d->input_width;
@@ -265,20 +290,22 @@ static void gchd_detect_workfn(struct work_struct *work)
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
 
-  /* A query can configure the input while it remains safely in IDLE. */
   if (READ_ONCE(d->streaming)) {
    r = gchd_input_start(d);
-   if (!r) {
-    d->last_video_jiffies = jiffies;
-    d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
-    if (IS_ERR(d->rx_thread)) {
-     r = PTR_ERR(d->rx_thread);
-     d->rx_thread = NULL;
-     if (gchd_stream_stop(d))
-      gchd_input_stop(d);
-    }
+   if (r) {
+    dev_warn(&d->intf->dev, "capture start after detection failed: %d\\n", r);
+    goto retry;
+   }
+   d->last_video_jiffies = jiffies;
+   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+   if (IS_ERR(d->rx_thread)) {
+    r = PTR_ERR(d->rx_thread);
+    d->rx_thread = NULL;
+    gchd_stream_stop(d);
+    goto retry;
    }
   } else {
+   /* Configured and ready; later STREAMON uses this known-good setup. */
    WRITE_ONCE(d->detect_requested, false);
   }
  }
@@ -286,7 +313,7 @@ static void gchd_detect_workfn(struct work_struct *work)
 retry:
  if ((r || !READ_ONCE(d->signal_present)) &&
      !d->disconnected && READ_ONCE(d->detect_requested))
-  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
+  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
 
 out:
  mutex_unlock(&d->lifecycle_lock);
@@ -518,6 +545,8 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->input_forced = true;
  d->mode_forced = false;
  d->input_configured = false;
+ d->encoder_started = false;
+ d->input_prepared = false;
  d->signal_present = false;
  d->last_video_jiffies = jiffies;
  switch (i) {
@@ -539,9 +568,17 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  }
 
  /*
-  * Selection invalidates the old timing/configuration. Detection work will
-  * probe this input and configure it only after a valid timing is found.
+  * Re-enter the reference initialization baseline before preparing the new
+  * connector. This prevents the old encoder/input state from leaking across
+  * a connector change.
   */
+ r = gchd_hw_init(d);
+ if (r) {
+  dev_err(&d->intf->dev, "input switch: hardware reinitialization failed: %d\\n", r);
+  WRITE_ONCE(d->streaming, false);
+  mutex_unlock(&d->lifecycle_lock);
+  return r;
+ }
  WRITE_ONCE(d->detect_requested, true);
  schedule_delayed_work(&d->detect_work, 0);
  mutex_unlock(&d->lifecycle_lock);
