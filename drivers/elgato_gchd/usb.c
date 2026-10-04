@@ -1047,9 +1047,23 @@ int gchd_hw_shutdown(struct gchd *d)
  r = gchd_do_enable(d, EB_FIRMWARE_PROCESSOR, 0);
  if (r) return r;
 
- /* These are confirmed state transitions, not fire-and-forget SCMD writes. */
- r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
+ /*
+  * The normal capture-close path may already have returned the device to
+  * IDLE (0x11). Sending SCMD_IDLE again from IDLE is not idempotent on
+  * HDNew: it can wait forever for a transition that will never occur.
+  * Re-read the state after processor shutdown and only request IDLE when
+  * the hardware is not already there. RESET is reserved for device close,
+  * never for connector switching.
+  */
+ r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
  if (r) return r;
+ state &= 0x1f;
+ if (state != 0x11) {
+  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
+  if (r) return r;
+ }
+
+ /* RESET is the final close-time transition to a known boot state. */
  r = gchd_state_cmd(d, SCMD_RESET, 1, 0, 0x12);
  if (r) return r;
 
