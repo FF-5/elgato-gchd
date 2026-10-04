@@ -981,11 +981,40 @@ processor_state_ready:
 int gchd_hw_shutdown(struct gchd *d)
 {
  int r;
+ u16 state;
  u8 v;
 
  if (!d->udev)
   return 0;
 
+ /*
+  * Match GCHD::uninitDevice(): stop transport only when the firmware is
+  * actually in START/NULL, and do not run the teardown sequence twice when
+  * the processor is already reset or still in boot state.
+  */
+ r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+ if (r)
+  return r;
+ state &= 0x1f;
+
+ if (state == 0x02 || state == 0x04) {
+  r = gchd_stream_stop(d);
+  if (r)
+   return r;
+  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+  if (r)
+   return r;
+  state &= 0x1f;
+ }
+
+ if (state == 0x12 || state == 0x00 || state == 0x10) {
+  d->hw_enable_state = 0;
+  d->hw_enable_register = 0;
+  d->saved_enable_state = 0;
+  return 0;
+ }
+
+ /* The undocumented pre-shutdown mailbox sequence from userspace. */
  r = gchd_mail_write(d, 0x44, (u8[]){0x06,0x86}, 2);
  if (r) return r;
  r = gchd_mail_write(d, 0x33, (u8[]){0x89,0x89,0xf8}, 3);
@@ -1000,25 +1029,32 @@ int gchd_hw_shutdown(struct gchd *d)
  r = gchd_reg_read16(d, ENABLE_STATE_INDEX, &d->hw_enable_state);
  if (r) return r;
 
- r = gchd_sparam(d, 0x1a08, 3, 1, 0);
+ /* Preserve the userspace ordering: read state before disabling output. */
+ r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+ if (r) return r;
+ r = gchd_transcoder_output_enable(d, false);
  if (r) return r;
 
  r = gchd_scmd(d, SCMD_INIT, 0xa0, 0x0000);
  if (r) return r;
 
+ /* clearEnableState() in userspace clears the state mask before processor-off. */
  r = gchd_reg_write16(d, ENABLE_STATE_INDEX, 0);
  if (r) return r;
  d->hw_enable_state = 0;
+ d->saved_enable_state = 0;
 
  r = gchd_do_enable(d, EB_FIRMWARE_PROCESSOR, 0);
  if (r) return r;
 
- r = gchd_scmd(d, SCMD_IDLE, 0, 0);
+ /* These are confirmed state transitions, not fire-and-forget SCMD writes. */
+ r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
  if (r) return r;
- r = gchd_scmd(d, SCMD_RESET, 1, 0);
+ r = gchd_state_cmd(d, SCMD_RESET, 1, 0, 0x12);
  if (r) return r;
 
  d->hw_enable_state = 0;
  d->hw_enable_register = 0;
+ d->saved_enable_state = 0;
  return 0;
 }
