@@ -2,6 +2,40 @@
 #include <linux/delay.h>
 #include "elgato_gchd.h"
 
+/*
+ * Signal-measurement polling policy. A source with recognizable timing gets
+ * the longer window; a source without recognizable timing gets the short
+ * window. These limits are independent of the hardware setup sequence.
+ */
+static unsigned int signal_active_retries = 10;
+static unsigned int signal_inactive_retries = 3;
+static unsigned int signal_poll_delay_ms = 200;
+module_param(signal_active_retries, uint, 0644);
+MODULE_PARM_DESC(signal_active_retries, "Signal measurement retries when timing is detected");
+module_param(signal_inactive_retries, uint, 0644);
+MODULE_PARM_DESC(signal_inactive_retries, "Signal measurement retries when timing is not detected");
+module_param(signal_poll_delay_ms, uint, 0644);
+MODULE_PARM_DESC(signal_poll_delay_ms, "Delay in milliseconds between signal measurement batches");
+
+static bool gchd_hdmi_timing_valid(u32 value)
+{
+ return (value >= 0xb6cd && value <= 0xb6e1) ||
+        (value >= 0xb077 && value <= 0xb08b) ||
+        (value >= 0xb052 && value <= 0xb066) ||
+        (value >= 0xb0b5 && value <= 0xb0cd);
+}
+
+static bool gchd_component_timing_valid(u32 value)
+{
+ return abs((int)value - 0xbbf4) < 10 ||
+        abs((int)value - 0xa03d) < 10 ||
+        abs((int)value - 0xbf59) < 10 ||
+        abs((int)value - 0xa6b7) < 10 ||
+        abs((int)value - 0x9ab9) < 10 ||
+        abs((int)value - 0xa150) < 10 ||
+        abs((int)value - 0x9576) < 10;
+}
+
 struct gchd_mail_cmd {
  u8 port;
  u8 len;
@@ -862,19 +896,29 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
  MW(0x4e,0x00,0x4c); R9(0x3f); MW(0x4e,0x00,0xcc); R9(0xf1);
  MW(0x4e,0xce,0x4c); R9(0xf0); MW(0x4e,0xcf,0xce); R9(0x3f);
 
- for (i=0;i<10;i++) {
+ for (i=0; i<max_t(unsigned int, 1, signal_active_retries); i++) {
+  unsigned int retry_limit;
+
   sum6665=sum6463=count6665=count6463=0;
   for (j=0;j<10;j++) {
    r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->rgb_input);
    if(r)return r;
   }
   value6665=sum6665/count6665;
+  value6463=sum6463/count6463;
+  retry_limit = gchd_hdmi_timing_valid(value6463) ?
+   max_t(unsigned int, 1, signal_active_retries) :
+   max_t(unsigned int, 1, signal_inactive_retries);
   if (i >= 2 && (value6665 < 0xad43 || value6665 > 0xad57))
    break;
-  msleep(200);
+  if (i + 1 >= retry_limit)
+   break;
+  if (signal_poll_delay_ms)
+   msleep(signal_poll_delay_ms);
  }
- if (i==10) return -ETIMEDOUT;
- d->signal_present = true;
+ value6665=sum6665/count6665;
+ value6463=sum6463/count6463;
+ d->signal_present = gchd_hdmi_timing_valid(value6463);
 
  if (d->input_width == 0) {
   value6463=sum6463/count6463;
@@ -1089,7 +1133,9 @@ static int gchd_configure_component_exact(struct gchd *d)
  MW(0x24,0x0c); MW(0x21,0xcd); MW(0x91,0xc8); MW(0x0e,0x8c);
  MW(0x11,0xec); MW(0x71,0x4c); MW(0x04,0xcc);
 
- for (i=0;i<10;i++) {
+ for (i=0; i<max_t(unsigned int, 1, signal_active_retries); i++) {
+  unsigned int retry_limit;
+
   sum6867=sum6665=count6867=count6665=0;
   for (j=0;j<10;j++) {
    u8 a,b;
@@ -1101,12 +1147,18 @@ static int gchd_configure_component_exact(struct gchd *d)
    sum6867 += ((u32)a<<8)|b; count6867++;
   }
   value6665=sum6665/count6665;
+  value6867=sum6867/count6867;
+  retry_limit = gchd_component_timing_valid(value6867) ?
+   max_t(unsigned int, 1, signal_active_retries) :
+   max_t(unsigned int, 1, signal_inactive_retries);
   if(i>=2 && abs((int)value6665-0xad4d)>=10) break;
-  msleep(200);
+  if (i + 1 >= retry_limit) break;
+  if (signal_poll_delay_ms)
+   msleep(signal_poll_delay_ms);
  }
- if(i==10)return -ETIMEDOUT;
 
  value6867=sum6867/count6867;
+ d->signal_present = gchd_component_timing_valid(value6867);
  if(!d->input_height) {
   if(abs((int)value6867-0xbbf4)<10) {
    d->input_width=1920; d->input_height=1080; d->input_interlaced=false; d->input_fps_num=30;
