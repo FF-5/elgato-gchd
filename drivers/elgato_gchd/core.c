@@ -19,6 +19,14 @@ static const char * const gchd_input_menu[] = {
 };
 
 /* Preserve the VB2 read/poll/mmap/ioctl operations while adding lifecycle hooks. */
+static void gchd_release_ref(struct kref *ref)
+{
+ struct gchd *d = container_of(ref, struct gchd, refcount);
+
+ kfree(d->usb_buf);
+ usb_put_dev(d->udev);
+ kfree(d);
+}
 static struct v4l2_file_operations gchd_fops;
 
 static unsigned long ring_bytes = GCHD_RING_BYTES;
@@ -462,8 +470,12 @@ static void gchd_stop(struct vb2_queue *q)
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
  }
- r = gchd_stream_stop(d);
- if (r) {
+ if (d->disconnected) {
+  r = -ENODEV;
+ } else {
+  r = gchd_stream_stop(d);
+ }
+ if (r && !d->disconnected) {
   dev_err(&d->intf->dev,
           "userspace-compatible stream stop failed: %d; disabling encoder as fallback\n",
           r);
@@ -929,10 +941,14 @@ static int gchd_fop_open(struct file *file)
  struct gchd *d = video_drvdata(file);
  int r = 0;
 
+ /* Protect the embedded video_device/driver state against unplug races. */
+ kref_get(&d->refcount);
  if (vb2_fops.open) {
   r = vb2_fops.open(file);
-  if (r)
+  if (r) {
+   kref_put(&d->refcount, gchd_release_ref);
    return r;
+  }
  }
 
  mutex_lock(&d->users_lock);
@@ -958,7 +974,7 @@ static int gchd_fop_open(struct file *file)
   d->input_fps_den = 0;
   r = gchd_hw_init(d);
   if (r) {
-   dev_err(&d->intf->dev, "hardware initialization on open failed: %d\\n", r);
+   dev_err(&d->intf->dev, "hardware initialization on open failed: %d\n", r);
    gchd_hw_shutdown(d);
    d->hw_initialized = false;
    goto out;
@@ -967,7 +983,7 @@ static int gchd_fop_open(struct file *file)
   d->hw_initialized = true;
   WRITE_ONCE(d->detect_requested, true);
   schedule_delayed_work(&d->detect_work, 0);
-  dev_info(&d->intf->dev, "V4L2 opened: hardware initialized, detecting input %u\\n",
+  dev_info(&d->intf->dev, "V4L2 opened: hardware initialized, detecting input %u\n",
            d->input);
  }
  d->open_count++;
@@ -977,6 +993,8 @@ out:
  mutex_unlock(&d->users_lock);
  if (r && vb2_fops.release)
   vb2_fops.release(file);
+ if (r)
+  kref_put(&d->refcount, gchd_release_ref);
  return r;
 }
 
@@ -1010,11 +1028,11 @@ static int gchd_fop_release(struct file *file)
    gchd_input_stop(d);
    sr = gchd_hw_shutdown(d);
    if (sr) {
-    dev_warn(&d->intf->dev, "hardware shutdown on last close failed: %d\\n", sr);
+    dev_warn(&d->intf->dev, "hardware shutdown on last close failed: %d\n", sr);
     if (!r)
      r = sr;
    } else {
-    dev_info(&d->intf->dev, "V4L2 closed: hardware safely shut down\\n");
+    dev_info(&d->intf->dev, "V4L2 closed: hardware safely shut down\n");
    }
    d->hw_initialized = false;
   }
@@ -1028,6 +1046,7 @@ static int gchd_fop_release(struct file *file)
   mutex_unlock(&d->lifecycle_lock);
  }
  mutex_unlock(&d->users_lock);
+ kref_put(&d->refcount, gchd_release_ref);
  return r;
 }
 
@@ -1087,6 +1106,7 @@ static int gchd_probe(struct usb_interface *i,
  d = kzalloc(sizeof(*d), GFP_KERNEL);
  if (!d)
   return -ENOMEM;
+ kref_init(&d->refcount);
  d->udev = usb_get_dev(interface_to_usbdev(i));
  d->intf = i;
  d->family = (enum gchd_family)id->driver_info;
@@ -1131,14 +1151,12 @@ static int gchd_probe(struct usb_interface *i,
  r = gchd_v4l2_register(d);
  if (r) {
   usb_set_intfdata(i, NULL);
-  kfree(d->usb_buf);
   goto err;
  }
  return 0;
 
 err:
- usb_put_dev(d->udev);
- kfree(d);
+ kref_put(&d->refcount, gchd_release_ref);
  return r;
 }
 
@@ -1162,9 +1180,7 @@ static void gchd_disconnect(struct usb_interface *i)
  /* The interface may already be gone: never issue USB commands here. */
  gchd_v4l2_unregister(d);
  gchd_ring_free(&d->ring);
- kfree(d->usb_buf);
- usb_put_dev(d->udev);
- kfree(d);
+ kref_put(&d->refcount, gchd_release_ref);
 }
 
 static void gchd_shutdown(struct device *dev)
