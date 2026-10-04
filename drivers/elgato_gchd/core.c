@@ -356,14 +356,16 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  d->width = d->input_width;
  d->height = d->input_height;
 
- /* V4L2 input selection while idle must not start the encoder. */
+ /* Configure the selected source after STOP. Only active capture
+  * transitions back to START; an idle S_INPUT leaves hardware in STOP. */
+ r = resume ? gchd_input_configure(d) : gchd_input_configure_idle(d);
+ if (r) {
+  dev_err(&d->intf->dev, "input switch: setup for input %u failed: %d\n",
+          i, r);
+  return r;
+ }
+
  if (resume) {
-  r = gchd_input_configure(d);
-  if (r) {
-   dev_err(&d->intf->dev, "input switch: setup for input %u failed: %d\n",
-           i, r);
-   return r;
-  }
   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
   if (IS_ERR(d->rx_thread)) {
    r = PTR_ERR(d->rx_thread);
