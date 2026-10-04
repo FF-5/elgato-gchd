@@ -3,6 +3,7 @@
 
 #include <linux/list.h>
 #include <linux/mutex.h>
+#include <linux/workqueue.h>
 #include <linux/spinlock.h>
 #include <linux/usb.h>
 #include <linux/videodev2.h>
