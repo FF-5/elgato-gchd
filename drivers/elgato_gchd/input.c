@@ -926,7 +926,18 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
   else if (value6463 >= 0xb077 && value6463 <= 0xb08b) { d->input_width=1920; d->input_height=1080; d->input_interlaced=true; }
   else if (value6463 >= 0xb052 && value6463 <= 0xb066) { d->input_width=1280; d->input_height=720; d->input_interlaced=false; }
   else if (value6463 >= 0xb0b5 && value6463 <= 0xb0cd) { d->input_width=720; d->input_height=480; d->input_interlaced=false; }
-  else return -EINVAL;
+  else {
+   /*
+    * No recognizable timing is not a setup failure. Use the driver's
+    * default HDMI mode so the receiver can be configured before a source
+    * is connected; signal status remains false until timing is detected.
+    */
+   d->input_width=1920;
+   d->input_height=1080;
+   d->input_interlaced=false;
+   d->input_fps_num=60;
+   d->input_fps_den=1;
+  }
   if (d->input_height==480 && value6665 >= 0xbb6b && value6665 <= 0xbb7f)
    d->input_height=576;
  }
