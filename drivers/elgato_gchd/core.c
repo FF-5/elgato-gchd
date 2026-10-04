@@ -278,13 +278,13 @@ static void gchd_detect_workfn(struct work_struct *work)
   if (r) {
    if (r != -ENOLINK) {
     dev_warn(&d->intf->dev,
-             "redetection: input configuration failed: %d\\n", r);
+             "redetection: input configuration failed: %d\n", r);
     /* Recover protocol/setup errors from a known hardware baseline. */
     gchd_input_stop(d);
     r = gchd_hw_init(d);
     if (r)
      dev_warn(&d->intf->dev,
-              "redetection: recovery initialization failed: %d\\n", r);
+              "redetection: recovery initialization failed: %d\n", r);
    }
    goto retry;
   }
