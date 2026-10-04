@@ -1219,10 +1219,18 @@ static void gchd_shutdown(struct device *dev)
   d->rx_thread = NULL;
  }
 
- /* Attempt RESET directly; failure must never prevent system shutdown. */
- r = gchd_state_cmd(d, SCMD_RESET, 0, 0, 0x10);
- if (r)
-  dev_dbg(dev, "best-effort hardware shutdown failed: %d\n", r);
+ /*
+  * Use the same ordered teardown as last-close rather than issuing RESET
+  * from an arbitrary active state. System shutdown must continue even if
+  * USB communication has already failed.
+  */
+ r = gchd_hw_shutdown(d);
+ if (r) {
+  dev_warn(dev, "best-effort hardware shutdown during system shutdown failed: %d\\n",
+           r);
+ } else {
+  d->hw_initialized = false;
+ }
  mutex_unlock(&d->lifecycle_lock);
 }
 
