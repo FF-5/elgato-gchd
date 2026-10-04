@@ -812,30 +812,6 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  return 0;
 }
 
-static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
-                                  u32 *sum6665, u32 *count6665, bool *rgb)
-{
- u8 v;
- u16 a, b;
- int r;
- r = gchd_mail_write(d, 0x4e, (u8[]){0x00,0xcc}, 2); if (r) return r;
- r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x66}, 3); if (r) return r;
- r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; b = (u16)v << 8;
- r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x65}, 3); if (r) return r;
- r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; b |= v;
- *sum6665 += b; (*count6665)++;
- r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x64}, 3); if (r) return r;
- r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; a = (u16)v << 8;
- r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x63}, 3); if (r) return r;
- r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; a |= v;
- *sum6463 += a; (*count6463)++;
- r = gchd_mail_write(d, 0x4e, (u8[]){0x00,0xce}, 2); if (r) return r;
- r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x34}, 3); if (r) return r;
- r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r;
- *rgb = !!(v & BIT(2));
- return 0;
-}
-
 static int gchd_configure_default_input(struct gchd *d)
 {
  u8 v, reply;
@@ -904,7 +880,7 @@ static int gchd_configure_default_input(struct gchd *d)
  r=gchd_common_block_b2(d); if(r)return r;
  r=gchd_common_block_b3(d); if(r)return r;
  r=gchd_common_block_c(d); if(r)return r;
- r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->rgb_input); if(r)return r;
+ d->rgb_input = false; /* Use YUV as the default HDMI color space. */
 
  MW(0x4e,0x00,0xcc);
  r=gchd_color_space_exact(d); if(r)return r;
