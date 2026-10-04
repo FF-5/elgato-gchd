@@ -219,21 +219,35 @@ static void gchd_return_queued(struct gchd *d, enum vb2_buffer_state state)
 static int gchd_start(struct vb2_queue*q,unsigned int c)
 {
  struct gchd *d = vb2_get_drv_priv(q);
- int r = gchd_input_configure(d);
- if (r) {
-  gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
-  return r;
+ int r;
+
+ /* Setup normally completed during probe; retry only after invalidation. */
+ if (!d->input_configured) {
+  r = gchd_input_configure_idle(d);
+  if (r)
+   goto err_queued;
  }
+
+ /* STREAMON performs only the state transition before starting RX. */
+ r = gchd_input_start(d);
+ if (r)
+  goto err_queued;
+
+ d->streaming = true;
  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
  if (IS_ERR(d->rx_thread)) {
   r = PTR_ERR(d->rx_thread);
   d->rx_thread = NULL;
-  gchd_input_stop(d);
-  gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
-  return r;
+  d->streaming = false;
+  if (gchd_stream_stop(d))
+   gchd_input_stop(d);
+  goto err_queued;
  }
- d->streaming = true;
  return 0;
+
+err_queued:
+ gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
+ return r;
 }
 static void gchd_stop(struct vb2_queue *q)
 {
@@ -356,21 +370,29 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  d->width = d->input_width;
  d->height = d->input_height;
 
- /* Configure the selected source after STOP. Only active capture
-  * transitions back to START; an idle S_INPUT leaves hardware in STOP. */
- r = resume ? gchd_input_configure(d) : gchd_input_configure_idle(d);
+ /* Configure the selected input while idle; never repeat device init. */
+ r = gchd_input_configure_idle(d);
  if (r) {
   dev_err(&d->intf->dev, "input switch: setup for input %u failed: %d\n",
           i, r);
+  if (resume)
+   d->streaming = false;
   return r;
  }
 
  if (resume) {
+  r = gchd_input_start(d);
+  if (r) {
+   d->streaming = false;
+   return r;
+  }
   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
   if (IS_ERR(d->rx_thread)) {
    r = PTR_ERR(d->rx_thread);
    d->rx_thread = NULL;
-   gchd_input_stop(d);
+   d->streaming = false;
+   if (gchd_stream_stop(d))
+    gchd_input_stop(d);
    return r;
   }
  }
@@ -673,31 +695,123 @@ static const struct usb_device_id gchd_ids[] = {
  { }
 };
 MODULE_DEVICE_TABLE(usb, gchd_ids);
-static int gchd_probe(struct usb_interface*i,const struct usb_device_id*id)
+static int gchd_probe(struct usb_interface *i,
+                      const struct usb_device_id *id)
 {
- struct gchd*d;int r;d=kzalloc(sizeof(*d),GFP_KERNEL);if(!d)return-ENOMEM;
- d->udev=usb_get_dev(interface_to_usbdev(i));d->intf=i;d->family=(enum gchd_family)id->driver_info;
- /* Match userspace libusb_set_configuration(1): reset the active USB configuration. */
- r=usb_reset_configuration(d->udev);
- if(r)goto err;
-	/* USB enumeration has already selected configuration 1. */
-	mutex_init(&d->lock);spin_lock_init(&d->qlock);INIT_LIST_HEAD(&d->queued);
- spin_lock_init(&d->ring.lock);d->width=1920;d->height=1080;d->sizeimage=GCHD_MAX_FRAME;d->input=0;d->input_forced=false;d->bitrate_forced=false;d->h264_level_forced=false;d->input_width=0;d->input_height=0;d->input_fps_num=0;d->input_fps_den=0;d->bitrate=40000;d->h264_profile=V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;d->h264_level=41;d->usb_buf=kmalloc(GCHD_USB_BUFSIZE,GFP_KERNEL);
- if(!d->usb_buf){r=-ENOMEM;goto err;}r=gchd_v4l2_register(d);if(r)goto errbuf;
- r=gchd_hw_init(d);if(r)goto errhw;d->hw_initialized=true;
- usb_set_intfdata(i,d);
+ struct gchd *d;
+ int r;
+
+ d = kzalloc(sizeof(*d), GFP_KERNEL);
+ if (!d)
+  return -ENOMEM;
+ d->udev = usb_get_dev(interface_to_usbdev(i));
+ d->intf = i;
+ d->family = (enum gchd_family)id->driver_info;
+
+ r = usb_reset_configuration(d->udev);
+ if (r)
+  goto err;
+ mutex_init(&d->lock);
+ spin_lock_init(&d->qlock);
+ INIT_LIST_HEAD(&d->queued);
+ spin_lock_init(&d->ring.lock);
+ d->width = 1920;
+ d->height = 1080;
+ d->sizeimage = GCHD_MAX_FRAME;
+ d->input = 0;
+ d->input_forced = false;
+ d->bitrate_forced = false;
+ d->h264_level_forced = false;
+ d->input_width = 0;
+ d->input_height = 0;
+ d->input_fps_num = 0;
+ d->input_fps_den = 0;
+ d->bitrate = 40000;
+ d->h264_profile = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
+ d->h264_level = 41;
+ d->usb_buf = kmalloc(GCHD_USB_BUFSIZE, GFP_KERNEL);
+ if (!d->usb_buf) {
+  r = -ENOMEM;
+  goto err;
+ }
+
+ /* Complete hardware and selected-input setup before exposing /dev/video*. */
+ r = gchd_hw_init(d);
+ if (r)
+  goto err_shutdown;
+ d->hw_initialized = true;
+
+ r = gchd_input_configure_idle(d);
+ if (r)
+  goto err_shutdown;
+
+ r = gchd_v4l2_register(d);
+ if (r)
+  goto err_shutdown;
+
+ usb_set_intfdata(i, d);
  return 0;
-errhw:gchd_hw_shutdown(d);d->hw_initialized=false;
-gchd_v4l2_unregister(d);errbuf:kfree(d->usb_buf);err:usb_put_dev(d->udev);kfree(d);return r;
-}
-static void gchd_disconnect(struct usb_interface*i)
-{struct gchd*d=usb_get_intfdata(i);if(!d)return;usb_set_intfdata(i,NULL);d->disconnected=true;if(d->rx_thread)kthread_stop(d->rx_thread);
+
+err_shutdown:
  if (d->hw_initialized)
   gchd_hw_shutdown(d);
+ d->hw_initialized = false;
+ kfree(d->usb_buf);
+err:
+ usb_put_dev(d->udev);
+ kfree(d);
+ return r;
+}
+
+static void gchd_disconnect(struct usb_interface *i)
+{
+ struct gchd *d = usb_get_intfdata(i);
+
+ if (!d)
+  return;
+ usb_set_intfdata(i, NULL);
+ d->disconnected = true;
+ d->streaming = false;
+ if (d->rx_thread) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+ }
+ /* The interface may already be gone: never issue USB commands here. */
  gchd_v4l2_unregister(d);
  gchd_ring_free(&d->ring);
  kfree(d->usb_buf);
  usb_put_dev(d->udev);
- kfree(d);}
-static struct usb_driver gchd_usb={.name="elgato_gchd",.id_table=gchd_ids,.probe=gchd_probe,.disconnect=gchd_disconnect};
+ kfree(d);
+}
+
+static void gchd_shutdown(struct device *dev)
+{
+ struct usb_interface *i = to_usb_interface(dev);
+ struct gchd *d = usb_get_intfdata(i);
+ int r;
+
+ if (!d || d->disconnected || !d->hw_initialized)
+  return;
+
+ d->streaming = false;
+ if (d->rx_thread) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+ }
+
+ /* Best effort only: shutdown must proceed even if the device is unresponsive. */
+ r = gchd_hw_shutdown(d);
+ if (r)
+  dev_dbg(dev, "best-effort hardware shutdown failed: %d\n", r);
+}
+
+static struct usb_driver gchd_usb = {
+ .name = "elgato_gchd",
+ .id_table = gchd_ids,
+ .probe = gchd_probe,
+ .disconnect = gchd_disconnect,
+ .driver = {
+  .shutdown = gchd_shutdown,
+ },
+};
 module_usb_driver(gchd_usb);
