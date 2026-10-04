@@ -239,16 +239,17 @@ static void gchd_detect_workfn(struct work_struct *work)
  WRITE_ONCE(d->signal_present, false);
 
  /*
-  * Force the existing input setup to sample timing again instead of reusing
-  * fallback dimensions from the previous no-signal attempt.
+  * VIDIOC_S_FMT describes the format requested by the application; it is not
+  * evidence of the signal arriving at the physical connector. Always clear
+  * it before probing so hardware timing, not guvcview's preferred 1080p mode,
+  * determines the encoder/transcoder configuration.
   */
- if (!d->mode_forced) {
-  d->input_width = 0;
-  d->input_height = 0;
-  d->input_fps_num = 0;
-  d->input_fps_den = 0;
-  d->input_interlaced = false;
- }
+ d->input_width = 0;
+ d->input_height = 0;
+ d->input_fps_num = 0;
+ d->input_fps_den = 0;
+ d->input_interlaced = false;
+ d->mode_forced = false;
  if (d->input_configured)
   gchd_input_stop(d);
  r = gchd_input_configure_idle(d);
