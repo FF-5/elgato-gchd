@@ -1,45 +1,99 @@
-ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ cd ~/elgato-gchd
-git pull
-
-cd drivers/elgato_gchd
-make clean
-make
-remote: Enumerating objects: 21, done.
-remote: Counting objects: 100% (21/21), done.
-remote: Compressing objects: 100% (12/12), done.
-remote: Total 15 (delta 8), reused 0 (delta 0), pack-reused 0 (from 0)
-Unpacking objects: 100% (15/15), 2.69 KiB | 48.00 KiB/s, done.
-From https://github.com/FF-5/elgato-gchd
-   e8b940c..f1afa24  v4l2-dkms-driver -> origin/v4l2-dkms-driver
-Updating e8b940c..f1afa24
-Fast-forward
- drivers/elgato_gchd/elgato_gchd.h |   2 +
- drivers/elgato_gchd/errors.txt    | 176 +++++++++-----------------------------
- drivers/elgato_gchd/usb.c         |   1 -
- 3 files changed, 42 insertions(+), 137 deletions(-)
-make -C /lib/modules/6.8.0-146-generic/build M=/home/ff5/elgato-gchd/drivers/elgato_gchd clean
-make[1]: Entering directory '/usr/src/linux-headers-6.8.0-146-generic'
-make[1]: Leaving directory '/usr/src/linux-headers-6.8.0-146-generic'
-make -C /lib/modules/6.8.0-146-generic/build M=/home/ff5/elgato-gchd/drivers/elgato_gchd modules
-make[1]: Entering directory '/usr/src/linux-headers-6.8.0-146-generic'
-warning: the compiler differs from the one used to build the kernel
-  The kernel was built by: x86_64-linux-gnu-gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-  You are using:           gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/core.o
-  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/fops.o
-  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/usb.o
-  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/transcoder.o
-  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/input.o
-/home/ff5/elgato-gchd/drivers/elgato_gchd/input.c: In function ‘gchd_input_configure_idle’:
-/home/ff5/elgato-gchd/drivers/elgato_gchd/input.c:1369:9: error: too many arguments to function ‘gchd_input_configure_mode’
- 1369 |  return gchd_input_configure_mode(d, false);
-      |         ^~~~~~~~~~~~~~~~~~~~~~~~~
-/home/ff5/elgato-gchd/drivers/elgato_gchd/input.c:1304:12: note: declared here
- 1304 | static int gchd_input_configure_mode(struct gchd *d)
-      |            ^~~~~~~~~~~~~~~~~~~~~~~~~
-make[3]: *** [scripts/Makefile.build:243: /home/ff5/elgato-gchd/drivers/elgato_gchd/input.o] Error 1
-make[2]: *** [/usr/src/linux-headers-6.8.0-146-generic/Makefile:1946: /home/ff5/elgato-gchd/drivers/elgato_gchd] Error 2
-make[1]: *** [Makefile:240: __sub-make] Error 2
-make[1]: Leaving directory '/usr/src/linux-headers-6.8.0-146-generic'
-make: *** [Makefile:6: all] Error 2
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg | tail -100
+[38559.892819] usb 2-1: new high-speed USB device number 15 using ehci-pci
+[38560.346984] usb 2-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
+[38560.346993] usb 2-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[38560.346996] usb 2-1: Product: GameCapture HD
+[38560.346997] usb 2-1: Manufacturer: Elgato
+[38560.346999] usb 2-1: SerialNumber: 04107F1267
+[38571.292220] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38571.294599] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38571.298024] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38571.301516] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38571.304903] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38571.308417] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38571.311844] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38571.315219] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38571.318808] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38571.322335] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38571.325876] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=4016 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38571.402440] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
+[38571.404119] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x01
+[38572.355545] elgato_gchd 2-1:1.0: transcoder defaults loaded
+[38572.358095] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 00 00 00
+[38572.359246] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x04
+[38572.368726] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.371914] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.375290] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.378694] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.381954] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.385223] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.388601] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.391965] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.395302] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.398720] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.402047] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.405441] elgato_gchd 2-1:1.0: firmware chunk offset=360448 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.408783] elgato_gchd 2-1:1.0: firmware chunk offset=393216 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.412229] elgato_gchd 2-1:1.0: firmware chunk offset=425984 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.415589] elgato_gchd 2-1:1.0: firmware chunk offset=458752 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.418885] elgato_gchd 2-1:1.0: firmware chunk offset=491520 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.422240] elgato_gchd 2-1:1.0: firmware chunk offset=524288 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.425631] elgato_gchd 2-1:1.0: firmware chunk offset=557056 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.428932] elgato_gchd 2-1:1.0: firmware chunk offset=589824 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.432347] elgato_gchd 2-1:1.0: firmware chunk offset=622592 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.435661] elgato_gchd 2-1:1.0: firmware chunk offset=655360 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.439016] elgato_gchd 2-1:1.0: firmware chunk offset=688128 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.442507] elgato_gchd 2-1:1.0: firmware chunk offset=720896 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.445916] elgato_gchd 2-1:1.0: firmware chunk offset=753664 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.449332] elgato_gchd 2-1:1.0: firmware chunk offset=786432 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.452867] elgato_gchd 2-1:1.0: firmware chunk offset=819200 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.456324] elgato_gchd 2-1:1.0: firmware chunk offset=851968 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.459811] elgato_gchd 2-1:1.0: firmware chunk offset=884736 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.463264] elgato_gchd 2-1:1.0: firmware chunk offset=917504 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.466823] elgato_gchd 2-1:1.0: firmware chunk offset=950272 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.470299] elgato_gchd 2-1:1.0: firmware chunk offset=983040 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.473774] elgato_gchd 2-1:1.0: firmware chunk offset=1015808 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.477271] elgato_gchd 2-1:1.0: firmware chunk offset=1048576 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.480685] elgato_gchd 2-1:1.0: firmware chunk offset=1081344 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.484006] elgato_gchd 2-1:1.0: firmware chunk offset=1114112 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.487373] elgato_gchd 2-1:1.0: firmware chunk offset=1146880 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.490719] elgato_gchd 2-1:1.0: firmware chunk offset=1179648 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.494012] elgato_gchd 2-1:1.0: firmware chunk offset=1212416 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.497415] elgato_gchd 2-1:1.0: firmware chunk offset=1245184 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.500909] elgato_gchd 2-1:1.0: firmware chunk offset=1277952 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.504429] elgato_gchd 2-1:1.0: firmware chunk offset=1310720 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.507990] elgato_gchd 2-1:1.0: firmware chunk offset=1343488 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.511409] elgato_gchd 2-1:1.0: firmware chunk offset=1376256 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.514923] elgato_gchd 2-1:1.0: firmware chunk offset=1409024 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.518456] elgato_gchd 2-1:1.0: firmware chunk offset=1441792 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.522016] elgato_gchd 2-1:1.0: firmware chunk offset=1474560 size=26224 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[38572.569422] elgato_gchd 2-1:1.0: device idle, processor state 0x27f97b
+[38572.569900] elgato_gchd 2-1:1.0: capture setup: input=0 mode=0x0 fps=0/0 interlaced=0
+[38572.569972] usbcore: registered new interface driver elgato_gchd
+[38578.801033] elgato_gchd 2-1:1.0: capture setup: encoder start failed: -22
+[38578.801045] elgato_gchd 2-1:1.0: redetection: input setup failed: -22
+[38579.810736] elgato_gchd 2-1:1.0: capture setup: input=0 mode=0x0 fps=0/0 interlaced=0
+[38586.064662] elgato_gchd 2-1:1.0: capture setup: encoder start failed: -22
+[38586.064678] elgato_gchd 2-1:1.0: redetection: input setup failed: -22
+[38587.165511] elgato_gchd 2-1:1.0: capture setup: input=0 mode=0x0 fps=0/0 interlaced=0
+[38593.366481] elgato_gchd 2-1:1.0: capture setup: encoder start failed: -22
+[38593.366495] elgato_gchd 2-1:1.0: redetection: input setup failed: -22
+[38594.399091] elgato_gchd 2-1:1.0: capture setup: input=0 mode=0x0 fps=0/0 interlaced=0
+[38600.625584] elgato_gchd 2-1:1.0: capture setup: encoder start failed: -22
+[38600.625599] elgato_gchd 2-1:1.0: redetection: input setup failed: -22
+[38601.629359] elgato_gchd 2-1:1.0: capture setup: input=0 mode=1920x1080 fps=60/1 interlaced=0
+[38608.138251] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[38608.391118] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[38616.185491] elgato_gchd 2-1:1.0: capture setup: input configuration failed: -67
+[38618.276521] elgato_gchd 2-1:1.0: capture setup: input=0 mode=1920x1080 fps=60/1 interlaced=0
+[38624.770372] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[38625.025423] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[38632.780989] elgato_gchd 2-1:1.0: capture setup: input configuration failed: -67
+[38633.825454] elgato_gchd 2-1:1.0: capture setup: input=0 mode=1920x1080 fps=60/1 interlaced=0
+[38640.337270] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[38640.598084] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[38648.342154] elgato_gchd 2-1:1.0: capture setup: input configuration failed: -67
+[38649.371919] elgato_gchd 2-1:1.0: capture setup: input=0 mode=1920x1080 fps=60/1 interlaced=0
+[38655.851281] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[38656.102104] elgato_gchd 2-1:1.0: capture setup: encoder start completed
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ 
