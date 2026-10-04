@@ -257,7 +257,7 @@ static void gchd_detect_workfn(struct work_struct *work)
      !READ_ONCE(d->detect_requested))
   goto out;
 
- dev_info(&d->intf->dev, "input detection started: input=%u streaming=%u\\n",
+ dev_dbg(&d->intf->dev, "input detection started: input=%u streaming=%u\\n",
           READ_ONCE(d->input), READ_ONCE(d->streaming));
 
  /* Only the RX thread may own bulk-IN while START is active. */
@@ -312,7 +312,7 @@ static void gchd_detect_workfn(struct work_struct *work)
    */
   r = gchd_input_detect_signal(d);
   if (r == -ENOLINK) {
-   dev_info(&d->intf->dev, "no signal on input=%u; retrying detection\\n",
+   dev_info_ratelimited(&d->intf->dev, "no signal on input=%u; retrying detection\\n",
             READ_ONCE(d->input));
    d->input_prepared = false;
    goto retry;
