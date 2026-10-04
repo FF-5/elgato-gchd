@@ -63,6 +63,7 @@ struct gchd {
  u8 ts_partial[188];
  u16 ts_partial_len;
  bool streaming;
+ bool detect_requested;
  bool disconnected;
  bool hw_initialized;
  bool input_configured;
