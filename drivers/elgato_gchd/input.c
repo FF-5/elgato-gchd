@@ -918,7 +918,13 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
  }
  value6665=sum6665/count6665;
  value6463=sum6463/count6463;
- d->signal_present = gchd_hdmi_timing_valid(value6463);
+ /*
+  * The timing register can retain a plausible value with no source attached.
+  * Require both a recognized timing and a non-idle 0x6665 measurement.
+  * 0xad4d +/- 10 is the no-signal signature observed in the original driver.
+  */
+ d->signal_present = gchd_hdmi_timing_valid(value6463) &&
+                     abs((int)value6665 - 0xad4d) >= 10;
 
  if (d->input_width == 0) {
   value6463=sum6463/count6463;
@@ -1185,7 +1191,12 @@ static int gchd_configure_component_exact(struct gchd *d)
  }
 
  value6867=sum6867/count6867;
- d->signal_present = gchd_component_timing_valid(value6867);
+ /*
+  * A valid-looking timing value alone is insufficient: the receiver can
+  * leave the last timing latched after the source disappears.
+  */
+ d->signal_present = gchd_component_timing_valid(value6867) &&
+                     abs((int)value6665 - 0xad4d) >= 10;
  if(!d->input_height) {
   if(abs((int)value6867-0xbbf4)<10) {
    d->input_width=1920; d->input_height=1080; d->input_interlaced=false; d->input_fps_num=30;
@@ -1346,6 +1357,19 @@ static int gchd_input_configure_mode(struct gchd *d)
  else
   r = gchd_configure_component_exact(d);
  if (r) {
+  /*
+   * Connector setup may have enabled the encoder before discovering that
+   * no source timing is available. Put those blocks back into a known-off
+   * state before the asynchronous worker retries detection.
+   */
+  if (r == -ENOLINK) {
+   int cleanup = gchd_do_enable(d, BIT(4) | BIT(3), 0);
+
+   if (cleanup)
+    dev_warn(&d->intf->dev,
+             "capture setup: encoder cleanup after no signal failed: %d\n",
+             cleanup);
+  }
   dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\n", r);
   return r;
  }
