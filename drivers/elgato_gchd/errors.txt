@@ -1,95 +1,113 @@
-ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg | tail -500
-[58782.994063] usb 2-1: new high-speed USB device number 34 using ehci-pci
-[58783.417683] usb 2-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
-[58783.417695] usb 2-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
-[58783.417700] usb 2-1: Product: GameCapture HD
-[58783.417703] usb 2-1: Manufacturer: Elgato
-[58783.417706] usb 2-1: SerialNumber: 04107F1267
-[58785.416228] usbcore: registered new interface driver elgato_gchd
-[58792.833350] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58792.835374] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58792.838821] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58792.842310] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58792.845725] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58792.849209] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58792.852847] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58792.856351] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58792.859868] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58792.863324] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58792.866824] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=4016 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58792.943817] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
-[58792.945130] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x01
-[58793.663178] elgato_gchd 2-1:1.0: transcoder defaults loaded
-[58793.665730] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 00 00 00
-[58793.667011] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x04
-[58793.676168] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.679616] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.683065] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.686573] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.690117] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.693647] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.697099] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.700527] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.704011] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.707415] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.710858] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.714267] elgato_gchd 2-1:1.0: firmware chunk offset=360448 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.717731] elgato_gchd 2-1:1.0: firmware chunk offset=393216 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.721179] elgato_gchd 2-1:1.0: firmware chunk offset=425984 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.724610] elgato_gchd 2-1:1.0: firmware chunk offset=458752 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.727970] elgato_gchd 2-1:1.0: firmware chunk offset=491520 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.731422] elgato_gchd 2-1:1.0: firmware chunk offset=524288 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.734811] elgato_gchd 2-1:1.0: firmware chunk offset=557056 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.738296] elgato_gchd 2-1:1.0: firmware chunk offset=589824 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.741725] elgato_gchd 2-1:1.0: firmware chunk offset=622592 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.745246] elgato_gchd 2-1:1.0: firmware chunk offset=655360 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.748674] elgato_gchd 2-1:1.0: firmware chunk offset=688128 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.752142] elgato_gchd 2-1:1.0: firmware chunk offset=720896 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.755616] elgato_gchd 2-1:1.0: firmware chunk offset=753664 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.759099] elgato_gchd 2-1:1.0: firmware chunk offset=786432 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.762495] elgato_gchd 2-1:1.0: firmware chunk offset=819200 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.765954] elgato_gchd 2-1:1.0: firmware chunk offset=851968 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.769342] elgato_gchd 2-1:1.0: firmware chunk offset=884736 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.772818] elgato_gchd 2-1:1.0: firmware chunk offset=917504 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.776304] elgato_gchd 2-1:1.0: firmware chunk offset=950272 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.779728] elgato_gchd 2-1:1.0: firmware chunk offset=983040 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.783201] elgato_gchd 2-1:1.0: firmware chunk offset=1015808 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.786628] elgato_gchd 2-1:1.0: firmware chunk offset=1048576 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.789984] elgato_gchd 2-1:1.0: firmware chunk offset=1081344 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.793369] elgato_gchd 2-1:1.0: firmware chunk offset=1114112 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.796712] elgato_gchd 2-1:1.0: firmware chunk offset=1146880 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.800053] elgato_gchd 2-1:1.0: firmware chunk offset=1179648 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.803442] elgato_gchd 2-1:1.0: firmware chunk offset=1212416 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.806729] elgato_gchd 2-1:1.0: firmware chunk offset=1245184 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.810095] elgato_gchd 2-1:1.0: firmware chunk offset=1277952 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.813433] elgato_gchd 2-1:1.0: firmware chunk offset=1310720 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.816801] elgato_gchd 2-1:1.0: firmware chunk offset=1343488 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.820106] elgato_gchd 2-1:1.0: firmware chunk offset=1376256 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.823475] elgato_gchd 2-1:1.0: firmware chunk offset=1409024 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.826810] elgato_gchd 2-1:1.0: firmware chunk offset=1441792 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.830162] elgato_gchd 2-1:1.0: firmware chunk offset=1474560 size=26224 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[58793.875299] elgato_gchd 2-1:1.0: device idle, processor state 0x27f97b
-[58793.875307] elgato_gchd 2-1:1.0: capture requested: hardware initialized, detecting input 0
-[58799.435051] elgato_gchd 2-1:1.0: signal detected: input=2 mode=720x480 fps=60/1 interlaced=1
-[58799.435065] elgato_gchd 2-1:1.0: capture setup: input=2 mode=720x480 fps=60/1 interlaced=1
-[58805.921553] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
-[58806.297779] elgato_gchd 2-1:1.0: capture setup: encoder start completed
-[58821.796945] elgato_gchd 2-1:1.0: capture setup: input configuration completed
-[58821.853165] elgato_gchd 2-1:1.0: capture setup: transcoder final configuration completed
-[58822.129512] elgato_gchd 2-1:1.0: capture setup: transcoder setup completed
-[58822.132278] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
-[58822.132287] elgato_gchd 2-1:1.0: capture setup: SCMD_INIT submitted
-[58822.142876] elgato_gchd 2-1:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x030e (r=0) completion=0x011e (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x030e
-[58822.146373] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 02
-[58822.148612] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
-[58822.897731] guvcview[26494]: segfault at 7e5aa3a13230 ip 00007e5ab0ebab22 sp 00007e5aa53fe708 error 4 in libc.so.6[7e5ab0e28000+189000] likely on CPU 3 (core 3, socket 0)
-[58822.897751] Code: d1 0f 82 91 00 00 00 48 3b 15 2a 07 15 00 0f 87 14 01 00 00 4c 8d 04 11 49 31 c8 49 c1 e8 3f 81 e1 00 0f 00 00 44 01 c1 74 73 <0f> 10 6c 16 f0 0f 10 74 16 e0 48 89 f9 48 83 cf 0f 0f 10 7c 16 d0
-[58824.625048] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 04
-[58824.626400] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
-[58826.338617] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 01
-[58826.339933] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
-[58883.359262] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
-[58883.381090] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
-[58883.382635] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x01
-[58883.429659] elgato_gchd 2-1:1.0: V4L2 closed: hardware safely shut down
-ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ 
+ff5@ff5-VirtualBox:~$ ffmpeg -hide_banner -loglevel info   -i /tmp/elgato_gchd.ts   -an -vf format=yuyv422   -f v4l2 /dev/video10
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 2 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+[h264 @ 0x615235168800] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x615235168800] decode_slice_header error
+[h264 @ 0x615235168800] no frame!
+Input #0, mpegts, from '/tmp/elgato_gchd.ts':
+  Duration: N/A, start: 0.500000, bitrate: N/A
+  Program 1 
+  Stream #0:0[0x1011]: Video: h264 (High) (HDMV / 0x564D4448), yuv420p(tv, smpte170m/smpte170m/bt709, top first), 720x480 [SAR 10:11 DAR 15:11], 29.97 fps, 59.94 tbr, 90k tbn
+  Stream #0:1[0x10f]: Audio: mp2 ([3][0][0][0] / 0x0003), 48000 Hz, stereo, fltp, 320 kb/s
+Stream mapping:
+  Stream #0:0 -> #0:0 (h264 (native) -> rawvideo (native))
+Press [q] to stop, [?] for help
+[h264 @ 0x615235253e40] Missing reference picture, default is 2147483647
+    Last message repeated 1 times
+[h264 @ 0x6152351b92c0] Missing reference picture, default is 2147483647
+    Last message repeated 1 times
+[h264 @ 0x615235172fc0] Missing reference picture, default is 2147483647
+Output #0, video4linux2,v4l2, to '/dev/video10':
+  Metadata:
+    encoder         : Lavf60.16.100
+  Stream #0:0: Video: rawvideo (YUY2 / 0x32595559), yuyv422(tv, smpte170m/smpte170m/bt709, top coded first (swapped)), 720x480 [SAR 10:11 DAR 15:11], q=2-31, 165722 kb/s, 29.97 fps, 29.97 tbn
+    Metadata:
+      encoder         : Lavc60.31.102 rawvideo
+frame=    6 fps=0.0 q=-0.0 size=N/A time=00:00:00.30 bitrate=N/A dup=13 drop=0 sframe=   57 fps=0.0 q=-0.0 size=N/A time=00:00:01.90 bitrate=N/A dup=13 drop=0 sframe=   77 fps= 71 q=-0.0 size=N/A time=00:00:02.53 bitrate=N/A dup=13 drop=0 sframe=   92 fps= 58 q=-0.0 size=N/A time=00:00:03.03 bitrate=N/A dup=13 drop=0 sframe=  106 fps= 51 q=-0.0 size=N/A time=00:00:03.53 bitrate=N/A dup=13 drop=0 sframe=  122 fps= 46 q=-0.0 size=N/A time=00:00:04.07 bitrate=N/A dup=13 drop=0 sframe=  138 fps= 44 q=-0.0 size=N/A time=00:00:04.60 bitrate=N/A dup=13 drop=0 sframe=  154 fps= 42 q=-0.0 size=N/A time=00:00:05.10 bitrate=N/A dup=13 drop=0 sframe=  169 fps= 40 q=-0.0 size=N/A time=00:00:05.63 bitrate=N/A dup=13 drop=0 sframe=  185 fps= 39 q=-0.0 size=N/A time=00:00:06.13 bitrate=N/A dup=13 drop=0 sframe=  200 fps= 39 q=-0.0 size=N/A time=00:00:06.63 bitrate=N/A dup=13 drop=0 sframe=  215 fps= 38 q=-0.0 size=N/A time=00:00:07.14 bitrate=N/A dup=13 drop=0 sframe=  230 fps= 37 q=-0.0 size=N/A time=00:00:07.64 bitrate=N/A dup=13 drop=0 sframe=  245 fps= 37 q=-0.0 size=N/A time=00:00:08.14 bitrate=N/A dup=13 drop=0 sframe=  261 fps= 36 q=-0.0 size=N/A time=00:00:08.67 bitrate=N/A dup=13 drop=0 sframe=  276 fps= 36 q=-0.0 size=N/A time=00:00:09.17 bitrate=N/A dup=13 drop=0 sframe=  291 fps= 35 q=-0.0 size=N/A time=00:00:09.67 bitrate=N/A dup=13 drop=0 sframe=  307 fps= 35 q=-0.0 size=N/A time=00:00:10.21 bitrate=N/A dup=13 drop=0 sframe=  323 fps= 35 q=-0.0 size=N/A time=00:00:10.74 bitrate=N/A dup=13 drop=0 sframe=  338 fps= 35 q=-0.0 size=N/A time=00:00:11.24 bitrate=N/A dup=13 drop=0 sframe=  353 fps= 34 q=-0.0 size=N/A time=00:00:11.74 bitrate=N/A dup=13 drop=0 sframe=  368 fps= 34 q=-0.0 size=N/A time=00:00:12.24 bitrate=N/A dup=13 drop=0 sframe=  383 fps= 34 q=-0.0 size=N/A time=00:00:12.74 bitrate=N/A dup=13 drop=0 sframe=  398 fps= 34 q=-0.0 size=N/A time=00:00:13.24 bitrate=N/A dup=13 drop=0 sframe=  413 fps= 34 q=-0.0 size=N/A time=00:00:13.74 bitrate=N/A dup=13 drop=0 sframe=  428 fps= 33 q=-0.0 size=N/A time=00:00:14.24 bitrate=N/A dup=13 drop=0 sframe=  444 fps= 33 q=-0.0 size=N/A time=00:00:14.78 bitrate=N/A dup=13 drop=0 sframe=  459 fps= 33 q=-0.0 size=N/A time=00:00:15.28 bitrate=N/A dup=13 drop=0 sframe=  474 fps= 33 q=-0.0 size=N/A time=00:00:15.78 bitrate=N/A dup=13 drop=0 sframe=  489 fps= 33 q=-0.0 size=N/A time=00:00:16.28 bitrate=N/A dup=13 drop=0 sframe=  503 fps= 33 q=-0.0 size=N/A time=00:00:16.78 bitrate=N/A dup=13 drop=0 sframe=  519 fps= 33 q=-0.0 size=N/A time=00:00:17.28 bitrate=N/A dup=13 drop=0 sframe=  534 fps= 33 q=-0.0 size=N/A time=00:00:17.78 bitrate=N/A dup=13 drop=0 sframe=  549 fps= 33 q=-0.0 size=N/A time=00:00:18.28 bitrate=N/A dup=13 drop=0 sframe=  564 fps= 32 q=-0.0 size=N/A time=00:00:18.81 bitrate=N/A dup=13 drop=0 sframe=  581 fps= 32 q=-0.0 size=N/A time=00:00:19.35 bitrate=N/A dup=13 drop=0 sframe=  596 fps= 32 q=-0.0 size=N/A time=00:00:19.85 bitrate=N/A dup=13 drop=0 sframe=  611 fps= 32 q=-0.0 size=N/A time=00:00:20.35 bitrate=N/A dup=13 drop=0 sframe=  626 fps= 32 q=-0.0 size=N/A time=00:00:20.85 bitrate=N/A dup=13 drop=0 sframe=  641 fps= 32 q=-0.0 size=N/A time=00:00:21.35 bitrate=N/A dup=13 drop=0 sframe=  656 fps= 32 q=-0.0 size=N/A time=00:00:21.85 bitrate=N/A dup=13 drop=0 sframe=  671 fps= 32 q=-0.0 size=N/A time=00:00:22.35 bitrate=N/A dup=13 drop=0 sframe=  687 fps= 32 q=-0.0 size=N/A time=00:00:22.88 bitrate=N/A dup=13 drop=0 sframe=  703 fps= 32 q=-0.0 size=N/A time=00:00:23.42 bitrate=N/A dup=13 drop=0 sframe=  717 fps= 32 q=-0.0 size=N/A time=00:00:23.92 bitrate=N/A dup=13 drop=0 sframe=  734 fps= 32 q=-0.0 size=N/A time=00:00:24.45 bitrate=N/A dup=13 drop=0 sframe=  749 fps= 32 q=-0.0 size=N/A time=00:00:24.99 bitrate=N/A dup=13 drop=0 sframe=  765 fps= 32 q=-0.0 size=N/A time=00:00:25.49 bitrate=N/A dup=13 drop=0 sframe=  781 fps= 32 q=-0.0 size=N/A time=00:00:26.02 bitrate=N/A dup=13 drop=0 sframe=  795 fps= 32 q=-0.0 size=N/A time=00:00:26.52 bitrate=N/A dup=13 drop=0 sframe=  812 fps= 32 q=-0.0 size=N/A time=00:00:27.06 bitrate=N/A dup=13 drop=0 sframe=  828 fps= 32 q=-0.0 size=N/A time=00:00:27.59 bitrate=N/A dup=13 drop=0 sframe=  843 fps= 32 q=-0.0 size=N/A time=00:00:28.12 bitrate=N/A dup=13 drop=0 sframe=  858 fps= 32 q=-0.0 size=N/A time=00:00:28.62 bitrate=N/A dup=13 drop=0 sframe=  873 fps= 32 q=-0.0 size=N/A time=00:00:29.09 bitrate=N/A dup=13 drop=0 sframe=  888 fps= 32 q=-0.0 size=N/A time=00:00:29.59 bitrate=N/A dup=13 drop=0 sframe=  903 fps= 32 q=-0.0 size=N/A time=00:00:30.09 bitrate=N/A dup=13 drop=0 sframe=  918 fps= 31 q=-0.0 size=N/A time=00:00:30.59 bitrate=N/A dup=13 drop=0 sframe=  934 fps= 31 q=-0.0 size=N/A time=00:00:31.13 bitrate=N/A dup=13 drop=0 sframe=  949 fps= 31 q=-0.0 size=N/A time=00:00:31.63 bitrate=N/A dup=13 drop=0 sframe=  963 fps= 31 q=-0.0 size=N/A time=00:00:32.13 bitrate=N/A dup=13 drop=0 sframe=  979 fps= 31 q=-0.0 size=N/A time=00:00:32.63 bitrate=N/A dup=13 drop=0 sframe=  993 fps= 31 q=-0.0 size=N/A time=00:00:33.13 bitrate=N/A dup=13 drop=0 sframe= 1009 fps= 31 q=-0.0 size=N/A time=00:00:33.66 bitrate=N/A dup=13 drop=0 sframe= 1024 fps= 31 q=-0.0 size=N/A time=00:00:34.13 bitrate=N/A dup=13 drop=0 sframe= 1039 fps= 31 q=-0.0 size=N/A time=00:00:34.63 bitrate=N/A dup=13 drop=0 sframe= 1054 fps= 31 q=-0.0 size=N/A time=00:00:35.13 bitrate=N/A dup=13 drop=0 sframe= 1069 fps= 31 q=-0.0 size=N/A time=00:00:35.66 bitrate=N/A dup=13 drop=0 sframe= 1085 fps= 31 q=-0.0 size=N/A time=00:00:36.16 bitrate=N/A dup=13 drop=0 s
