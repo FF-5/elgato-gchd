@@ -1301,7 +1301,7 @@ static int gchd_configure_component_exact(struct gchd *d)
 #undef R9
 }
 
-static int gchd_input_configure_mode(struct gchd *d, bool start_stream)
+static int gchd_input_configure_mode(struct gchd *d)
 {
  int r;
 
@@ -1354,15 +1354,6 @@ static int gchd_input_configure_mode(struct gchd *d, bool start_stream)
  }
  dev_info(&d->intf->dev, "capture setup: SCMD_INIT submitted\n");
 
- if (start_stream) {
-  r = gchd_state_cmd(d, 5, 0, 0x0002, 0x0002);
-  if (r) {
-   dev_err(&d->intf->dev, "capture setup: START transition failed: %d\n", r);
-   return r;
-  }
-  dev_info(&d->intf->dev, "capture setup: START transition completed\n");
- }
-
  /* A successfully configured input stays configured while hardware is idle. */
  d->input_configured = true;
  return 0;
@@ -1370,7 +1361,7 @@ static int gchd_input_configure_mode(struct gchd *d, bool start_stream)
 
 int gchd_input_configure(struct gchd *d)
 {
- return gchd_input_configure_mode(d, false);
+ return gchd_input_configure_mode(d);
 }
 
 int gchd_input_configure_idle(struct gchd *d)
