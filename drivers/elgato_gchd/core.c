@@ -234,35 +234,38 @@ static void gchd_detect_workfn(struct work_struct *work)
   }
 
   /*
-   * Signal was lost during capture. Tear down the configured encoder and
-   * restore the same IDLE baseline used by the reference userspace setup.
+   * Stop transport and return to IDLE without re-running hardware init.
+   * hw_init() issues RESET from every nonzero state; on HDNew that RESET
+   * transition times out when the device is already IDLE (state 0x11).
+   * Keep the encoder firmware alive: restarting it after input changes has
+   * been observed to fail with -EINVAL.
    */
   gchd_ring_free(&d->ring);
   d->ts_partial_len = 0;
-  gchd_input_stop(d);
-  r = gchd_hw_init(d);
+  d->input_configured = false;
+  d->input_prepared = false;
+  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
   if (r) {
    dev_warn(&d->intf->dev,
-            "redetection: hardware reinitialization failed: %d\n", r);
+            "redetection: transition to IDLE failed: %d\n", r);
    goto retry;
   }
  }
 
  if (d->input_configured && !READ_ONCE(d->signal_present)) {
   /*
-   * STREAMOFF may cancel the worker that was queued by RX signal-loss
-   * detection. Recover here too, so a later STREAMON cannot reuse stale
-   * timing/configuration.
+   * STREAMOFF can race with signal-loss notification. Invalidate the old
+   * timing and return to IDLE without resetting/reloading the device.
    */
-  gchd_input_stop(d);
-  r = gchd_hw_init(d);
+  d->input_configured = false;
+  d->input_prepared = false;
+  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
   if (r) {
    dev_warn(&d->intf->dev,
-            "redetection: hardware reset after signal loss failed: %d\n", r);
+            "redetection: transition to IDLE after signal loss failed: %d\n", r);
    goto retry;
   }
  }
-
  if (d->input_prepared && !d->input_configured) {
   /* Short async probe: one timing-register sample, no encoder restart. */
   r = gchd_input_detect_signal(d);
@@ -294,12 +297,17 @@ static void gchd_detect_workfn(struct work_struct *work)
    if (r != -ENOLINK) {
     dev_warn(&d->intf->dev,
              "redetection: input configuration failed: %d\n", r);
-    /* Recover protocol/setup errors from a known hardware baseline. */
-    gchd_input_stop(d);
-    r = gchd_hw_init(d);
+    /*
+     * Do not call hw_init() from IDLE: it attempts SCMD_RESET and times out
+     * because HDNew's IDLE state (0x11) does not transition to RESET (0x10).
+     * Keep the encoder instance alive and retry connector setup from IDLE.
+     */
+    d->input_configured = false;
+    d->input_prepared = false;
+    r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
     if (r)
      dev_warn(&d->intf->dev,
-              "redetection: recovery initialization failed: %d\n", r);
+              "redetection: could not restore IDLE after setup error: %d\n", r);
    }
    goto retry;
   }
@@ -558,7 +566,15 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
    return r;
   }
  }
- gchd_input_stop(d);
+ /*
+  * Keep the encoder firmware running across connector changes. It is started
+  * during initial setup; after disabling its bits, the encoder-start handshake
+  * fails with -EINVAL on this device. Invalidate connector-specific state and
+  * reconfigure the selected input from IDLE instead.
+  */
+ d->input_configured = false;
+ d->input_prepared = false;
+ d->signal_present = false;
 
  gchd_ring_free(&d->ring);
  d->ts_partial_len = 0;
@@ -598,6 +614,14 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   * Move directly to the documented IDLE state before async detection and
   * timing-dependent configuration of the selected connector.
   */
+ r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
+ if (r) {
+  dev_err(&d->intf->dev,
+          "input switch: transition to IDLE failed: %d\n", r);
+  WRITE_ONCE(d->streaming, false);
+  mutex_unlock(&d->lifecycle_lock);
+  return r;
+ }
  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
  if (r) {
   dev_err(&d->intf->dev,
