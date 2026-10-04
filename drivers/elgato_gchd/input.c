@@ -7,8 +7,8 @@
  * the longer window; a source without recognizable timing gets the short
  * window. These limits are independent of the hardware setup sequence.
  */
-static unsigned int signal_active_retries = 10;
-static unsigned int signal_inactive_retries = 3;
+static unsigned int signal_active_retries = 3;
+static unsigned int signal_inactive_retries = 1;
 static unsigned int signal_poll_delay_ms = 200;
 module_param(signal_active_retries, uint, 0644);
 MODULE_PARM_DESC(signal_active_retries, "Signal measurement retries when timing is detected");
