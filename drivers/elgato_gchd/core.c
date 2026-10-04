@@ -241,8 +241,13 @@ static void gchd_detect_workfn(struct work_struct *work)
   dev_warn(&d->intf->dev, "redetection: input setup failed: %d\\n", r);
 
  if (!r && READ_ONCE(d->signal_present)) {
+  struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
+
   d->width = d->input_width;
   d->height = d->input_height;
+  ev.id = d->input;
+  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
+  v4l2_event_queue(&d->vdev, &ev);
   r = gchd_input_start(d);
   if (!r) {
    d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
