@@ -932,8 +932,8 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
     * default HDMI mode so the receiver can be configured before a source
     * is connected; signal status remains false until timing is detected.
     */
-   d->input_width=1920;
-   d->input_height=1080;
+   d->input_width=1280;
+   d->input_height=720;
    d->input_interlaced=false;
    d->input_fps_num=60;
    d->input_fps_den=1;
@@ -1202,8 +1202,8 @@ static int gchd_configure_component_exact(struct gchd *d)
   } else if(abs((int)value6867-0x9576)<10) {
    d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60;
   } else {
-   /* Keep setup independent from signal detection when no timing is present. */
-   d->input_width=1920; d->input_height=1080;
+   /* Keep the advertised fallback aligned with the driver's 720p default. */
+   d->input_width=1280; d->input_height=720;
    d->input_interlaced=false; d->input_fps_num=60;
   }
   d->input_fps_den=1;
