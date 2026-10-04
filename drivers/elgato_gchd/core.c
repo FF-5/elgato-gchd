@@ -592,13 +592,16 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  }
 
  /*
-  * Re-enter the reference initialization baseline before preparing the new
-  * connector. This prevents the old encoder/input state from leaking across
-  * a connector change.
+  * Input switching is not device shutdown: do not call gchd_hw_init() here.
+  * That routine can issue SCMD_RESET for a non-reset state. Capture has
+  * already been stopped and gchd_input_stop() has disabled the encoder.
+  * Move directly to the documented IDLE state before async detection and
+  * timing-dependent configuration of the selected connector.
   */
- r = gchd_hw_init(d);
+ r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
  if (r) {
-  dev_err(&d->intf->dev, "input switch: hardware reinitialization failed: %d\n", r);
+  dev_err(&d->intf->dev,
+          "input switch: transition to IDLE failed: %d\\n", r);
   WRITE_ONCE(d->streaming, false);
   mutex_unlock(&d->lifecycle_lock);
   return r;
