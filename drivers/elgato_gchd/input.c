@@ -870,6 +870,88 @@ static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
  return 0;
 }
 
+/*
+ * One measurement batch for retries after connector preparation. This path
+ * never repeats the long encoder-start sequence or timing-dependent setup.
+ */
+int gchd_input_detect_signal(struct gchd *d)
+{
+ u32 sum6665 = 0, sum6463 = 0, count6665 = 0, count6463 = 0;
+ u32 value6665, value6463;
+ int r;
+
+ WRITE_ONCE(d->signal_present, false);
+ if (d->input == 0) {
+  r = gchd_hdmi_read_signal(d, &sum6463, &count6463,
+                            &sum6665, &count6665, &d->rgb_input);
+  if (r) return r;
+  value6665 = sum6665 / count6665;
+  value6463 = sum6463 / count6463;
+  if (!gchd_hdmi_timing_valid(value6463) ||
+      abs((int)value6665 - 0xad4d) < 10)
+   return -ENOLINK;
+  if (value6463 >= 0xb6cd && value6463 <= 0xb6e1) {
+   d->input_width=1920; d->input_height=1080; d->input_interlaced=false;
+  } else if (value6463 >= 0xb077 && value6463 <= 0xb08b) {
+   d->input_width=1920; d->input_height=1080; d->input_interlaced=true;
+  } else if (value6463 >= 0xb052 && value6463 <= 0xb066) {
+   d->input_width=1280; d->input_height=720; d->input_interlaced=false;
+  } else {
+   d->input_width=720;
+   d->input_height=(value6665 >= 0xbb6b && value6665 <= 0xbb7f) ? 576 : 480;
+   d->input_interlaced=false;
+  }
+  d->input_fps_num=d->input_height==576 ? 50 : 60;
+  d->input_fps_den=1;
+ } else if (d->input == 1) {
+  u8 hi, lo;
+  u32 value6867;
+  r = gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x66},3); if(r)return r;
+  r = gchd_mail_read(d,0x33,&hi,1); if(r)return r;
+  sum6665=(u32)hi<<8;
+  r = gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x65},3); if(r)return r;
+  r = gchd_mail_read(d,0x33,&lo,1); if(r)return r;
+  sum6665|=lo;
+  r = gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x68},3); if(r)return r;
+  r = gchd_mail_read(d,0x33,&hi,1); if(r)return r;
+  value6867=(u32)hi<<8;
+  r = gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x67},3); if(r)return r;
+  r = gchd_mail_read(d,0x33,&lo,1); if(r)return r;
+  value6867|=lo;
+  if (!gchd_component_timing_valid(value6867) ||
+      abs((int)sum6665-0xad4d)<10)
+   return -ENOLINK;
+  if (abs((int)value6867-0xbbf4)<10) {
+   d->input_width=1920; d->input_height=1080; d->input_interlaced=false; d->input_fps_num=30;
+  } else if (abs((int)value6867-0xa03d)<10) {
+   d->input_width=1920; d->input_height=1080; d->input_interlaced=true; d->input_fps_num=60;
+  } else if (abs((int)value6867-0xbf59)<10) {
+   d->input_width=1280; d->input_height=720; d->input_interlaced=false; d->input_fps_num=60;
+  } else if (abs((int)value6867-0xa6b7)<10) {
+   d->input_width=720; d->input_height=576; d->input_interlaced=false; d->input_fps_num=50;
+  } else if (abs((int)value6867-0x9ab9)<10) {
+   d->input_width=720; d->input_height=576; d->input_interlaced=true; d->input_fps_num=50;
+  } else if (abs((int)value6867-0xa150)<10) {
+   d->input_width=720; d->input_height=480; d->input_interlaced=false; d->input_fps_num=60;
+  } else {
+   d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60;
+  }
+  d->input_fps_den=1;
+ } else {
+  u8 v;
+  r=gchd_mail_write(d,0x33,(u8[]){0x89,0x89,0xfa},3); if(r)return r;
+  r=gchd_mail_read(d,0x33,&v,1); if(r)return r;
+  if ((v&0x0f)==6) {
+   d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60;
+  } else if ((v&0x0f)==7) {
+   d->input_width=720; d->input_height=576; d->input_interlaced=true; d->input_fps_num=50;
+  } else return -ENOLINK;
+  d->input_fps_den=1;
+ }
+ WRITE_ONCE(d->signal_present,true);
+ return 0;
+}
+
 static int gchd_configure_hdmi_exact(struct gchd *d)
 {
  u8 v, reply;
@@ -1343,12 +1425,15 @@ static int gchd_input_configure_mode(struct gchd *d)
           d->input, d->input_width, d->input_height, d->input_fps_num,
           d->input_fps_den, d->input_interlaced);
 
- r = gchd_encoder_start(d);
- if (r) {
-  dev_err(&d->intf->dev, "capture setup: encoder start failed: %d\n", r);
-  return r;
+ if (!d->encoder_started) {
+  r = gchd_encoder_start(d);
+  if (r) {
+   dev_err(&d->intf->dev, "capture setup: encoder start failed: %d\\n", r);
+   return r;
+  }
+  d->encoder_started = true;
+  dev_info(&d->intf->dev, "capture setup: encoder start completed\\n");
  }
- dev_info(&d->intf->dev, "capture setup: encoder start completed\n");
 
  if (d->input == 0)
   r = gchd_configure_hdmi_exact(d);
@@ -1357,20 +1442,16 @@ static int gchd_input_configure_mode(struct gchd *d)
  else
   r = gchd_configure_component_exact(d);
  if (r) {
-  /*
-   * Connector setup may have enabled the encoder before discovering that
-   * no source timing is available. Put those blocks back into a known-off
-   * state before the asynchronous worker retries detection.
-   */
   if (r == -ENOLINK) {
-   int cleanup = gchd_do_enable(d, BIT(4) | BIT(3), 0);
-
-   if (cleanup)
-    dev_warn(&d->intf->dev,
-             "capture setup: encoder cleanup after no signal failed: %d\n",
-             cleanup);
+   /* Keep the prepared receiver in IDLE; the worker now polls timing only. */
+   d->input_prepared = true;
+   return r;
   }
-  dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\n", r);
+  gchd_do_enable(d, BIT(4) | BIT(3), 0);
+  gchd_state_cmd(d, 1, 0, 0, 0x11);
+  d->encoder_started = false;
+  d->input_prepared = false;
+  dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\\n", r);
   return r;
  }
  dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
@@ -1398,6 +1479,7 @@ static int gchd_input_configure_mode(struct gchd *d)
  dev_info(&d->intf->dev, "capture setup: SCMD_INIT submitted\n");
 
  /* A successfully configured input stays configured while hardware is idle. */
+ d->input_prepared = false;
  d->input_configured = true;
  return 0;
 }
@@ -1438,10 +1520,12 @@ int gchd_input_start(struct gchd *d)
 
 void gchd_input_stop(struct gchd *d)
 {
- if (!d->input_configured)
-  return;
- gchd_do_enable(d, BIT(4) | BIT(3), 0);
+ if (d->input_configured || d->encoder_started)
+  gchd_do_enable(d, BIT(4) | BIT(3), 0);
  d->input_configured = false;
+ d->encoder_started = false;
+ d->input_prepared = false;
+ d->signal_present = false;
 }
 
 MODULE_DESCRIPTION("Elgato Game Capture HD input configuration");
