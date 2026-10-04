@@ -27,6 +27,7 @@
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
 
+#define SCMD_IDLE 1
 #define SCMD_RESET 2
 
 struct gchd_frame { u8 *data; size_t len; u64 sequence; };
