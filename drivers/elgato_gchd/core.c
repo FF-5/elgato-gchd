@@ -132,18 +132,29 @@ static void gchd_ts(struct gchd *d,const u8 *p,u8 *pes,size_t *n)
  if(p[0]!=0x47)return;
  pid=((p[1]&0x1f)<<8)|p[2]; if(pid!=0x1011)return;
  d->last_video_jiffies = jiffies;
- if (!d->signal_present) {
+ if (!READ_ONCE(d->signal_present)) {
   struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
   ev.id = d->input;
-  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
+  ev.u.src_change.changes = V4L2_EVENT_SRC_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
-  d->signal_present = true;
+  WRITE_ONCE(d->signal_present, true);
+  dev_info(&d->intf->dev,
+           "signal present: input=%u; first video TS packet on PID 0x1011\\n",
+           READ_ONCE(d->input));
  }
  start=!!(p[1]&0x40); afc=(p[3]>>4)&3; if(!afc||afc==2)return;
  if(afc==3){off+=1+p[4];if(off>=188)return;}
  if(start){
-  if (*n)
-   gchd_ring_push(&d->ring, pes, *n);
+  if (*n) {
+   int r = gchd_ring_push(&d->ring, pes, *n);
+
+   if (r)
+    dev_warn_ratelimited(&d->intf->dev,
+                         "dropping PES payload: bytes=%zu queue_error=%d\\n",
+                         *n, r);
+   else
+    dev_dbg(&d->intf->dev, "queued PES payload: bytes=%zu\\n", *n);
+  }
   *n = 0;
   if(188-off>=9 && p[off]==0 && p[off+1]==0 && p[off+2]==1){
    unsigned int h=9+p[off+8]; if(h>=188-off)return; off+=h;
@@ -183,14 +194,26 @@ static void gchd_deliver(struct gchd *d)
  if(!d->streaming)return;
  f=gchd_ring_pop(&d->ring); if(!f)return;
  spin_lock_irqsave(&d->qlock,flags);
- if(list_empty(&d->queued)){spin_unlock_irqrestore(&d->qlock,flags);kvfree(f->data);kfree(f);return;}
+ if(list_empty(&d->queued)){
+  spin_unlock_irqrestore(&d->qlock,flags);
+  dev_dbg(&d->intf->dev, "discarding payload: bytes=%zu, no V4L2 buffer queued\\n", f->len);
+  kvfree(f->data);kfree(f);return;
+ }
  b=list_first_entry(&d->queued,struct gchd_buffer,list);list_del(&b->list);
  spin_unlock_irqrestore(&d->qlock,flags);
  dst=vb2_plane_vaddr(&b->vb.vb2_buf,0);
- if(!dst || f->len>d->sizeimage) vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);
- else {memcpy(dst,f->data,f->len);vb2_set_plane_payload(&b->vb.vb2_buf,0,f->len);
+ if(!dst || f->len>d->sizeimage) {
+  dev_warn_ratelimited(&d->intf->dev,
+                       "V4L2 buffer error: dst=%p payload=%zu sizeimage=%zu\\n",
+                       dst, f->len, d->sizeimage);
+  vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);
+ } else {
+  memcpy(dst,f->data,f->len);vb2_set_plane_payload(&b->vb.vb2_buf,0,f->len);
   b->vb.sequence=f->sequence;b->vb.vb2_buf.timestamp=ktime_get_ns();
-  vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_DONE);}
+  dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%u bytes=%zu sizeimage=%zu\\n",
+          f->sequence, f->len, d->sizeimage);
+  vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_DONE);
+ }
  kvfree(f->data);kfree(f);
 }
 
@@ -233,6 +256,9 @@ static void gchd_detect_workfn(struct work_struct *work)
  if (d->disconnected || !READ_ONCE(d->hw_initialized) ||
      !READ_ONCE(d->detect_requested))
   goto out;
+
+ dev_info(&d->intf->dev, "input detection started: input=%u streaming=%u\\n",
+          READ_ONCE(d->input), READ_ONCE(d->streaming));
 
  /* Only the RX thread may own bulk-IN while START is active. */
  if (d->rx_thread) {
@@ -286,6 +312,8 @@ static void gchd_detect_workfn(struct work_struct *work)
    */
   r = gchd_input_detect_signal(d);
   if (r == -ENOLINK) {
+   dev_info(&d->intf->dev, "no signal on input=%u; retrying detection\\n",
+            READ_ONCE(d->input));
    d->input_prepared = false;
    goto retry;
   }
@@ -591,8 +619,14 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 
  if (i > 2)
   return -EINVAL;
- if (i == d->input)
+ dev_info(&d->intf->dev,
+          "input switch requested: old=%u new=%u hw_initialized=%u streaming=%u\\n",
+          READ_ONCE(d->input), i, READ_ONCE(d->hw_initialized),
+          READ_ONCE(d->streaming));
+ if (i == d->input) {
+  dev_dbg(&d->intf->dev, "input switch ignored: input %u already selected\\n", i);
   return 0;
+ }
 
  /*
   * Input selection is safe while buffers are allocated but the queue is not
@@ -667,6 +701,8 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   * untouched until capture is requested.
   */
  if (!READ_ONCE(d->hw_initialized)) {
+  dev_info(&d->intf->dev,
+           "input selected: input=%u; detection deferred until STREAMON\\n", i);
   mutex_unlock(&d->lifecycle_lock);
   return 0;
  }
@@ -674,6 +710,8 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  /* Detect/configure asynchronously so VIDIOC_S_INPUT stays non-blocking. */
  WRITE_ONCE(d->detect_requested, true);
  schedule_delayed_work(&d->detect_work, 0);
+ dev_info(&d->intf->dev,
+          "input selected: input=%u; detection scheduled\\n", i);
  mutex_unlock(&d->lifecycle_lock);
  return 0;
 }
