@@ -938,7 +938,9 @@ int gchd_v4l2_register(struct gchd*d)
    .type = V4L2_CTRL_TYPE_MENU,
    .min = 0,
    .max = ARRAY_SIZE(gchd_input_menu) - 2,
-   .step = 1,
+   /* V4L2 menu controls use menu_skip_mask, not step. */
+   .step = 0,
+   .menu_skip_mask = 0,
    .def = d->input,
    .qmenu = gchd_input_menu,
   };
