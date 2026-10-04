@@ -753,8 +753,8 @@ static int gchd_probe(struct usb_interface *i,
  return 0;
 
 err_shutdown:
- if (d->hw_initialized)
-  gchd_hw_shutdown(d);
+ /* Initialization may have partially programmed the device; best-effort cleanup. */
+ gchd_hw_shutdown(d);
  d->hw_initialized = false;
  kfree(d->usb_buf);
 err:
@@ -799,8 +799,8 @@ static void gchd_shutdown(struct device *dev)
   d->rx_thread = NULL;
  }
 
- /* Best effort only: shutdown must proceed even if the device is unresponsive. */
- r = gchd_hw_shutdown(d);
+ /* Attempt RESET directly; failure must never prevent system shutdown. */
+ r = gchd_state_cmd(d, SCMD_RESET, 0, 0, 0x10);
  if (r)
   dev_dbg(dev, "best-effort hardware shutdown failed: %d\n", r);
 }
