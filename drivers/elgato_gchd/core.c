@@ -478,6 +478,7 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
    return r;
   }
  }
+ gchd_input_stop(d);
 
  gchd_ring_free(&d->ring);
  d->ts_partial_len = 0;
