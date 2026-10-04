@@ -1185,7 +1185,11 @@ static int gchd_configure_component_exact(struct gchd *d)
    d->input_width=720; d->input_height=480; d->input_interlaced=false; d->input_fps_num=60;
   } else if(abs((int)value6867-0x9576)<10) {
    d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60;
-  } else return -EINVAL;
+  } else {
+   /* Keep setup independent from signal detection when no timing is present. */
+   d->input_width=1920; d->input_height=1080;
+   d->input_interlaced=false; d->input_fps_num=60;
+  }
   d->input_fps_den=1;
  }
 
