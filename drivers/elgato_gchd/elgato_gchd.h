@@ -55,6 +55,9 @@ struct gchd {
  struct mutex lock;
  /* Serializes hardware lifecycle changes against asynchronous detection. */
  struct mutex lifecycle_lock;
+ /* Serializes first-open initialization and last-close shutdown. */
+ struct mutex users_lock;
+ unsigned int open_count;
  struct delayed_work detect_work;
  spinlock_t qlock;
  struct list_head queued;
