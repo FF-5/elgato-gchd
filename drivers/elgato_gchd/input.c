@@ -939,8 +939,24 @@ int gchd_input_detect_signal(struct gchd *d)
   d->input_fps_den=1;
  } else {
   u8 v;
-  r=gchd_mail_write(d,0x33,(u8[]){0x89,0x89,0xfa},3); if(r)return r;
-  r=gchd_mail_read(d,0x33,&v,1); if(r)return r;
+
+  /*
+   * Match the pre-detection writes in userspace configureComposite().
+   * Register 0xfa is not a reliable timing probe until this receiver path
+   * has been selected; reading it alone can leave the async detector
+   * reporting no signal forever after an input switch.
+   */
+  r = gchd_mail_write(d, 0x33, (u8[]){0x94,0x41,0x37}, 3);
+  if (r) return r;
+  r = gchd_mail_write(d, 0x33, (u8[]){0x94,0x4a,0xaf}, 3);
+  if (r) return r;
+  r = gchd_mail_write(d, 0x33, (u8[]){0x94,0x4b,0xaf}, 3);
+  if (r) return r;
+  r = gchd_mail_write(d, 0x33, (u8[]){0x89,0x89,0xfa}, 3);
+  if (r) return r;
+  r = gchd_mail_read(d, 0x33, &v, 1);
+  if (r) return r;
+  v &= 0x0f;
   if ((v&0x0f)==6) {
    d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60;
   } else if ((v&0x0f)==7) {
