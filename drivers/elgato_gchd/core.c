@@ -417,17 +417,20 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   * STREAMON is the first point where the client actually needs capture.
   * This prevents firmware loading during short-lived discovery opens.
   */
- if (!d->hw_initialized) {
-  /* If a previous initialization partially failed, clean it up first. */
-  if (d->hw_initialized) {
-   sr = gchd_hw_shutdown(d);
-   if (sr) {
-    r = sr;
-    goto err;
-   }
-   d->hw_initialized = false;
+ if (d->hw_init_failed) {
+  /* Failed initialization plus failed cleanup: recover before another try. */
+  sr = gchd_hw_shutdown(d);
+  if (sr) {
+   r = sr;
+   dev_err(&d->intf->dev,
+           "retrying cleanup after failed initialization failed: %d\\n", sr);
+   goto err;
   }
+  d->hw_initialized = false;
+  d->hw_init_failed = false;
+ }
 
+ if (!d->hw_initialized) {
   d->input_forced = true; /* preserve default HDMI or the last chosen input */
   d->input_configured = false;
   d->input_prepared = false;
@@ -443,12 +446,14 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
    dev_err(&d->intf->dev, "hardware initialization on STREAMON failed: %d\n", r);
    sr = gchd_hw_shutdown(d);
    d->hw_initialized = (sr != 0);
+   d->hw_init_failed = (sr != 0);
    if (sr)
     dev_warn(&d->intf->dev,
              "cleanup after failed STREAMON init failed: %d\n", sr);
    goto err;
   }
   d->hw_initialized = true;
+  d->hw_init_failed = false;
   dev_info(&d->intf->dev,
            "capture requested: hardware initialized, detecting input %u\n",
            d->input);
@@ -1017,6 +1022,17 @@ static int gchd_fop_open(struct file *file)
   * Opening the node must not load firmware. Defer HW init until STREAMON.
   */
  if (d->open_count == 0) {
+  /* A previous last-close teardown may have failed; recover before reuse. */
+  if (d->hw_initialized) {
+   r = gchd_hw_shutdown(d);
+   if (r) {
+    dev_err(&d->intf->dev,
+            "retrying previous hardware shutdown before open failed: %d\\n", r);
+    goto out;
+   }
+   d->hw_initialized = false;
+   d->hw_init_failed = false;
+  }
   d->input_configured = false;
   d->input_prepared = false;
   d->signal_present = false;
@@ -1077,6 +1093,7 @@ static int gchd_fop_release(struct file *file)
    } else {
     dev_info(&d->intf->dev, "V4L2 closed: hardware safely shut down\n");
     d->hw_initialized = false;
+    d->hw_init_failed = false;
    }
   }
 
