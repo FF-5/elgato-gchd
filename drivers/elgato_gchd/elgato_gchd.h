@@ -51,6 +51,9 @@ struct gchd {
  struct vb2_queue vbq;
  struct v4l2_ctrl_handler ctrls;
  struct mutex lock;
+ /* Serializes hardware lifecycle changes against asynchronous detection. */
+ struct mutex lifecycle_lock;
+ struct delayed_work detect_work;
  spinlock_t qlock;
  struct list_head queued;
  struct task_struct *rx_thread;
