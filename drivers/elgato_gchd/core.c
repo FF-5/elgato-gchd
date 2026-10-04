@@ -250,6 +250,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   v4l2_event_queue(&d->vdev, &ev);
   r = gchd_input_start(d);
   if (!r) {
+   d->last_video_jiffies = jiffies;
    d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
    if (IS_ERR(d->rx_thread)) {
     r = PTR_ERR(d->rx_thread);
@@ -341,7 +342,8 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
  if (r)
   goto err_streaming;
 
- d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+ d->last_video_jiffies = jiffies;
+   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
  if (IS_ERR(d->rx_thread)) {
   r = PTR_ERR(d->rx_thread);
   d->rx_thread = NULL;
@@ -520,7 +522,8 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
    mutex_unlock(&d->lifecycle_lock);
    return r;
   }
-  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+  d->last_video_jiffies = jiffies;
+   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
   if (IS_ERR(d->rx_thread)) {
    r = PTR_ERR(d->rx_thread);
    d->rx_thread = NULL;
