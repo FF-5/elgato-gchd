@@ -1,677 +1,734 @@
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ sudo dmesg -w
 [sudo] password for ff5:           
-[19522.279481] workqueue: hub_event hogged CPU for >10000us 8 times, consider switching to WQ_UNBOUND
-[19522.395252] usb 2-1: new high-speed USB device number 9 using ehci-pci
-[19522.850711] usb 2-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
-[19522.850724] usb 2-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
-[19522.850728] usb 2-1: Product: GameCapture HD
-[19522.850731] usb 2-1: Manufacturer: Elgato
-[19522.850734] usb 2-1: SerialNumber: 04107F1267
-[19529.425135] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19529.427389] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19529.431106] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19529.434555] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19529.438088] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19529.441585] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19529.445319] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19529.448792] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19529.452406] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19529.456464] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19529.459683] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=4016 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19529.536278] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
-[19529.537615] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x01
-[19530.373305] elgato_gchd 2-1:1.0: transcoder defaults loaded
-[19530.375998] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 00 00 00
-[19530.377535] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x04
-[19530.394347] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.396948] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.400376] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.403983] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.407458] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.411090] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.414612] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.418219] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.421741] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.425281] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.428834] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.432321] elgato_gchd 2-1:1.0: firmware chunk offset=360448 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.435847] elgato_gchd 2-1:1.0: firmware chunk offset=393216 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.439455] elgato_gchd 2-1:1.0: firmware chunk offset=425984 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.443117] elgato_gchd 2-1:1.0: firmware chunk offset=458752 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.446511] elgato_gchd 2-1:1.0: firmware chunk offset=491520 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.450160] elgato_gchd 2-1:1.0: firmware chunk offset=524288 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.453744] elgato_gchd 2-1:1.0: firmware chunk offset=557056 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.457271] elgato_gchd 2-1:1.0: firmware chunk offset=589824 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.460775] elgato_gchd 2-1:1.0: firmware chunk offset=622592 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.464352] elgato_gchd 2-1:1.0: firmware chunk offset=655360 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.467867] elgato_gchd 2-1:1.0: firmware chunk offset=688128 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.471508] elgato_gchd 2-1:1.0: firmware chunk offset=720896 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.474853] elgato_gchd 2-1:1.0: firmware chunk offset=753664 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.478525] elgato_gchd 2-1:1.0: firmware chunk offset=786432 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.482053] elgato_gchd 2-1:1.0: firmware chunk offset=819200 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.485587] elgato_gchd 2-1:1.0: firmware chunk offset=851968 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.489205] elgato_gchd 2-1:1.0: firmware chunk offset=884736 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.492700] elgato_gchd 2-1:1.0: firmware chunk offset=917504 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.496181] elgato_gchd 2-1:1.0: firmware chunk offset=950272 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.499810] elgato_gchd 2-1:1.0: firmware chunk offset=983040 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.503291] elgato_gchd 2-1:1.0: firmware chunk offset=1015808 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.506848] elgato_gchd 2-1:1.0: firmware chunk offset=1048576 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.510435] elgato_gchd 2-1:1.0: firmware chunk offset=1081344 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.513978] elgato_gchd 2-1:1.0: firmware chunk offset=1114112 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.517494] elgato_gchd 2-1:1.0: firmware chunk offset=1146880 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.521042] elgato_gchd 2-1:1.0: firmware chunk offset=1179648 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.524567] elgato_gchd 2-1:1.0: firmware chunk offset=1212416 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.528148] elgato_gchd 2-1:1.0: firmware chunk offset=1245184 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.531713] elgato_gchd 2-1:1.0: firmware chunk offset=1277952 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.535173] elgato_gchd 2-1:1.0: firmware chunk offset=1310720 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.538755] elgato_gchd 2-1:1.0: firmware chunk offset=1343488 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.542323] elgato_gchd 2-1:1.0: firmware chunk offset=1376256 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.545935] elgato_gchd 2-1:1.0: firmware chunk offset=1409024 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.549481] elgato_gchd 2-1:1.0: firmware chunk offset=1441792 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.553064] elgato_gchd 2-1:1.0: firmware chunk offset=1474560 size=26224 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[19530.599277] elgato_gchd 2-1:1.0: device idle, processor state 0x27f97b
-[19530.599393] usbcore: registered new interface driver elgato_gchd
-[19553.609068] elgato_gchd 2-1:1.0: capture setup: input=1 mode=1920x1080 fps=60/1 interlaced=0
-[19560.112739] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
-[19560.364583] elgato_gchd 2-1:1.0: capture setup: encoder start completed
-[19582.224338] elgato_gchd 2-1:1.0: capture setup: input configuration completed
-[19582.280383] elgato_gchd 2-1:1.0: capture setup: transcoder final configuration completed
-[19582.561847] elgato_gchd 2-1:1.0: capture setup: transcoder setup completed
-[19582.564512] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
-[19582.564521] elgato_gchd 2-1:1.0: capture setup: SCMD_INIT submitted
-[19582.575502] elgato_gchd 2-1:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011e (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
-[19582.578091] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 02
-[19582.579718] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
-
+[20786.158511] usb 2-1: new high-speed USB device number 12 using ehci-pci
+[20786.630247] usb 2-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
+[20786.630260] usb 2-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[20786.630264] usb 2-1: Product: GameCapture HD
+[20786.630268] usb 2-1: Manufacturer: Elgato
+[20786.630270] usb 2-1: SerialNumber: 04107F1267
+[20790.543477] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20790.545451] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20790.548947] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20790.552537] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20790.556152] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20790.559784] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20790.563460] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20790.567040] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20790.570723] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20790.574182] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20790.577751] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=4016 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20790.657118] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
+[20790.658463] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x01
+[20791.433383] elgato_gchd 2-1:1.0: transcoder defaults loaded
+[20791.436019] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 00 00 00
+[20791.437386] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x04
+[20791.454482] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.456973] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.460549] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.464089] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.467746] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.471378] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.474986] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.478583] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.482076] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.485639] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.489212] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.492641] elgato_gchd 2-1:1.0: firmware chunk offset=360448 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.496337] elgato_gchd 2-1:1.0: firmware chunk offset=393216 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.500002] elgato_gchd 2-1:1.0: firmware chunk offset=425984 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.503630] elgato_gchd 2-1:1.0: firmware chunk offset=458752 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.507269] elgato_gchd 2-1:1.0: firmware chunk offset=491520 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.510807] elgato_gchd 2-1:1.0: firmware chunk offset=524288 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.514439] elgato_gchd 2-1:1.0: firmware chunk offset=557056 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.517730] elgato_gchd 2-1:1.0: firmware chunk offset=589824 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.521362] elgato_gchd 2-1:1.0: firmware chunk offset=622592 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.524648] elgato_gchd 2-1:1.0: firmware chunk offset=655360 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.528063] elgato_gchd 2-1:1.0: firmware chunk offset=688128 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.531552] elgato_gchd 2-1:1.0: firmware chunk offset=720896 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.535124] elgato_gchd 2-1:1.0: firmware chunk offset=753664 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.538781] elgato_gchd 2-1:1.0: firmware chunk offset=786432 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.542411] elgato_gchd 2-1:1.0: firmware chunk offset=819200 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.545926] elgato_gchd 2-1:1.0: firmware chunk offset=851968 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.549434] elgato_gchd 2-1:1.0: firmware chunk offset=884736 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.553051] elgato_gchd 2-1:1.0: firmware chunk offset=917504 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.556773] elgato_gchd 2-1:1.0: firmware chunk offset=950272 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.560350] elgato_gchd 2-1:1.0: firmware chunk offset=983040 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.563871] elgato_gchd 2-1:1.0: firmware chunk offset=1015808 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.567459] elgato_gchd 2-1:1.0: firmware chunk offset=1048576 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.570960] elgato_gchd 2-1:1.0: firmware chunk offset=1081344 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.574486] elgato_gchd 2-1:1.0: firmware chunk offset=1114112 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.577936] elgato_gchd 2-1:1.0: firmware chunk offset=1146880 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.581238] elgato_gchd 2-1:1.0: firmware chunk offset=1179648 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.584676] elgato_gchd 2-1:1.0: firmware chunk offset=1212416 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.588003] elgato_gchd 2-1:1.0: firmware chunk offset=1245184 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.591380] elgato_gchd 2-1:1.0: firmware chunk offset=1277952 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.594787] elgato_gchd 2-1:1.0: firmware chunk offset=1310720 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.598370] elgato_gchd 2-1:1.0: firmware chunk offset=1343488 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.601709] elgato_gchd 2-1:1.0: firmware chunk offset=1376256 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.605224] elgato_gchd 2-1:1.0: firmware chunk offset=1409024 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.608739] elgato_gchd 2-1:1.0: firmware chunk offset=1441792 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.612113] elgato_gchd 2-1:1.0: firmware chunk offset=1474560 size=26224 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[20791.658647] elgato_gchd 2-1:1.0: device idle, processor state 0x27f97b
+[20791.658756] usbcore: registered new interface driver elgato_gchd
+[20807.884254] elgato_gchd 2-1:1.0: capture setup: input=1 mode=1920x1080 fps=60/1 interlaced=0
+[20814.375822] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[20814.629710] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[20836.512909] elgato_gchd 2-1:1.0: capture setup: input configuration completed
+[20836.570032] elgato_gchd 2-1:1.0: capture setup: transcoder final configuration completed
+[20836.853604] elgato_gchd 2-1:1.0: capture setup: transcoder setup completed
+[20836.856412] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[20836.856418] elgato_gchd 2-1:1.0: capture setup: SCMD_INIT submitted
+[20836.867048] elgato_gchd 2-1:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011e (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
+[20836.869754] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 02
+[20836.870919] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
+[20853.071405] elgato_gchd 2-1:1.0: state-change timeout: current=0x01 expected=0x02 state=0x0001 completion=0x011a
+[20853.082315] elgato_gchd 2-1:1.0: START failed: ret=-110 state=0x0001 (r=0) enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
+[20853.082339] elgato_gchd 2-1:1.0: capture setup: START transition failed: -110
+[20853.084735] elgato_gchd 2-1:1.0: capture setup: input=1 mode=1920x1080 fps=60/1 interlaced=0
+[20859.544292] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[20859.793070] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[20881.620777] elgato_gchd 2-1:1.0: capture setup: input configuration completed
+[20881.676483] elgato_gchd 2-1:1.0: capture setup: transcoder final configuration completed
+[20881.955765] elgato_gchd 2-1:1.0: capture setup: transcoder setup completed
+[20881.959445] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[20881.959449] elgato_gchd 2-1:1.0: capture setup: SCMD_INIT submitted
+[20881.969465] elgato_gchd 2-1:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
+[20881.972214] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 02
+[20881.973490] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
+[20898.189488] elgato_gchd 2-1:1.0: state-change timeout: current=0x01 expected=0x02 state=0x0001 completion=0x011a
+[20898.200336] elgato_gchd 2-1:1.0: START failed: ret=-110 state=0x0001 (r=0) enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
+[20898.200356] elgato_gchd 2-1:1.0: capture setup: START transition failed: -110
+[20898.200721] elgato_gchd 2-1:1.0: capture setup: input=1 mode=1920x1080 fps=60/1 interlaced=0
+[20904.642059] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[20904.898646] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[20926.716851] elgato_gchd 2-1:1.0: capture setup: input configuration completed
+[20926.772842] elgato_gchd 2-1:1.0: capture setup: transcoder final configuration completed
+[20927.052786] elgato_gchd 2-1:1.0: capture setup: transcoder setup completed
+[20927.055538] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[20927.055549] elgato_gchd 2-1:1.0: capture setup: SCMD_INIT submitted
+[20927.066230] elgato_gchd 2-1:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
+[20927.068891] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 02
+[20927.070149] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
+[20943.274215] elgato_gchd 2-1:1.0: state-change timeout: current=0x01 expected=0x02 state=0x0001 completion=0x011a
+[20943.284940] elgato_gchd 2-1:1.0: START failed: ret=-110 state=0x0001 (r=0) enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
+[20943.284960] elgato_gchd 2-1:1.0: capture setup: START transition failed: -110
+[20943.285497] elgato_gchd 2-1:1.0: capture setup: input=1 mode=1920x1080 fps=60/1 interlaced=0
+[20949.740852] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[20949.988896] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[20971.772022] elgato_gchd 2-1:1.0: capture setup: input configuration completed
+[20971.829657] elgato_gchd 2-1:1.0: capture setup: transcoder final configuration completed
+[20972.114132] elgato_gchd 2-1:1.0: capture setup: transcoder setup completed
+[20972.116910] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[20972.116918] elgato_gchd 2-1:1.0: capture setup: SCMD_INIT submitted
+[20972.127911] elgato_gchd 2-1:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
+[20972.130643] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 02
+[20972.131896] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
+[20988.384079] elgato_gchd 2-1:1.0: state-change timeout: current=0x01 expected=0x02 state=0x0001 completion=0x011a
+[20988.394945] elgato_gchd 2-1:1.0: START failed: ret=-110 state=0x0001 (r=0) enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
+[20988.394960] elgato_gchd 2-1:1.0: capture setup: START transition failed: -110
+[20988.395381] elgato_gchd 2-1:1.0: capture setup: input=1 mode=1920x1080 fps=60/1 interlaced=0
+[20994.864213] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[20995.115641] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[21016.990487] elgato_gchd 2-1:1.0: capture setup: input configuration completed
+[21017.048163] elgato_gchd 2-1:1.0: capture setup: transcoder final configuration completed
+[21017.331887] elgato_gchd 2-1:1.0: capture setup: transcoder setup completed
+[21017.334910] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[21017.334919] elgato_gchd 2-1:1.0: capture setup: SCMD_INIT submitted
+[21017.345627] elgato_gchd 2-1:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
+[21017.348302] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 02
+[21017.349686] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
+[21033.523642] elgato_gchd 2-1:1.0: state-change timeout: current=0x01 expected=0x02 state=0x0001 completion=0x011a
+[21033.536887] elgato_gchd 2-1:1.0: START failed: ret=-110 state=0x0001 (r=0) enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
+[21033.536906] elgato_gchd 2-1:1.0: capture setup: START transition failed: -110
 
 
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ strace -f -tt -T -e trace=ioctl guvcview
-02:17:37.633271 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000121>
-02:17:37.633913 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000057>
-02:17:37.634085 ioctl(4, VIDIOC_G_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_NONE, bytesperline=0, sizeimage=8388608, colorspace=V4L2_COLORSPACE_REC709}}) = 0 <0.000052>
-02:17:37.634315 ioctl(4, VIDIOC_G_PARM, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 ENOTTY (Inappropriate ioctl for device) <0.000053>
-02:17:37.634596 ioctl(4, VIDIOC_ENUM_FMT, {index=0, type=V4L2_BUF_TYPE_VIDEO_CAPTURE, flags=V4L2_FMT_FLAG_COMPRESSED, description="H.264", pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */}) = 0 <0.000052>
-02:17:37.634787 ioctl(4, VIDIOC_ENUM_FMT, {index=1, type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 EINVAL (Invalid argument) <0.000053>
-02:17:37.634954 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000052>
-02:17:37.635127 ioctl(4, VIDIOC_G_INPUT, [1]) = 0 <0.000067>
-02:17:37.635409 ioctl(4, VIDIOC_ENUMINPUT, {index=1, name="Component", type=V4L2_INPUT_TYPE_CAMERA, audioset=0, tuner=0, std=0, status=V4L2_IN_ST_NO_SIGNAL, capabilities=V4L2_IN_CAP_DV_TIMINGS}) = 0 <0.000075>
-02:17:37.642111 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|0 /* V4L2_CID_??? */ => V4L2_CTRL_CLASS_CODEC+0x1, type=V4L2_CTRL_TYPE_CTRL_CLASS, name="Codec Controls", ...}) = 0 <0.000107>
-02:17:37.642419 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000051>
+02:38:31.500494 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.001294>
+02:38:31.504453 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000110>
+02:38:31.504749 ioctl(4, VIDIOC_G_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_NONE, bytesperline=0, sizeimage=8388608, colorspace=V4L2_COLORSPACE_REC709}}) = 0 <0.000127>
+02:38:31.505160 ioctl(4, VIDIOC_G_PARM, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 ENOTTY (Inappropriate ioctl for device) <0.000116>
+02:38:31.505628 ioctl(4, VIDIOC_ENUM_FMT, {index=0, type=V4L2_BUF_TYPE_VIDEO_CAPTURE, flags=V4L2_FMT_FLAG_COMPRESSED, description="H.264", pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */}) = 0 <0.000119>
+02:38:31.506029 ioctl(4, VIDIOC_ENUM_FMT, {index=1, type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 EINVAL (Invalid argument) <0.000045>
+02:38:31.506189 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000068>
+02:38:31.506545 ioctl(4, VIDIOC_G_INPUT, [1]) = 0 <0.000080>
+02:38:31.506735 ioctl(4, VIDIOC_ENUMINPUT, {index=1, name="Component", type=V4L2_INPUT_TYPE_CAMERA, audioset=0, tuner=0, std=0, status=V4L2_IN_ST_NO_SIGNAL, capabilities=V4L2_IN_CAP_DV_TIMINGS}) = 0 <0.000055>
+02:38:31.511020 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|0 /* V4L2_CID_??? */ => V4L2_CTRL_CLASS_CODEC+0x1, type=V4L2_CTRL_TYPE_CTRL_CLASS, name="Codec Controls", ...}) = 0 <0.000045>
+02:38:31.511256 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000052>
 GUVCVIEW: version 2.0.8
-02:17:37.664955 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000050>
-02:17:37.665320 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000048>
-02:17:37.665464 ioctl(4, VIDIOC_G_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_NONE, bytesperline=0, sizeimage=8388608, colorspace=V4L2_COLORSPACE_REC709}}) = 0 <0.000049>
-02:17:37.665613 ioctl(4, VIDIOC_G_PARM, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 ENOTTY (Inappropriate ioctl for device) <0.000050>
-02:17:37.665760 ioctl(4, VIDIOC_ENUM_FMT, {index=0, type=V4L2_BUF_TYPE_VIDEO_CAPTURE, flags=V4L2_FMT_FLAG_COMPRESSED, description="H.264", pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */}) = 0 <0.000051>
-02:17:37.665911 ioctl(4, VIDIOC_ENUM_FMT, {index=1, type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 EINVAL (Invalid argument) <0.000050>
-02:17:37.666052 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000047>
-02:17:37.666197 ioctl(4, VIDIOC_G_INPUT, [1]) = 0 <0.000049>
-02:17:37.666340 ioctl(4, VIDIOC_ENUMINPUT, {index=1, name="Component", type=V4L2_INPUT_TYPE_CAMERA, audioset=0, tuner=0, std=0, status=V4L2_IN_ST_NO_SIGNAL, capabilities=V4L2_IN_CAP_DV_TIMINGS}) = 0 <0.000048>
-02:17:37.671547 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|0 /* V4L2_CID_??? */ => V4L2_CTRL_CLASS_CODEC+0x1, type=V4L2_CTRL_TYPE_CTRL_CLASS, name="Codec Controls", ...}) = 0 <0.000068>
-02:17:37.671802 ioctl(4, UVCIOC_CTRL_MAP, 0x7718ee14d440) = -1 ENOTTY (Inappropriate ioctl for device) <0.000064>
+02:38:31.537711 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000049>
+02:38:31.538113 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000080>
+02:38:31.538307 ioctl(4, VIDIOC_G_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_NONE, bytesperline=0, sizeimage=8388608, colorspace=V4L2_COLORSPACE_REC709}}) = 0 <0.000052>
+02:38:31.538560 ioctl(4, VIDIOC_G_PARM, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 ENOTTY (Inappropriate ioctl for device) <0.000083>
+02:38:31.538821 ioctl(4, VIDIOC_ENUM_FMT, {index=0, type=V4L2_BUF_TYPE_VIDEO_CAPTURE, flags=V4L2_FMT_FLAG_COMPRESSED, description="H.264", pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */}) = 0 <0.000078>
+02:38:31.539096 ioctl(4, VIDIOC_ENUM_FMT, {index=1, type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 EINVAL (Invalid argument) <0.000042>
+02:38:31.539245 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000051>
+02:38:31.539459 ioctl(4, VIDIOC_G_INPUT, [1]) = 0 <0.000053>
+02:38:31.539661 ioctl(4, VIDIOC_ENUMINPUT, {index=1, name="Component", type=V4L2_INPUT_TYPE_CAMERA, audioset=0, tuner=0, std=0, status=V4L2_IN_ST_NO_SIGNAL, capabilities=V4L2_IN_CAP_DV_TIMINGS}) = 0 <0.000051>
+02:38:31.546287 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|0 /* V4L2_CID_??? */ => V4L2_CTRL_CLASS_CODEC+0x1, type=V4L2_CTRL_TYPE_CTRL_CLASS, name="Codec Controls", ...}) = 0 <0.000157>
+02:38:31.546894 ioctl(4, UVCIOC_CTRL_MAP, 0x77d53eb49440) = -1 ENOTTY (Inappropriate ioctl for device) <0.000122>
 V4L2_CORE: (UVCIOC_CTRL_MAP) Error: Inappropriate ioctl for device
-02:17:37.673664 ioctl(4, UVCIOC_CTRL_MAP, 0x7718ee14d4a0) = -1 ENOTTY (Inappropriate ioctl for device) <0.000060>
+02:38:31.548761 ioctl(4, UVCIOC_CTRL_MAP, 0x77d53eb494a0) = -1 ENOTTY (Inappropriate ioctl for device) <0.000069>
 V4L2_CORE: (UVCIOC_CTRL_MAP) Error: Inappropriate ioctl for device
-02:17:37.674045 ioctl(4, UVCIOC_CTRL_MAP, 0x7718ee14d500) = -1 ENOTTY (Inappropriate ioctl for device) <0.000069>
+02:38:31.549067 ioctl(4, UVCIOC_CTRL_MAP, 0x77d53eb49500) = -1 ENOTTY (Inappropriate ioctl for device) <0.000041>
 V4L2_CORE: (UVCIOC_CTRL_MAP) Error: Inappropriate ioctl for device
-02:17:37.674488 ioctl(4, UVCIOC_CTRL_MAP, 0x7718ee14d560) = -1 ENOTTY (Inappropriate ioctl for device) <0.000064>
+02:38:31.549391 ioctl(4, UVCIOC_CTRL_MAP, 0x77d53eb49560) = -1 ENOTTY (Inappropriate ioctl for device) <0.000123>
 V4L2_CORE: (UVCIOC_CTRL_MAP) Error: Inappropriate ioctl for device
-02:17:37.674867 ioctl(4, UVCIOC_CTRL_MAP, 0x7718ee14d5c0) = -1 ENOTTY (Inappropriate ioctl for device) <0.000057>
+02:38:31.549923 ioctl(4, UVCIOC_CTRL_MAP, 0x77d53eb495c0) = -1 ENOTTY (Inappropriate ioctl for device) <0.000137>
 V4L2_CORE: (UVCIOC_CTRL_MAP) Error: Inappropriate ioctl for device
-02:17:37.675216 ioctl(4, UVCIOC_CTRL_MAP, 0x7718ee14d620) = -1 ENOTTY (Inappropriate ioctl for device) <0.000097>
+02:38:31.550542 ioctl(4, UVCIOC_CTRL_MAP, 0x77d53eb49620) = -1 ENOTTY (Inappropriate ioctl for device) <0.003791>
 V4L2_CORE: (UVCIOC_CTRL_MAP) Error: Inappropriate ioctl for device
-02:17:37.675607 ioctl(4, UVCIOC_CTRL_MAP, 0x7718ee14d680) = -1 ENOTTY (Inappropriate ioctl for device) <0.000067>
+02:38:31.554631 ioctl(4, UVCIOC_CTRL_MAP, 0x77d53eb49680) = -1 ENOTTY (Inappropriate ioctl for device) <0.000066>
 V4L2_CORE: (UVCIOC_CTRL_MAP) Error: Inappropriate ioctl for device
-02:17:37.675930 ioctl(4, UVCIOC_CTRL_MAP, 0x7718ee14d6e0) = -1 ENOTTY (Inappropriate ioctl for device) <0.000081>
+02:38:31.555006 ioctl(4, UVCIOC_CTRL_MAP, 0x77d53eb496e0) = -1 ENOTTY (Inappropriate ioctl for device) <0.000099>
 V4L2_CORE: (UVCIOC_CTRL_MAP) Error: Inappropriate ioctl for device
-02:17:37.676340 ioctl(4, UVCIOC_CTRL_MAP, 0x7718ee14d740) = -1 ENOTTY (Inappropriate ioctl for device) <0.000087>
+02:38:31.555849 ioctl(4, UVCIOC_CTRL_MAP, 0x77d53eb49740) = -1 ENOTTY (Inappropriate ioctl for device) <0.000174>
 V4L2_CORE: (UVCIOC_CTRL_MAP) Error: Inappropriate ioctl for device
-02:17:37.676701 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000066>
-02:17:37.676903 ioctl(4, VIDIOC_ENUM_FMT, {index=0, type=V4L2_BUF_TYPE_VIDEO_CAPTURE, flags=V4L2_FMT_FLAG_COMPRESSED, description="H.264", pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */}) = 0 <0.000068>
-02:17:37.677118 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=1920, height=1080}}) = 0 <0.000080>
-02:17:37.677369 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1920, height=1080, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/60}) = 0 <0.000068>
-02:17:37.677571 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1920, height=1080}) = -1 EINVAL (Invalid argument) <0.000059>
-02:17:37.677768 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=1920, height=1080}}) = 0 <0.000068>
-02:17:37.677975 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1920, height=1080, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/60}) = 0 <0.000068>
-02:17:37.678202 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1920, height=1080}) = -1 EINVAL (Invalid argument) <0.000075>
-02:17:37.678429 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=2, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=1280, height=720}}) = 0 <0.000070>
-02:17:37.678637 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1280, height=720, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/60}) = 0 <0.000070>
-02:17:37.678843 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1280, height=720}) = -1 EINVAL (Invalid argument) <0.000083>
-02:17:37.679076 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=3, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=720, height=576}}) = 0 <0.000068>
-02:17:37.679329 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=576, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/50}) = 0 <0.000068>
-02:17:37.679536 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=576}) = -1 EINVAL (Invalid argument) <0.000069>
-02:17:37.679741 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=4, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=720, height=576}}) = 0 <0.000068>
-02:17:37.679947 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=576, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/50}) = 0 <0.000068>
-02:17:37.680187 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=576}) = -1 EINVAL (Invalid argument) <0.000066>
-02:17:37.680388 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=5, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=720, height=480}}) = 0 <0.000068>
-02:17:37.680592 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=480, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/60}) = 0 <0.000069>
-02:17:37.680795 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=480}) = -1 EINVAL (Invalid argument) <0.000069>
-02:17:37.680997 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=6, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=720, height=480}}) = 0 <0.000069>
-02:17:37.681224 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=480, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/60}) = 0 <0.000070>
-02:17:37.681448 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=480}) = -1 EINVAL (Invalid argument) <0.000057>
-02:17:37.681648 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=7, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */}) = -1 EINVAL (Invalid argument) <0.000071>
-02:17:37.681861 ioctl(4, VIDIOC_TRY_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=0, height=0, pixelformat=v4l2_fourcc('R', 'G', 'B', '3') /* V4L2_PIX_FMT_RGB24 */, field=V4L2_FIELD_ANY, bytesperline=522729216, sizeimage=2069959853, colorspace=V4L2_COLORSPACE_DEFAULT}}) = -1 EINVAL (Invalid argument) <0.000068>
+02:38:31.556399 ioctl(4, VIDIOC_QUERYCAP, {driver="elgato-gchd", card="Elgato Game Capture HD", bus_info="usb", version=KERNEL_VERSION(6, 8, 12), capabilities=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING|V4L2_CAP_DEVICE_CAPS, device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_EXT_PIX_FORMAT|V4L2_CAP_READWRITE|V4L2_CAP_STREAMING}) = 0 <0.000091>
+02:38:31.556688 ioctl(4, VIDIOC_ENUM_FMT, {index=0, type=V4L2_BUF_TYPE_VIDEO_CAPTURE, flags=V4L2_FMT_FLAG_COMPRESSED, description="H.264", pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */}) = 0 <0.000086>
+02:38:31.556990 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=1920, height=1080}}) = 0 <0.000080>
+02:38:31.557238 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1920, height=1080, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/60}) = 0 <0.000079>
+02:38:31.557459 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1920, height=1080}) = -1 EINVAL (Invalid argument) <0.000069>
+02:38:31.557725 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=1920, height=1080}}) = 0 <0.000069>
+02:38:31.557986 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1920, height=1080, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/60}) = 0 <0.000071>
+02:38:31.558279 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1920, height=1080}) = -1 EINVAL (Invalid argument) <0.000079>
+02:38:31.558502 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=2, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=1280, height=720}}) = 0 <0.000078>
+02:38:31.558732 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1280, height=720, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/60}) = 0 <0.000077>
+02:38:31.558960 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=1280, height=720}) = -1 EINVAL (Invalid argument) <0.000060>
+02:38:31.559233 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=3, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=720, height=576}}) = 0 <0.000070>
+02:38:31.559500 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=576, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/50}) = 0 <0.000073>
+02:38:31.559768 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=576}) = -1 EINVAL (Invalid argument) <0.000072>
+02:38:31.560046 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=4, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=720, height=576}}) = 0 <0.000069>
+02:38:31.560313 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=576, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/50}) = 0 <0.000070>
+02:38:31.560575 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=576}) = -1 EINVAL (Invalid argument) <0.000069>
+02:38:31.560845 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=5, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=720, height=480}}) = 0 <0.000081>
+02:38:31.561117 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=480, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/60}) = 0 <0.000073>
+02:38:31.561385 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=480}) = -1 EINVAL (Invalid argument) <0.000070>
+02:38:31.561655 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=6, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, type=V4L2_FRMSIZE_TYPE_DISCRETE, discrete={width=720, height=480}}) = 0 <0.000072>
+02:38:31.561915 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=0, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=480, type=V4L2_FRMIVAL_TYPE_DISCRETE, discrete=1/60}) = 0 <0.000070>
+02:38:31.562196 ioctl(4, VIDIOC_ENUM_FRAMEINTERVALS, {index=1, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, width=720, height=480}) = -1 EINVAL (Invalid argument) <0.000070>
+02:38:31.562468 ioctl(4, VIDIOC_ENUM_FRAMESIZES, {index=7, pixel_format=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */}) = -1 EINVAL (Invalid argument) <0.000067>
+02:38:31.562736 ioctl(4, VIDIOC_TRY_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=0, height=0, pixelformat=v4l2_fourcc('R', 'G', 'B', '3') /* V4L2_PIX_FMT_RGB24 */, field=V4L2_FIELD_ANY, bytesperline=3736357888, sizeimage=406200341, colorspace=V4L2_COLORSPACE_DEFAULT}}) = -1 EINVAL (Invalid argument) <0.000079>
 { VIDIOC_TRY_FMT (invalid values): width = 0, height = 0 }
 v4L2_CORE: Unable to enumerate frame sizes :Invalid argument
-02:17:37.682473 ioctl(4, VIDIOC_TRY_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=0, height=0, pixelformat=v4l2_fourcc('B', 'G', 'R', '3') /* V4L2_PIX_FMT_BGR24 */, field=V4L2_FIELD_ANY, bytesperline=522729216, sizeimage=2069959853, colorspace=V4L2_COLORSPACE_DEFAULT}}) = -1 EINVAL (Invalid argument) <0.000069>
+02:38:31.563301 ioctl(4, VIDIOC_TRY_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=0, height=0, pixelformat=v4l2_fourcc('B', 'G', 'R', '3') /* V4L2_PIX_FMT_BGR24 */, field=V4L2_FIELD_ANY, bytesperline=3736357888, sizeimage=406200341, colorspace=V4L2_COLORSPACE_DEFAULT}}) = -1 EINVAL (Invalid argument) <0.000081>
 { VIDIOC_TRY_FMT (invalid values): width = 0, height = 0 }
 v4L2_CORE: Unable to enumerate frame sizes :Invalid argument
-02:17:37.682967 ioctl(4, VIDIOC_TRY_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=0, height=0, pixelformat=v4l2_fourcc('Y', 'U', '1', '2') /* V4L2_PIX_FMT_YUV420 */, field=V4L2_FIELD_ANY, bytesperline=522729216, sizeimage=2069959853, colorspace=V4L2_COLORSPACE_DEFAULT}}) = -1 EINVAL (Invalid argument) <0.000088>
+02:38:31.563844 ioctl(4, VIDIOC_TRY_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=0, height=0, pixelformat=v4l2_fourcc('Y', 'U', '1', '2') /* V4L2_PIX_FMT_YUV420 */, field=V4L2_FIELD_ANY, bytesperline=3736357888, sizeimage=406200341, colorspace=V4L2_COLORSPACE_DEFAULT}}) = -1 EINVAL (Invalid argument) <0.000062>
 { VIDIOC_TRY_FMT (invalid values): width = 0, height = 0 }
 v4L2_CORE: Unable to enumerate frame sizes :Invalid argument
-02:17:37.683533 ioctl(4, VIDIOC_TRY_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=0, height=0, pixelformat=v4l2_fourcc('Y', 'V', '1', '2') /* V4L2_PIX_FMT_YVU420 */, field=V4L2_FIELD_ANY, bytesperline=522729216, sizeimage=2069959853, colorspace=V4L2_COLORSPACE_DEFAULT}}) = -1 EINVAL (Invalid argument) <0.000073>
+02:38:31.564436 ioctl(4, VIDIOC_TRY_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=0, height=0, pixelformat=v4l2_fourcc('Y', 'V', '1', '2') /* V4L2_PIX_FMT_YVU420 */, field=V4L2_FIELD_ANY, bytesperline=3736357888, sizeimage=406200341, colorspace=V4L2_COLORSPACE_DEFAULT}}) = -1 EINVAL (Invalid argument) <0.000080>
 { VIDIOC_TRY_FMT (invalid values): width = 0, height = 0 }
 v4L2_CORE: Unable to enumerate frame sizes :Invalid argument
-02:17:37.684019 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|0 /* V4L2_CID_??? */ => V4L2_CTRL_CLASS_CODEC+0x1, type=V4L2_CTRL_TYPE_CTRL_CLASS, name="Codec Controls", ...}) = 0 <0.000069>
-02:17:37.684921 ioctl(4, VIDIOC_SUBSCRIBE_EVENT, 0x64ffbaa628c0) = 0 <0.000084>
-02:17:37.685120 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|V4L2_CTRL_CLASS_CODEC+0x1 => V4L2_CID_MPEG_VIDEO_BITRATE, type=V4L2_CTRL_TYPE_INTEGER, name="Video Bitrate", ...}) = 0 <0.000082>
-02:17:37.685374 ioctl(4, VIDIOC_SUBSCRIBE_EVENT, 0x64ffbaa628c0) = 0 <0.000069>
-02:17:37.685555 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|V4L2_CID_MPEG_VIDEO_BITRATE => V4L2_CID_MPEG_VIDEO_H264_LEVEL, type=V4L2_CTRL_TYPE_MENU, name="H264 Level", ...}) = 0 <0.000070>
-02:17:37.685777 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000057>
-02:17:37.685950 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000066>
-02:17:37.686147 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000081>
-02:17:37.686347 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000065>
-02:17:37.686522 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000055>
-02:17:37.686686 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000066>
-02:17:37.686861 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000067>
-02:17:37.687039 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000066>
-02:17:37.687217 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000063>
-02:17:37.687406 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000065>
-02:17:37.687582 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000067>
-02:17:37.687759 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000066>
-02:17:37.687936 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000065>
-02:17:37.688110 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000065>
-02:17:37.688308 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000068>
-02:17:37.688486 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000067>
-02:17:37.688674 ioctl(4, VIDIOC_SUBSCRIBE_EVENT, 0x64ffbaa628c0) = 0 <0.000065>
-02:17:37.688847 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|V4L2_CID_MPEG_VIDEO_H264_LEVEL => V4L2_CID_MPEG_VIDEO_H264_PROFILE, type=V4L2_CTRL_TYPE_MENU, name="H264 Profile", ...}) = 0 <0.000067>
-02:17:37.689054 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000069>
-02:17:37.689254 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = -1 EINVAL (Invalid argument) <0.000077>
-02:17:37.689468 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000065>
-02:17:37.689645 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = -1 EINVAL (Invalid argument) <0.000071>
-02:17:37.689846 ioctl(4, VIDIOC_QUERYMENU, 0x7fff83b08de0) = 0 <0.000067>
-02:17:37.690106 ioctl(4, VIDIOC_SUBSCRIBE_EVENT, 0x64ffbaa628c0) = 0 <0.000092>
-02:17:37.690347 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|V4L2_CID_MPEG_VIDEO_H264_PROFILE}) = -1 EINVAL (Invalid argument) <0.000065>
-02:17:37.690535 ioctl(4, VIDIOC_G_EXT_CTRLS, {ctrl_class=V4L2_CTRL_CLASS_CODEC, count=3, controls=[{id=V4L2_CID_MPEG_VIDEO_BITRATE, size=0, value=16000000, value64=8605934592}, {id=V4L2_CID_MPEG_VIDEO_H264_LEVEL, size=0, value=12, value64=111046379438092}, {id=V4L2_CID_MPEG_VIDEO_H264_PROFILE, size=0, value=2, value64=2}]}) = 0 <0.000065>
-02:17:37.690997 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08800) = 0 <0.000055>
-02:17:37.697298 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08460) = 0 <0.000082>
-02:17:37.697852 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0886c) = 0 <0.000069>
-02:17:37.698036 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08b70) = 0 <0.000054>
-02:17:37.698248 ioctl(5, SNDRV_CTL_IOCTL_PCM_NEXT_DEVICE, 0x7fff83b08d6c) = 0 <0.000066>
-02:17:37.698426 ioctl(5, SNDRV_CTL_IOCTL_PCM_INFO, 0x7fff83b08a40) = 0 <0.000063>
-02:17:37.698595 ioctl(5, SNDRV_CTL_IOCTL_PCM_INFO, 0x7fff83b08a40) = 0 <0.000064>
-02:17:37.698770 ioctl(5, SNDRV_CTL_IOCTL_PCM_NEXT_DEVICE, 0x7fff83b08d6c) = 0 <0.000063>
-02:17:37.698940 ioctl(5, SNDRV_CTL_IOCTL_PCM_INFO, 0x7fff83b08a40) = 0 <0.000064>
-02:17:37.699110 ioctl(5, SNDRV_CTL_IOCTL_PCM_INFO, 0x7fff83b08a40) = -1 ENOENT (No such file or directory) <0.000068>
-02:17:37.699319 ioctl(5, SNDRV_CTL_IOCTL_PCM_NEXT_DEVICE, 0x7fff83b08d6c) = 0 <0.000069>
-02:17:37.708893 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08390) = 0 <0.000055>
-02:17:37.709393 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0853c) = 0 <0.000048>
-02:17:37.709529 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b0859c) = 0 <0.000048>
-02:17:37.709953 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b08440) = 0 <0.000050>
-02:17:37.710177 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b08420) = 0 <0.000056>
-02:17:37.710358 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b08430) = 0 <0.000065>
-02:17:37.710530 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b08424) = 0 <0.000064>
-02:17:37.711274 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000078>
-02:17:37.711464 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000062>
-02:17:37.711616 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000053>
-02:17:37.711754 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000050>
-02:17:37.711885 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000051>
-02:17:37.712057 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000067>
-02:17:37.712264 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000060>
-02:17:37.712406 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b083f0) = 0 <0.000052>
-02:17:37.712540 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000050>
-02:17:37.712673 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000055>
-02:17:37.712816 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000049>
-02:17:37.712947 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000050>
-02:17:37.713080 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000051>
-02:17:37.713217 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000091>
-02:17:37.713407 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000053>
-02:17:37.713544 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000051>
-02:17:37.714616 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08390) = 0 <0.000072>
-02:17:37.715087 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0853c) = 0 <0.000077>
-02:17:37.715299 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b0859c) = 0 <0.000072>
-02:17:37.715910 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b08440) = 0 <0.000083>
-02:17:37.716336 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b08420) = 0 <0.000071>
-02:17:37.716516 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b08430) = 0 <0.000051>
-02:17:37.716671 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b08424) = 0 <0.000054>
-02:17:37.717444 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000091>
-02:17:37.717668 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000092>
-02:17:37.717877 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000069>
-02:17:37.718056 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000064>
-02:17:37.718226 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000071>
-02:17:37.718420 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000065>
-02:17:37.718597 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b083f0) = 0 <0.000063>
-02:17:37.718770 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000063>
-02:17:37.718944 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000069>
-02:17:37.719124 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000064>
-02:17:37.719308 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000065>
-02:17:37.719485 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000066>
-02:17:37.719662 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000064>
-02:17:37.720752 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08390) = 0 <0.000052>
-02:17:37.721162 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0853c) = 0 <0.000061>
-02:17:37.721340 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b0859c) = 0 <0.000062>
-02:17:37.721878 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b08440) = 0 <0.000063>
-02:17:37.722170 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b08420) = 0 <0.000077>
-02:17:37.722362 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b08430) = 0 <0.000063>
-02:17:37.722536 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b08424) = 0 <0.000053>
-02:17:37.723249 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000079>
-02:17:37.723455 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000067>
-02:17:37.723636 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000064>
-02:17:37.723810 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000063>
-02:17:37.723982 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000063>
-02:17:37.724156 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000076>
-02:17:37.724344 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000065>
-02:17:37.724519 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b083f0) = 0 <0.000064>
-02:17:37.724695 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000066>
-02:17:37.724871 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000066>
-02:17:37.725049 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000065>
-02:17:37.725225 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000066>
-02:17:37.725411 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000063>
-02:17:37.725584 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000065>
-02:17:37.725759 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000067>
-02:17:37.725938 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000065>
-02:17:37.730695 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b082f0) = 0 <0.000052>
-02:17:37.731267 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07d80) = 0 <0.000062>
-02:17:37.731698 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0818c) = 0 <0.000053>
-02:17:37.731862 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08380) = 0 <0.000062>
-02:17:37.747700 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000043>
-02:17:37.749127 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b073b0) = 0 <0.000078>
-02:17:37.750136 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b071e0) = 0 <0.000081>
-02:17:37.750635 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b075ec) = 0 <0.000051>
-02:17:37.750794 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b077e0) = 0 <0.000056>
-02:17:37.751301 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b073b0) = 0 <0.000049>
-02:17:37.751771 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b071e0) = 0 <0.000074>
-02:17:37.752306 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b075ec) = 0 <0.000052>
-02:17:37.752466 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b077e0) = 0 <0.000056>
-02:17:37.753002 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b073b0) = 0 <0.000065>
-02:17:37.753604 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b071e0) = 0 <0.000064>
-02:17:37.754028 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b075ec) = 0 <0.000051>
-02:17:37.754225 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b077e0) = 0 <0.000057>
-02:17:37.757363 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07bc0) = 0 <0.000063>
-02:17:37.759150 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07af0) = 0 <0.000073>
-02:17:37.759599 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07c9c) = 0 <0.000053>
-02:17:37.759763 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b07cfc) = 0 <0.000062>
-02:17:37.760089 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07d60) = 0 <0.000062>
-02:17:37.760493 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07ba0) = 0 <0.000063>
-02:17:37.760787 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b07b80) = 0 <0.000051>
-02:17:37.760947 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b07b90) = 0 <0.000053>
-02:17:37.761097 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b07b84) = 0 <0.000062>
-02:17:37.761684 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e40) = 0 <0.000075>
-02:17:37.761867 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e40) = 0 <0.000063>
-02:17:37.762046 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e40) = 0 <0.000066>
-02:17:37.762222 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e40) = 0 <0.000068>
-02:17:37.762415 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e40) = 0 <0.000066>
-02:17:37.762593 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e40) = 0 <0.000065>
-02:17:37.762770 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e40) = 0 <0.000061>
-02:17:37.762939 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e40) = 0 <0.000063>
-02:17:37.763112 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e40) = 0 <0.000062>
-02:17:37.763293 ioctl(6, SNDRV_PCM_IOCTL_HW_PARAMS, 0x7fff83b07e40) = 0 <0.000101>
-02:17:37.763579 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7fff83b07ca0) = 0 <0.000065>
-02:17:37.763754 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7fff83b07be0) = 0 <0.000064>
-02:17:37.763927 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7fff83b07be0) = 0 <0.000063>
-02:17:37.764261 ioctl(6, SNDRV_PCM_IOCTL_PREPARE, 0) = 0 <0.000082>
-02:17:37.764462 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7fff83b07db0) = 0 <0.000066>
-02:17:37.764635 ioctl(6, SNDRV_PCM_IOCTL_START, 0) = 0 <0.000111>
-02:17:37.764855 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b07d9c) = 0 <0.000062>
-02:17:37.765045 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07f80) = 0 <0.000054>
-02:17:37.765804 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07700) = 0 <0.000058>
-02:17:37.766621 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7fff83b07a68) = 0 <0.000042>
-02:17:37.766788 ioctl(5, SNDRV_TIMER_IOCTL_TREAD_OLD, 0x7fff83b07a6c) = 0 <0.000082>
-02:17:37.766993 ioctl(5, SNDRV_TIMER_IOCTL_SELECT, 0x7fff83b07a70) = 0 <0.000075>
-02:17:37.767289 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7fff83b07efc) = 0 <0.000084>
-02:17:37.770448 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000056>
-02:17:37.771140 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07150) = 0 <0.000075>
-02:17:37.771785 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b06f80) = 0 <0.000055>
-02:17:37.772257 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0738c) = 0 <0.000055>
-02:17:37.772439 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07580) = 0 <0.000061>
-02:17:37.773029 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07150) = 0 <0.000054>
-02:17:37.773624 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b06f80) = 0 <0.000065>
-02:17:37.774077 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0738c) = 0 <0.000056>
-02:17:37.774261 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07580) = 0 <0.000067>
-02:17:37.774875 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07150) = 0 <0.000059>
-02:17:37.775484 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b06f80) = 0 <0.000065>
-02:17:37.775943 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0738c) = 0 <0.000066>
-02:17:37.776130 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07580) = 0 <0.000055>
-02:17:37.777617 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07960) = 0 <0.000054>
-02:17:37.779410 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07890) = 0 <0.000065>
-02:17:37.779860 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07a3c) = 0 <0.000055>
-02:17:37.780033 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b07a9c) = 0 <0.000064>
-02:17:37.780529 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07b00) = 0 <0.000068>
-02:17:37.780983 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07940) = 0 <0.000057>
-02:17:37.781320 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b07920) = 0 <0.000053>
-02:17:37.781484 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b07930) = 0 <0.000054>
-02:17:37.781647 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b07924) = 0 <0.000054>
-02:17:37.782127 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07be0) = 0 <0.000080>
-02:17:37.782355 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07be0) = 0 <0.000068>
-02:17:37.782539 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07be0) = 0 <0.000072>
-02:17:37.782721 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07be0) = 0 <0.000070>
-02:17:37.782902 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07be0) = 0 <0.000071>
-02:17:37.783084 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07be0) = 0 <0.000082>
-02:17:37.783293 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07be0) = 0 <0.000070>
-02:17:37.783476 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07be0) = 0 <0.000069>
-02:17:37.783660 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07be0) = 0 <0.000075>
-02:17:37.783859 ioctl(6, SNDRV_PCM_IOCTL_HW_PARAMS, 0x7fff83b07be0) = 0 <0.000124>
-02:17:37.784113 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7fff83b07a40) = 0 <0.000113>
-02:17:37.784382 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7fff83b07980) = 0 <0.000066>
-02:17:37.784559 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7fff83b07980) = 0 <0.000065>
-02:17:37.784893 ioctl(6, SNDRV_PCM_IOCTL_PREPARE, 0) = 0 <0.000082>
-02:17:37.785089 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7fff83b07b50) = 0 <0.000082>
-02:17:37.785298 ioctl(6, SNDRV_PCM_IOCTL_START, 0) = 0 <0.000176>
-02:17:37.785625 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b07b3c) = 0 <0.000116>
-02:17:37.786547 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07d20) = 0 <0.000059>
-02:17:37.787187 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b074a0) = 0 <0.000066>
-02:17:37.787595 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7fff83b07808) = 0 <0.000042>
-02:17:37.787726 ioctl(5, SNDRV_TIMER_IOCTL_TREAD_OLD, 0x7fff83b0780c) = 0 <0.000053>
-02:17:37.787865 ioctl(5, SNDRV_TIMER_IOCTL_SELECT, 0x7fff83b07810) = 0 <0.000053>
-02:17:37.788018 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7fff83b07c9c) = 0 <0.000041>
-02:17:37.788410 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07db0) = 0 <0.000053>
-02:17:37.788889 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07840) = 0 <0.000053>
-02:17:37.789269 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07c4c) = 0 <0.000045>
-02:17:37.789408 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7fff83b07e90) = 0 <0.000053>
-02:17:37.792642 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000085>
-02:17:37.793132 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07f70) = 0 <0.000043>
-02:17:37.793542 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0811c) = 0 <0.000041>
-02:17:37.793694 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b0817c) = 0 <0.000047>
-02:17:37.794259 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b08020) = 0 <0.000060>
-02:17:37.794612 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b08000) = 0 <0.000113>
-02:17:37.794824 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b08010) = 0 <0.000094>
-02:17:37.795060 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b08004) = 0 <0.000042>
-02:17:37.795592 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08170) = 0 <0.000052>
-02:17:37.796081 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07c00) = 0 <0.000051>
-02:17:37.796479 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0800c) = 0 <0.000061>
-02:17:37.796652 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7fff83b08250) = 0 <0.000061>
-02:17:37.797290 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000063>
-02:17:37.797447 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000055>
-02:17:37.797594 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000055>
-02:17:37.797740 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000055>
-02:17:37.797877 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000055>
-02:17:37.798025 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b083f0) = 0 <0.000055>
-02:17:37.798173 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000055>
-02:17:37.798347 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000069>
-02:17:37.798529 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000064>
-02:17:37.798704 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000064>
-02:17:37.798879 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000067>
-02:17:37.799058 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000064>
+02:38:31.565023 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|0 /* V4L2_CID_??? */ => V4L2_CTRL_CLASS_CODEC+0x1, type=V4L2_CTRL_TYPE_CTRL_CLASS, name="Codec Controls", ...}) = 0 <0.000082>
+02:38:31.565776 ioctl(4, VIDIOC_SUBSCRIBE_EVENT, 0x599c88bfa8b0) = 0 <0.000079>
+02:38:31.565990 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|V4L2_CTRL_CLASS_CODEC+0x1 => V4L2_CID_MPEG_VIDEO_BITRATE, type=V4L2_CTRL_TYPE_INTEGER, name="Video Bitrate", ...}) = 0 <0.000062>
+02:38:31.566266 ioctl(4, VIDIOC_SUBSCRIBE_EVENT, 0x599c88bfa8b0) = 0 <0.000071>
+02:38:31.566510 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|V4L2_CID_MPEG_VIDEO_BITRATE => V4L2_CID_MPEG_VIDEO_H264_LEVEL, type=V4L2_CTRL_TYPE_MENU, name="H264 Level", ...}) = 0 <0.000074>
+02:38:31.566790 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000071>
+02:38:31.567066 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000067>
+02:38:31.567309 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000081>
+02:38:31.567514 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000063>
+02:38:31.567756 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.003906>
+02:38:31.571811 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000158>
+02:38:31.572189 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000082>
+02:38:31.572381 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000080>
+02:38:31.572571 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000080>
+02:38:31.572762 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000079>
+02:38:31.572961 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000076>
+02:38:31.573223 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000064>
+02:38:31.573453 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000074>
+02:38:31.573646 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000074>
+02:38:31.573840 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000073>
+02:38:31.574042 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000105>
+02:38:31.574410 ioctl(4, VIDIOC_SUBSCRIBE_EVENT, 0x599c88bfa8b0) = 0 <0.000074>
+02:38:31.574647 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|V4L2_CID_MPEG_VIDEO_H264_LEVEL => V4L2_CID_MPEG_VIDEO_H264_PROFILE, type=V4L2_CTRL_TYPE_MENU, name="H264 Profile", ...}) = 0 <0.000076>
+02:38:31.574904 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000076>
+02:38:31.575149 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = -1 EINVAL (Invalid argument) <0.000073>
+02:38:31.575386 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000071>
+02:38:31.575624 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = -1 EINVAL (Invalid argument) <0.000079>
+02:38:31.575828 ioctl(4, VIDIOC_QUERYMENU, 0x7ffd43fe4250) = 0 <0.000073>
+02:38:31.576033 ioctl(4, VIDIOC_SUBSCRIBE_EVENT, 0x599c88bfa8b0) = 0 <0.000088>
+02:38:31.576243 ioctl(4, VIDIOC_QUERYCTRL, {id=V4L2_CTRL_FLAG_NEXT_CTRL|V4L2_CID_MPEG_VIDEO_H264_PROFILE}) = -1 EINVAL (Invalid argument) <0.000064>
+02:38:31.576490 ioctl(4, VIDIOC_G_EXT_CTRLS, {ctrl_class=V4L2_CTRL_CLASS_CODEC, count=3, controls=[{id=V4L2_CID_MPEG_VIDEO_BITRATE, size=0, value=16000000, value64=8605934592}, {id=V4L2_CID_MPEG_VIDEO_H264_LEVEL, size=0, value=12, value64=98526549770252}, {id=V4L2_CID_MPEG_VIDEO_H264_PROFILE, size=0, value=2, value64=2}]}) = 0 <0.000073>
+02:38:31.577020 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3c70) = 0 <0.000097>
+02:38:31.588427 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe38d0) = 0 <0.001185>
+02:38:31.590056 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe3cdc) = 0 <0.000087>
+02:38:31.590260 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3fe0) = 0 <0.000082>
+02:38:31.590464 ioctl(5, SNDRV_CTL_IOCTL_PCM_NEXT_DEVICE, 0x7ffd43fe41dc) = 0 <0.000084>
+02:38:31.590666 ioctl(5, SNDRV_CTL_IOCTL_PCM_INFO, 0x7ffd43fe3eb0) = 0 <0.000085>
+02:38:31.590866 ioctl(5, SNDRV_CTL_IOCTL_PCM_INFO, 0x7ffd43fe3eb0) = 0 <0.000082>
+02:38:31.593654 ioctl(5, SNDRV_CTL_IOCTL_PCM_NEXT_DEVICE, 0x7ffd43fe41dc) = 0 <0.000118>
+02:38:31.593898 ioctl(5, SNDRV_CTL_IOCTL_PCM_INFO, 0x7ffd43fe3eb0) = 0 <0.000093>
+02:38:31.594115 ioctl(5, SNDRV_CTL_IOCTL_PCM_INFO, 0x7ffd43fe3eb0) = -1 ENOENT (No such file or directory) <0.000083>
+02:38:31.594324 ioctl(5, SNDRV_CTL_IOCTL_PCM_NEXT_DEVICE, 0x7ffd43fe41dc) = 0 <0.000083>
+02:38:31.608487 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3800) = 0 <0.000139>
+02:38:31.609069 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe39ac) = 0 <0.000082>
+02:38:31.611798 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe3a0c) = 0 <0.000161>
+02:38:31.612560 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe38b0) = 0 <0.000119>
+02:38:31.613018 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe3890) = 0 <0.000114>
+02:38:31.613245 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe38a0) = 0 <0.000071>
+02:38:31.613488 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe3894) = 0 <0.000074>
+02:38:31.614244 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000078>
+02:38:31.616685 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000113>
+02:38:31.616951 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000098>
+02:38:31.617188 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000122>
+02:38:31.617480 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000107>
+02:38:31.618159 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000052>
+02:38:31.618392 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000113>
+02:38:31.618669 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3860) = 0 <0.000113>
+02:38:31.618882 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000045>
+02:38:31.619035 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000057>
+02:38:31.619188 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000045>
+02:38:31.619327 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000051>
+02:38:31.621672 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000098>
+02:38:31.621906 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000105>
+02:38:31.622148 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000097>
+02:38:31.622366 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000085>
+02:38:31.623548 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3800) = 0 <0.000096>
+02:38:31.624006 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe39ac) = 0 <0.000122>
+02:38:31.624329 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe3a0c) = 0 <0.000079>
+02:38:31.624850 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe38b0) = 0 <0.000078>
+02:38:31.625160 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe3890) = 0 <0.000042>
+02:38:31.625339 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe38a0) = 0 <0.000050>
+02:38:31.625539 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe3894) = 0 <0.000069>
+02:38:31.626134 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000059>
+02:38:31.626345 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000086>
+02:38:31.626522 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000055>
+02:38:31.626728 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000085>
+02:38:31.626903 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000101>
+02:38:31.627099 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000088>
+02:38:31.627277 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3860) = 0 <0.000053>
+02:38:31.627474 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000053>
+02:38:31.627672 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000056>
+02:38:31.627890 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000044>
+02:38:31.628068 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000047>
+02:38:31.628309 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000082>
+02:38:31.628578 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000077>
+02:38:31.629421 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3800) = 0 <0.000077>
+02:38:31.629852 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe39ac) = 0 <0.000040>
+02:38:31.630040 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe3a0c) = 0 <0.000059>
+02:38:31.630544 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe38b0) = 0 <0.000043>
+02:38:31.630794 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe3890) = 0 <0.000041>
+02:38:31.630971 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe38a0) = 0 <0.000098>
+02:38:31.631167 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe3894) = 0 <0.000111>
+02:38:31.631923 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000090>
+02:38:31.632154 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000047>
+02:38:31.632293 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000054>
+02:38:31.632485 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000053>
+02:38:31.632701 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000045>
+02:38:31.632875 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000046>
+02:38:31.633061 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000090>
+02:38:31.633350 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3860) = 0 <0.000149>
+02:38:31.633740 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000136>
+02:38:31.634069 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000109>
+02:38:31.634408 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000105>
+02:38:31.637411 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000109>
+02:38:31.637658 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000108>
+02:38:31.637911 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000103>
+02:38:31.638136 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000086>
+02:38:31.638340 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000084>
+02:38:31.644771 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3760) = 0 <0.000083>
+02:38:31.645710 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe31f0) = 0 <0.000088>
+02:38:31.646446 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe35fc) = 0 <0.000078>
+02:38:31.646685 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe37f0) = 0 <0.000087>
+02:38:31.671033 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000127>
+02:38:31.672032 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2820) = 0 <0.000123>
+02:38:31.672896 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2650) = 0 <0.000096>
+02:38:31.673562 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe2a5c) = 0 <0.000081>
+02:38:31.673795 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2c50) = 0 <0.000083>
+02:38:31.674688 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2820) = 0 <0.000083>
+02:38:31.675567 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2650) = 0 <0.000083>
+02:38:31.676235 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe2a5c) = 0 <0.000084>
+02:38:31.676460 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2c50) = 0 <0.000059>
+02:38:31.677190 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2820) = 0 <0.000115>
+02:38:31.677893 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2650) = 0 <0.000125>
+02:38:31.678495 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe2a5c) = 0 <0.000108>
+02:38:31.678732 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2c50) = 0 <0.000117>
+02:38:31.683534 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3030) = 0 <0.000169>
+02:38:31.687599 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2f60) = 0 <0.000053>
+02:38:31.688025 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe310c) = 0 <0.000052>
+02:38:31.688246 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe316c) = 0 <0.000050>
+02:38:31.688550 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe31d0) = 0 <0.000101>
+02:38:31.689039 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3010) = 0 <0.000144>
+02:38:31.689472 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe2ff0) = 0 <0.000053>
+02:38:31.689675 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe3000) = 0 <0.000109>
+02:38:31.689907 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe2ff4) = 0 <0.000149>
+02:38:31.690654 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32b0) = 0 <0.000151>
+02:38:31.690948 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32b0) = 0 <0.000103>
+02:38:31.691355 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32b0) = 0 <0.000073>
+02:38:31.691637 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32b0) = 0 <0.000072>
+02:38:31.691944 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32b0) = 0 <0.000103>
+02:38:31.692364 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32b0) = 0 <0.000091>
+02:38:31.692609 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32b0) = 0 <0.000097>
+02:38:31.692963 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32b0) = 0 <0.000205>
+02:38:31.693353 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32b0) = 0 <0.000110>
+02:38:31.693783 ioctl(6, SNDRV_PCM_IOCTL_HW_PARAMS, 0x7ffd43fe32b0) = 0 <0.000135>
+02:38:31.694241 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7ffd43fe3110) = 0 <0.000149>
+02:38:31.694628 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7ffd43fe3050) = 0 <0.000144>
+02:38:31.695088 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7ffd43fe3050) = 0 <0.000144>
+02:38:31.695820 ioctl(6, SNDRV_PCM_IOCTL_PREPARE, 0) = 0 <0.000160>
+02:38:31.696284 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7ffd43fe3220) = 0 <0.000105>
+02:38:31.696613 ioctl(6, SNDRV_PCM_IOCTL_START, 0) = 0 <0.000150>
+02:38:31.697116 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe320c) = 0 <0.000229>
+02:38:31.697608 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe33f0) = 0 <0.000148>
+02:38:31.698826 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2b70) = 0 <0.000167>
+02:38:31.699737 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7ffd43fe2ed8) = 0 <0.000067>
+02:38:31.700073 ioctl(5, SNDRV_TIMER_IOCTL_TREAD_OLD, 0x7ffd43fe2edc) = 0 <0.000143>
+02:38:31.700489 ioctl(5, SNDRV_TIMER_IOCTL_SELECT, 0x7ffd43fe2ee0) = 0 <0.000146>
+02:38:31.700905 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7ffd43fe336c) = 0 <0.000185>
+02:38:31.705266 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000057>
+02:38:31.705984 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe25c0) = 0 <0.000127>
+02:38:31.707195 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe23f0) = 0 <0.000075>
+02:38:31.707816 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe27fc) = 0 <0.000148>
+02:38:31.708131 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe29f0) = 0 <0.000170>
+02:38:31.709101 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe25c0) = 0 <0.000164>
+02:38:31.710275 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe23f0) = 0 <0.000137>
+02:38:31.711092 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe27fc) = 0 <0.000163>
+02:38:31.711471 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe29f0) = 0 <0.000122>
+02:38:31.712148 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe25c0) = 0 <0.000169>
+02:38:31.713411 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe23f0) = 0 <0.000104>
+02:38:31.713983 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe27fc) = 0 <0.000065>
+02:38:31.714233 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe29f0) = 0 <0.000070>
+02:38:31.716216 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2dd0) = 0 <0.000084>
+02:38:31.718893 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2d00) = 0 <0.000087>
+02:38:31.719515 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe2eac) = 0 <0.000078>
+02:38:31.719735 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe2f0c) = 0 <0.000082>
+02:38:31.720166 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe2f70) = 0 <0.000083>
+02:38:31.720609 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe2db0) = 0 <0.000073>
+02:38:31.720962 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe2d90) = 0 <0.000093>
+02:38:31.721209 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe2da0) = 0 <0.000066>
+02:38:31.721404 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe2d94) = 0 <0.000063>
+02:38:31.721938 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3050) = 0 <0.000102>
+02:38:31.722188 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3050) = 0 <0.000084>
+02:38:31.722406 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3050) = 0 <0.000083>
+02:38:31.722701 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3050) = 0 <0.000053>
+02:38:31.722839 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3050) = 0 <0.000051>
+02:38:31.722974 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3050) = 0 <0.000055>
+02:38:31.723116 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3050) = 0 <0.000040>
+02:38:31.723267 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3050) = 0 <0.000043>
+02:38:31.723395 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3050) = 0 <0.000052>
+02:38:31.723522 ioctl(6, SNDRV_PCM_IOCTL_HW_PARAMS, 0x7ffd43fe3050) = 0 <0.000090>
+02:38:31.723698 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7ffd43fe2eb0) = 0 <0.000050>
+02:38:31.723831 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7ffd43fe2df0) = 0 <0.000040>
+02:38:31.723955 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7ffd43fe2df0) = 0 <0.000049>
+02:38:31.724210 ioctl(6, SNDRV_PCM_IOCTL_PREPARE, 0) = 0 <0.000061>
+02:38:31.724359 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7ffd43fe2fc0) = 0 <0.000040>
+02:38:31.724483 ioctl(6, SNDRV_PCM_IOCTL_START, 0) = 0 <0.000092>
+02:38:31.724661 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe2fac) = 0 <0.000040>
+02:38:31.725397 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3190) = 0 <0.000041>
+02:38:31.725791 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2910) = 0 <0.000043>
+02:38:31.726136 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7ffd43fe2c78) = 0 <0.000040>
+02:38:31.726263 ioctl(5, SNDRV_TIMER_IOCTL_TREAD_OLD, 0x7ffd43fe2c7c) = 0 <0.000039>
+02:38:31.726385 ioctl(5, SNDRV_TIMER_IOCTL_SELECT, 0x7ffd43fe2c80) = 0 <0.000053>
+02:38:31.726546 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7ffd43fe310c) = 0 <0.000068>
+02:38:31.727064 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3220) = 0 <0.000043>
+02:38:31.727699 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2cb0) = 0 <0.000043>
+02:38:31.728042 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe30bc) = 0 <0.000040>
+02:38:31.728186 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7ffd43fe3300) = 0 <0.000053>
+02:38:31.730911 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000058>
+02:38:31.731387 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe33e0) = 0 <0.000048>
+02:38:31.731725 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe358c) = 0 <0.000039>
+02:38:31.731849 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe35ec) = 0 <0.000042>
+02:38:31.732230 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3490) = 0 <0.000051>
+02:38:31.732457 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe3470) = 0 <0.000039>
+02:38:31.732579 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe3480) = 0 <0.000042>
+02:38:31.732725 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe3474) = 0 <0.000067>
+02:38:31.733513 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe35e0) = 0 <0.000069>
+02:38:31.734305 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3070) = 0 <0.000074>
+02:38:31.734856 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe347c) = 0 <0.000066>
+02:38:31.735075 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7ffd43fe36c0) = 0 <0.000105>
+02:38:31.735825 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000095>
+02:38:31.736072 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000127>
+02:38:31.736344 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000087>
+02:38:31.736569 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000089>
+02:38:31.736797 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000087>
+02:38:31.737032 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3860) = 0 <0.000088>
+02:38:31.737263 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000085>
+02:38:31.737493 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000112>
+02:38:31.737755 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000074>
+02:38:31.737957 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000091>
+02:38:31.738200 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000080>
+02:38:31.738397 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000083>
 ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.rear
 ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.center_lfe
 ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.side
-02:17:37.801930 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000134>
-02:17:37.802712 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000051>
-02:17:37.803262 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07cfc) = 0 <0.000052>
-02:17:37.803427 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b07d5c) = 0 <0.000051>
-02:17:37.803941 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07c00) = 0 <0.000064>
-02:17:37.804235 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b07be0) = 0 <0.000065>
-02:17:37.804423 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b07bf0) = 0 <0.000040>
-02:17:37.804571 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b07be4) = 0 <0.000063>
-02:17:37.805052 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07d50) = 0 <0.000063>
-02:17:37.805529 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07730) = 0 <0.000055>
-02:17:37.805962 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07b3c) = 0 <0.000054>
-02:17:37.806147 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e900) = 0 <0.000063>
-02:17:37.806339 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e900) = 0 <0.000064>
-02:17:37.806513 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e900) = 0 <0.000064>
-02:17:37.806687 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e900) = 0 <0.000061>
-02:17:37.806859 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e900) = 0 <0.000062>
-02:17:37.807030 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e900) = 0 <0.000063>
-02:17:37.807203 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e900) = 0 <0.000058>
-02:17:37.807385 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9f8e0) = -1 ENOENT (No such file or directory) <0.000063>
-02:17:37.807575 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9fa00) = -1 ENOENT (No such file or directory) <0.000065>
-02:17:37.807764 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9fb70) = -1 ENOENT (No such file or directory) <0.000063>
-02:17:37.807950 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9fc90) = -1 ENOENT (No such file or directory) <0.000062>
-02:17:37.808297 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08130) = 0 <0.000061>
-02:17:37.808855 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07bc0) = 0 <0.000065>
-02:17:37.809266 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07fcc) = 0 <0.000054>
-02:17:37.809417 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7fff83b08210) = 0 <0.000054>
-02:17:37.809990 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = -1 EINVAL (Invalid argument) <0.000054>
-02:17:37.810146 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = -1 EINVAL (Invalid argument) <0.000053>
-02:17:37.810314 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07910) = -1 EINVAL (Invalid argument) <0.000053>
-02:17:37.810483 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07910) = -1 EINVAL (Invalid argument) <0.000054>
-02:17:37.811578 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000054>
-02:17:37.811989 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07d90) = 0 <0.000054>
-02:17:37.812370 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07f3c) = 0 <0.000043>
-02:17:37.812516 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b07f9c) = 0 <0.000054>
-02:17:37.812971 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07e40) = 0 <0.000054>
-02:17:37.813219 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b07e20) = 0 <0.000055>
-02:17:37.813379 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b07e30) = 0 <0.000054>
-02:17:37.813518 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b07e24) = 0 <0.000053>
-02:17:37.813923 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07f90) = 0 <0.000054>
-02:17:37.814319 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07970) = 0 <0.000053>
-02:17:37.814686 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07d7c) = 0 <0.000054>
-02:17:37.814844 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e280) = 0 <0.000056>
-02:17:37.814994 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e280) = 0 <0.000054>
-02:17:37.815132 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e280) = 0 <0.000044>
-02:17:37.815269 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e280) = 0 <0.000055>
-02:17:37.815438 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e280) = 0 <0.000044>
-02:17:37.815580 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9e740) = -1 ENOENT (No such file or directory) <0.000053>
-02:17:37.815737 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa82910) = -1 ENOENT (No such file or directory) <0.000054>
-02:17:37.816012 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08170) = 0 <0.000053>
-02:17:37.816522 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07c00) = 0 <0.000053>
-02:17:37.816887 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0800c) = 0 <0.000045>
-02:17:37.817029 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7fff83b08250) = 0 <0.000053>
-02:17:37.817586 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000061>
-02:17:37.817743 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000057>
-02:17:37.817896 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000057>
-02:17:37.818046 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000058>
-02:17:37.818190 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000063>
-02:17:37.818346 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b083f0) = 0 <0.000055>
-02:17:37.818495 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000061>
-02:17:37.818664 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000064>
-02:17:37.818824 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000056>
-02:17:37.818977 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000057>
-02:17:37.819129 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000057>
-02:17:37.819279 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b086d0) = 0 <0.000056>
-02:17:37.820356 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000054>
-02:17:37.820837 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000035>
-02:17:37.821212 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07cfc) = 0 <0.000055>
-02:17:37.821363 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b07d5c) = 0 <0.000054>
-02:17:37.821806 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07c00) = 0 <0.000055>
-02:17:37.822056 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b07be0) = 0 <0.000054>
-02:17:37.822204 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b07bf0) = 0 <0.000049>
-02:17:37.822347 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b07be4) = 0 <0.000046>
-02:17:37.822744 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07d50) = 0 <0.000054>
-02:17:37.823131 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07730) = 0 <0.000055>
-02:17:37.823504 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07b3c) = 0 <0.000043>
-02:17:37.823648 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9bcc0) = 0 <0.000054>
-02:17:37.823795 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9bcc0) = 0 <0.000054>
-02:17:37.823933 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9bcc0) = 0 <0.000053>
-02:17:37.824079 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9bcc0) = 0 <0.000054>
-02:17:37.824218 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9bcc0) = 0 <0.000053>
-02:17:37.824375 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9bcc0) = 0 <0.000052>
-02:17:37.824521 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9bcc0) = 0 <0.000054>
-02:17:37.824692 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9c300) = -1 ENOENT (No such file or directory) <0.000055>
-02:17:37.824857 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9c300) = -1 ENOENT (No such file or directory) <0.000053>
-02:17:37.825024 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9c350) = -1 ENOENT (No such file or directory) <0.000056>
-02:17:37.825187 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9c350) = -1 ENOENT (No such file or directory) <0.000070>
-02:17:37.825492 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08130) = 0 <0.000054>
-02:17:37.825980 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07bc0) = 0 <0.000053>
-02:17:37.826353 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07fcc) = 0 <0.000046>
-02:17:37.826495 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7fff83b08210) = 0 <0.000054>
-02:17:37.827062 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000061>
-02:17:37.827223 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000058>
-02:17:37.827391 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000059>
-02:17:37.827546 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000058>
-02:17:37.827702 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000053>
-02:17:37.827852 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000057>
-02:17:37.828005 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000054>
-02:17:37.828155 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000056>
-02:17:37.828318 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000059>
-02:17:37.828474 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000057>
-02:17:37.828627 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000057>
-02:17:37.828780 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000058>
-02:17:37.828933 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000053>
-02:17:37.829081 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000056>
-02:17:37.829233 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000059>
-02:17:37.829398 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000056>
-02:17:37.829549 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000058>
-02:17:37.829704 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000056>
-02:17:37.829855 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000053>
-02:17:37.830003 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000056>
-02:17:37.830155 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000058>
-02:17:37.830320 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000054>
-02:17:37.830471 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000058>
-02:17:37.830625 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000057>
-02:17:37.830778 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000054>
-02:17:37.830926 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000056>
-02:17:37.831078 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000057>
-02:17:37.831231 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000056>
-02:17:37.831393 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000056>
-02:17:37.831546 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000057>
-02:17:37.831700 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000054>
-02:17:37.831850 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000056>
-02:17:37.832000 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000057>
-02:17:37.832153 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000054>
-02:17:37.832314 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000057>
-02:17:37.833425 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000055>
-02:17:37.833872 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000053>
-02:17:37.834247 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07cfc) = 0 <0.000053>
-02:17:37.834396 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b07d5c) = 0 <0.000052>
-02:17:37.834885 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07c00) = 0 <0.000066>
-02:17:37.835178 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b07be0) = 0 <0.000071>
-02:17:37.835355 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b07bf0) = 0 <0.000065>
-02:17:37.835533 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b07be4) = 0 <0.000070>
-02:17:37.835964 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07d50) = 0 <0.000054>
-02:17:37.836366 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07730) = 0 <0.000053>
-02:17:37.836736 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07b3c) = 0 <0.000054>
-02:17:37.836929 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9ab20) = 0 <0.000058>
-02:17:37.837091 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9ab20) = 0 <0.000056>
-02:17:37.837253 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9ab20) = 0 <0.000054>
-02:17:37.837402 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9ab20) = 0 <0.000054>
-02:17:37.837551 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9ab20) = 0 <0.000054>
-02:17:37.837700 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9ab20) = 0 <0.000054>
-02:17:37.837850 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9ab20) = 0 <0.000054>
-02:17:37.838002 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9b160) = -1 ENOENT (No such file or directory) <0.000056>
-02:17:37.838165 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9b160) = -1 ENOENT (No such file or directory) <0.000062>
-02:17:37.838334 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9b1b0) = -1 ENOENT (No such file or directory) <0.000053>
-02:17:37.838489 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9b1b0) = -1 ENOENT (No such file or directory) <0.000053>
-02:17:37.838772 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08130) = 0 <0.000054>
-02:17:37.839284 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07bc0) = 0 <0.000054>
-02:17:37.839652 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07fcc) = 0 <0.000045>
-02:17:37.839793 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7fff83b08210) = 0 <0.000054>
-02:17:37.840382 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000062>
-02:17:37.840544 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000057>
-02:17:37.840700 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000057>
-02:17:37.840853 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000057>
-02:17:37.841007 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000054>
-02:17:37.841158 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000065>
-02:17:37.841323 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000054>
-02:17:37.841474 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000057>
-02:17:37.841626 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000057>
-02:17:37.841780 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000054>
-02:17:37.841930 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000058>
-02:17:37.842084 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000058>
-02:17:37.842238 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000057>
-02:17:37.842399 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000057>
-02:17:37.842552 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000057>
-02:17:37.842704 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000054>
-02:17:37.842853 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000057>
-02:17:37.843005 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000059>
-02:17:37.843161 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000054>
-02:17:37.843321 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000057>
-02:17:37.843472 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000059>
-02:17:37.843627 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000054>
-02:17:37.843777 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08120) = 0 <0.000057>
-02:17:37.843929 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000057>
-02:17:37.844082 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000056>
-02:17:37.844234 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000058>
-02:17:37.844396 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000058>
-02:17:37.844550 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000054>
-02:17:37.844700 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000057>
-02:17:37.844852 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000057>
-02:17:37.845004 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000054>
-02:17:37.845154 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b078e0) = 0 <0.000057>
-02:17:37.845319 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000057>
-02:17:37.845473 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000054>
-02:17:37.845623 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07b70) = 0 <0.000057>
-02:17:37.846729 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000054>
-02:17:37.847172 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b90) = 0 <0.000060>
-02:17:37.847550 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07d3c) = 0 <0.000046>
-02:17:37.847690 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b07d9c) = 0 <0.000053>
-02:17:37.848143 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07c40) = 0 <0.000054>
-02:17:37.848400 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b07c20) = 0 <0.000045>
-02:17:37.848537 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b07c30) = 0 <0.000050>
-02:17:37.848670 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b07c24) = 0 <0.000050>
-02:17:37.849072 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b07d90) = 0 <0.000057>
-02:17:37.849475 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07770) = 0 <0.000054>
-02:17:37.849842 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07b7c) = 0 <0.000045>
-02:17:37.849987 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9acf0) = 0 <0.000055>
-02:17:37.850135 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9acf0) = 0 <0.000056>
-02:17:37.850303 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9acf0) = 0 <0.000056>
-02:17:37.850454 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9acf0) = 0 <0.000054>
-02:17:37.850601 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9acf0) = 0 <0.000052>
-02:17:37.850745 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9acf0) = 0 <0.000052>
-02:17:37.850888 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9acf0) = 0 <0.000052>
-02:17:37.851038 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9b800) = -1 ENOENT (No such file or directory) <0.000053>
-02:17:37.851196 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9b800) = -1 ENOENT (No such file or directory) <0.000062>
-02:17:37.851364 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9b850) = -1 ENOENT (No such file or directory) <0.000054>
-02:17:37.851525 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa9b850) = -1 ENOENT (No such file or directory) <0.000054>
-02:17:37.851817 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b08170) = 0 <0.000067>
-02:17:37.852347 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07c00) = 0 <0.000053>
-02:17:37.852718 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0800c) = 0 <0.000043>
-02:17:37.852857 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7fff83b08250) = 0 <0.000052>
-02:17:37.853416 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08400) = 0 <0.000061>
-02:17:37.853578 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08400) = 0 <0.000054>
-02:17:37.853728 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08400) = 0 <0.000058>
-02:17:37.853884 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07bc0) = 0 <0.000058>
-02:17:37.854039 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07bc0) = 0 <0.000054>
-02:17:37.854187 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e50) = 0 <0.000066>
-02:17:37.854350 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e50) = 0 <0.000054>
-02:17:37.854498 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07bc0) = 0 <0.000058>
-02:17:37.854654 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07bc0) = 0 <0.000054>
-02:17:37.854804 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07bc0) = 0 <0.000056>
-02:17:37.854955 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07bc0) = 0 <0.000053>
-02:17:37.855101 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e50) = 0 <0.000056>
-02:17:37.855258 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e50) = 0 <0.000055>
-02:17:37.855407 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08400) = 0 <0.000059>
-02:17:37.855562 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08400) = 0 <0.000056>
-02:17:37.855714 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07bc0) = 0 <0.000057>
-02:17:37.855866 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07bc0) = 0 <0.000053>
-02:17:37.856012 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e50) = 0 <0.000057>
-02:17:37.856165 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e50) = 0 <0.000065>
-02:17:37.856336 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07bc0) = 0 <0.000058>
-02:17:37.856490 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07bc0) = 0 <0.000054>
-02:17:37.856637 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e50) = 0 <0.000058>
-02:17:37.856792 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b07e50) = 0 <0.000056>
+02:38:31.741706 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000065>
+02:38:31.742546 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000066>
+02:38:31.743078 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe316c) = 0 <0.000100>
+02:38:31.743317 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe31cc) = 0 <0.000067>
+02:38:31.743856 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3070) = 0 <0.000079>
+02:38:31.744194 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe3050) = 0 <0.000186>
+02:38:31.744625 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe3060) = 0 <0.000147>
+02:38:31.744971 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe3054) = 0 <0.000208>
+02:38:31.745929 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe31c0) = 0 <0.000096>
+02:38:31.746640 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2ba0) = 0 <0.000082>
+02:38:31.747221 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe2fac) = 0 <0.000067>
+02:38:31.747457 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c368f0) = 0 <0.000085>
+02:38:31.747678 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c368f0) = 0 <0.000078>
+02:38:31.747887 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c368f0) = 0 <0.000100>
+02:38:31.748209 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c368f0) = 0 <0.000082>
+02:38:31.748432 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c368f0) = 0 <0.000085>
+02:38:31.748664 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c368f0) = 0 <0.000071>
+02:38:31.748879 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c368f0) = 0 <0.000074>
+02:38:31.749186 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c378d0) = -1 ENOENT (No such file or directory) <0.000065>
+02:38:31.749444 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c379f0) = -1 ENOENT (No such file or directory) <0.000076>
+02:38:31.749685 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c37b60) = -1 ENOENT (No such file or directory) <0.000080>
+02:38:31.749945 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c37c80) = -1 ENOENT (No such file or directory) <0.000091>
+02:38:31.750450 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe35a0) = 0 <0.000069>
+02:38:31.751232 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3030) = 0 <0.000085>
+02:38:31.751879 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe343c) = 0 <0.000095>
+02:38:31.752121 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7ffd43fe3680) = 0 <0.000089>
+02:38:31.752916 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = -1 EINVAL (Invalid argument) <0.000098>
+02:38:31.753164 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = -1 EINVAL (Invalid argument) <0.000103>
+02:38:31.753421 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d80) = -1 EINVAL (Invalid argument) <0.000084>
+02:38:31.753651 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d80) = -1 EINVAL (Invalid argument) <0.000082>
+02:38:31.755540 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000072>
+02:38:31.756322 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3200) = 0 <0.000078>
+02:38:31.756965 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe33ac) = 0 <0.000069>
+02:38:31.757183 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe340c) = 0 <0.000085>
+02:38:31.757878 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe32b0) = 0 <0.000118>
+02:38:31.758360 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe3290) = 0 <0.000066>
+02:38:31.758562 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe32a0) = 0 <0.000085>
+02:38:31.758794 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe3294) = 0 <0.000083>
+02:38:31.759463 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3400) = 0 <0.000086>
+02:38:31.760175 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2de0) = 0 <0.000088>
+02:38:31.760768 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe31ec) = 0 <0.000068>
+02:38:31.760991 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c36270) = 0 <0.000085>
+02:38:31.761248 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c36270) = 0 <0.000084>
+02:38:31.761470 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c36270) = 0 <0.000073>
+02:38:31.761679 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c36270) = 0 <0.000086>
+02:38:31.761904 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c36270) = 0 <0.000081>
+02:38:31.762165 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c36730) = -1 ENOENT (No such file or directory) <0.000086>
+02:38:31.762409 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c1a900) = -1 ENOENT (No such file or directory) <0.000086>
+02:38:31.762844 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe35e0) = 0 <0.000072>
+02:38:31.763663 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3070) = 0 <0.000069>
+02:38:31.764258 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe347c) = 0 <0.000069>
+02:38:31.764475 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7ffd43fe36c0) = 0 <0.000087>
+02:38:31.765304 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000103>
+02:38:31.765558 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000086>
+02:38:31.765794 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000084>
+02:38:31.766040 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000091>
+02:38:31.766287 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000086>
+02:38:31.766501 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3860) = 0 <0.000082>
+02:38:31.766732 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000084>
+02:38:31.766960 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000125>
+02:38:31.767248 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000091>
+02:38:31.767480 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000090>
+02:38:31.767708 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000085>
+02:38:31.767928 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3b40) = 0 <0.000102>
+02:38:31.769509 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000101>
+02:38:31.770663 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000183>
+02:38:31.771728 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe316c) = 0 <0.000129>
+02:38:31.772062 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe31cc) = 0 <0.000145>
+02:38:31.772804 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3070) = 0 <0.000068>
+02:38:31.773246 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe3050) = 0 <0.000079>
+02:38:31.773475 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe3060) = 0 <0.000081>
+02:38:31.773703 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe3054) = 0 <0.000073>
+02:38:31.774407 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe31c0) = 0 <0.000088>
+02:38:31.775233 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2ba0) = 0 <0.000076>
+02:38:31.775916 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe2fac) = 0 <0.000167>
+02:38:31.776299 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c33cb0) = 0 <0.000158>
+02:38:31.776678 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c33cb0) = 0 <0.000174>
+02:38:31.777007 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c33cb0) = 0 <0.000087>
+02:38:31.777244 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c33cb0) = 0 <0.000085>
+02:38:31.777472 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c33cb0) = 0 <0.000082>
+02:38:31.777691 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c33cb0) = 0 <0.000069>
+02:38:31.777900 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c33cb0) = 0 <0.000084>
+02:38:31.778268 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c342f0) = -1 ENOENT (No such file or directory) <0.000080>
+02:38:31.778522 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c342f0) = -1 ENOENT (No such file or directory) <0.000084>
+02:38:31.778785 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c34340) = -1 ENOENT (No such file or directory) <0.000077>
+02:38:31.779030 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c34340) = -1 ENOENT (No such file or directory) <0.000087>
+02:38:31.779548 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe35a0) = 0 <0.000105>
+02:38:31.780469 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3030) = 0 <0.000077>
+02:38:31.781034 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe343c) = 0 <0.000089>
+02:38:31.781295 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7ffd43fe3680) = 0 <0.000083>
+02:38:31.782373 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000110>
+02:38:31.782645 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000092>
+02:38:31.782896 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000102>
+02:38:31.783143 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000197>
+02:38:31.783571 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000086>
+02:38:31.783812 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000092>
+02:38:31.784066 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000111>
+02:38:31.784323 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000098>
+02:38:31.784570 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000098>
+02:38:31.784816 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000085>
+02:38:31.785058 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000118>
+02:38:31.785321 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000099>
+02:38:31.785569 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000085>
+02:38:31.785796 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000090>
+02:38:31.786039 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000121>
+02:38:31.786319 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000087>
+02:38:31.786551 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000090>
+02:38:31.786783 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000089>
+02:38:31.787027 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000137>
+02:38:31.787329 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000094>
+02:38:31.787568 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000093>
+02:38:31.787807 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000072>
+02:38:31.788031 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000113>
+02:38:31.788291 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000088>
+02:38:31.788521 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000084>
+02:38:31.788746 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000087>
+02:38:31.788973 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000091>
+02:38:31.789231 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000087>
+02:38:31.789460 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000088>
+02:38:31.789688 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000087>
+02:38:31.789918 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000093>
+02:38:31.790153 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000101>
+02:38:31.790414 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000096>
+02:38:31.790671 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000083>
+02:38:31.790938 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000109>
+02:38:31.793506 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000182>
+02:38:31.794856 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000202>
+02:38:31.795812 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe316c) = 0 <0.000119>
+02:38:31.796108 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe31cc) = 0 <0.000097>
+02:38:31.797017 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3070) = 0 <0.000131>
+02:38:31.797674 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe3050) = 0 <0.000157>
+02:38:31.798032 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe3060) = 0 <0.000182>
+02:38:31.798489 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe3054) = 0 <0.000074>
+02:38:31.799392 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe31c0) = 0 <0.000169>
+02:38:31.800252 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2ba0) = 0 <0.000084>
+02:38:31.800871 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe2fac) = 0 <0.000072>
+02:38:31.801134 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32b10) = 0 <0.000092>
+02:38:31.801414 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32b10) = 0 <0.000089>
+02:38:31.801649 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32b10) = 0 <0.000076>
+02:38:31.801870 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32b10) = 0 <0.000104>
+02:38:31.802130 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32b10) = 0 <0.000090>
+02:38:31.802403 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32b10) = 0 <0.000087>
+02:38:31.802637 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32b10) = 0 <0.000088>
+02:38:31.802883 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c33150) = -1 ENOENT (No such file or directory) <0.000102>
+02:38:31.803189 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c33150) = -1 ENOENT (No such file or directory) <0.000090>
+02:38:31.803445 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c331a0) = -1 ENOENT (No such file or directory) <0.000089>
+02:38:31.803697 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c331a0) = -1 ENOENT (No such file or directory) <0.000089>
+02:38:31.804224 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe35a0) = 0 <0.000120>
+02:38:31.805468 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3030) = 0 <0.000093>
+02:38:31.806207 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe343c) = 0 <0.000089>
+02:38:31.806483 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7ffd43fe3680) = 0 <0.000087>
+02:38:31.807542 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000112>
+02:38:31.807841 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000094>
+02:38:31.808177 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000134>
+02:38:31.808502 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000192>
+02:38:31.808880 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000112>
+02:38:31.809247 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000105>
+02:38:31.809542 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000097>
+02:38:31.809798 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000098>
+02:38:31.810080 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000140>
+02:38:31.810519 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000093>
+02:38:31.810888 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000164>
+02:38:31.811288 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000155>
+02:38:31.811678 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000143>
+02:38:31.812059 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000122>
+02:38:31.812366 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000139>
+02:38:31.812684 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000088>
+02:38:31.812941 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000134>
+02:38:31.813333 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000188>
+02:38:31.813795 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000197>
+02:38:31.814293 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000209>
+02:38:31.814793 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000123>
+02:38:31.815224 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000102>
+02:38:31.815471 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3590) = 0 <0.000121>
+02:38:31.815709 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000056>
+02:38:31.815854 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000051>
+02:38:31.816001 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000059>
+02:38:31.816170 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000059>
+02:38:31.816326 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000053>
+02:38:31.816468 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000054>
+02:38:31.816609 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000076>
+02:38:31.816816 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000084>
+02:38:31.817061 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2d50) = 0 <0.000113>
+02:38:31.817323 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000091>
+02:38:31.817561 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000077>
+02:38:31.817780 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe2fe0) = 0 <0.000089>
+02:38:31.820217 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000189>
+02:38:31.821495 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3000) = 0 <0.000182>
+02:38:31.822524 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe31ac) = 0 <0.000057>
+02:38:31.822803 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe320c) = 0 <0.000054>
+02:38:31.823288 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe30b0) = 0 <0.000053>
+02:38:31.823551 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe3090) = 0 <0.000048>
+02:38:31.823701 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe30a0) = 0 <0.000048>
+02:38:31.823849 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe3094) = 0 <0.000050>
+02:38:31.824505 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3200) = 0 <0.000055>
+02:38:31.824983 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2be0) = 0 <0.000056>
+02:38:31.825365 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe2fec) = 0 <0.000040>
+02:38:31.825499 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32ce0) = 0 <0.000051>
+02:38:31.825627 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32ce0) = 0 <0.000049>
+02:38:31.825759 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32ce0) = 0 <0.000042>
+02:38:31.825885 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32ce0) = 0 <0.000044>
+02:38:31.826017 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32ce0) = 0 <0.000052>
+02:38:31.826171 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32ce0) = 0 <0.000046>
+02:38:31.826301 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c32ce0) = 0 <0.000044>
+02:38:31.826434 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c337f0) = -1 ENOENT (No such file or directory) <0.000052>
+02:38:31.826582 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c337f0) = -1 ENOENT (No such file or directory) <0.000052>
+02:38:31.826727 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c33840) = -1 ENOENT (No such file or directory) <0.000052>
+02:38:31.826872 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c33840) = -1 ENOENT (No such file or directory) <0.000052>
+02:38:31.827361 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe35e0) = 0 <0.000076>
+02:38:31.828110 ioctl(7, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3070) = 0 <0.000052>
+02:38:31.828567 ioctl(7, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe347c) = 0 <0.000050>
+02:38:31.828753 ioctl(7, SNDRV_CTL_IOCTL_ELEM_INFO, 0x7ffd43fe36c0) = 0 <0.000062>
+02:38:31.829447 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3870) = 0 <0.000079>
+02:38:31.829641 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3870) = 0 <0.000054>
+02:38:31.829798 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3870) = 0 <0.000054>
+02:38:31.829980 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3030) = 0 <0.000063>
+02:38:31.830176 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3030) = 0 <0.000054>
+02:38:31.830333 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32c0) = 0 <0.000053>
+02:38:31.830490 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32c0) = 0 <0.000051>
+02:38:31.830645 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3030) = 0 <0.000059>
+02:38:31.830825 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3030) = 0 <0.000067>
+02:38:31.831087 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3030) = 0 <0.000154>
+02:38:31.831367 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3030) = 0 <0.000057>
+02:38:31.831623 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32c0) = 0 <0.000104>
+02:38:31.831950 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32c0) = 0 <0.000067>
+02:38:31.832110 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3870) = 0 <0.000067>
+02:38:31.832300 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3870) = 0 <0.000052>
+02:38:31.832440 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3030) = 0 <0.000055>
+02:38:31.832583 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3030) = 0 <0.000052>
+02:38:31.832720 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32c0) = 0 <0.000053>
+02:38:31.832859 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32c0) = 0 <0.000051>
+02:38:31.833006 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3030) = 0 <0.000082>
+02:38:31.833275 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe3030) = 0 <0.000067>
+02:38:31.833467 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32c0) = 0 <0.000078>
+02:38:31.833670 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe32c0) = 0 <0.000075>
 ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.surround71
-02:17:37.858459 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000044>
-02:17:37.858886 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07ff0) = 0 <0.000044>
-02:17:37.859248 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0819c) = 0 <0.000047>
-02:17:37.859391 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b081fc) = 0 <0.000054>
-02:17:37.859845 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b080a0) = 0 <0.000054>
-02:17:37.860094 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b08080) = 0 <0.000043>
-02:17:37.860230 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b08090) = 0 <0.000054>
-02:17:37.860388 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b08084) = 0 <0.000044>
-02:17:37.860805 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b081f0) = 0 <0.000058>
-02:17:37.861198 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07bd0) = 0 <0.000060>
-02:17:37.861571 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07fdc) = 0 <0.000045>
-02:17:37.861718 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa97f50) = -1 ENOENT (No such file or directory) <0.000053>
-02:17:37.861875 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa97ff0) = -1 ENOENT (No such file or directory) <0.000054>
+02:38:31.836012 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000082>
+02:38:31.836647 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3460) = 0 <0.000073>
+02:38:31.837183 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe360c) = 0 <0.000071>
+02:38:31.837405 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe366c) = 0 <0.000095>
+02:38:31.838228 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3510) = 0 <0.000097>
+02:38:31.838753 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe34f0) = 0 <0.000160>
+02:38:31.839176 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe3500) = 0 <0.000145>
+02:38:31.839468 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe34f4) = 0 <0.000079>
+02:38:31.840189 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3660) = 0 <0.000079>
+02:38:31.840839 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3040) = 0 <0.000072>
+02:38:31.841479 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe344c) = 0 <0.000075>
+02:38:31.841728 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c2ff40) = -1 ENOENT (No such file or directory) <0.000089>
+02:38:31.842026 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c2ffe0) = -1 ENOENT (No such file or directory) <0.000194>
 ALSA lib setup.c:547:(add_elem) Cannot obtain info for CTL elem (MIXER,'IEC958 Playback Default',0,0,0): No such file or directory
-02:17:37.863317 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000044>
-02:17:37.863739 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07ff0) = 0 <0.000054>
-02:17:37.864107 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0819c) = 0 <0.000045>
-02:17:37.864256 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b081fc) = 0 <0.000046>
-02:17:37.864702 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b080a0) = 0 <0.000054>
-02:17:37.864950 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b08080) = 0 <0.000046>
-02:17:37.865089 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b08090) = 0 <0.000046>
-02:17:37.865227 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b08084) = 0 <0.000047>
-02:17:37.865639 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b081f0) = 0 <0.000054>
-02:17:37.866025 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07bd0) = 0 <0.000053>
-02:17:37.866409 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07fdc) = 0 <0.000043>
-02:17:37.866553 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa98010) = -1 ENOENT (No such file or directory) <0.000056>
-02:17:37.866717 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa98010) = -1 ENOENT (No such file or directory) <0.000045>
+02:38:31.845037 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000088>
+02:38:31.845833 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3460) = 0 <0.000090>
+02:38:31.846638 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe360c) = 0 <0.000074>
+02:38:31.846865 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe366c) = 0 <0.000072>
+02:38:31.847593 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3510) = 0 <0.000074>
+02:38:31.847986 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe34f0) = 0 <0.000091>
+02:38:31.848356 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe3500) = 0 <0.000096>
+02:38:31.848645 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe34f4) = 0 <0.000128>
+02:38:31.849460 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3660) = 0 <0.000073>
+02:38:31.849992 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3040) = 0 <0.000078>
+02:38:31.850530 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe344c) = 0 <0.000066>
+02:38:31.850762 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c30000) = -1 ENOENT (No such file or directory) <0.000069>
+02:38:31.851010 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c30000) = -1 ENOENT (No such file or directory) <0.000090>
 ALSA lib setup.c:547:(add_elem) Cannot obtain info for CTL elem (MIXER,'IEC958 Playback Default',0,0,0): No such file or directory
-02:17:37.868189 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07b50) = 0 <0.000064>
-02:17:37.868638 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07ff0) = 0 <0.000043>
-02:17:37.868993 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0819c) = 0 <0.000046>
-02:17:37.869133 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b081fc) = 0 <0.000052>
-02:17:37.869605 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b080a0) = 0 <0.000054>
-02:17:37.869976 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b08080) = 0 <0.000136>
-02:17:37.870265 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b08090) = 0 <0.000054>
-02:17:37.870411 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b08084) = 0 <0.000042>
-02:17:37.870806 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b081f0) = 0 <0.000054>
-02:17:37.871182 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07bd0) = 0 <0.000056>
-02:17:37.871544 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07fdc) = 0 <0.000051>
-02:17:37.871692 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa98230) = -1 ENOENT (No such file or directory) <0.000053>
-02:17:37.871848 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x64ffbaa98230) = -1 ENOENT (No such file or directory) <0.000051>
+02:38:31.852978 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2fc0) = 0 <0.000084>
+02:38:31.853699 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3460) = 0 <0.000068>
+02:38:31.854328 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe360c) = 0 <0.000072>
+02:38:31.854544 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe366c) = 0 <0.000069>
+02:38:31.855253 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3510) = 0 <0.000084>
+02:38:31.855713 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe34f0) = 0 <0.000121>
+02:38:31.855986 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe3500) = 0 <0.000075>
+02:38:31.856213 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe34f4) = 0 <0.000074>
+02:38:31.856813 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3660) = 0 <0.000067>
+02:38:31.857374 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3040) = 0 <0.000074>
+02:38:31.857857 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe344c) = 0 <0.000056>
+02:38:31.858059 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c30220) = -1 ENOENT (No such file or directory) <0.000090>
+02:38:31.858290 ioctl(5, SNDRV_CTL_IOCTL_ELEM_INFO, 0x599c88c30220) = -1 ENOENT (No such file or directory) <0.000073>
 ALSA lib setup.c:547:(add_elem) Cannot obtain info for CTL elem (MIXER,'IEC958 Playback Default',0,0,0): No such file or directory
 ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.hdmi
 ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.hdmi
@@ -679,108 +736,133 @@ ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.modem
 ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.modem
 ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.phoneline
 ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.phoneline
-02:17:37.884384 ioctl(2, TCGETS, {c_iflag=ICRNL|IXON|IUTF8, c_oflag=NL0|CR0|TAB0|BS0|VT0|FF0|OPOST|ONLCR, c_cflag=B38400|CS8|CREAD, c_lflag=ISIG|ICANON|ECHO|ECHOE|ECHOK|IEXTEN|ECHOCTL|ECHOKE, ...}) = 0 <0.000049>
-strace: Process 7551 attached
-strace: Process 7552 attached
-strace: Process 7553 attached
-[pid  7553] 02:17:37.925516 +++ exited with 0 +++
-[pid  7552] 02:17:37.926619 +++ exited with 0 +++
-[pid  7551] 02:17:37.928676 +++ exited with 0 +++
-strace: Process 7557 attached
-strace: Process 7558 attached
-strace: Process 7559 attached
-[pid  7559] 02:17:37.963118 +++ exited with 0 +++
-[pid  7558] 02:17:37.963549 +++ exited with 0 +++
-[pid  7557] 02:17:37.965376 +++ exited with 0 +++
-02:17:37.966730 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b079b0) = 0 <0.000030>
-02:17:37.966929 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b077e0) = 0 <0.000014>
-02:17:37.967065 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07bec) = 0 <0.000014>
-02:17:37.967173 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07de0) = 0 <0.000014>
-02:17:37.967479 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b079b0) = 0 <0.000014>
-02:17:37.967656 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b077e0) = 0 <0.000014>
-02:17:37.967789 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07bec) = 0 <0.000013>
-02:17:37.967854 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07de0) = 0 <0.000014>
-02:17:37.968041 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b079b0) = 0 <0.000095>
-02:17:37.968325 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b077e0) = 0 <0.000028>
-02:17:37.968466 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b07bec) = 0 <0.000014>
-02:17:37.968551 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07de0) = 0 <0.000017>
-02:17:37.969307 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7fff83b0828c) = 0 <0.000027>
-02:17:37.969384 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7fff83b082ec) = 0 <0.000014>
-02:17:37.969494 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b08350) = 0 <0.000017>
-02:17:37.969612 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b08190) = 0 <0.000015>
-02:17:37.969699 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b08170) = 0 <0.000014>
-02:17:37.969775 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7fff83b08180) = 0 <0.000024>
-02:17:37.969843 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7fff83b08174) = 0 <0.000024>
-02:17:37.970030 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08430) = 0 <0.000038>
-02:17:37.970116 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08430) = 0 <0.000016>
-02:17:37.970198 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08430) = 0 <0.000033>
-02:17:37.970347 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08430) = 0 <0.000029>
-02:17:37.970423 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08430) = 0 <0.000019>
-02:17:37.970505 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08430) = 0 <0.000029>
-02:17:37.970586 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08430) = 0 <0.000026>
-02:17:37.970667 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08430) = 0 <0.000027>
-02:17:37.970747 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7fff83b08430) = 0 <0.000026>
-02:17:37.970824 ioctl(6, SNDRV_PCM_IOCTL_HW_PARAMS, 0x7fff83b08430) = 0 <0.000075>
-02:17:37.970962 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7fff83b08290) = 0 <0.000014>
-02:17:37.971041 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7fff83b081d0) = 0 <0.000029>
-02:17:37.971135 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7fff83b081d0) = 0 <0.000025>
-02:17:37.971267 ioctl(6, SNDRV_PCM_IOCTL_PREPARE, 0) = 0 <0.000040>
-02:17:37.971358 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7fff83b083a0) = 0 <0.000014>
-02:17:37.971429 ioctl(6, SNDRV_PCM_IOCTL_START, 0) = 0 <0.000078>
-02:17:37.971570 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7fff83b0838c) = 0 <0.000016>
-02:17:37.971847 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7fff83b08570) = 0 <0.000016>
-02:17:37.972050 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7fff83b07cf0) = 0 <0.000029>
-02:17:37.972234 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7fff83b08058) = 0 <0.000013>
-02:17:37.972317 ioctl(5, SNDRV_TIMER_IOCTL_TREAD_OLD, 0x7fff83b0805c) = 0 <0.000025>
-02:17:37.972387 ioctl(5, SNDRV_TIMER_IOCTL_SELECT, 0x7fff83b08060) = 0 <0.000017>
-02:17:37.972458 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7fff83b084ec) = 0 <0.000026>
-strace: Process 7560 attached
-strace: Process 7561 attached
-strace: Process 7562 attached
-[pid  7562] 02:17:37.994007 +++ exited with 0 +++
-[pid  7561] 02:17:37.995850 +++ exited with 0 +++
-[pid  7560] 02:17:37.997767 +++ exited with 0 +++
-strace: Process 7563 attached
-strace: Process 7564 attached
-strace: Process 7565 attached
-[pid  7565] 02:17:38.017215 +++ exited with 0 +++
-[pid  7564] 02:17:38.020730 +++ exited with 0 +++
-[pid  7563] 02:17:38.022236 +++ exited with 0 +++
-strace: Process 7566 attached
+02:38:31.869309 ioctl(2, TCGETS, {c_iflag=ICRNL|IXON|IUTF8, c_oflag=NL0|CR0|TAB0|BS0|VT0|FF0|OPOST|ONLCR, c_cflag=B38400|CS8|CREAD, c_lflag=ISIG|ICANON|ECHO|ECHOE|ECHOK|IEXTEN|ECHOCTL|ECHOKE, ...}) = 0 <0.000058>
+strace: Process 8148 attached
+strace: Process 8149 attached
+strace: Process 8150 attached
+[pid  8150] 02:38:31.930490 +++ exited with 0 +++
+[pid  8149] 02:38:31.931143 +++ exited with 0 +++
+[pid  8148] 02:38:31.933747 +++ exited with 0 +++
+strace: Process 8154 attached
+strace: Process 8155 attached
+strace: Process 8156 attached
+[pid  8156] 02:38:31.963452 +++ exited with 0 +++
+[pid  8155] 02:38:31.969372 +++ exited with 0 +++
+[pid  8154] 02:38:31.973361 +++ exited with 0 +++
+02:38:31.979051 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2e20) = 0 <0.000054>
+02:38:31.979423 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2c50) = 0 <0.000026>
+02:38:31.979664 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe305c) = 0 <0.000031>
+02:38:31.979787 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3250) = 0 <0.000025>
+02:38:31.980163 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2e20) = 0 <0.000026>
+02:38:31.980487 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2c50) = 0 <0.000026>
+02:38:31.980727 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe305c) = 0 <0.000024>
+02:38:31.980849 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3250) = 0 <0.000032>
+02:38:31.981307 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2e20) = 0 <0.000027>
+02:38:31.981637 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe2c50) = 0 <0.000025>
+02:38:31.981920 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe305c) = 0 <0.000024>
+02:38:31.982061 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3250) = 0 <0.000026>
+02:38:31.984155 ioctl(5, SNDRV_CTL_IOCTL_PVERSION, 0x7ffd43fe36fc) = 0 <0.000026>
+02:38:31.984288 ioctl(5, SNDRV_CTL_IOCTL_PCM_PREFER_SUBDEVICE, 0x7ffd43fe375c) = 0 <0.000025>
+02:38:31.984482 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe37c0) = 0 <0.000029>
+02:38:31.984685 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe3600) = 0 <0.000028>
+02:38:31.984853 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe35e0) = 0 <0.000031>
+02:38:31.984964 ioctl(6, SNDRV_PCM_IOCTL_USER_PVERSION, 0x7ffd43fe35f0) = 0 <0.000064>
+02:38:31.985110 ioctl(6, SNDRV_PCM_IOCTL_TTSTAMP, 0x7ffd43fe35e4) = 0 <0.000034>
+02:38:31.985411 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe38a0) = 0 <0.000064>
+02:38:31.985559 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe38a0) = 0 <0.000026>
+02:38:31.985700 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe38a0) = 0 <0.000051>
+02:38:31.985831 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe38a0) = 0 <0.000032>
+02:38:31.985957 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe38a0) = 0 <0.000062>
+02:38:31.986111 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe38a0) = 0 <0.000034>
+02:38:31.986290 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe38a0) = 0 <0.000029>
+02:38:31.986420 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe38a0) = 0 <0.000046>
+02:38:31.986545 ioctl(6, SNDRV_PCM_IOCTL_HW_REFINE, 0x7ffd43fe38a0) = 0 <0.000026>
+02:38:31.986667 ioctl(6, SNDRV_PCM_IOCTL_HW_PARAMS, 0x7ffd43fe38a0) = 0 <0.000107>
+02:38:31.986867 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7ffd43fe3700) = 0 <0.000025>
+02:38:31.986976 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7ffd43fe3640) = 0 <0.000037>
+02:38:31.987115 ioctl(6, SNDRV_PCM_IOCTL_CHANNEL_INFO, 0x7ffd43fe3640) = 0 <0.000029>
+02:38:31.987286 ioctl(6, SNDRV_PCM_IOCTL_PREPARE, 0) = 0 <0.000048>
+02:38:31.987417 ioctl(6, SNDRV_PCM_IOCTL_SW_PARAMS, 0x7ffd43fe3810) = 0 <0.000071>
+02:38:31.987568 ioctl(6, SNDRV_PCM_IOCTL_START, 0) = 0 <0.000091>
+02:38:31.987755 ioctl(6, SNDRV_PCM_IOCTL_PVERSION, 0x7ffd43fe37fc) = 0 <0.000023>
+02:38:31.988320 ioctl(6, SNDRV_PCM_IOCTL_INFO, 0x7ffd43fe39e0) = 0 <0.000029>
+02:38:31.988630 ioctl(5, SNDRV_CTL_IOCTL_CARD_INFO, 0x7ffd43fe3160) = 0 <0.000042>
+02:38:31.988857 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7ffd43fe34c8) = 0 <0.000042>
+02:38:31.989004 ioctl(5, SNDRV_TIMER_IOCTL_TREAD_OLD, 0x7ffd43fe34cc) = 0 <0.000049>
+02:38:31.989218 ioctl(5, SNDRV_TIMER_IOCTL_SELECT, 0x7ffd43fe34d0) = 0 <0.000028>
+02:38:31.989354 ioctl(5, SNDRV_TIMER_IOCTL_PVERSION, 0x7ffd43fe395c) = 0 <0.000022>
+strace: Process 8157 attached
+strace: Process 8158 attached
+strace: Process 8159 attached
+[pid  8159] 02:38:32.030678 +++ exited with 0 +++
+[pid  8158] 02:38:32.032749 +++ exited with 0 +++
+[pid  8157] 02:38:32.035742 +++ exited with 0 +++
+strace: Process 8160 attached
+strace: Process 8161 attached
+strace: Process 8162 attached
+[pid  8162] 02:38:32.102867 +++ exited with 0 +++
+[pid  8161] 02:38:32.104962 +++ exited with 0 +++
+[pid  8160] 02:38:32.107795 +++ exited with 0 +++
+strace: Process 8163 attached
 Cannot connect to server socket err = No such file or directory
 Cannot connect to server request channel
 jack server is not running or cannot be started
-[pid  7566] 02:17:38.041709 +++ exited with 0 +++
+[pid  8163] 02:38:32.132436 +++ exited with 0 +++
 JackShmReadWritePtr::~JackShmReadWritePtr - Init not done for -1, skipping unlock
 JackShmReadWritePtr::~JackShmReadWritePtr - Init not done for -1, skipping unlock
-02:17:38.042306 ioctl(4, VIDIOC_TRY_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_ANY, bytesperline=0, sizeimage=0, colorspace=V4L2_COLORSPACE_DEFAULT}} => {fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_NONE, bytesperline=0, sizeimage=8388608, colorspace=V4L2_COLORSPACE_REC709}}) = 0 <0.000023>
-02:17:38.042467 ioctl(4, VIDIOC_S_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_NONE, bytesperline=0, sizeimage=8388608, colorspace=V4L2_COLORSPACE_REC709}} => {fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_NONE, bytesperline=0, sizeimage=8388608, colorspace=V4L2_COLORSPACE_REC709}}) = 0 <0.000018>
-02:17:38.045747 ioctl(4, VIDIOC_REQBUFS, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, memory=V4L2_MEMORY_MMAP, count=4 => 4}) = 0 <0.004649>
-02:17:38.050581 ioctl(4, VIDIOC_QUERYBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=0, memory=V4L2_MEMORY_MMAP, m.offset=0, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000024>
-02:17:38.050690 ioctl(4, VIDIOC_QUERYBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=1, memory=V4L2_MEMORY_MMAP, m.offset=0x8000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000021>
-02:17:38.050780 ioctl(4, VIDIOC_QUERYBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=2, memory=V4L2_MEMORY_MMAP, m.offset=0x10000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000016>
-02:17:38.050864 ioctl(4, VIDIOC_QUERYBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=3, memory=V4L2_MEMORY_MMAP, m.offset=0x18000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000017>
-02:17:38.052441 ioctl(4, VIDIOC_QBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=0, memory=V4L2_MEMORY_MMAP, m.offset=0, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_MAPPED|V4L2_BUF_FLAG_QUEUED|V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000020>
-02:17:38.052547 ioctl(4, VIDIOC_QBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=1, memory=V4L2_MEMORY_MMAP, m.offset=0x8000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_MAPPED|V4L2_BUF_FLAG_QUEUED|V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000021>
-02:17:38.052652 ioctl(4, VIDIOC_QBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=2, memory=V4L2_MEMORY_MMAP, m.offset=0x10000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_MAPPED|V4L2_BUF_FLAG_QUEUED|V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000030>
-02:17:38.052755 ioctl(4, VIDIOC_QBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=3, memory=V4L2_MEMORY_MMAP, m.offset=0x18000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_MAPPED|V4L2_BUF_FLAG_QUEUED|V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000029>
-02:17:38.052866 ioctl(4, VIDIOC_G_PARM, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 ENOTTY (Inappropriate ioctl for device) <0.000029>
+02:38:32.133829 ioctl(4, VIDIOC_TRY_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_ANY, bytesperline=0, sizeimage=0, colorspace=V4L2_COLORSPACE_DEFAULT}} => {fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_NONE, bytesperline=0, sizeimage=8388608, colorspace=V4L2_COLORSPACE_REC709}}) = 0 <0.000038>
+02:38:32.134274 ioctl(4, VIDIOC_S_FMT, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_NONE, bytesperline=0, sizeimage=8388608, colorspace=V4L2_COLORSPACE_REC709}} => {fmt.pix={width=1920, height=1080, pixelformat=v4l2_fourcc('H', '2', '6', '4') /* V4L2_PIX_FMT_H264 */, field=V4L2_FIELD_NONE, bytesperline=0, sizeimage=8388608, colorspace=V4L2_COLORSPACE_REC709}}) = 0 <0.000061>
+02:38:32.140051 ioctl(4, VIDIOC_REQBUFS, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, memory=V4L2_MEMORY_MMAP, count=4 => 4}) = 0 <0.005083>
+02:38:32.145690 ioctl(4, VIDIOC_QUERYBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=0, memory=V4L2_MEMORY_MMAP, m.offset=0, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000164>
+02:38:32.146231 ioctl(4, VIDIOC_QUERYBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=1, memory=V4L2_MEMORY_MMAP, m.offset=0x8000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000196>
+02:38:32.146929 ioctl(4, VIDIOC_QUERYBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=2, memory=V4L2_MEMORY_MMAP, m.offset=0x10000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000109>
+02:38:32.147569 ioctl(4, VIDIOC_QUERYBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=3, memory=V4L2_MEMORY_MMAP, m.offset=0x18000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000170>
+02:38:32.151206 ioctl(4, VIDIOC_QBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=0, memory=V4L2_MEMORY_MMAP, m.offset=0, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_MAPPED|V4L2_BUF_FLAG_QUEUED|V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000209>
+02:38:32.151655 ioctl(4, VIDIOC_QBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=1, memory=V4L2_MEMORY_MMAP, m.offset=0x8000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_MAPPED|V4L2_BUF_FLAG_QUEUED|V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000072>
+02:38:32.151940 ioctl(4, VIDIOC_QBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=2, memory=V4L2_MEMORY_MMAP, m.offset=0x10000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_MAPPED|V4L2_BUF_FLAG_QUEUED|V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000168>
+02:38:32.152519 ioctl(4, VIDIOC_QBUF, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE, index=3, memory=V4L2_MEMORY_MMAP, m.offset=0x18000, length=8388608, bytesused=0, flags=V4L2_BUF_FLAG_MAPPED|V4L2_BUF_FLAG_QUEUED|V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC|V4L2_BUF_FLAG_TSTAMP_SRC_EOF, ...}) = 0 <0.000116>
+02:38:32.152956 ioctl(4, VIDIOC_G_PARM, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 ENOTTY (Inappropriate ioctl for device) <0.000187>
 V4L2_CORE: (VIDIOC_G_PARM) error: Inappropriate ioctl for device
 V4L2_CORE: Unable to set 1/25 fps
-02:17:38.053049 ioctl(4, VIDIOC_G_PARM, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 ENOTTY (Inappropriate ioctl for device) <0.000029>
+02:38:32.153916 ioctl(4, VIDIOC_G_PARM, {type=V4L2_BUF_TYPE_VIDEO_CAPTURE}) = -1 ENOTTY (Inappropriate ioctl for device) <0.000085>
 V4L2_CORE: (VIDIOC_G_PARM) error: Inappropriate ioctl for device
-strace: Process 7567 attached
-strace: Process 7568 attached
-strace: Process 7569 attached
-strace: Process 7570 attached
-strace: Process 7571 attached
-strace: Process 7572 attached
-strace: Process 7573 attached
-strace: Process 7574 attached
-strace: Process 7575 attached
-strace: Process 7576 attached
-strace: Process 7577 attached
-[pid  7567] 02:17:39.238411 ioctl(4, VIDIOC_STREAMON, [V4L2_BUF_TYPE_VIDEO_CAPTURE]) = -1 ETIMEDOUT (Connection timed out) <45.203785>
+strace: Process 8164 attached
+strace: Process 8165 attached
+strace: Process 8166 attached
+strace: Process 8167 attached
+strace: Process 8168 attached
+strace: Process 8169 attached
+strace: Process 8170 attached
+strace: Process 8171 attached
+strace: Process 8172 attached
+strace: Process 8173 attached
+strace: Process 8174 attached
+[pid  8164] 02:38:33.550451 ioctl(4, VIDIOC_STREAMON, [V4L2_BUF_TYPE_VIDEO_CAPTURE]) = -1 ETIMEDOUT (Connection timed out) <45.199520>
 libv4l2: error turning on stream: Connection timed out
-[pid  7567] 02:18:24.442407 ioctl(4, VIDIOC_STREAMON, [V4L2_BUF_TYPE_VIDEO_CAPTURE]
-
+[pid  8164] 02:39:18.752058 ioctl(4, VIDIOC_STREAMON, [V4L2_BUF_TYPE_VIDEO_CAPTURE]) = -1 ETIMEDOUT (Connection timed out) <45.117050>
+libv4l2: error turning on stream: Connection timed out
+[pid  8164] 02:40:03.869486 ioctl(4, VIDIOC_STREAMON, [V4L2_BUF_TYPE_VIDEO_CAPTURE]) = -1 ETIMEDOUT (Connection timed out) <45.085665>
+libv4l2: error turning on stream: Connection timed out
+[pid  8164] 02:40:48.955548 ioctl(4, VIDIOC_STREAMON, [V4L2_BUF_TYPE_VIDEO_CAPTURE]) = -1 ETIMEDOUT (Connection timed out) <45.110822>
+libv4l2: error turning on stream: Connection timed out
+[pid  8164] 02:41:34.066683 ioctl(4, VIDIOC_STREAMON, [V4L2_BUF_TYPE_VIDEO_CAPTURE]) = -1 ETIMEDOUT (Connection timed out) <45.143001>
+libv4l2: error turning on stream: Connection timed out
+V4L2_CORE: ioctl (1074026002) retried 4 times - giving up: Connection timed out)
+V4L2_CORE: (VIDIOC_STREAMON) Unable to start stream: Connection timed out 
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+GUVCVIEW: capture_cond wait timedout (5 sec)
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
+V4L2_CORE: (get_v4l2_frame) video stream must be started first
