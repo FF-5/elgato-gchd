@@ -594,7 +594,7 @@ static int gchd_drain_stream(struct gchd *d, unsigned int count)
 /* completeStateChange(..., forceStreamEmpty=true), including its 50-read
  * drain before each completion-register poll. */
 static int gchd_complete_state_change_draining(struct gchd *d,
-                                                u16 current, u16 next)
+                                                u16 current_state, u16 next_state)
 {
  u16 state = 0, completion = 0, dummy;
  int r, tries;
@@ -605,8 +605,8 @@ static int gchd_complete_state_change_draining(struct gchd *d,
    r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
    if (r) return r;
    state &= 0x1f;
-   if (state != current && state != next)
-    return first ? -EIO : -EIO;
+   if (first && state != current_state && state != next_state)
+    return -EIO;
    first = false;
 
    r = gchd_drain_stream(d, 50);
@@ -630,8 +630,8 @@ static int gchd_complete_state_change_draining(struct gchd *d,
   if (r) return r;
   r = gchd_reg_write16(d, 0x01b0, 0x0000);
   if (r) return r;
-  if (state == next) return 0;
-  if (state != current) return -EIO;
+  if (state == next_state) return 0;
+  if (state != current_state) return -EIO;
  }
 }
 
