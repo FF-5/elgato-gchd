@@ -474,22 +474,20 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  switch (i) {
  case 0:
  case 1:
-  d->input_width = 1920;
-  d->input_height = 1080;
-  d->input_fps_num = 60;
-  d->input_fps_den = 1;
+  d->input_width = 0;
+  d->input_height = 0;
+  d->input_fps_num = 0;
+  d->input_fps_den = 0;
   d->input_interlaced = false;
   break;
  default:
-  d->input_width = 720;
-  d->input_height = 480;
-  d->input_fps_num = 60;
-  d->input_fps_den = 1;
-  d->input_interlaced = true;
+  d->input_width = 0;
+  d->input_height = 0;
+  d->input_fps_num = 0;
+  d->input_fps_den = 0;
+  d->input_interlaced = false;
   break;
  }
- d->width = d->input_width;
- d->height = d->input_height;
 
  r = gchd_input_configure_idle(d);
  if (r) {
@@ -500,6 +498,8 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
   mutex_unlock(&d->lifecycle_lock);
   return r;
  }
+ d->width = d->input_width;
+ d->height = d->input_height;
 
  if (resume) {
   if (!READ_ONCE(d->signal_present)) {
