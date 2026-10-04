@@ -2,6 +2,7 @@
 #define ELGATO_GCHD_H
 
 #include <linux/list.h>
+#include <linux/kref.h>
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
 #include <linux/spinlock.h>
@@ -45,6 +46,7 @@ struct gchd_buffer {
 enum gchd_family { GCHD_FAMILY_OLD, GCHD_FAMILY_HDNEW };
 
 struct gchd {
+ struct kref refcount;
  struct usb_device *udev;
  enum gchd_family family;
  struct usb_interface *intf;
