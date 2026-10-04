@@ -812,10 +812,36 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  return 0;
 }
 
-static int gchd_configure_default_input(struct gchd *d)
+static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
+                                  u32 *sum6665, u32 *count6665, bool *rgb)
+{
+ u8 v;
+ u16 a, b;
+ int r;
+ r = gchd_mail_write(d, 0x4e, (u8[]){0x00,0xcc}, 2); if (r) return r;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x66}, 3); if (r) return r;
+ r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; b = (u16)v << 8;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x65}, 3); if (r) return r;
+ r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; b |= v;
+ *sum6665 += b; (*count6665)++;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x64}, 3); if (r) return r;
+ r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; a = (u16)v << 8;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x63}, 3); if (r) return r;
+ r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r; a |= v;
+ *sum6463 += a; (*count6463)++;
+ r = gchd_mail_write(d, 0x4e, (u8[]){0x00,0xce}, 2); if (r) return r;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x9d,0xcd,0x34}, 3); if (r) return r;
+ r = gchd_mail_read(d, 0x33, &v, 1); if (r) return r;
+ *rgb = !!(v & BIT(2));
+ return 0;
+}
+
+static int gchd_configure_hdmi_exact(struct gchd *d)
 {
  u8 v, reply;
- int r;
+ u32 sum6665=0, sum6463=0, count6665=0, count6463=0;
+ u32 value6665, value6463;
+ int r, i, j;
 
 #define MW(p,a,b) do { u8 __x[]={a,b}; r=gchd_mail_write(d,p,__x,2); if(r)return r; } while(0)
 #define M3(a,b,c) do { u8 __x[]={a,b,c}; r=gchd_mail_write(d,0x33,__x,3); if(r)return r; } while(0)
@@ -836,15 +862,32 @@ static int gchd_configure_default_input(struct gchd *d)
  MW(0x4e,0x00,0x4c); R9(0x3f); MW(0x4e,0x00,0xcc); R9(0xf1);
  MW(0x4e,0xce,0x4c); R9(0xf0); MW(0x4e,0xcf,0xce); R9(0x3f);
 
- if (!d->input_width) {
-  /* Default HDMI mode; do not infer the input timing from live signal registers. */
-  d->input_width = 1920;
-  d->input_height = 1080;
-  d->input_interlaced = false;
+ for (i=0;i<10;i++) {
+  sum6665=sum6463=count6665=count6463=0;
+  for (j=0;j<10;j++) {
+   r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->rgb_input);
+   if(r)return r;
+  }
+  value6665=sum6665/count6665;
+  if (i >= 2 && (value6665 < 0xad43 || value6665 > 0xad57))
+   break;
+  msleep(200);
+ }
+ if (i==10) return -ETIMEDOUT;
+ d->signal_present = true;
+
+ if (d->input_width == 0) {
+  value6463=sum6463/count6463;
+  if (value6463 >= 0xb6cd && value6463 <= 0xb6e1) { d->input_width=1920; d->input_height=1080; d->input_interlaced=false; }
+  else if (value6463 >= 0xb077 && value6463 <= 0xb08b) { d->input_width=1920; d->input_height=1080; d->input_interlaced=true; }
+  else if (value6463 >= 0xb052 && value6463 <= 0xb066) { d->input_width=1280; d->input_height=720; d->input_interlaced=false; }
+  else if (value6463 >= 0xb0b5 && value6463 <= 0xb0cd) { d->input_width=720; d->input_height=480; d->input_interlaced=false; }
+  else return -EINVAL;
+  if (d->input_height==480 && value6665 >= 0xbb6b && value6665 <= 0xbb7f)
+   d->input_height=576;
  }
  if (!d->input_fps_num) {
-  d->input_fps_num = 30;
-  d->input_fps_den = 1;
+  d->input_fps_num = (d->input_height==576)?50:60; d->input_fps_den=1;
  }
 
  MW(0x4e,0x00,0xcc);
@@ -880,7 +923,7 @@ static int gchd_configure_default_input(struct gchd *d)
  r=gchd_common_block_b2(d); if(r)return r;
  r=gchd_common_block_b3(d); if(r)return r;
  r=gchd_common_block_c(d); if(r)return r;
- d->rgb_input = false; /* Use YUV as the default HDMI color space. */
+ r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->rgb_input); if(r)return r;
 
  MW(0x4e,0x00,0xcc);
  r=gchd_color_space_exact(d); if(r)return r;
@@ -1211,7 +1254,7 @@ int gchd_input_configure(struct gchd *d)
  dev_info(&d->intf->dev, "capture setup: encoder start completed\n");
 
  if (d->input == 0)
-  r = gchd_configure_default_input(d);
+  r = gchd_configure_hdmi_exact(d);
  else if (d->input == 2)
   r = gchd_configure_composite_exact(d);
  else
