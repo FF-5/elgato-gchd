@@ -235,10 +235,38 @@ static int gchd_start(struct vb2_queue*q,unsigned int c)
  d->streaming = true;
  return 0;
 }
-static void gchd_stop(struct vb2_queue*q)
-{struct gchd*d=vb2_get_drv_priv(q);struct gchd_buffer*b,*tmp;unsigned long f;d->streaming=false;
- gchd_input_stop(d);
- spin_lock_irqsave(&d->qlock,f);list_for_each_entry_safe(b,tmp,&d->queued,list){list_del(&b->list);vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);}spin_unlock_irqrestore(&d->qlock,f);}
+static void gchd_stop(struct vb2_queue *q)
+{
+ struct gchd *d = vb2_get_drv_priv(q);
+ struct gchd_buffer *b, *tmp;
+ unsigned long flags;
+ int r;
+
+ d->streaming = false;
+ /* The RX thread and the stopStream drain must never read EP 0x81 together. */
+ if (d->rx_thread) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+ }
+ if (d->input_configured) {
+  r = gchd_stream_stop(d);
+  if (r) {
+   dev_err(&d->intf->dev,
+           "userspace-compatible stream stop failed: %d; disabling encoder as fallback\n",
+           r);
+   gchd_input_stop(d);
+  }
+ }
+ gchd_ring_free(&d->ring);
+ d->ts_partial_len = 0;
+
+ spin_lock_irqsave(&d->qlock, flags);
+ list_for_each_entry_safe(b, tmp, &d->queued, list) {
+  list_del(&b->list);
+  vb2_buffer_done(&b->vb.vb2_buf, VB2_BUF_STATE_ERROR);
+ }
+ spin_unlock_irqrestore(&d->qlock, flags);
+}
 
 static const struct vb2_ops gchd_vb2_ops={
  .queue_setup=gchd_queue_setup,.buf_queue=gchd_buf_queue,.start_streaming=gchd_start,
