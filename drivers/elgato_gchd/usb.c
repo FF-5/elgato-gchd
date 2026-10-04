@@ -645,7 +645,7 @@ int gchd_stream_stop(struct gchd *d)
  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
  if (r) return r;
  state &= 0x1f;
- if (state == 0x01)
+ if (state == 0x01 || state == 0x11)
   return 0;
  if (state != 0x02 && state != 0x04)
   return -EINVAL;
