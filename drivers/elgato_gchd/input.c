@@ -1055,6 +1055,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
  M3(0x94,0x41,0x37); M3(0x94,0x4a,0xaf); M3(0x94,0x4b,0xaf);
  M3(0x89,0x89,0xfa); MRP(0x33);
  v &= 0x0f;
+ d->signal_present = (v == 6 || v == 7);
  if (v == 6) { d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60; d->input_fps_den=1; }
  else if (v == 7) { d->input_width=720; d->input_height=576; d->input_interlaced=true; d->input_fps_num=50; d->input_fps_den=1; }
  else if (!d->input_height) {
@@ -1375,6 +1376,15 @@ int gchd_input_start(struct gchd *d)
 
  if (!d->input_configured)
   return -EINVAL;
+
+ /*
+  * The timing-detection pass in input configuration is authoritative for
+  * now.  Do not put the device into START when it only has fallback mode
+  * dimensions and no recognized signal.  A later change can replace this
+  * with asynchronous re-detection while keeping STREAMON pending.
+  */
+ if (!d->signal_present)
+  return -ENOLINK;
 
  r = gchd_state_cmd(d, 5, 0, 0x0002, 0x0002);
  if (r) {
