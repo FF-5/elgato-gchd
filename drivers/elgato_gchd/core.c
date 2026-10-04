@@ -560,7 +560,7 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  /* Keep the GUI-visible menu and standard VIDIOC_S_INPUT API in sync. */
  ctrl = v4l2_ctrl_find(&d->ctrls, V4L2_CID_GCHD_INPUT_SOURCE);
  if (ctrl && ctrl->val != i)
-  return __v4l2_ctrl_s_ctrl(ctrl, i);
+  return v4l2_ctrl_s_ctrl(ctrl, i);
  return 0;
 }
 
