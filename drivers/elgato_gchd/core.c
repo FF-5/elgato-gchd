@@ -151,7 +151,7 @@ static void gchd_signal_check(struct gchd *d)
   /* RX must not issue control transfers or attempt to stop itself here. */
   if (READ_ONCE(d->streaming))
    schedule_delayed_work(&d->detect_work, 0);
-  pr_info("elgato_gchd: input %u signal lost; scheduling redetection\\n",
+  pr_info("elgato_gchd: input %u signal lost; scheduling redetection\n",
           d->input);
  }
 }
@@ -218,7 +218,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   d->rx_thread = NULL;
   r = gchd_stream_stop(d);
   if (r)
-   dev_warn(&d->intf->dev, "redetection: stream stop failed: %d\\n", r);
+   dev_warn(&d->intf->dev, "redetection: stream stop failed: %d\n", r);
  }
 
  gchd_ring_free(&d->ring);
@@ -238,7 +238,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   gchd_input_stop(d);
  r = gchd_input_configure_idle(d);
  if (r)
-  dev_warn(&d->intf->dev, "redetection: input setup failed: %d\\n", r);
+  dev_warn(&d->intf->dev, "redetection: input setup failed: %d\n", r);
 
  if (!r && READ_ONCE(d->signal_present)) {
   struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
@@ -268,7 +268,33 @@ out:
  mutex_unlock(&d->lifecycle_lock);
 }
 
-static int gchd_queue_setup(static void gchd_return_queued(struct gchd *d, enum vb2_buffer_state state)
+static int gchd_queue_setup(struct vb2_queue *q, unsigned int *nb,
+                            unsigned int *np, unsigned int sizes[],
+                            struct device *alloc[])
+{
+ struct gchd *d = vb2_get_drv_priv(q);
+
+ if (*np)
+  return sizes[0] >= d->sizeimage ? 0 : -EINVAL;
+ *np = 1;
+ sizes[0] = d->sizeimage;
+ return 0;
+}
+
+static void gchd_buf_queue(struct vb2_buffer *vb)
+{
+ struct gchd *d = vb2_get_drv_priv(vb->vb2_queue);
+ struct gchd_buffer *b = container_of(to_vb2_v4l2_buffer(vb),
+                                      struct gchd_buffer, vb);
+ unsigned long flags;
+
+ spin_lock_irqsave(&d->qlock, flags);
+ list_add_tail(&b->list, &d->queued);
+ spin_unlock_irqrestore(&d->qlock, flags);
+ gchd_deliver(d);
+}
+
+static void gchd_return_queued(struct gchd *d, enum vb2_buffer_state state)
 {
  struct gchd_buffer *b, *tmp;
  unsigned long flags;
@@ -352,7 +378,7 @@ static void gchd_stop(struct vb2_queue *q)
  r = gchd_stream_stop(d);
  if (r) {
   dev_err(&d->intf->dev,
-          "userspace-compatible stream stop failed: %d; disabling encoder as fallback\\n",
+          "userspace-compatible stream stop failed: %d; disabling encoder as fallback\n",
           r);
   gchd_input_stop(d);
  }
@@ -368,7 +394,7 @@ static void gchd_stop(struct vb2_queue *q)
  mutex_unlock(&d->lifecycle_lock);
 }
 
-static const struct vb2_opsstatic const struct vb2_ops gchd_vb2_ops={
+static const struct vb2_ops gchd_vb2_ops={
  .queue_setup=gchd_queue_setup,.buf_queue=gchd_buf_queue,.start_streaming=gchd_start,
  .stop_streaming=gchd_stop,.wait_prepare=vb2_ops_wait_prepare,.wait_finish=vb2_ops_wait_finish
 };
@@ -432,7 +458,7 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
   }
   r = gchd_stream_stop(d);
   if (r) {
-   dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\\n", r);
+   dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\n", r);
    mutex_unlock(&d->lifecycle_lock);
    return r;
   }
@@ -467,7 +493,7 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
 
  r = gchd_input_configure_idle(d);
  if (r) {
-  dev_err(&d->intf->dev, "input switch: setup for input %u failed: %d\\n",
+  dev_err(&d->intf->dev, "input switch: setup for input %u failed: %d\n",
           i, r);
   if (resume)
    WRITE_ONCE(d->streaming, false);
@@ -507,7 +533,7 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  return 0;
 }
 
-static int gchd_query_dv_timings(static int gchd_query_dv_timings(struct file *f, void *p,
+static int gchd_query_dv_timings(struct file *f, void *p,
 				     struct v4l2_dv_timings *t)
 {
  struct gchd *d = video_drvdata(f);
@@ -918,11 +944,11 @@ static void gchd_shutdown(struct device *dev)
  /* Attempt RESET directly; failure must never prevent system shutdown. */
  r = gchd_state_cmd(d, SCMD_RESET, 0, 0, 0x10);
  if (r)
-  dev_dbg(dev, "best-effort hardware shutdown failed: %d\\n", r);
+  dev_dbg(dev, "best-effort hardware shutdown failed: %d\n", r);
  mutex_unlock(&d->lifecycle_lock);
 }
 
-static struct usb_driver gchd_usbstatic struct usb_driver gchd_usb = {
+static struct usb_driver gchd_usb = {
  .name = "elgato_gchd",
  .id_table = gchd_ids,
  .probe = gchd_probe,
