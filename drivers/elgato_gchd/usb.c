@@ -646,7 +646,7 @@ int gchd_stream_stop(struct gchd *d)
  if (r) return r;
  state &= 0x1f;
  if (state == 0x01 || state == 0x11) {
-  d->input_configured = false;
+  /* STOP/IDLE leaves the selected input's setup intact. */
   return 0;
  }
  if (state != 0x02 && state != 0x04)
@@ -666,8 +666,7 @@ int gchd_stream_stop(struct gchd *d)
  r = gchd_complete_state_change_draining(d, 0x04, 0x01);
  if (r) return r;
  r = gchd_drain_stream(d, 5);
- if (!r)
-  d->input_configured = false;
+ /* Successful STOP keeps input configuration for the next STREAMON. */
  return r;
 }
 
