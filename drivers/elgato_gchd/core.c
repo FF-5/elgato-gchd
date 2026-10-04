@@ -209,7 +209,7 @@ static void gchd_detect_workfn(struct work_struct *work)
  int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
- if (d->disconnected || !READ_ONCE(d->streaming))
+ if (d->disconnected || !READ_ONCE(d->detect_requested))
   goto out;
 
  /* Join the only bulk-IN reader before control/mailbox operations. */
@@ -250,21 +250,27 @@ static void gchd_detect_workfn(struct work_struct *work)
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
-  r = gchd_input_start(d);
-  if (!r) {
-   d->last_video_jiffies = jiffies;
-   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
-   if (IS_ERR(d->rx_thread)) {
-    r = PTR_ERR(d->rx_thread);
-    d->rx_thread = NULL;
-    if (gchd_stream_stop(d))
-     gchd_input_stop(d);
+
+  /* A query can configure the input while it remains safely in IDLE. */
+  if (READ_ONCE(d->streaming)) {
+   r = gchd_input_start(d);
+   if (!r) {
+    d->last_video_jiffies = jiffies;
+    d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+    if (IS_ERR(d->rx_thread)) {
+     r = PTR_ERR(d->rx_thread);
+     d->rx_thread = NULL;
+     if (gchd_stream_stop(d))
+      gchd_input_stop(d);
+    }
    }
+  } else {
+   WRITE_ONCE(d->detect_requested, false);
   }
  }
 
  if ((r || !READ_ONCE(d->signal_present)) &&
-     !d->disconnected && READ_ONCE(d->streaming))
+     !d->disconnected && READ_ONCE(d->detect_requested))
   schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
 
 out:
@@ -327,6 +333,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   * V4L2 stream request remains pending.
   */
  WRITE_ONCE(d->streaming, true);
+ WRITE_ONCE(d->detect_requested, true);
  if (!d->input_configured || !READ_ONCE(d->signal_present)) {
   schedule_delayed_work(&d->detect_work, 0);
   mutex_unlock(&d->lifecycle_lock);
@@ -371,6 +378,7 @@ static void gchd_stop(struct vb2_queue *q)
  int r;
 
  cancel_delayed_work_sync(&d->detect_work);
+ WRITE_ONCE(d->detect_requested, false);
  mutex_lock(&d->lifecycle_lock);
  WRITE_ONCE(d->streaming, false);
  if (d->rx_thread) {
@@ -418,8 +426,11 @@ static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
  }
  in->type = V4L2_INPUT_TYPE_CAMERA;
 
- if (index == d->input && !d->signal_present)
+ if (index == d->input && !READ_ONCE(d->signal_present)) {
   in->status = V4L2_IN_ST_NO_SIGNAL;
+  WRITE_ONCE(d->detect_requested, true);
+  schedule_delayed_work(&d->detect_work, 0);
+ }
  if (index < 2)
   in->capabilities = V4L2_IN_CAP_DV_TIMINGS;
  return 0;
@@ -547,8 +558,11 @@ static int gchd_query_dv_timings(struct file *f, void *p,
 
  if (d->input == 2)
   return -ENODATA;
- if (!d->signal_present)
+ if (!READ_ONCE(d->signal_present)) {
+  WRITE_ONCE(d->detect_requested, true);
+  schedule_delayed_work(&d->detect_work, 0);
   return -ENOLINK;
+ }
 
  memset(t, 0, sizeof(*t));
  t->type = V4L2_DV_BT_656_1120;
@@ -878,15 +892,11 @@ static int gchd_probe(struct usb_interface *i,
   goto err;
  }
 
- /* Complete hardware and selected-input setup before exposing /dev/video*. */
+ /* Hardware init leaves the device in IDLE; input timing is on-demand. */
  r = gchd_hw_init(d);
  if (r)
   goto err_shutdown;
  d->hw_initialized = true;
-
- r = gchd_input_configure_idle(d);
- if (r)
-  goto err_shutdown;
 
  r = gchd_v4l2_register(d);
  if (r)
