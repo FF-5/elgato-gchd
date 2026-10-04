@@ -1080,7 +1080,16 @@ static int gchd_configure_composite_exact(struct gchd *d)
   gchd_mail_write(d,0x4e,(u8[]){0xb8,0xcc},2);
   gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x3f},3);
   gchd_mail_read(d,0x33,&x,1);
-  return -EINVAL;
+  /*
+   * Keep the receiver configured while no composite source is present.
+   * The caller tracks signal_present separately and the detection worker
+   * will repeat this measurement when the source may have appeared.
+   */
+  d->input_width = 720;
+  d->input_height = 480;
+  d->input_interlaced = true;
+  d->input_fps_num = 60;
+  d->input_fps_den = 1;
  }
 
  if (d->input_height==480) {
