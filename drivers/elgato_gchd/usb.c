@@ -654,10 +654,8 @@ int gchd_stream_stop(struct gchd *d)
  if (r) return r;
  r = gchd_drain_stream(d, 200);
  if (r) return r;
- if (state == 0x02) {
-  r = gchd_complete_state_change_draining(d, 0x02, 0x04);
-  if (r) return r;
- }
+ r = gchd_complete_state_change_draining(d, 0x02, 0x04);
+ if (r) return r;
  r = gchd_drain_stream(d, 20);
  if (r) return r;
 
