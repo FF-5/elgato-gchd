@@ -459,6 +459,8 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
   r = gchd_stream_stop(d);
   if (r) {
    dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\n", r);
+   /* Do not advertise an active stream after its RX thread has been joined. */
+   WRITE_ONCE(d->streaming, false);
    mutex_unlock(&d->lifecycle_lock);
    return r;
   }
