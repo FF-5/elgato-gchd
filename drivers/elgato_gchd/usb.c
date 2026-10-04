@@ -531,6 +531,20 @@ int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
   return r;
  current_state &= 0x1f;
 
+ /*
+  * SCMD_IDLE is used when entering/re-entering input detection. HDNew reports
+  * 0x11 when already IDLE, but its completion flag does not signal a second
+  * transition to the same state. Treat this state request as idempotent so an
+  * input switch from IDLE can proceed to signal detection instead of timing
+  * out while waiting for a transition that cannot occur.
+  */
+ if (command == SCMD_IDLE && current_state == expected) {
+  dev_dbg(&d->intf->dev,
+          "state already IDLE (0x%02x); skipping redundant SCMD_IDLE\n",
+          current_state);
+  return 0;
+ }
+
  if (command == SCMD_STATE_CHANGE && expected == 0x02) {
   u16 enable_state = 0xffff, enable = 0xffff, completion = 0xffff;
   int er1, er2, er3;
