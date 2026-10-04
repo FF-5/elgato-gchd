@@ -960,9 +960,20 @@ static int gchd_fop_open(struct file *file)
 
  if (d->open_count == 0) {
   /*
-   * A previous close deliberately shut the processor down. Re-run the full
-   * hardware initialization on the first open, preserving the selected input.
+   * A previous close may have reported a shutdown error. Retry that exact
+   * state-aware shutdown before starting another firmware initialization;
+   * never layer a fresh init on top of a known failed teardown.
    */
+  if (d->hw_initialized) {
+   r = gchd_hw_shutdown(d);
+   if (r) {
+    dev_err(&d->intf->dev,
+            "retrying previous hardware shutdown before open failed: %d\\n", r);
+    goto out;
+   }
+   d->hw_initialized = false;
+  }
+
   d->input_forced = true;
   d->input_configured = false;
   d->input_prepared = false;
@@ -974,12 +985,16 @@ static int gchd_fop_open(struct file *file)
   d->input_fps_den = 0;
   r = gchd_hw_init(d);
   if (r) {
-   dev_err(&d->intf->dev, "hardware initialization on open failed: %d\n", r);
-   gchd_hw_shutdown(d);
-   d->hw_initialized = false;
+   int sr;
+
+   dev_err(&d->intf->dev, "hardware initialization on open failed: %d\\n", r);
+   sr = gchd_hw_shutdown(d);
+   d->hw_initialized = (sr != 0);
+   if (sr)
+    dev_warn(&d->intf->dev,
+             "cleanup after failed initialization also failed: %d\\n", sr);
    goto out;
   }
-
   d->hw_initialized = true;
   WRITE_ONCE(d->detect_requested, true);
   schedule_delayed_work(&d->detect_work, 0);
@@ -1025,16 +1040,20 @@ static int gchd_fop_release(struct file *file)
   }
 
   if (d->hw_initialized) {
-   gchd_input_stop(d);
+   /*
+    * Do not call gchd_input_stop() here: userspace uninitDevice() owns
+    * encoder/transcoder teardown and must observe the original HW state.
+    */
    sr = gchd_hw_shutdown(d);
    if (sr) {
-    dev_warn(&d->intf->dev, "hardware shutdown on last close failed: %d\n", sr);
+    dev_warn(&d->intf->dev, "hardware shutdown on last close failed: %d\\n", sr);
     if (!r)
      r = sr;
+    /* Keep the flag set so the next open retries shutdown before HW init. */
    } else {
-    dev_info(&d->intf->dev, "V4L2 closed: hardware safely shut down\n");
+    dev_info(&d->intf->dev, "V4L2 closed: hardware safely shut down\\n");
+    d->hw_initialized = false;
    }
-   d->hw_initialized = false;
   }
 
   d->input_configured = false;
