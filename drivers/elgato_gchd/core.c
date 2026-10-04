@@ -230,7 +230,8 @@ static void gchd_detect_workfn(struct work_struct *work)
  int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
- if (d->disconnected || !READ_ONCE(d->detect_requested))
+ if (d->disconnected || !READ_ONCE(d->hw_initialized) ||
+     !READ_ONCE(d->detect_requested))
   goto out;
 
  /* Only the RX thread may own bulk-IN while START is active. */
@@ -404,7 +405,7 @@ static void gchd_return_queued(struct gchd *d, enum vb2_buffer_state state)
 static int gchd_start(struct vb2_queue *q, unsigned int count)
 {
  struct gchd *d = vb2_get_drv_priv(q);
- int r;
+ int r, sr;
 
  mutex_lock(&d->lifecycle_lock);
  if (d->disconnected) {
@@ -413,9 +414,50 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
  }
 
  /*
+  * STREAMON is the first point where the client actually needs capture.
+  * This prevents firmware loading during short-lived discovery opens.
+  */
+ if (!d->hw_initialized) {
+  /* If a previous initialization partially failed, clean it up first. */
+  if (d->hw_initialized) {
+   sr = gchd_hw_shutdown(d);
+   if (sr) {
+    r = sr;
+    goto err;
+   }
+   d->hw_initialized = false;
+  }
+
+  d->input_forced = true; /* preserve default HDMI or the last chosen input */
+  d->input_configured = false;
+  d->input_prepared = false;
+  d->encoder_started = false;
+  d->signal_present = false;
+  d->input_width = 0;
+  d->input_height = 0;
+  d->input_fps_num = 0;
+  d->input_fps_den = 0;
+
+  r = gchd_hw_init(d);
+  if (r) {
+   dev_err(&d->intf->dev, "hardware initialization on STREAMON failed: %d\n", r);
+   sr = gchd_hw_shutdown(d);
+   d->hw_initialized = (sr != 0);
+   if (sr)
+    dev_warn(&d->intf->dev,
+             "cleanup after failed STREAMON init failed: %d\n", sr);
+   goto err;
+  }
+  d->hw_initialized = true;
+  dev_info(&d->intf->dev,
+           "capture requested: hardware initialized, detecting input %u\n",
+           d->input);
+ }
+
+ /*
   * Keep STREAMON non-blocking when setup is invalidated by S_FMT or when
-  * timing is absent. The worker performs configuration/detection while the
-  * V4L2 stream request remains pending.
+  * timing is absent. The worker performs detection/configuration while the
+  * stream request remains pending.
   */
  WRITE_ONCE(d->streaming, true);
  WRITE_ONCE(d->detect_requested, true);
@@ -435,7 +477,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   goto err_streaming;
 
  d->last_video_jiffies = jiffies;
-   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+ d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
  if (IS_ERR(d->rx_thread)) {
   r = PTR_ERR(d->rx_thread);
   d->rx_thread = NULL;
@@ -527,8 +569,11 @@ static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
 
  if (index == d->input && !READ_ONCE(d->signal_present)) {
   in->status = V4L2_IN_ST_NO_SIGNAL;
-  WRITE_ONCE(d->detect_requested, true);
-  schedule_delayed_work(&d->detect_work, 0);
+  /* Enumeration is often only GUI discovery; don't initialize hardware. */
+  if (READ_ONCE(d->hw_initialized)) {
+   WRITE_ONCE(d->detect_requested, true);
+   schedule_delayed_work(&d->detect_work, 0);
+  }
  }
  if (index < 2)
   in->capabilities = V4L2_IN_CAP_DV_TIMINGS;
@@ -623,10 +668,17 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  }
 
  /*
-  * Input switching is not device shutdown: do not call gchd_hw_init() here.
-  * That routine can issue SCMD_RESET for a non-reset state. Capture transport
-  * has already been stopped; keep the encoder firmware initialized, move to
-  * IDLE, then asynchronously detect timing and configure the selected input.
+  * Input selection can happen before first STREAMON. In that case only
+  * remember the choice; hardware remains untouched until capture is requested.
+  */
+ if (!READ_ONCE(d->hw_initialized)) {
+  mutex_unlock(&d->lifecycle_lock);
+  return 0;
+ }
+
+ /*
+  * Input switching is not device shutdown: keep the encoder firmware
+  * initialized, move to IDLE, then asynchronously detect/configure the input.
   */
  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
  if (r) {
@@ -668,8 +720,10 @@ static int gchd_query_dv_timings(struct file *f, void *p,
  if (d->input == 2)
   return -ENODATA;
  if (!READ_ONCE(d->signal_present)) {
-  WRITE_ONCE(d->detect_requested, true);
-  schedule_delayed_work(&d->detect_work, 0);
+  if (READ_ONCE(d->hw_initialized)) {
+   WRITE_ONCE(d->detect_requested, true);
+   schedule_delayed_work(&d->detect_work, 0);
+  }
   return -ENOLINK;
  }
 
@@ -958,48 +1012,18 @@ static int gchd_fop_open(struct file *file)
   goto out;
  }
 
+ /*
+  * V4L2 clients often open/close briefly to enumerate inputs and controls.
+  * Opening the node must not load firmware. Defer HW init until STREAMON.
+  */
  if (d->open_count == 0) {
-  /*
-   * A previous close may have reported a shutdown error. Retry that exact
-   * state-aware shutdown before starting another firmware initialization;
-   * never layer a fresh init on top of a known failed teardown.
-   */
-  if (d->hw_initialized) {
-   r = gchd_hw_shutdown(d);
-   if (r) {
-    dev_err(&d->intf->dev,
-            "retrying previous hardware shutdown before open failed: %d\n", r);
-    goto out;
-   }
-   d->hw_initialized = false;
-  }
-
-  d->input_forced = true;
   d->input_configured = false;
   d->input_prepared = false;
-  d->encoder_started = false;
   d->signal_present = false;
   d->input_width = 0;
   d->input_height = 0;
   d->input_fps_num = 0;
   d->input_fps_den = 0;
-  r = gchd_hw_init(d);
-  if (r) {
-   int sr;
-
-   dev_err(&d->intf->dev, "hardware initialization on open failed: %d\n", r);
-   sr = gchd_hw_shutdown(d);
-   d->hw_initialized = (sr != 0);
-   if (sr)
-    dev_warn(&d->intf->dev,
-             "cleanup after failed initialization also failed: %d\n", sr);
-   goto out;
-  }
-  d->hw_initialized = true;
-  WRITE_ONCE(d->detect_requested, true);
-  schedule_delayed_work(&d->detect_work, 0);
-  dev_info(&d->intf->dev, "V4L2 opened: hardware initialized, detecting input %u\n",
-           d->input);
  }
  d->open_count++;
 
