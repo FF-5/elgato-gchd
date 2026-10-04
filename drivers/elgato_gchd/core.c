@@ -278,48 +278,42 @@ static void gchd_detect_workfn(struct work_struct *work)
    goto retry;
   }
  }
- if (d->input_prepared && !d->input_configured) {
-  /* Short async probe: one timing-register sample, no encoder restart. */
-  r = gchd_input_detect_signal(d);
-  if (r == -ENOLINK)
-   goto retry;
-  if (r) {
-   dev_warn(&d->intf->dev, "signal probe failed: %d\n", r);
-   goto retry;
-  }
- }
-
  if (!d->input_configured) {
   /*
-   * This call runs the userspace-equivalent connector setup only after a
-   * signal has been found by the short probe. On the first attempt it also
-   * prepares the receiver and may return -ENOLINK, leaving it prepared.
+   * Detection must precede configuration. Do not run the encoder-start
+   * handshake against a no-signal input: on HDNew this repeatedly fails
+   * with -EINVAL and leaves retries in a bad lifecycle state.
    */
-  if (!d->input_prepared) {
-   d->input_width = 0;
-   d->input_height = 0;
-   d->input_fps_num = 0;
-   d->input_fps_den = 0;
-   d->input_interlaced = false;
-   d->mode_forced = false;
+  r = gchd_input_detect_signal(d);
+  if (r == -ENOLINK) {
+   d->input_prepared = false;
+   goto retry;
   }
+  if (r) {
+   dev_warn(&d->intf->dev, "signal probe failed: %d\\n", r);
+   d->input_prepared = false;
+   goto retry;
+  }
+
+  d->input_prepared = true;
+  dev_info(&d->intf->dev,
+           "signal detected: input=%u mode=%ux%u fps=%u/%u interlaced=%u\\n",
+           d->input, d->input_width, d->input_height, d->input_fps_num,
+           d->input_fps_den, d->input_interlaced);
 
   r = gchd_input_configure_idle(d);
   if (r) {
    if (r != -ENOLINK) {
     dev_warn(&d->intf->dev,
-             "redetection: input configuration failed: %d\n", r);
+             "redetection: input configuration failed: %d\\n", r);
     /*
-     * Do not call hw_init() from IDLE: it attempts SCMD_RESET and times out
-     * because HDNew's IDLE state (0x11) does not transition to RESET (0x10).
-     * Keep the encoder instance alive and retry connector setup from IDLE.
+     * Configuration began from IDLE and has not issued START. Do not send
+     * another IDLE state-change command here: HDNew can time out when asked
+     * to transition to the state it is already in. Re-probe and retry setup.
      */
     d->input_configured = false;
     d->input_prepared = false;
-    r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
-    if (r)
-     dev_warn(&d->intf->dev,
-              "redetection: could not restore IDLE after setup error: %d\n", r);
+    WRITE_ONCE(d->signal_present, false);
    }
    goto retry;
   }
