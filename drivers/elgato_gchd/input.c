@@ -941,6 +941,9 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
   if (d->input_height==480 && value6665 >= 0xbb6b && value6665 <= 0xbb7f)
    d->input_height=576;
  }
+ if (!d->signal_present)
+  return -ENOLINK;
+
  if (!d->input_fps_num) {
   d->input_fps_num = (d->input_height==576)?50:60; d->input_fps_den=1;
  }
@@ -1092,6 +1095,9 @@ static int gchd_configure_composite_exact(struct gchd *d)
   d->input_fps_den = 1;
  }
 
+ if (!d->signal_present)
+  return -ENOLINK;
+
  if (d->input_height==480) {
   MW(0x44,0x07,0x8a); MW(0x44,0x08,0x9b); MW(0x44,0x09,0x7a); MW(0x44,0x28,0x88);
   M3(0x89,0x89,0xfd); MRP(0x33); MW(0x44,0x06,0x08);
@@ -1202,6 +1208,9 @@ static int gchd_configure_component_exact(struct gchd *d)
   }
   d->input_fps_den=1;
  }
+
+ if (!d->signal_present)
+  return -ENOLINK;
 
  if(d->input_height==480 || d->input_height==576) MW(0xb2,0xcf); else MW(0xb2,0xcc);
  MW(0xb5,0xcc);
