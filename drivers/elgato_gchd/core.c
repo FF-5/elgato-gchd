@@ -24,6 +24,10 @@ struct gchd_mode {
  bool interlaced;
 };
 
+/* The device defaults to HDMI; remember the last selected input across rebinds. */
+static DEFINE_MUTEX(gchd_last_input_lock);
+static unsigned int gchd_last_input;
+
 static const struct gchd_mode gchd_modes[] = {
  {1920, 1080, 60, 1, false},
  {1920, 1080, 60, 1, true},
@@ -483,6 +487,9 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  gchd_ring_free(&d->ring);
  d->ts_partial_len = 0;
  d->input = i;
+ mutex_lock(&gchd_last_input_lock);
+ gchd_last_input = i;
+ mutex_unlock(&gchd_last_input_lock);
  d->input_forced = true;
  d->mode_forced = false;
  d->input_configured = false;
@@ -838,10 +845,12 @@ static int gchd_probe(struct usb_interface *i,
  spin_lock_init(&d->qlock);
  INIT_LIST_HEAD(&d->queued);
  spin_lock_init(&d->ring.lock);
- d->width = 1920;
- d->height = 1080;
+ d->width = 1280;
+ d->height = 720;
  d->sizeimage = GCHD_MAX_FRAME;
- d->input = 0;
+ mutex_lock(&gchd_last_input_lock);
+ d->input = gchd_last_input <= 2 ? gchd_last_input : 0;
+ mutex_unlock(&gchd_last_input_lock);
  d->input_forced = false;
  d->bitrate_forced = false;
  d->h264_level_forced = false;
@@ -869,6 +878,12 @@ static int gchd_probe(struct usb_interface *i,
   goto err_shutdown;
 
  usb_set_intfdata(i, d);
+ /*
+  * Start detection only after the V4L2 node exists. Keep the public default
+  * format at 720p while no source timing has been measured.
+  */
+ WRITE_ONCE(d->detect_requested, true);
+ schedule_delayed_work(&d->detect_work, 0);
  return 0;
 
 err_shutdown:
