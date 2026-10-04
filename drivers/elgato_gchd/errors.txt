@@ -1,5 +1,4 @@
 Log before opening guvcview:
-
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg | tail -500
 [45945.294191] usb 2-1: new high-speed USB device number 22 using ehci-pci
 [45945.728942] usb 2-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
@@ -227,4 +226,8 @@ ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg | tail -500
 [46069.853051] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
 [46069.854342] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x01
 [46069.877155] elgato_gchd 2-1:1.0: capture setup: input=2 mode=0x0 fps=0/0 interlaced=0
+[46196.733318] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[46196.749587] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
+[46196.750978] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x01
+[46196.756509] elgato_gchd 2-1:1.0: V4L2 closed: hardware safely shut down
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ 
