@@ -587,15 +587,12 @@ static int gchd_ginput(struct file *f, void *p, unsigned int *i)
 
 static int gchd_set_input(struct gchd *d, unsigned int i)
 {
- bool resume;
  int r;
 
  if (i > 2)
   return -EINVAL;
  if (i == d->input)
   return 0;
-
- resume = READ_ONCE(d->streaming);
 
  /*
   * Input selection is safe while buffers are allocated but the queue is not
@@ -611,30 +608,44 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   return -ENODEV;
  }
 
- if (resume) {
-  if (d->rx_thread) {
-   kthread_stop(d->rx_thread);
-   d->rx_thread = NULL;
-  }
+ /*
+  * Stop/join RX before taking over bulk-IN. Stop the transport even if the
+  * V4L2 streaming flag is already clear: the device may still be in START
+  * after a signal-loss or STREAMOFF race. The stop helper is a no-op in STOP
+  * or IDLE and performs the userspace-compatible drain sequence otherwise.
+  */
+ if (d->rx_thread) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+ }
+ if (READ_ONCE(d->hw_initialized)) {
   r = gchd_stream_stop(d);
   if (r) {
-   dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\n", r);
-   /* Do not advertise an active stream after its RX thread has been joined. */
+   dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\\n", r);
+   WRITE_ONCE(d->streaming, false);
+   mutex_unlock(&d->lifecycle_lock);
+   return r;
+  }
+
+  /*
+   * Keep encoder firmware initialized; do not run full hardware shutdown or
+   * input-specific teardown. gchd_state_cmd skips an already-completed IDLE
+   * transition, which matters when switching between no-signal inputs.
+   */
+  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
+  if (r) {
+   dev_err(&d->intf->dev,
+           "input switch: transition to IDLE failed: %d\\n", r);
    WRITE_ONCE(d->streaming, false);
    mutex_unlock(&d->lifecycle_lock);
    return r;
   }
  }
- /*
-  * Keep the encoder firmware running across connector changes. It is started
-  * during initial setup; after disabling its bits, the encoder-start handshake
-  * fails with -EINVAL on this device. Invalidate connector-specific state and
-  * reconfigure the selected input from IDLE instead.
-  */
+
+ /* Clear connector-specific cached state only after reaching IDLE. */
  d->input_configured = false;
  d->input_prepared = false;
- d->signal_present = false;
-
+ WRITE_ONCE(d->signal_present, false);
  gchd_ring_free(&d->ring);
  d->ts_partial_len = 0;
  d->input = i;
@@ -643,50 +654,24 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  mutex_unlock(&gchd_last_input_lock);
  d->input_forced = true;
  d->mode_forced = false;
- d->input_configured = false;
  /* encoder_started is deliberately preserved across connector changes. */
- d->input_prepared = false;
- d->signal_present = false;
  d->last_video_jiffies = jiffies;
- switch (i) {
- case 0:
- case 1:
-  d->input_width = 0;
-  d->input_height = 0;
-  d->input_fps_num = 0;
-  d->input_fps_den = 0;
-  d->input_interlaced = false;
-  break;
- default:
-  d->input_width = 0;
-  d->input_height = 0;
-  d->input_fps_num = 0;
-  d->input_fps_den = 0;
-  d->input_interlaced = false;
-  break;
- }
+ d->input_width = 0;
+ d->input_height = 0;
+ d->input_fps_num = 0;
+ d->input_fps_den = 0;
+ d->input_interlaced = false;
 
  /*
-  * Input selection can happen before first STREAMON. In that case only
-  * remember the choice; hardware remains untouched until capture is requested.
+  * Before first STREAMON, only remember the selection; hardware remains
+  * untouched until capture is requested.
   */
  if (!READ_ONCE(d->hw_initialized)) {
   mutex_unlock(&d->lifecycle_lock);
   return 0;
  }
 
- /*
-  * Input switching is not device shutdown: keep the encoder firmware
-  * initialized, move to IDLE, then asynchronously detect/configure the input.
-  */
- r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
- if (r) {
-  dev_err(&d->intf->dev,
-          "input switch: transition to IDLE failed: %d\n", r);
-  WRITE_ONCE(d->streaming, false);
-  mutex_unlock(&d->lifecycle_lock);
-  return r;
- }
+ /* Detect/configure asynchronously so VIDIOC_S_INPUT stays non-blocking. */
  WRITE_ONCE(d->detect_requested, true);
  schedule_delayed_work(&d->detect_work, 0);
  mutex_unlock(&d->lifecycle_lock);
