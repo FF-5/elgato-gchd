@@ -72,6 +72,7 @@ struct gchd {
  bool detect_requested;
  bool disconnected;
  bool hw_initialized;
+ bool hw_init_failed;
  bool input_configured;
  bool encoder_started;
  bool input_prepared;
