@@ -229,11 +229,13 @@ static void gchd_detect_workfn(struct work_struct *work)
   * Force the existing input setup to sample timing again instead of reusing
   * fallback dimensions from the previous no-signal attempt.
   */
- d->input_width = 0;
- d->input_height = 0;
- d->input_fps_num = 0;
- d->input_fps_den = 0;
- d->input_interlaced = false;
+ if (!d->mode_forced) {
+  d->input_width = 0;
+  d->input_height = 0;
+  d->input_fps_num = 0;
+  d->input_fps_den = 0;
+  d->input_interlaced = false;
+ }
  if (d->input_configured)
   gchd_input_stop(d);
  r = gchd_input_configure_idle(d);
@@ -470,6 +472,7 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  d->ts_partial_len = 0;
  d->input = i;
  d->input_forced = true;
+ d->mode_forced = false;
  d->input_configured = false;
  d->signal_present = false;
  d->last_video_jiffies = jiffies;
@@ -706,6 +709,7 @@ static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
  d->input_fps_num=m->fps_num;
  d->input_fps_den=m->fps_den;
  d->input_interlaced=m->interlaced;
+ d->mode_forced=true;
  d->input_configured=false;
  d->sizeimage=GCHD_MAX_FRAME;
 
