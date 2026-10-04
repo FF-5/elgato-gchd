@@ -135,7 +135,7 @@ static void gchd_ts(struct gchd *d,const u8 *p,u8 *pes,size_t *n)
  if (!READ_ONCE(d->signal_present)) {
   struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
   ev.id = d->input;
-  ev.u.src_change.changes = V4L2_EVENT_SRC_RESOLUTION;
+  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
   WRITE_ONCE(d->signal_present, true);
   dev_info(&d->intf->dev,
