@@ -84,4 +84,55 @@ ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg | tail -100
 [27544.986780] elgato_gchd 2-1:1.0: capture setup: input=0 mode=1920x1080 fps=60/1 interlaced=0
 [27551.441811] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
 [27551.685582] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[27575.377360] elgato_gchd 2-1:1.0: capture setup: input configuration failed: -110
+[27575.377439] elgato_gchd 2-1:1.0: capture setup: input=0 mode=1920x1080 fps=60/1 interlaced=0
+[27581.816405] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[27582.070556] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[27605.561542] elgato_gchd 2-1:1.0: capture setup: input configuration failed: -110
+[27703.437447] elgato_gchd 2-1:1.0: capture setup: input=2 mode=720x480 fps=60/1 interlaced=1
+[27709.917674] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[27710.291879] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[27725.779802] elgato_gchd 2-1:1.0: capture setup: input configuration completed
+[27725.836083] elgato_gchd 2-1:1.0: capture setup: transcoder final configuration completed
+[27726.120369] elgato_gchd 2-1:1.0: capture setup: transcoder setup completed
+[27726.122963] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[27726.122971] elgato_gchd 2-1:1.0: capture setup: SCMD_INIT submitted
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ 
+
+
+
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ v4l2-ctl -d /dev/video0 --list-inputs
+v4l2-ctl -d /dev/video0 --get-input
+ioctl: VIDIOC_ENUMINPUT
+	Input       : 0
+	Name        : HDMI
+	Type        : 0x00000002 (Camera)
+	Audioset    : 0x00000000
+	Tuner       : 0x00000000
+	Standard    : 0x0000000000000000 ()
+	Status      : 0x00000002 (no signal)
+	Capabilities: 0x00000002 (DV timings)
+
+	Input       : 1
+	Name        : Component
+	Type        : 0x00000002 (Camera)
+	Audioset    : 0x00000000
+	Tuner       : 0x00000000
+	Standard    : 0x0000000000000000 ()
+	Status      : 0x00000000 (ok)
+	Capabilities: 0x00000002 (DV timings)
+
+	Input       : 2
+	Name        : Composite
+	Type        : 0x00000002 (Camera)
+	Audioset    : 0x00000000
+	Tuner       : 0x00000000
+	Standard    : 0x0000000000000000 ()
+	Status      : 0x00000000 (ok)
+	Capabilities: 0x00000000 (not defined)
+Video input : 0 (HDMI: no signal)
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ v4l2-ctl -d /dev/video0 --set-input=2
+v4l2-ctl -d /dev/video0 --get-input
+Video input set to 2 (Composite: Camera, no signal)
+Video input : 2 (Composite: no signal)
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ 
