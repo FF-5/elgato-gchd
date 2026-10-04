@@ -968,7 +968,7 @@ static int gchd_fop_open(struct file *file)
    r = gchd_hw_shutdown(d);
    if (r) {
     dev_err(&d->intf->dev,
-            "retrying previous hardware shutdown before open failed: %d\\n", r);
+            "retrying previous hardware shutdown before open failed: %d\n", r);
     goto out;
    }
    d->hw_initialized = false;
@@ -987,12 +987,12 @@ static int gchd_fop_open(struct file *file)
   if (r) {
    int sr;
 
-   dev_err(&d->intf->dev, "hardware initialization on open failed: %d\\n", r);
+   dev_err(&d->intf->dev, "hardware initialization on open failed: %d\n", r);
    sr = gchd_hw_shutdown(d);
    d->hw_initialized = (sr != 0);
    if (sr)
     dev_warn(&d->intf->dev,
-             "cleanup after failed initialization also failed: %d\\n", sr);
+             "cleanup after failed initialization also failed: %d\n", sr);
    goto out;
   }
   d->hw_initialized = true;
@@ -1046,12 +1046,12 @@ static int gchd_fop_release(struct file *file)
     */
    sr = gchd_hw_shutdown(d);
    if (sr) {
-    dev_warn(&d->intf->dev, "hardware shutdown on last close failed: %d\\n", sr);
+    dev_warn(&d->intf->dev, "hardware shutdown on last close failed: %d\n", sr);
     if (!r)
      r = sr;
     /* Keep the flag set so the next open retries shutdown before HW init. */
    } else {
-    dev_info(&d->intf->dev, "V4L2 closed: hardware safely shut down\\n");
+    dev_info(&d->intf->dev, "V4L2 closed: hardware safely shut down\n");
     d->hw_initialized = false;
    }
   }
