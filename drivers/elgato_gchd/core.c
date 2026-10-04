@@ -248,6 +248,21 @@ static void gchd_detect_workfn(struct work_struct *work)
   }
  }
 
+ if (d->input_configured && !READ_ONCE(d->signal_present)) {
+  /*
+   * STREAMOFF may cancel the worker that was queued by RX signal-loss
+   * detection. Recover here too, so a later STREAMON cannot reuse stale
+   * timing/configuration.
+   */
+  gchd_input_stop(d);
+  r = gchd_hw_init(d);
+  if (r) {
+   dev_warn(&d->intf->dev,
+            "redetection: hardware reset after signal loss failed: %d\n", r);
+   goto retry;
+  }
+ }
+
  if (d->input_prepared && !d->input_configured) {
   /* Short async probe: one timing-register sample, no encoder restart. */
   r = gchd_input_detect_signal(d);
