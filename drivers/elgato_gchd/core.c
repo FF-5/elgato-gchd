@@ -4,6 +4,7 @@
 #include <linux/vmalloc.h>
 #include <linux/timekeeping.h>
 #include <linux/jiffies.h>
+#include <linux/workqueue.h>
 #include "elgato_gchd.h"
 
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
@@ -133,19 +134,24 @@ static void gchd_ts(struct gchd *d,const u8 *p,u8 *pes,size_t *n)
 
 static void gchd_signal_check(struct gchd *d)
 {
- if (!d->signal_present &&
-     time_after(jiffies, d->last_video_jiffies + msecs_to_jiffies(500)))
+ if (!READ_ONCE(d->signal_present) &&
+     time_after(jiffies, READ_ONCE(d->last_video_jiffies) +
+                msecs_to_jiffies(500)))
   return;
 
- if (d->signal_present &&
-     time_after(jiffies, d->last_video_jiffies + msecs_to_jiffies(500))) {
+ if (READ_ONCE(d->signal_present) &&
+     time_after(jiffies, READ_ONCE(d->last_video_jiffies) +
+                msecs_to_jiffies(500))) {
   struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
+
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
-  d->signal_present = false;
-  gchd_input_stop(d);
-  pr_info("elgato_gchd: input %u signal lost; capture stopped; switch input to reinitialize\n",
+  WRITE_ONCE(d->signal_present, false);
+  /* RX must not issue control transfers or attempt to stop itself here. */
+  if (READ_ONCE(d->streaming))
+   schedule_delayed_work(&d->detect_work, 0);
+  pr_info("elgato_gchd: input %u signal lost; scheduling redetection\\n",
           d->input);
  }
 }
@@ -196,14 +202,63 @@ static int gchd_rx(void *arg)
  return 0;
 }
 
-static int gchd_queue_setup(struct vb2_queue *q,unsigned int *nb,unsigned int *np,
-                            unsigned int sizes[],struct device *alloc[])
-{struct gchd*d=vb2_get_drv_priv(q);if(*np)return sizes[0]>=d->sizeimage?0:-EINVAL;
- *np=1;sizes[0]=d->sizeimage;return 0;}
-static void gchd_buf_queue(struct vb2_buffer *vb)
-{struct gchd*d=vb2_get_drv_priv(vb->vb2_queue);struct gchd_buffer*b=container_of(to_vb2_v4l2_buffer(vb),struct gchd_buffer,vb);
- unsigned long f;spin_lock_irqsave(&d->qlock,f);list_add_tail(&b->list,&d->queued);spin_unlock_irqrestore(&d->qlock,f);gchd_deliver(d);}
-static void gchd_return_queued(struct gchd *d, enum vb2_buffer_state state)
+static void gchd_detect_workfn(struct work_struct *work)
+{
+ struct gchd *d = container_of(to_delayed_work(work), struct gchd,
+                               detect_work);
+ int r = 0;
+
+ mutex_lock(&d->lifecycle_lock);
+ if (d->disconnected || !READ_ONCE(d->streaming))
+  goto out;
+
+ /* Join the only bulk-IN reader before control/mailbox operations. */
+ if (d->rx_thread) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+  r = gchd_stream_stop(d);
+  if (r)
+   dev_warn(&d->intf->dev, "redetection: stream stop failed: %d\\n", r);
+ }
+
+ gchd_ring_free(&d->ring);
+ d->ts_partial_len = 0;
+ WRITE_ONCE(d->signal_present, false);
+
+ /*
+  * Timing reads are currently part of input configuration. Re-run that
+  * sequence while stopped; detection and mode programming can be split later.
+  */
+ if (d->input_configured)
+  gchd_input_stop(d);
+ r = gchd_input_configure_idle(d);
+ if (r)
+  dev_warn(&d->intf->dev, "redetection: input setup failed: %d\\n", r);
+
+ if (!r && READ_ONCE(d->signal_present)) {
+  d->width = d->input_width;
+  d->height = d->input_height;
+  r = gchd_input_start(d);
+  if (!r) {
+   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+   if (IS_ERR(d->rx_thread)) {
+    r = PTR_ERR(d->rx_thread);
+    d->rx_thread = NULL;
+    if (gchd_stream_stop(d))
+     gchd_input_stop(d);
+   }
+  }
+ }
+
+ if ((r || !READ_ONCE(d->signal_present)) &&
+     !d->disconnected && READ_ONCE(d->streaming))
+  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
+
+out:
+ mutex_unlock(&d->lifecycle_lock);
+}
+
+static int gchd_queue_setup(static void gchd_return_queued(struct gchd *d, enum vb2_buffer_state state)
 {
  struct gchd_buffer *b, *tmp;
  unsigned long flags;
@@ -216,39 +271,60 @@ static void gchd_return_queued(struct gchd *d, enum vb2_buffer_state state)
  spin_unlock_irqrestore(&d->qlock, flags);
 }
 
-static int gchd_start(struct vb2_queue*q,unsigned int c)
+static int gchd_start(struct vb2_queue *q, unsigned int count)
 {
  struct gchd *d = vb2_get_drv_priv(q);
  int r;
 
- /* Setup normally completed during probe; retry only after invalidation. */
+ mutex_lock(&d->lifecycle_lock);
+ if (d->disconnected) {
+  r = -ENODEV;
+  goto err;
+ }
+
  if (!d->input_configured) {
   r = gchd_input_configure_idle(d);
   if (r)
-   goto err_queued;
+   goto err;
  }
 
- /* STREAMON performs only the state transition before starting RX. */
- r = gchd_input_start(d);
- if (r)
-  goto err_queued;
+ /* Keep STREAMON pending if the source is absent. */
+ WRITE_ONCE(d->streaming, true);
+ if (!READ_ONCE(d->signal_present)) {
+  schedule_delayed_work(&d->detect_work, 0);
+  mutex_unlock(&d->lifecycle_lock);
+  return 0;
+ }
 
- d->streaming = true;
+ r = gchd_input_start(d);
+ if (r == -ENOLINK) {
+  schedule_delayed_work(&d->detect_work, 0);
+  mutex_unlock(&d->lifecycle_lock);
+  return 0;
+ }
+ if (r)
+  goto err_streaming;
+
  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
  if (IS_ERR(d->rx_thread)) {
   r = PTR_ERR(d->rx_thread);
   d->rx_thread = NULL;
-  d->streaming = false;
   if (gchd_stream_stop(d))
    gchd_input_stop(d);
-  goto err_queued;
+  goto err_streaming;
  }
+
+ mutex_unlock(&d->lifecycle_lock);
  return 0;
 
-err_queued:
+err_streaming:
+ WRITE_ONCE(d->streaming, false);
+err:
+ mutex_unlock(&d->lifecycle_lock);
  gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
  return r;
 }
+
 static void gchd_stop(struct vb2_queue *q)
 {
  struct gchd *d = vb2_get_drv_priv(q);
@@ -256,8 +332,9 @@ static void gchd_stop(struct vb2_queue *q)
  unsigned long flags;
  int r;
 
- d->streaming = false;
- /* The RX thread and the stopStream drain must never read EP 0x81 together. */
+ cancel_delayed_work_sync(&d->detect_work);
+ mutex_lock(&d->lifecycle_lock);
+ WRITE_ONCE(d->streaming, false);
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
@@ -265,7 +342,7 @@ static void gchd_stop(struct vb2_queue *q)
  r = gchd_stream_stop(d);
  if (r) {
   dev_err(&d->intf->dev,
-          "userspace-compatible stream stop failed: %d; disabling encoder as fallback\n",
+          "userspace-compatible stream stop failed: %d; disabling encoder as fallback\\n",
           r);
   gchd_input_stop(d);
  }
@@ -278,9 +355,10 @@ static void gchd_stop(struct vb2_queue *q)
   vb2_buffer_done(&b->vb.vb2_buf, VB2_BUF_STATE_ERROR);
  }
  spin_unlock_irqrestore(&d->qlock, flags);
+ mutex_unlock(&d->lifecycle_lock);
 }
 
-static const struct vb2_ops gchd_vb2_ops={
+static const struct vb2_opsstatic const struct vb2_ops gchd_vb2_ops={
  .queue_setup=gchd_queue_setup,.buf_queue=gchd_buf_queue,.start_streaming=gchd_start,
  .stop_streaming=gchd_stop,.wait_prepare=vb2_ops_wait_prepare,.wait_finish=vb2_ops_wait_finish
 };
@@ -326,19 +404,26 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  if (i == d->input)
   return 0;
 
- resume = d->streaming;
+ resume = READ_ONCE(d->streaming);
  if (vb2_is_busy(&d->vbq) && !resume)
   return -EBUSY;
 
+ cancel_delayed_work_sync(&d->detect_work);
+ mutex_lock(&d->lifecycle_lock);
+ if (d->disconnected) {
+  mutex_unlock(&d->lifecycle_lock);
+  return -ENODEV;
+ }
+
  if (resume) {
-  /* Stop the sole EP 0x81 reader before mirroring stopStream(true). */
   if (d->rx_thread) {
    kthread_stop(d->rx_thread);
    d->rx_thread = NULL;
   }
   r = gchd_stream_stop(d);
   if (r) {
-   dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\n", r);
+   dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\\n", r);
+   mutex_unlock(&d->lifecycle_lock);
    return r;
   }
  }
@@ -370,36 +455,49 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  d->width = d->input_width;
  d->height = d->input_height;
 
- /* Configure the selected input while idle; never repeat device init. */
  r = gchd_input_configure_idle(d);
  if (r) {
-  dev_err(&d->intf->dev, "input switch: setup for input %u failed: %d\n",
+  dev_err(&d->intf->dev, "input switch: setup for input %u failed: %d\\n",
           i, r);
   if (resume)
-   d->streaming = false;
+   WRITE_ONCE(d->streaming, false);
+  mutex_unlock(&d->lifecycle_lock);
   return r;
  }
 
  if (resume) {
+  if (!READ_ONCE(d->signal_present)) {
+   schedule_delayed_work(&d->detect_work, 0);
+   mutex_unlock(&d->lifecycle_lock);
+   return 0;
+  }
   r = gchd_input_start(d);
+  if (r == -ENOLINK) {
+   schedule_delayed_work(&d->detect_work, 0);
+   mutex_unlock(&d->lifecycle_lock);
+   return 0;
+  }
   if (r) {
-   d->streaming = false;
+   WRITE_ONCE(d->streaming, false);
+   mutex_unlock(&d->lifecycle_lock);
    return r;
   }
   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
   if (IS_ERR(d->rx_thread)) {
    r = PTR_ERR(d->rx_thread);
    d->rx_thread = NULL;
-   d->streaming = false;
+   WRITE_ONCE(d->streaming, false);
    if (gchd_stream_stop(d))
     gchd_input_stop(d);
+   mutex_unlock(&d->lifecycle_lock);
    return r;
   }
  }
+ mutex_unlock(&d->lifecycle_lock);
  return 0;
 }
 
-static int gchd_query_dv_timings(struct file *f, void *p,
+static int gchd_query_dv_timings(static int gchd_query_dv_timings(struct file *f, void *p,
 				     struct v4l2_dv_timings *t)
 {
  struct gchd *d = video_drvdata(f);
@@ -712,6 +810,8 @@ static int gchd_probe(struct usb_interface *i,
  if (r)
   goto err;
  mutex_init(&d->lock);
+ mutex_init(&d->lifecycle_lock);
+ INIT_DELAYED_WORK(&d->detect_work, gchd_detect_workfn);
  spin_lock_init(&d->qlock);
  INIT_LIST_HEAD(&d->queued);
  spin_lock_init(&d->ring.lock);
@@ -770,12 +870,16 @@ static void gchd_disconnect(struct usb_interface *i)
  if (!d)
   return;
  usb_set_intfdata(i, NULL);
- d->disconnected = true;
- d->streaming = false;
+ WRITE_ONCE(d->disconnected, true);
+ cancel_delayed_work_sync(&d->detect_work);
+ mutex_lock(&d->lifecycle_lock);
+ WRITE_ONCE(d->streaming, false);
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
  }
+ mutex_unlock(&d->lifecycle_lock);
+
  /* The interface may already be gone: never issue USB commands here. */
  gchd_v4l2_unregister(d);
  gchd_ring_free(&d->ring);
@@ -793,7 +897,9 @@ static void gchd_shutdown(struct device *dev)
  if (!d || d->disconnected || !d->hw_initialized)
   return;
 
- d->streaming = false;
+ cancel_delayed_work_sync(&d->detect_work);
+ mutex_lock(&d->lifecycle_lock);
+ WRITE_ONCE(d->streaming, false);
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
@@ -802,10 +908,11 @@ static void gchd_shutdown(struct device *dev)
  /* Attempt RESET directly; failure must never prevent system shutdown. */
  r = gchd_state_cmd(d, SCMD_RESET, 0, 0, 0x10);
  if (r)
-  dev_dbg(dev, "best-effort hardware shutdown failed: %d\n", r);
+  dev_dbg(dev, "best-effort hardware shutdown failed: %d\\n", r);
+ mutex_unlock(&d->lifecycle_lock);
 }
 
-static struct usb_driver gchd_usb = {
+static struct usb_driver gchd_usbstatic struct usb_driver gchd_usb = {
  .name = "elgato_gchd",
  .id_table = gchd_ids,
  .probe = gchd_probe,
