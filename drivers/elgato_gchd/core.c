@@ -601,7 +601,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
  if (r) {
   dev_err(&d->intf->dev,
-          "input switch: transition to IDLE failed: %d\\n", r);
+          "input switch: transition to IDLE failed: %d\n", r);
   WRITE_ONCE(d->streaming, false);
   mutex_unlock(&d->lifecycle_lock);
   return r;
