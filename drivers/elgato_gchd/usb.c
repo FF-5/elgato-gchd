@@ -809,32 +809,13 @@ int gchd_hw_init(struct gchd *d)
     * userspace driver's source-selection/transcoder initialization point.
     */
    if (first_time) {
-    bool hdmi_signal_found = !!(d->special_detect_mask & BIT(3));
-    u16 cable_type = d->special_detect_mask & 3;
-    bool signal_found;
-
-    if (cable_type == 0)
-     signal_found = hdmi_signal_found;
-    else
-     signal_found = true;
-
-    if (!d->input_forced) {
-     /*
-      * Match the userspace autodetect mapping:
-      *   3 -> Composite
-      *   2 -> Component
-      *   0 -> HDMI
-      * no signal -> HDMI fallback
-      */
-     if (!signal_found)
-      d->input = 0;
-     else if (cable_type == 3)
-      d->input = 2;
-     else if (cable_type == 2)
-      d->input = 1;
-     else
-      d->input = 0;
-    }
+    /*
+     * Do not auto-select an input from cable/source-detection status.
+     * HDMI (input 0) is the default; an explicit S_INPUT selection is
+     * preserved through input_forced.
+     */
+    if (!d->input_forced)
+     d->input = 0;
 
     /*
      * Userspace always calls enableAnalogInput() here, even for HDMI.
