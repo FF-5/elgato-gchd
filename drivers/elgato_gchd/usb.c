@@ -568,6 +568,109 @@ int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
  return r;
 }
 
+
+/*
+ * Reproduce GCHD::stopStream(true) from the userspace driver. The caller
+ * must stop/join the RX thread first: this function owns bulk-IN endpoint
+ * 0x81 while draining the device's queued transport stream.
+ */
+static int gchd_drain_stream(struct gchd *d, unsigned int count)
+{
+ unsigned int i;
+ int actual, r;
+
+ for (i = 0; i < count; ++i) {
+  actual = 0;
+  r = usb_bulk_msg(d->udev, usb_rcvbulkpipe(d->udev, GCHD_EP_IN),
+                   d->usb_buf, GCHD_USB_BUFSIZE, &actual, 1000);
+  if (r == -ETIMEDOUT || r == -EAGAIN)
+   continue;
+  if (r)
+   return r;
+ }
+ return 0;
+}
+
+/* completeStateChange(..., forceStreamEmpty=true), including its 50-read
+ * drain before each completion-register poll. */
+static int gchd_complete_state_change_draining(struct gchd *d,
+                                                u16 current, u16 next)
+{
+ u16 state = 0, completion = 0, dummy;
+ int r, tries;
+ bool first = true;
+
+ for (;;) {
+  for (tries = 0; tries < 2000; ++tries) {
+   r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+   if (r) return r;
+   state &= 0x1f;
+   if (state != current && state != next)
+    return first ? -EIO : -EIO;
+   first = false;
+
+   r = gchd_drain_stream(d, 50);
+   if (r) return r;
+   r = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
+   if (r) return r;
+   r = gchd_req_read16(d, 0x0900, 0x01b0, &dummy);
+   if (r) return r;
+   if (completion & 0x0004)
+    break;
+  }
+  if (tries == 2000)
+   return -ETIMEDOUT;
+
+  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+  if (r) return r;
+  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+  if (r) return r;
+  state &= 0x1f;
+  r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, 0x0004);
+  if (r) return r;
+  r = gchd_reg_write16(d, 0x01b0, 0x0000);
+  if (r) return r;
+  if (state == next) return 0;
+  if (state != current) return -EIO;
+ }
+}
+
+/* Exact userspace stopStream(true): START -> NULL, drain 200, complete;
+ * drain 20, NULL -> STOP, complete; drain 5. */
+int gchd_stream_stop(struct gchd *d)
+{
+ int r;
+ u16 state;
+
+ r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+ if (r) return r;
+ state &= 0x1f;
+ if (state == 0x01)
+  return 0;
+ if (state != 0x02 && state != 0x04)
+  return -EINVAL;
+
+ r = gchd_scmd(d, SCMD_STATE_CHANGE, 0, 0x0004);
+ if (r) return r;
+ r = gchd_drain_stream(d, 200);
+ if (r) return r;
+ if (state == 0x02) {
+  r = gchd_complete_state_change_draining(d, 0x02, 0x04);
+  if (r) return r;
+ }
+ r = gchd_drain_stream(d, 20);
+ if (r) return r;
+
+ r = gchd_scmd(d, SCMD_STATE_CHANGE, 0, 0x0001);
+ if (r) return r;
+ r = gchd_complete_state_change_draining(d, 0x04, 0x01);
+ if (r) return r;
+ r = gchd_drain_stream(d, 5);
+ if (!r)
+  d->input_configured = false;
+ return r;
+}
+
 int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
 {
  int r;
