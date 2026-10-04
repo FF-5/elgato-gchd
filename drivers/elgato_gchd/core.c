@@ -226,9 +226,14 @@ static void gchd_detect_workfn(struct work_struct *work)
  WRITE_ONCE(d->signal_present, false);
 
  /*
-  * Timing reads are currently part of input configuration. Re-run that
-  * sequence while stopped; detection and mode programming can be split later.
+  * Force the existing input setup to sample timing again instead of reusing
+  * fallback dimensions from the previous no-signal attempt.
   */
+ d->input_width = 0;
+ d->input_height = 0;
+ d->input_fps_num = 0;
+ d->input_fps_den = 0;
+ d->input_interlaced = false;
  if (d->input_configured)
   gchd_input_stop(d);
  r = gchd_input_configure_idle(d);
