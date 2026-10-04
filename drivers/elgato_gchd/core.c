@@ -1226,7 +1226,7 @@ static void gchd_shutdown(struct device *dev)
   */
  r = gchd_hw_shutdown(d);
  if (r) {
-  dev_warn(dev, "best-effort hardware shutdown during system shutdown failed: %d\\n",
+  dev_warn(dev, "best-effort hardware shutdown during system shutdown failed: %d\n",
            r);
  } else {
   d->hw_initialized = false;
