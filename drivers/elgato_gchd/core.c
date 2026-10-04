@@ -585,7 +585,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->input_forced = true;
  d->mode_forced = false;
  d->input_configured = false;
- d->encoder_started = false;
+ /* encoder_started is deliberately preserved across connector changes. */
  d->input_prepared = false;
  d->signal_present = false;
  d->last_video_jiffies = jiffies;
@@ -614,14 +614,6 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   * Move directly to the documented IDLE state before async detection and
   * timing-dependent configuration of the selected connector.
   */
- r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
- if (r) {
-  dev_err(&d->intf->dev,
-          "input switch: transition to IDLE failed: %d\n", r);
-  WRITE_ONCE(d->streaming, false);
-  mutex_unlock(&d->lifecycle_lock);
-  return r;
- }
  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
  if (r) {
   dev_err(&d->intf->dev,
