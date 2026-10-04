@@ -472,9 +472,13 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
   return 0;
 
  resume = READ_ONCE(d->streaming);
- if (vb2_is_busy(&d->vbq) && !resume)
-  return -EBUSY;
 
+ /*
+  * Input selection is safe while buffers are allocated but the queue is not
+  * streaming: sizeimage is a fixed maximum-frame allocation. Rejecting every
+  * busy VB2 queue here prevents GUI applications from switching inputs after
+  * they have prepared their capture buffers.
+  */
  WRITE_ONCE(d->detect_requested, false);
  cancel_delayed_work_sync(&d->detect_work);
  mutex_lock(&d->lifecycle_lock);
