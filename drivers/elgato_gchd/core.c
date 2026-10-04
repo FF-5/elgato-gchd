@@ -18,6 +18,9 @@ static const char * const gchd_input_menu[] = {
  "HDMI", "Component", "Composite", NULL,
 };
 
+/* Preserve the VB2 read/poll/mmap/ioctl operations while adding lifecycle hooks. */
+static struct v4l2_file_operations gchd_fops;
+
 static unsigned long ring_bytes = GCHD_RING_BYTES;
 module_param(ring_bytes, ulong, 0644);
 MODULE_PARM_DESC(ring_bytes, "Maximum encoded video bytes retained in RAM");
@@ -921,6 +924,113 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
 }
 static const struct v4l2_ctrl_ops gchd_ctrl_ops = { .s_ctrl = gchd_ctrl };
 
+static int gchd_fop_open(struct file *file)
+{
+ struct gchd *d = video_drvdata(file);
+ int r = 0;
+
+ if (vb2_fops.open) {
+  r = vb2_fops.open(file);
+  if (r)
+   return r;
+ }
+
+ mutex_lock(&d->users_lock);
+ mutex_lock(&d->lifecycle_lock);
+ if (d->disconnected) {
+  r = -ENODEV;
+  goto out;
+ }
+
+ if (d->open_count == 0) {
+  /*
+   * A previous close deliberately shut the processor down. Re-run the full
+   * hardware initialization on the first open, preserving the selected input.
+   */
+  d->input_forced = true;
+  d->input_configured = false;
+  d->input_prepared = false;
+  d->encoder_started = false;
+  d->signal_present = false;
+  d->input_width = 0;
+  d->input_height = 0;
+  d->input_fps_num = 0;
+  d->input_fps_den = 0;
+  r = gchd_hw_init(d);
+  if (r) {
+   dev_err(&d->intf->dev, "hardware initialization on open failed: %d\\n", r);
+   gchd_hw_shutdown(d);
+   d->hw_initialized = false;
+   goto out;
+  }
+
+  d->hw_initialized = true;
+  WRITE_ONCE(d->detect_requested, true);
+  schedule_delayed_work(&d->detect_work, 0);
+  dev_info(&d->intf->dev, "V4L2 opened: hardware initialized, detecting input %u\\n",
+           d->input);
+ }
+ d->open_count++;
+
+out:
+ mutex_unlock(&d->lifecycle_lock);
+ mutex_unlock(&d->users_lock);
+ if (r && vb2_fops.release)
+  vb2_fops.release(file);
+ return r;
+}
+
+static int gchd_fop_release(struct file *file)
+{
+ struct gchd *d = video_drvdata(file);
+ int r = 0, sr;
+
+ /* VB2 must release buffers and invoke stop_streaming before HW shutdown. */
+ if (vb2_fops.release)
+  r = vb2_fops.release(file);
+
+ mutex_lock(&d->users_lock);
+ if (d->open_count)
+  d->open_count--;
+
+ if (!d->open_count && !d->disconnected) {
+  WRITE_ONCE(d->detect_requested, false);
+  WRITE_ONCE(d->streaming, false);
+
+  /* Never wait for work while holding lifecycle_lock: the worker takes it. */
+  cancel_delayed_work_sync(&d->detect_work);
+  mutex_lock(&d->lifecycle_lock);
+
+  if (d->rx_thread) {
+   kthread_stop(d->rx_thread);
+   d->rx_thread = NULL;
+  }
+
+  if (d->hw_initialized) {
+   gchd_input_stop(d);
+   sr = gchd_hw_shutdown(d);
+   if (sr) {
+    dev_warn(&d->intf->dev, "hardware shutdown on last close failed: %d\\n", sr);
+    if (!r)
+     r = sr;
+   } else {
+    dev_info(&d->intf->dev, "V4L2 closed: hardware safely shut down\\n");
+   }
+   d->hw_initialized = false;
+  }
+
+  d->input_configured = false;
+  d->input_prepared = false;
+  d->encoder_started = false;
+  d->signal_present = false;
+  gchd_ring_free(&d->ring);
+  d->ts_partial_len = 0;
+  mutex_unlock(&d->lifecycle_lock);
+ }
+ mutex_unlock(&d->users_lock);
+ return r;
+}
+
 int gchd_v4l2_register(struct gchd*d)
 {
  int r=v4l2_device_register(&d->intf->dev,&d->v4l2_dev);if(r)return r;
@@ -950,7 +1060,10 @@ int gchd_v4l2_register(struct gchd*d)
  d->vbq.drv_priv=d;d->vbq.ops=&gchd_vb2_ops;d->vbq.mem_ops=&vb2_vmalloc_memops;d->vbq.lock=&d->lock;
  r=vb2_queue_init(&d->vbq);if(r)goto err;
  strscpy(d->vdev.name,d->family == GCHD_FAMILY_HDNEW ? "Elgato Game Capture HD (HDNew)" : "Elgato Game Capture HD",sizeof(d->vdev.name));d->vdev.v4l2_dev=&d->v4l2_dev;d->vdev.release=video_device_release_empty;
- d->vdev.fops=&vb2_fops;d->vdev.ioctl_ops=&gchd_ioctl;d->vdev.queue=&d->vbq;d->vdev.lock=&d->lock;
+ gchd_fops = vb2_fops;
+ gchd_fops.open = gchd_fop_open;
+ gchd_fops.release = gchd_fop_release;
+ d->vdev.fops=&gchd_fops;d->vdev.ioctl_ops=&gchd_ioctl;d->vdev.queue=&d->vbq;d->vdev.lock=&d->lock;
  d->vdev.ctrl_handler=&d->ctrls;d->vdev.device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_STREAMING|V4L2_CAP_READWRITE;video_set_drvdata(&d->vdev,d);
  r=video_register_device(&d->vdev,VFL_TYPE_VIDEO,-1);if(r)goto err;return 0;
 err:v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);return r;
@@ -983,6 +1096,7 @@ static int gchd_probe(struct usb_interface *i,
   goto err;
  mutex_init(&d->lock);
  mutex_init(&d->lifecycle_lock);
+ mutex_init(&d->users_lock);
  INIT_DELAYED_WORK(&d->detect_work, gchd_detect_workfn);
  spin_lock_init(&d->qlock);
  INIT_LIST_HEAD(&d->queued);
@@ -1009,30 +1123,19 @@ static int gchd_probe(struct usb_interface *i,
   goto err;
  }
 
- /* Hardware init leaves the device in IDLE; input timing is on-demand. */
- r = gchd_hw_init(d);
- if (r)
-  goto err_shutdown;
- d->hw_initialized = true;
-
- r = gchd_v4l2_register(d);
- if (r)
-  goto err_shutdown;
-
- usb_set_intfdata(i, d);
  /*
-  * Start detection only after the V4L2 node exists. Keep the public default
-  * format at 720p while no source timing has been measured.
+  * Keep the hardware uninitialized until a userspace client opens the V4L2
+  * node. This gives each open/last-close pair a clean HW init/shutdown cycle.
   */
- WRITE_ONCE(d->detect_requested, true);
- schedule_delayed_work(&d->detect_work, 0);
+ usb_set_intfdata(i, d);
+ r = gchd_v4l2_register(d);
+ if (r) {
+  usb_set_intfdata(i, NULL);
+  kfree(d->usb_buf);
+  goto err;
+ }
  return 0;
 
-err_shutdown:
- /* Initialization may have partially programmed the device; best-effort cleanup. */
- gchd_hw_shutdown(d);
- d->hw_initialized = false;
- kfree(d->usb_buf);
 err:
  usb_put_dev(d->udev);
  kfree(d);
