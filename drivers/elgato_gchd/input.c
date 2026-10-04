@@ -1428,11 +1428,11 @@ static int gchd_input_configure_mode(struct gchd *d)
  if (!d->encoder_started) {
   r = gchd_encoder_start(d);
   if (r) {
-   dev_err(&d->intf->dev, "capture setup: encoder start failed: %d\\n", r);
+   dev_err(&d->intf->dev, "capture setup: encoder start failed: %d\n", r);
    return r;
   }
   d->encoder_started = true;
-  dev_info(&d->intf->dev, "capture setup: encoder start completed\\n");
+  dev_info(&d->intf->dev, "capture setup: encoder start completed\n");
  }
 
  if (d->input == 0)
@@ -1451,7 +1451,7 @@ static int gchd_input_configure_mode(struct gchd *d)
   gchd_state_cmd(d, 1, 0, 0, 0x11);
   d->encoder_started = false;
   d->input_prepared = false;
-  dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\\n", r);
+  dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\n", r);
   return r;
  }
  dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
