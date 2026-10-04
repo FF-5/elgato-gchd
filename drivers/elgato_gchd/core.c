@@ -505,47 +505,12 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
   break;
  }
 
- r = gchd_input_configure_idle(d);
- if (r) {
-  dev_err(&d->intf->dev, "input switch: setup for input %u failed: %d\n",
-          i, r);
-  if (resume)
-   WRITE_ONCE(d->streaming, false);
-  mutex_unlock(&d->lifecycle_lock);
-  return r;
- }
- d->width = d->input_width;
- d->height = d->input_height;
-
- if (resume) {
-  if (!READ_ONCE(d->signal_present)) {
-   schedule_delayed_work(&d->detect_work, 0);
-   mutex_unlock(&d->lifecycle_lock);
-   return 0;
-  }
-  r = gchd_input_start(d);
-  if (r == -ENOLINK) {
-   schedule_delayed_work(&d->detect_work, 0);
-   mutex_unlock(&d->lifecycle_lock);
-   return 0;
-  }
-  if (r) {
-   WRITE_ONCE(d->streaming, false);
-   mutex_unlock(&d->lifecycle_lock);
-   return r;
-  }
-  d->last_video_jiffies = jiffies;
-   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
-  if (IS_ERR(d->rx_thread)) {
-   r = PTR_ERR(d->rx_thread);
-   d->rx_thread = NULL;
-   WRITE_ONCE(d->streaming, false);
-   if (gchd_stream_stop(d))
-    gchd_input_stop(d);
-   mutex_unlock(&d->lifecycle_lock);
-   return r;
-  }
- }
+ /*
+  * Selection invalidates the old timing/configuration. Detection work will
+  * probe this input and configure it only after a valid timing is found.
+  */
+ WRITE_ONCE(d->detect_requested, true);
+ schedule_delayed_work(&d->detect_work, 0);
  mutex_unlock(&d->lifecycle_lock);
  return 0;
 }
