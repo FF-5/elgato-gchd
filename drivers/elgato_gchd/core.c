@@ -423,7 +423,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   if (sr) {
    r = sr;
    dev_err(&d->intf->dev,
-           "retrying cleanup after failed initialization failed: %d\\n", sr);
+           "retrying cleanup after failed initialization failed: %d\n", sr);
    goto err;
   }
   d->hw_initialized = false;
@@ -1027,7 +1027,7 @@ static int gchd_fop_open(struct file *file)
    r = gchd_hw_shutdown(d);
    if (r) {
     dev_err(&d->intf->dev,
-            "retrying previous hardware shutdown before open failed: %d\\n", r);
+            "retrying previous hardware shutdown before open failed: %d\n", r);
     goto out;
    }
    d->hw_initialized = false;
