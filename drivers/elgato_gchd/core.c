@@ -248,14 +248,12 @@ static void gchd_stop(struct vb2_queue *q)
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
  }
- if (d->input_configured) {
-  r = gchd_stream_stop(d);
-  if (r) {
-   dev_err(&d->intf->dev,
-           "userspace-compatible stream stop failed: %d; disabling encoder as fallback\n",
-           r);
-   gchd_input_stop(d);
-  }
+ r = gchd_stream_stop(d);
+ if (r) {
+  dev_err(&d->intf->dev,
+          "userspace-compatible stream stop failed: %d; disabling encoder as fallback\n",
+          r);
+  gchd_input_stop(d);
  }
  gchd_ring_free(&d->ring);
  d->ts_partial_len = 0;
