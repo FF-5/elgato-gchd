@@ -12,6 +12,12 @@ MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("0.2.0");
 
+/* Private V4L2 menu control so GUI applications can select the connector. */
+#define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
+static const char * const gchd_input_menu[] = {
+ "HDMI", "Component", "Composite", NULL,
+};
+
 static unsigned long ring_bytes = GCHD_RING_BYTES;
 module_param(ring_bytes, ulong, 0644);
 MODULE_PARM_DESC(ring_bytes, "Maximum encoded video bytes retained in RAM");
@@ -460,9 +466,8 @@ static int gchd_ginput(struct file *f, void *p, unsigned int *i)
  return 0;
 }
 
-static int gchd_sinput(struct file *f, void *p, unsigned int i)
+static int gchd_set_input(struct gchd *d, unsigned int i)
 {
- struct gchd *d = video_drvdata(f);
  bool resume;
  int r;
 
@@ -539,6 +544,23 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  WRITE_ONCE(d->detect_requested, true);
  schedule_delayed_work(&d->detect_work, 0);
  mutex_unlock(&d->lifecycle_lock);
+ return 0;
+}
+
+static int gchd_sinput(struct file *f, void *p, unsigned int i)
+{
+ struct gchd *d = video_drvdata(f);
+ struct v4l2_ctrl *ctrl;
+ int r;
+
+ r = gchd_set_input(d, i);
+ if (r)
+  return r;
+
+ /* Keep the GUI-visible menu and standard VIDIOC_S_INPUT API in sync. */
+ ctrl = v4l2_ctrl_find(&d->ctrls, V4L2_CID_GCHD_INPUT_SOURCE);
+ if (ctrl && ctrl->val != i)
+  return __v4l2_ctrl_s_ctrl(ctrl, i);
  return 0;
 }
 
@@ -777,6 +799,11 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
  struct gchd *d = container_of(c->handler, struct gchd, ctrls);
  u8 level;
 
+ switch (c->id) {
+ case V4L2_CID_GCHD_INPUT_SOURCE:
+  return gchd_set_input(d, c->val);
+ }
+
  if (d->streaming)
   return -EBUSY;
 
@@ -817,11 +844,25 @@ static const struct v4l2_ctrl_ops gchd_ctrl_ops = { .s_ctrl = gchd_ctrl };
 int gchd_v4l2_register(struct gchd*d)
 {
  int r=v4l2_device_register(&d->intf->dev,&d->v4l2_dev);if(r)return r;
- v4l2_ctrl_handler_init(&d->ctrls,3);
+ v4l2_ctrl_handler_init(&d->ctrls,4);
  v4l2_ctrl_new_std(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_BITRATE,32000,40000000,1000,16000000);
  v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_PROFILE,V4L2_MPEG_VIDEO_H264_PROFILE_HIGH,
   ~(BIT(V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)),V4L2_MPEG_VIDEO_H264_PROFILE_MAIN);
  v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_LEVEL,V4L2_MPEG_VIDEO_H264_LEVEL_5_1,0,V4L2_MPEG_VIDEO_H264_LEVEL_4_1);
+ {
+  struct v4l2_ctrl_config input_cfg = {
+   .ops = &gchd_ctrl_ops,
+   .id = V4L2_CID_GCHD_INPUT_SOURCE,
+   .name = "Input Source",
+   .type = V4L2_CTRL_TYPE_MENU,
+   .min = 0,
+   .max = ARRAY_SIZE(gchd_input_menu) - 2,
+   .step = 1,
+   .def = d->input,
+   .qmenu = gchd_input_menu,
+  };
+  v4l2_ctrl_new_custom(&d->ctrls, &input_cfg, NULL);
+ }
  if(d->ctrls.error){r=d->ctrls.error;goto err;}
  memset(&d->vbq,0,sizeof(d->vbq));d->vbq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE;d->vbq.io_modes=VB2_MMAP|VB2_READ;d->vbq.timestamp_flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;d->vbq.dev=&d->intf->dev;
  d->vbq.drv_priv=d;d->vbq.ops=&gchd_vb2_ops;d->vbq.mem_ops=&vb2_vmalloc_memops;d->vbq.lock=&d->lock;
