@@ -1447,9 +1447,12 @@ static int gchd_input_configure_mode(struct gchd *d)
    d->input_prepared = true;
    return r;
   }
-  gchd_do_enable(d, BIT(4) | BIT(3), 0);
-  gchd_state_cmd(d, 1, 0, 0, 0x11);
-  d->encoder_started = false;
+  /*
+   * Connector setup failed after the encoder firmware was already running.
+   * Return to IDLE, but do not tear down the encoder: input changes reuse the
+   * initialized encoder and retry only the connector-specific configuration.
+   */
+  gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
   d->input_prepared = false;
   dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\n", r);
   return r;
