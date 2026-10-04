@@ -306,14 +306,33 @@ static int gchd_ginput(struct file *f, void *p, unsigned int *i)
 static int gchd_sinput(struct file *f, void *p, unsigned int i)
 {
  struct gchd *d = video_drvdata(f);
+ bool resume;
+ int r;
 
- if (i > 2) return -EINVAL;
- if (vb2_is_busy(&d->vbq)) {
-  if (!d->streaming || d->signal_present)
-   return -EBUSY;
-  gchd_input_stop(d);
+ if (i > 2)
+  return -EINVAL;
+ if (i == d->input)
+  return 0;
+
+ resume = d->streaming;
+ if (vb2_is_busy(&d->vbq) && !resume)
+  return -EBUSY;
+
+ if (resume) {
+  /* Stop the sole EP 0x81 reader before mirroring stopStream(true). */
+  if (d->rx_thread) {
+   kthread_stop(d->rx_thread);
+   d->rx_thread = NULL;
+  }
+  r = gchd_stream_stop(d);
+  if (r) {
+   dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\n", r);
+   return r;
+  }
  }
 
+ gchd_ring_free(&d->ring);
+ d->ts_partial_len = 0;
  d->input = i;
  d->input_forced = true;
  d->input_configured = false;
@@ -321,28 +340,39 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  d->last_video_jiffies = jiffies;
  switch (i) {
  case 0:
-  d->input_width = 1920; d->input_height = 1080;
-  d->input_fps_num = 60; d->input_fps_den = 1;
-  d->input_interlaced = false;
-  break;
  case 1:
-  d->input_width = 1920; d->input_height = 1080;
-  d->input_fps_num = 60; d->input_fps_den = 1;
+  d->input_width = 1920;
+  d->input_height = 1080;
+  d->input_fps_num = 60;
+  d->input_fps_den = 1;
   d->input_interlaced = false;
   break;
  default:
-  d->input_width = 720; d->input_height = 480;
-  d->input_fps_num = 60; d->input_fps_den = 1;
+  d->input_width = 720;
+  d->input_height = 480;
+  d->input_fps_num = 60;
+  d->input_fps_den = 1;
   d->input_interlaced = true;
   break;
  }
  d->width = d->input_width;
  d->height = d->input_height;
 
- if (d->streaming) {
-  int r = gchd_input_configure(d);
-  if (r)
+ /* V4L2 input selection while idle must not start the encoder. */
+ if (resume) {
+  r = gchd_input_configure(d);
+  if (r) {
+   dev_err(&d->intf->dev, "input switch: setup for input %u failed: %d\n",
+           i, r);
    return r;
+  }
+  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+  if (IS_ERR(d->rx_thread)) {
+   r = PTR_ERR(d->rx_thread);
+   d->rx_thread = NULL;
+   gchd_input_stop(d);
+   return r;
+  }
  }
  return 0;
 }
