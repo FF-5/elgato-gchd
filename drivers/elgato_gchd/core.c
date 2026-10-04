@@ -409,6 +409,16 @@ static void gchd_stop(struct vb2_queue *q)
   vb2_buffer_done(&b->vb.vb2_buf, VB2_BUF_STATE_ERROR);
  }
  spin_unlock_irqrestore(&d->qlock, flags);
+
+ /*
+  * STREAMOFF stops capture, not source monitoring. If no source has been
+  * found, keep the asynchronous detector alive so a later connection works
+  * without requiring another open/input switch.
+  */
+ if (!d->disconnected && !READ_ONCE(d->signal_present)) {
+  WRITE_ONCE(d->detect_requested, true);
+  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
+ }
  mutex_unlock(&d->lifecycle_lock);
 }
 
