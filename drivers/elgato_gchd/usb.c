@@ -16,7 +16,6 @@ MODULE_FIRMWARE("gchd/MB86M01_ASSP_NSEC_ENC_H");
 #define REG_REQ 0xbc
 #define MAIL_REG 0xbd
 #define SCMD_REG 0xb8
-#define SCMD_IDLE 1
 #define SCMD_INIT 4
 #define SCMD_STATE_CHANGE 5
 
