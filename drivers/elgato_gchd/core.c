@@ -319,15 +319,13 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   goto err;
  }
 
- if (!d->input_configured) {
-  r = gchd_input_configure_idle(d);
-  if (r)
-   goto err;
- }
-
- /* Keep STREAMON pending if the source is absent. */
+ /*
+  * Keep STREAMON non-blocking when setup is invalidated by S_FMT or when
+  * timing is absent. The worker performs configuration/detection while the
+  * V4L2 stream request remains pending.
+  */
  WRITE_ONCE(d->streaming, true);
- if (!READ_ONCE(d->signal_present)) {
+ if (!d->input_configured || !READ_ONCE(d->signal_present)) {
   schedule_delayed_work(&d->detect_work, 0);
   mutex_unlock(&d->lifecycle_lock);
   return 0;
