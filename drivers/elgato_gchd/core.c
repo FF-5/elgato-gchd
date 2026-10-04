@@ -609,10 +609,9 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 
  /*
   * Input switching is not device shutdown: do not call gchd_hw_init() here.
-  * That routine can issue SCMD_RESET for a non-reset state. Capture has
-  * already been stopped and gchd_input_stop() has disabled the encoder.
-  * Move directly to the documented IDLE state before async detection and
-  * timing-dependent configuration of the selected connector.
+  * That routine can issue SCMD_RESET for a non-reset state. Capture transport
+  * has already been stopped; keep the encoder firmware initialized, move to
+  * IDLE, then asynchronously detect timing and configure the selected input.
   */
  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
  if (r) {
