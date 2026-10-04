@@ -290,14 +290,14 @@ static void gchd_detect_workfn(struct work_struct *work)
    goto retry;
   }
   if (r) {
-   dev_warn(&d->intf->dev, "signal probe failed: %d\\n", r);
+   dev_warn(&d->intf->dev, "signal probe failed: %d\n", r);
    d->input_prepared = false;
    goto retry;
   }
 
   d->input_prepared = true;
   dev_info(&d->intf->dev,
-           "signal detected: input=%u mode=%ux%u fps=%u/%u interlaced=%u\\n",
+           "signal detected: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
            d->input, d->input_width, d->input_height, d->input_fps_num,
            d->input_fps_den, d->input_interlaced);
 
@@ -305,7 +305,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   if (r) {
    if (r != -ENOLINK) {
     dev_warn(&d->intf->dev,
-             "redetection: input configuration failed: %d\\n", r);
+             "redetection: input configuration failed: %d\n", r);
     /*
      * Configuration began from IDLE and has not issued START. Do not send
      * another IDLE state-change command here: HDNew can time out when asked
