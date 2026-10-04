@@ -221,8 +221,11 @@ static void gchd_detect_workfn(struct work_struct *work)
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
   r = gchd_stream_stop(d);
-  if (r)
-   dev_warn(&d->intf->dev, "redetection: stream stop failed: %d\n", r);
+  if (r) {
+   dev_warn(&d->intf->dev,
+            "redetection: stream stop failed: %d; retrying later\n", r);
+   goto retry;
+  }
  }
 
  gchd_ring_free(&d->ring);
@@ -243,7 +246,7 @@ static void gchd_detect_workfn(struct work_struct *work)
  if (d->input_configured)
   gchd_input_stop(d);
  r = gchd_input_configure_idle(d);
- if (r)
+ if (r && r != -ENOLINK)
   dev_warn(&d->intf->dev, "redetection: input setup failed: %d\n", r);
 
  if (!r && READ_ONCE(d->signal_present)) {
@@ -273,6 +276,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   }
  }
 
+retry:
  if ((r || !READ_ONCE(d->signal_present)) &&
      !d->disconnected && READ_ONCE(d->detect_requested))
   schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
