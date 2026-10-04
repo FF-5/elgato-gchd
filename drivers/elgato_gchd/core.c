@@ -229,7 +229,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   r = gchd_stream_stop(d);
   if (r) {
    dev_warn(&d->intf->dev,
-            "redetection: stream stop failed: %d; retrying later\\n", r);
+            "redetection: stream stop failed: %d; retrying later\n", r);
    goto retry;
   }
 
@@ -237,11 +237,13 @@ static void gchd_detect_workfn(struct work_struct *work)
    * Signal was lost during capture. Tear down the configured encoder and
    * restore the same IDLE baseline used by the reference userspace setup.
    */
+  gchd_ring_free(&d->ring);
+  d->ts_partial_len = 0;
   gchd_input_stop(d);
   r = gchd_hw_init(d);
   if (r) {
    dev_warn(&d->intf->dev,
-            "redetection: hardware reinitialization failed: %d\\n", r);
+            "redetection: hardware reinitialization failed: %d\n", r);
    goto retry;
   }
  }
@@ -252,7 +254,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   if (r == -ENOLINK)
    goto retry;
   if (r) {
-   dev_warn(&d->intf->dev, "signal probe failed: %d\\n", r);
+   dev_warn(&d->intf->dev, "signal probe failed: %d\n", r);
    goto retry;
   }
  }
@@ -274,9 +276,16 @@ static void gchd_detect_workfn(struct work_struct *work)
 
   r = gchd_input_configure_idle(d);
   if (r) {
-   if (r != -ENOLINK)
+   if (r != -ENOLINK) {
     dev_warn(&d->intf->dev,
              "redetection: input configuration failed: %d\\n", r);
+    /* Recover protocol/setup errors from a known hardware baseline. */
+    gchd_input_stop(d);
+    r = gchd_hw_init(d);
+    if (r)
+     dev_warn(&d->intf->dev,
+              "redetection: recovery initialization failed: %d\\n", r);
+   }
    goto retry;
   }
  }
@@ -293,7 +302,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   if (READ_ONCE(d->streaming)) {
    r = gchd_input_start(d);
    if (r) {
-    dev_warn(&d->intf->dev, "capture start after detection failed: %d\\n", r);
+    dev_warn(&d->intf->dev, "capture start after detection failed: %d\n", r);
     goto retry;
    }
    d->last_video_jiffies = jiffies;
@@ -574,7 +583,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   */
  r = gchd_hw_init(d);
  if (r) {
-  dev_err(&d->intf->dev, "input switch: hardware reinitialization failed: %d\\n", r);
+  dev_err(&d->intf->dev, "input switch: hardware reinitialization failed: %d\n", r);
   WRITE_ONCE(d->streaming, false);
   mutex_unlock(&d->lifecycle_lock);
   return r;
