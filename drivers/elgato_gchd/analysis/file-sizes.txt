@@ -1,0 +1,3 @@
+-rw-r--r-- 1 ff5 ff5 43M Oct  4 01:25 high.ts
+-rw-r--r-- 1 ff5 ff5 45M Oct  4 01:32 low.ts
+-rw-r--r-- 1 ff5 ff5 24M Oct  4 01:36 medium.ts

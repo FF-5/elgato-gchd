@@ -1,0 +1,33 @@
+===== analysis/high_10s.ts.h264 =====
+[extract_extradata @ 0x5d9a69b805c0] nal_unit_type: 9(AUD), nal_ref_idc: 0
+[extract_extradata @ 0x5d9a69b805c0] nal_unit_type: 7(SPS), nal_ref_idc: 1
+[extract_extradata @ 0x5d9a69b805c0] nal_unit_type: 8(PPS), nal_ref_idc: 1
+[extract_extradata @ 0x5d9a69b805c0] nal_unit_type: 6(SEI), nal_ref_idc: 0
+[extract_extradata @ 0x5d9a69b805c0] nal_unit_type: 5(IDR), nal_ref_idc: 1
+[h264 @ 0x5d9a69b795c0] nal_unit_type: 9(AUD), nal_ref_idc: 0
+[h264 @ 0x5d9a69b795c0] nal_unit_type: 7(SPS), nal_ref_idc: 1
+[h264 @ 0x5d9a69b795c0] nal_unit_type: 8(PPS), nal_ref_idc: 1
+[h264 @ 0x5d9a69b795c0] nal_unit_type: 6(SEI), nal_ref_idc: 0
+[h264 @ 0x5d9a69b795c0] nal_unit_type: 5(IDR), nal_ref_idc: 1
+===== analysis/low_10s.ts.h264 =====
+[extract_extradata @ 0x5fa020bc35c0] nal_unit_type: 9(AUD), nal_ref_idc: 0
+[extract_extradata @ 0x5fa020bc35c0] nal_unit_type: 7(SPS), nal_ref_idc: 1
+[extract_extradata @ 0x5fa020bc35c0] nal_unit_type: 8(PPS), nal_ref_idc: 1
+[extract_extradata @ 0x5fa020bc35c0] nal_unit_type: 6(SEI), nal_ref_idc: 0
+[extract_extradata @ 0x5fa020bc35c0] nal_unit_type: 5(IDR), nal_ref_idc: 1
+[h264 @ 0x5fa020bbc5c0] nal_unit_type: 9(AUD), nal_ref_idc: 0
+[h264 @ 0x5fa020bbc5c0] nal_unit_type: 7(SPS), nal_ref_idc: 1
+[h264 @ 0x5fa020bbc5c0] nal_unit_type: 8(PPS), nal_ref_idc: 1
+[h264 @ 0x5fa020bbc5c0] nal_unit_type: 6(SEI), nal_ref_idc: 0
+[h264 @ 0x5fa020bbc5c0] nal_unit_type: 5(IDR), nal_ref_idc: 1
+===== analysis/medium_10s.ts.h264 =====
+[extract_extradata @ 0x5696a08745c0] nal_unit_type: 9(AUD), nal_ref_idc: 0
+[extract_extradata @ 0x5696a08745c0] nal_unit_type: 7(SPS), nal_ref_idc: 1
+[extract_extradata @ 0x5696a08745c0] nal_unit_type: 8(PPS), nal_ref_idc: 1
+[extract_extradata @ 0x5696a08745c0] nal_unit_type: 6(SEI), nal_ref_idc: 0
+[extract_extradata @ 0x5696a08745c0] nal_unit_type: 5(IDR), nal_ref_idc: 1
+[h264 @ 0x5696a086d5c0] nal_unit_type: 9(AUD), nal_ref_idc: 0
+[h264 @ 0x5696a086d5c0] nal_unit_type: 7(SPS), nal_ref_idc: 1
+[h264 @ 0x5696a086d5c0] nal_unit_type: 8(PPS), nal_ref_idc: 1
+[h264 @ 0x5696a086d5c0] nal_unit_type: 6(SEI), nal_ref_idc: 0
+[h264 @ 0x5696a086d5c0] nal_unit_type: 5(IDR), nal_ref_idc: 1

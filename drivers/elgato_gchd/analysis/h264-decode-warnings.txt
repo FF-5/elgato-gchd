@@ -1,0 +1,6 @@
+===== analysis/high_10s.ts.h264 =====
+[h264 @ 0x6232f3f66680] Stream #0: not enough frames to estimate rate; consider increasing probesize
+[null @ 0x6232f3f6b040] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 294 >= 294
+===== analysis/low_10s.ts.h264 =====
+[null @ 0x6440cb22f6c0] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 294 >= 294
+===== analysis/medium_10s.ts.h264 =====

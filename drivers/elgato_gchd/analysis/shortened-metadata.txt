@@ -1,0 +1,9 @@
+analysis/high_10s.ts: duration=10.076000
+size=18083532
+bit_rate=14357707
+analysis/low_10s.ts: duration=10.076000
+size=7669460
+bit_rate=6089289
+analysis/medium_10s.ts: duration=10.052033
+size=6921220
+bit_rate=5508314
