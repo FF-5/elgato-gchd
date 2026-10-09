@@ -254,14 +254,14 @@ static void gchd_deliver(struct gchd *d)
  dst=vb2_plane_vaddr(&b->vb.vb2_buf,0);
  if(!dst || f->len>d->sizeimage) {
   dev_warn_ratelimited(&d->intf->dev,
-                       "V4L2 buffer error: dst=%p payload=%zu sizeimage=%zu\\n",
+                       "V4L2 buffer error: dst=%p payload=%zu sizeimage=%u\\n",
                        dst, f->len, d->sizeimage);
   vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);
  } else {
   memcpy(dst,f->data,f->len);vb2_set_plane_payload(&b->vb.vb2_buf,0,f->len);
   b->vb.sequence=f->sequence;b->vb.vb2_buf.timestamp=ktime_get_ns();
-  dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%u bytes=%zu sizeimage=%zu\\n",
-          f->sequence, f->len, d->sizeimage);
+  dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%llu bytes=%zu sizeimage=%u\\n",
+          (unsigned long long)f->sequence, f->len, d->sizeimage);
   vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_DONE);
  }
  kvfree(f->data);kfree(f);
