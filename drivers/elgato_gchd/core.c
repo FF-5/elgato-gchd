@@ -191,7 +191,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n)
       p[off] == 0 && p[off + 1] == 0 && p[off + 2] == 1) {
    unsigned int header_len;
 
-   if (p[off + 6] & 0xc0) {
+   if ((p[off + 6] & 0xc0) == 0x80) {
     header_len = 9 + p[off + 8];
     if (header_len >= 188 - off)
      return;
@@ -281,11 +281,30 @@ static int gchd_rx(void *arg)
   }
   if (ret)
    break;
-  for(pos=0;pos<actual;){
-   size_t take=min_t(size_t,188-d->ts_partial_len,actual-pos);
-   memcpy(d->ts_partial+d->ts_partial_len,d->usb_buf+pos,take);
-   d->ts_partial_len+=take;pos+=take;
-   if(d->ts_partial_len==188){gchd_ts(d,d->ts_partial,pes,&n);d->ts_partial_len=0;}
+  for (pos = 0; pos < actual;) {
+   size_t take;
+
+   /*
+    * USB bulk reads are arbitrary byte chunks. Recover TS alignment after
+    * startup or a dropped/corrupt byte instead of permanently parsing every
+    * subsequent packet at the wrong offset.
+    */
+   if (!d->ts_partial_len) {
+    while (pos < actual && d->usb_buf[pos] != 0x47)
+     pos++;
+    if (pos == actual)
+     break;
+   }
+
+   take = min_t(size_t, 188 - d->ts_partial_len, actual - pos);
+   memcpy(d->ts_partial + d->ts_partial_len, d->usb_buf + pos, take);
+   d->ts_partial_len += take;
+   pos += take;
+
+   if (d->ts_partial_len == 188) {
+    gchd_ts(d, d->ts_partial, pes, &n);
+    d->ts_partial_len = 0;
+   }
   }
   gchd_signal_check(d);
   gchd_deliver(d);
