@@ -124,16 +124,45 @@ void gchd_ring_free(struct gchd_ring *r)
  r->count=0; r->bytes=0; spin_unlock_irqrestore(&r->lock,flags);
 }
 
-/* The device emits MPEG-TS. The existing transcoder assigns video PID 0x1011.
- * Each PES payload is retained as one encoded frame. */
-static void gchd_ts(struct gchd *d,const u8 *p,u8 *pes,size_t *n)
+/*
+ * The transport is MPEG-TS (188-byte packets); PID 0x1011 carries video.
+ * This parser still queues one PES payload per V4L2 buffer. That is an
+ * interim framing assumption, not a claim that PES boundaries are H.264
+ * access-unit boundaries; AU framing is handled separately in a follow-up.
+ */
+static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n)
 {
- u16 pid; unsigned int off=4,afc; bool start;
- if(p[0]!=0x47)return;
- pid=((p[1]&0x1f)<<8)|p[2]; if(pid!=0x1011)return;
+ u16 pid;
+ unsigned int off = 4, afc;
+ bool start;
+
+ if (p[0] != 0x47)
+  return;
+
+ pid = ((p[1] & 0x1f) << 8) | p[2];
+ if (pid != 0x1011)
+  return;
+
+ afc = (p[3] >> 4) & 3;
+ if (!afc)
+  return;
+ if (afc == 2)
+  return;
+ if (afc == 3) {
+  unsigned int adaptation_len = p[4];
+
+  /* The adaptation field must fit entirely inside this TS packet. */
+  if (adaptation_len > 183 || 5 + adaptation_len > 188)
+   return;
+  off = 5 + adaptation_len;
+  if (off >= 188)
+   return;
+ }
+
  d->last_video_jiffies = jiffies;
  if (!READ_ONCE(d->signal_present)) {
   struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
+
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
@@ -142,9 +171,9 @@ static void gchd_ts(struct gchd *d,const u8 *p,u8 *pes,size_t *n)
            "signal present: input=%u; first video TS packet on PID 0x1011\\n",
            READ_ONCE(d->input));
  }
- start=!!(p[1]&0x40); afc=(p[3]>>4)&3; if(!afc||afc==2)return;
- if(afc==3){off+=1+p[4];if(off>=188)return;}
- if(start){
+
+ start = !!(p[1] & 0x40);
+ if (start) {
   if (*n) {
    int r = gchd_ring_push(&d->ring, pes, *n);
 
@@ -156,12 +185,33 @@ static void gchd_ts(struct gchd *d,const u8 *p,u8 *pes,size_t *n)
     dev_dbg(&d->intf->dev, "queued PES payload: bytes=%zu\\n", *n);
   }
   *n = 0;
-  if(188-off>=9 && p[off]==0 && p[off+1]==0 && p[off+2]==1){
-   unsigned int h=9+p[off+8]; if(h>=188-off)return; off+=h;
+
+  /* PES headers normally start in the first payload TS packet. */
+  if (188 - off >= 9 &&
+      p[off] == 0 && p[off + 1] == 0 && p[off + 2] == 1) {
+   unsigned int header_len;
+
+   if (p[off + 6] & 0xc0) {
+    header_len = 9 + p[off + 8];
+    if (header_len >= 188 - off)
+     return;
+    off += header_len;
+   } else {
+    /* MPEG-2 PES marker bits are absent: reject malformed header. */
+    return;
+   }
+  } else {
+   /* PUSI says this payload starts a PES packet; don't leak its header. */
+   return;
   }
  }
- if(off<188 && *n<GCHD_MAX_FRAME){size_t m=min_t(size_t,188-off,GCHD_MAX_FRAME-*n);
-  memcpy(pes+*n,p+off,m);*n+=m;}
+
+ if (off < 188 && *n < GCHD_MAX_FRAME) {
+  size_t m = min_t(size_t, 188 - off, GCHD_MAX_FRAME - *n);
+
+  memcpy(pes + *n, p + off, m);
+  *n += m;
+ }
 }
 
 static void gchd_signal_check(struct gchd *d)
