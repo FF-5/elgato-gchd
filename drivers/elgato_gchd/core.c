@@ -289,7 +289,7 @@ static int gchd_rx(void *arg)
    break;
 
   /* Capture the untouched USB bulk-IN bytes before TS alignment/parsing. */
-  gchd_trace_capture(d, d->usb_buf, actual);
+  gchd_trace_capture(d, d->usb_buf, actual, false);
 
   for (pos = 0; pos < actual;) {
    size_t take;
