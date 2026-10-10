@@ -360,11 +360,6 @@ int gchd_trace_init(struct gchd *d)
 		 dev_name(&d->intf->dev), t->capacity);
 	return 0;
 
-err:
-	if (t->dir)
-		debugfs_remove_recursive(t->dir);
-	gchd_trace_put(t);
-	return r;
 }
 
 void gchd_trace_destroy(struct gchd *d)
