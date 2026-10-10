@@ -317,7 +317,7 @@ int gchd_trace_init(struct gchd *d)
 	t->transfers = kvmalloc_array(t->transfer_capacity,
 				      sizeof(*t->transfers), GFP_KERNEL);
 	if (!t->data || !t->transfers) {
-		dev_warn(&d->intf->dev, "raw USB trace allocation failed; tracing disabled\\n");
+		dev_warn(&d->intf->dev, "raw USB trace allocation failed; tracing disabled\n");
 		gchd_trace_put(t);
 		return 0;
 	}
@@ -338,7 +338,7 @@ int gchd_trace_init(struct gchd *d)
 	}
 	mutex_unlock(&gchd_trace_root_lock);
 	if (r) {
-		dev_warn(&d->intf->dev, "debugfs unavailable; raw USB tracing disabled\\n");
+		dev_warn(&d->intf->dev, "debugfs unavailable; raw USB tracing disabled\n");
 		gchd_trace_put(t);
 		return 0;
 	}
