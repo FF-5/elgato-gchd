@@ -23,6 +23,7 @@ static void gchd_release_ref(struct kref *ref)
 {
  struct gchd *d = container_of(ref, struct gchd, refcount);
 
+ gchd_trace_destroy(d);
  kfree(d->usb_buf);
  usb_put_dev(d->udev);
  kfree(d);
@@ -286,6 +287,10 @@ static int gchd_rx(void *arg)
   }
   if (ret)
    break;
+
+  /* Capture the untouched USB bulk-IN bytes before TS alignment/parsing. */
+  gchd_trace_capture(d, d->usb_buf, actual);
+
   for (pos = 0; pos < actual;) {
    size_t take;
 
@@ -1294,6 +1299,9 @@ static int gchd_probe(struct usb_interface *i,
   goto err;
  }
 
+ /* Trace allocation/debugfs are optional and never block device probing. */
+ gchd_trace_init(d);
+
  /*
   * Keep the hardware uninitialized until a userspace client opens the V4L2
   * node. This gives each open/last-close pair a clean HW init/shutdown cycle.
@@ -1327,6 +1335,9 @@ static void gchd_disconnect(struct usb_interface *i)
   d->rx_thread = NULL;
  }
  mutex_unlock(&d->lifecycle_lock);
+
+ /* Stop capture and remove debugfs entries before the device reference drops. */
+ gchd_trace_destroy(d);
 
  /* The interface may already be gone: never issue USB commands here. */
  gchd_v4l2_unregister(d);
