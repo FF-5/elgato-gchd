@@ -24,6 +24,7 @@ struct gchd_trace_transfer {
 	u64 timestamp_ns;
 	u32 offset;
 	u32 length;
+	bool draining;
 };
 
 struct gchd_trace {
@@ -133,9 +134,9 @@ static int gchd_trace_seq_show(struct seq_file *s, void *v)
 	unsigned int index = x - t->transfers;
 	size_t i, end = (size_t)x->offset + x->length;
 
-	seq_printf(s, "# transfer=%u timestamp_ns=%llu offset=%u length=%u\n",
-		   index, (unsigned long long)x->timestamp_ns, x->offset,
-		   x->length);
+	seq_printf(s, "# transfer=%u source=%s timestamp_ns=%llu offset=%u length=%u\n",
+		   index, x->draining ? "drain" : "rx",
+		   (unsigned long long)x->timestamp_ns, x->offset, x->length);
 	for (i = x->offset; i < end; i += 16) {
 		size_t j, n = min_t(size_t, 16, end - i);
 
@@ -304,8 +305,10 @@ int gchd_trace_init(struct gchd *d)
 	int r = 0;
 
 	t = kzalloc(sizeof(*t), GFP_KERNEL);
-	if (!t)
-		return -ENOMEM;
+	if (!t) {
+		dev_warn(&d->intf->dev, "raw USB trace state allocation failed; tracing disabled\\n");
+		return 0;
+	}
 	kref_init(&t->ref);
 	mutex_init(&t->lock);
 
@@ -379,7 +382,7 @@ void gchd_trace_destroy(struct gchd *d)
 	gchd_trace_put(t);
 }
 
-void gchd_trace_capture(struct gchd *d, const u8 *data, size_t len)
+void gchd_trace_capture(struct gchd *d, const u8 *data, size_t len, bool draining)
 {
 	struct gchd_trace *t = READ_ONCE(d->trace);
 	struct gchd_trace_transfer *x;
@@ -401,6 +404,7 @@ void gchd_trace_capture(struct gchd *d, const u8 *data, size_t len)
 	x->timestamp_ns = ktime_get_ns();
 	x->offset = t->used;
 	x->length = len;
+	x->draining = draining;
 	memcpy(t->data + t->used, data, len);
 	t->used += len;
 
