@@ -104,10 +104,8 @@ static void *gchd_trace_seq_start(struct seq_file *s, loff_t *pos)
 	struct gchd_trace *t = s->private;
 
 	mutex_lock(&t->lock);
-	if (*pos >= t->transfer_count) {
-		mutex_unlock(&t->lock);
+	if (*pos >= t->transfer_count)
 		return NULL;
-	}
 	return &t->transfers[*pos];
 }
 
@@ -319,8 +317,9 @@ int gchd_trace_init(struct gchd *d)
 	t->transfers = kvmalloc_array(t->transfer_capacity,
 				      sizeof(*t->transfers), GFP_KERNEL);
 	if (!t->data || !t->transfers) {
-		r = -ENOMEM;
-		goto err;
+		dev_warn(&d->intf->dev, "raw USB trace allocation failed; tracing disabled\\n");
+		gchd_trace_put(t);
+		return 0;
 	}
 
 	mutex_lock(&gchd_trace_root_lock);
@@ -338,8 +337,11 @@ int gchd_trace_init(struct gchd *d)
 		}
 	}
 	mutex_unlock(&gchd_trace_root_lock);
-	if (r)
-		goto err;
+	if (r) {
+		dev_warn(&d->intf->dev, "debugfs unavailable; raw USB tracing disabled\\n");
+		gchd_trace_put(t);
+		return 0;
+	}
 
 	debugfs_create_file("enable", 0600, t->dir, t,
 			    &gchd_trace_enable_fops);
