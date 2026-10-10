@@ -273,7 +273,7 @@ static int gchd_rx(void *arg)
  pes=kvmalloc(GCHD_MAX_FRAME,GFP_KERNEL);if(!pes)return-ENOMEM;
  while(!kthread_should_stop()&&!d->disconnected){
   ret=usb_bulk_msg(d->udev,usb_rcvbulkpipe(d->udev,GCHD_EP_IN),d->usb_buf,
-                   GCHD_USB_BUFSIZE,&actual,1000);
+                   GCHD_USB_BUFSIZE,&actual,100);
   if (ret == -ETIMEDOUT || ret == -EAGAIN) {
    gchd_signal_check(d);
    gchd_deliver(d);
