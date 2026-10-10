@@ -272,6 +272,11 @@ static int gchd_rx(void *arg)
  struct gchd *d=arg; u8 *pes; size_t n=0; int ret,actual,pos;
  pes=kvmalloc(GCHD_MAX_FRAME,GFP_KERNEL);if(!pes)return-ENOMEM;
  while(!kthread_should_stop()&&!d->disconnected){
+  /* Keep the RX timeout shorter than the signal-loss debounce so the
+   * watchdog can notice a video-PID gap during an input-mode switch.
+   * Check after successful reads too: non-video TS packets may continue
+   * while the video encoder is re-locking.
+   */
   ret=usb_bulk_msg(d->udev,usb_rcvbulkpipe(d->udev,GCHD_EP_IN),d->usb_buf,
                    GCHD_USB_BUFSIZE,&actual,100);
   if (ret == -ETIMEDOUT || ret == -EAGAIN) {
