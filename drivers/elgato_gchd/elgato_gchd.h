@@ -31,7 +31,8 @@
 #define SCMD_IDLE 1
 #define SCMD_RESET 2
 
-struct gchd_trace;\nstruct gchd_frame { u8 *data; size_t len; u64 sequence; };
+struct gchd_trace;
+struct gchd_frame { u8 *data; size_t len; u64 sequence; };
 struct gchd_ring {
  struct gchd_frame frames[GCHD_RING_FRAMES];
  unsigned int head, count;
@@ -131,7 +132,10 @@ int gchd_stream_stop(struct gchd *);
 
 int gchd_ring_push(struct gchd_ring *, const u8 *, size_t);
 struct gchd_frame *gchd_ring_pop(struct gchd_ring *);
-void gchd_ring_free(struct gchd_ring *);\nint gchd_trace_init(struct gchd *);\nvoid gchd_trace_destroy(struct gchd *);\nvoid gchd_trace_capture(struct gchd *, const u8 *, size_t);
+void gchd_ring_free(struct gchd_ring *);
+int gchd_trace_init(struct gchd *);
+void gchd_trace_destroy(struct gchd *);
+void gchd_trace_capture(struct gchd *, const u8 *, size_t);
 int gchd_v4l2_register(struct gchd *);
 void gchd_v4l2_unregister(struct gchd *);
 extern const struct v4l2_file_operations vb2_fops;
