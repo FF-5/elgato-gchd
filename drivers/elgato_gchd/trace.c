@@ -42,6 +42,7 @@ struct gchd_trace {
 };
 
 static struct dentry *gchd_trace_root;
+static unsigned int gchd_trace_users;
 static DEFINE_MUTEX(gchd_trace_root_lock);
 
 static void gchd_trace_release(struct kref *ref)
@@ -337,7 +338,13 @@ int gchd_trace_init(struct gchd *d)
 		if (IS_ERR_OR_NULL(t->dir)) {
 			r = -ENODEV;
 			t->dir = NULL;
+		} else {
+			gchd_trace_users++;
 		}
+	}
+	if (r && !gchd_trace_users && gchd_trace_root) {
+		debugfs_remove_recursive(gchd_trace_root);
+		gchd_trace_root = NULL;
 	}
 	mutex_unlock(&gchd_trace_root_lock);
 	if (r) {
@@ -372,8 +379,16 @@ void gchd_trace_destroy(struct gchd *d)
 	mutex_lock(&t->lock);
 	t->enabled = false;
 	mutex_unlock(&t->lock);
+	mutex_lock(&gchd_trace_root_lock);
 	debugfs_remove_recursive(t->dir);
 	t->dir = NULL;
+	if (gchd_trace_users)
+		gchd_trace_users--;
+	if (!gchd_trace_users && gchd_trace_root) {
+		debugfs_remove_recursive(gchd_trace_root);
+		gchd_trace_root = NULL;
+	}
+	mutex_unlock(&gchd_trace_root_lock);
 	gchd_trace_put(t);
 }
 
