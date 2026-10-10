@@ -135,7 +135,7 @@ struct gchd_frame *gchd_ring_pop(struct gchd_ring *);
 void gchd_ring_free(struct gchd_ring *);
 int gchd_trace_init(struct gchd *);
 void gchd_trace_destroy(struct gchd *);
-void gchd_trace_capture(struct gchd *, const u8 *, size_t);
+void gchd_trace_capture(struct gchd *, const u8 *, size_t, bool);
 int gchd_v4l2_register(struct gchd *);
 void gchd_v4l2_unregister(struct gchd *);
 extern const struct v4l2_file_operations vb2_fops;
