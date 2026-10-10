@@ -599,6 +599,7 @@ static int gchd_drain_stream(struct gchd *d, unsigned int count)
    continue;
   if (r)
    return r;
+  gchd_trace_capture(d, d->usb_buf, actual, true);
  }
  return 0;
 }
