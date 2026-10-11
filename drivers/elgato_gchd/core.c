@@ -353,7 +353,7 @@ static int gchd_rx(void *arg)
                    GCHD_USB_BUFSIZE,&actual,100);
   if (ret == -ETIMEDOUT || ret == -EAGAIN) {
    rx_timeouts++;
-   if (rx_reads < 5)
+   if (rx_timeouts <= 5)
     dev_info(&d->intf->dev,
              "bulk-IN during START/stream: result=%d actual=%d reads=%llu bytes=%llu\n",
              ret, actual, (unsigned long long)rx_reads,
