@@ -10,9 +10,10 @@ Audited the main configuration/protocol paths:
 - [`src/gchd/configure_hdmi.cpp`](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/src/gchd/configure_hdmi.cpp): HDMI input, timing/color-space detection, mode-dependent setup.
 - [`src/gchd/configure_component.cpp`](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/src/gchd/configure_component.cpp): component input, timing/interlace inference and mode tables.
 - [`src/gchd/configure_composite.cpp`](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/src/gchd/configure_composite.cpp): composite NTSC/PAL detection and decoder setup.
+- [`src/gchd/transcoder.cpp`](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/src/gchd/transcoder.cpp): transcoder defaults, final settings, dynamic H.264/audio parameters, PID/table programming and output enable.
 - [`src/gchd_hardware.hpp`](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/src/gchd_hardware.hpp): request/register constants, SCMD values, enable bits and transcoder bitfields.
 
-This is not yet a repository-wide audit of every command-producing file, firmware bytes, all runtime paths, or all device generations. The source itself remains canonical for the full ordered sequences and inline expected-response comments. Do not call the overall catalogue complete until the remaining-work section is done.
+This includes the separate transcoder configuration implementation as well as the core decoder/mailbox paths, but is not yet a repository-wide audit of every command-producing file, firmware bytes, all runtime paths, or all device generations. The source itself remains canonical for the full ordered sequences and inline expected-response comments. Do not call the overall catalogue complete until the remaining-work section is done.
 
 ## 1. USB command primitives
 
@@ -168,7 +169,7 @@ Other explicit source expectations include:
 
 ## 9. Remaining work before calling the command catalogue complete
 
-- Generate a literal call-site ledger of every `mailWrite`, `mailRead`, `read_config`, `write_config`, `slsi`, `sparam`, `transcoderTableWrite`, and `scmd` across every runtime path, preserving order, conditionals, loops and expected-response comments.
+- The source call-site ledgers currently cover the six core command/configuration files and the separate transcoder implementation: [SOURCE_COMMAND_LEDGER.md](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/SOURCE_COMMAND_LEDGER.md) and [TRANSCODER_COMMAND_LEDGER.md](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/TRANSCODER_COMMAND_LEDGER.md). Expand the inventory to any other command-producing paths discovered in the rest of the repository, preserving order, conditionals, loops and expected-response comments.
 - Audit the rest of `src/` for other command-producing functions and compare against this branch.
 - Cross-check every literal command with raw USB captures; label expected bytes from source separately from observed bytes in traces.
 - Keep original HD and HD New transport paths separate.
