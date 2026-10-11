@@ -280,8 +280,11 @@ static int gchd_rx(void *arg)
    * Check after successful reads too: non-video TS packets may continue
    * while the video encoder is re-locking.
    */
+  actual = 0;
   ret=usb_bulk_msg(d->udev,usb_rcvbulkpipe(d->udev,GCHD_EP_IN),d->usb_buf,
                    GCHD_USB_BUFSIZE,&actual,100);
+  /* Count receiver activity even when tracing is disabled or no bytes arrive. */
+  gchd_trace_note_rx(d, ret, actual);
   if (ret == -ETIMEDOUT || ret == -EAGAIN) {
    gchd_signal_check(d);
    gchd_deliver(d);
