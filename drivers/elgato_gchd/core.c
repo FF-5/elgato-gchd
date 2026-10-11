@@ -332,7 +332,17 @@ static int gchd_rx(void *arg)
 {
  struct gchd *d=arg; u8 *pes; size_t n=0; int ret,actual,pos;
  bool pes_active=false, cc_valid=false; u8 last_cc=0;
+ u64 rx_reads=0, rx_bytes=0, rx_empty=0, rx_timeouts=0;
+ unsigned long report_jiffies = jiffies;
+ struct usb_host_endpoint *ep;
  pes=kvmalloc(GCHD_MAX_FRAME,GFP_KERNEL);if(!pes)return-ENOMEM;
+ ep = usb_pipe_endpoint(d->udev, usb_rcvbulkpipe(d->udev, GCHD_EP_IN));
+ dev_info(&d->intf->dev,
+          "bulk-IN reader starting: ep=0x%02x endpoint=%s maxpacket=%u speed=%u alt=%u start_pending=%u\\n",
+          GCHD_EP_IN, ep ? "present" : "missing",
+          ep ? usb_endpoint_maxp(&ep->desc) : 0, d->udev->speed,
+          d->intf->cur_altsetting->desc.bAlternateSetting,
+          READ_ONCE(d->start_pending));
  while(!kthread_should_stop()&&!d->disconnected){
   /* Keep the RX timeout shorter than the signal-loss debounce so the
    * watchdog can notice a video-PID gap during an input-mode switch.
@@ -342,12 +352,49 @@ static int gchd_rx(void *arg)
   ret=usb_bulk_msg(d->udev,usb_rcvbulkpipe(d->udev,GCHD_EP_IN),d->usb_buf,
                    GCHD_USB_BUFSIZE,&actual,100);
   if (ret == -ETIMEDOUT || ret == -EAGAIN) {
+   rx_timeouts++;
+   if (rx_reads < 5)
+    dev_info(&d->intf->dev,
+             "bulk-IN during START/stream: result=%d actual=%d reads=%llu bytes=%llu\\n",
+             ret, actual, (unsigned long long)rx_reads,
+             (unsigned long long)rx_bytes);
    gchd_signal_check(d);
    gchd_deliver(d);
+   if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
+    dev_info(&d->intf->dev,
+             "bulk-IN stats: reads=%llu bytes=%llu empty=%llu timeouts=%llu start_pending=%u\\n",
+             (unsigned long long)rx_reads, (unsigned long long)rx_bytes,
+             (unsigned long long)rx_empty, (unsigned long long)rx_timeouts,
+             READ_ONCE(d->start_pending));
+    report_jiffies = jiffies;
+   }
    continue;
   }
-  if (ret)
+  if (ret) {
+   dev_err(&d->intf->dev,
+           "bulk-IN reader failed: ret=%d actual=%d reads=%llu bytes=%llu\\n",
+           ret, actual, (unsigned long long)rx_reads,
+           (unsigned long long)rx_bytes);
    break;
+  }
+  rx_reads++;
+  if (actual > 0)
+   rx_bytes += actual;
+  else
+   rx_empty++;
+  if (rx_reads <= 5)
+   dev_info(&d->intf->dev,
+            "bulk-IN data: read=%llu ret=0 actual=%d total_bytes=%llu\\n",
+            (unsigned long long)rx_reads, actual,
+            (unsigned long long)rx_bytes);
+  if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
+   dev_info(&d->intf->dev,
+            "bulk-IN stats: reads=%llu bytes=%llu empty=%llu timeouts=%llu start_pending=%u\\n",
+            (unsigned long long)rx_reads, (unsigned long long)rx_bytes,
+            (unsigned long long)rx_empty, (unsigned long long)rx_timeouts,
+            READ_ONCE(d->start_pending));
+   report_jiffies = jiffies;
+  }
   for (pos = 0; pos < actual;) {
    size_t take;
 
