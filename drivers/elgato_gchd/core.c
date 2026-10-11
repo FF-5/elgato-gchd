@@ -166,7 +166,8 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n)
 
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
-  v4l2_event_queue(&d->vdev, &ev);
+  if (READ_ONCE(d->v4l2_registered))
+   v4l2_event_queue(&d->vdev, &ev);
   WRITE_ONCE(d->signal_present, true);
   dev_info(&d->intf->dev,
            "signal present: input=%u; first video TS packet on PID 0x1011\\n",
@@ -339,36 +340,10 @@ static void gchd_detect_workfn(struct work_struct *work)
  dev_dbg(&d->intf->dev, "input detection started: input=%u streaming=%u\\n",
           READ_ONCE(d->input), READ_ONCE(d->streaming));
 
- /* Only the RX thread may own bulk-IN while START is active. */
- if (d->rx_thread) {
-  kthread_stop(d->rx_thread);
-  d->rx_thread = NULL;
-  r = gchd_stream_stop(d);
-  if (r) {
-   dev_warn(&d->intf->dev,
-            "redetection: stream stop failed: %d; retrying later\n", r);
-   goto retry;
-  }
-
-  /*
-   * Stop transport and return to IDLE without re-running hardware init.
-   * hw_init() issues RESET from every nonzero state; on HDNew that RESET
-   * transition times out when the device is already IDLE (state 0x11).
-   * Keep the encoder firmware alive: restarting it after input changes has
-   * been observed to fail with -EINVAL.
-   */
-  gchd_ring_free(&d->ring);
-  d->ts_partial_len = 0;
-  d->input_configured = false;
-  d->input_prepared = false;
-  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
-  if (r) {
-   dev_warn(&d->intf->dev,
-            "redetection: transition to IDLE failed: %d\n", r);
-   goto retry;
-  }
- }
-
+ /*
+  * Keep the single connection-owned bulk-IN reader running through detection
+  * and START. It must not be gated by V4L2 or stopped for detector retries.
+  */
  if (d->input_configured && !READ_ONCE(d->signal_present)) {
   /*
    * STREAMOFF can race with signal-loss notification. Invalidate the old
@@ -376,6 +351,7 @@ static void gchd_detect_workfn(struct work_struct *work)
    */
   d->input_configured = false;
   d->input_prepared = false;
+  WRITE_ONCE(d->capture_started, false);
   r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
   if (r) {
    dev_warn(&d->intf->dev,
@@ -435,25 +411,15 @@ static void gchd_detect_workfn(struct work_struct *work)
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
 
-  /*
-   * Start the device transport immediately, even without an open V4L2
-   * client. The RX thread feeds the raw USB trace before parsing and only
-   * hands payloads to V4L2 when streaming is true.
-   */
-  if (!d->rx_thread) {
+  /* Reads are already pending before START; retry the command if needed. */
+  if (!READ_ONCE(d->capture_started)) {
    r = gchd_input_start(d);
    if (r) {
     dev_warn(&d->intf->dev, "capture start after detection failed: %d\n", r);
     goto retry;
    }
+   WRITE_ONCE(d->capture_started, true);
    d->last_video_jiffies = jiffies;
-   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
-   if (IS_ERR(d->rx_thread)) {
-    r = PTR_ERR(d->rx_thread);
-    d->rx_thread = NULL;
-    gchd_stream_stop(d);
-    goto retry;
-   }
   }
  }
 
@@ -508,110 +474,24 @@ static void gchd_return_queued(struct gchd *d, enum vb2_buffer_state state)
 static int gchd_start(struct vb2_queue *q, unsigned int count)
 {
  struct gchd *d = vb2_get_drv_priv(q);
- int r, sr;
+ int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
  if (d->disconnected) {
   r = -ENODEV;
-  goto err;
+  goto out;
  }
 
- /*
-  * STREAMON is the first point where the client actually needs capture.
-  * This prevents firmware loading during short-lived discovery opens.
-  */
- if (d->hw_init_failed) {
-  /* Failed initialization plus failed cleanup: recover before another try. */
-  sr = gchd_hw_shutdown(d);
-  if (sr) {
-   r = sr;
-   dev_err(&d->intf->dev,
-           "retrying cleanup after failed initialization failed: %d\n", sr);
-   goto err;
-  }
-  d->hw_initialized = false;
-  d->hw_init_failed = false;
- }
-
- if (!d->hw_initialized) {
-  d->input_forced = true; /* preserve default HDMI or the last chosen input */
-  d->input_configured = false;
-  d->input_prepared = false;
-  d->encoder_started = false;
-  d->signal_present = false;
-  d->input_width = 0;
-  d->input_height = 0;
-  d->input_fps_num = 0;
-  d->input_fps_den = 0;
-
-  r = gchd_hw_init(d);
-  if (r) {
-   dev_err(&d->intf->dev, "hardware initialization on STREAMON failed: %d\n", r);
-   sr = gchd_hw_shutdown(d);
-   d->hw_initialized = (sr != 0);
-   d->hw_init_failed = (sr != 0);
-   if (sr)
-    dev_warn(&d->intf->dev,
-             "cleanup after failed STREAMON init failed: %d\n", sr);
-   goto err;
-  }
-  d->hw_initialized = true;
-  d->hw_init_failed = false;
-  dev_info(&d->intf->dev,
-           "capture requested: hardware initialized, detecting input %u\n",
-           d->input);
- }
-
- /*
-  * Keep STREAMON non-blocking when setup is invalidated by S_FMT or when
-  * timing is absent. The worker performs detection/configuration while the
-  * stream request remains pending.
-  */
+ /* USB reception, device initialization and tracing are connection-owned. */
  WRITE_ONCE(d->streaming, true);
- WRITE_ONCE(d->detect_requested, true);
  if (!d->input_configured || !READ_ONCE(d->signal_present)) {
+  WRITE_ONCE(d->detect_requested, true);
   schedule_delayed_work(&d->detect_work, 0);
-  mutex_unlock(&d->lifecycle_lock);
-  return 0;
  }
-
- /*
-  * The connection-time detector may already have started the hardware RX
-  * thread. In that case STREAMON only enables V4L2 delivery; do not issue a
-  * second START command or create a second reader for endpoint 0x81.
-  */
- if (d->rx_thread) {
-  mutex_unlock(&d->lifecycle_lock);
-  return 0;
- }
-
- r = gchd_input_start(d);
- if (r == -ENOLINK) {
-  schedule_delayed_work(&d->detect_work, 0);
-  mutex_unlock(&d->lifecycle_lock);
-  return 0;
- }
+out:
+ mutex_unlock(&d->lifecycle_lock);
  if (r)
-  goto err_streaming;
-
- d->last_video_jiffies = jiffies;
- d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
- if (IS_ERR(d->rx_thread)) {
-  r = PTR_ERR(d->rx_thread);
-  d->rx_thread = NULL;
-  if (gchd_stream_stop(d))
-   gchd_input_stop(d);
-  goto err_streaming;
- }
-
- mutex_unlock(&d->lifecycle_lock);
- return 0;
-
-err_streaming:
- WRITE_ONCE(d->streaming, false);
-err:
- mutex_unlock(&d->lifecycle_lock);
- gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
+  gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
  return r;
 }
 
@@ -620,27 +500,9 @@ static void gchd_stop(struct vb2_queue *q)
  struct gchd *d = vb2_get_drv_priv(q);
  struct gchd_buffer *b, *tmp;
  unsigned long flags;
- int r;
 
- WRITE_ONCE(d->detect_requested, false);
+ /* STREAMOFF only stops V4L2 delivery; raw USB reception remains active. */
  WRITE_ONCE(d->streaming, false);
- cancel_delayed_work_sync(&d->detect_work);
- mutex_lock(&d->lifecycle_lock);
- if (d->rx_thread) {
-  kthread_stop(d->rx_thread);
-  d->rx_thread = NULL;
- }
- if (d->disconnected) {
-  r = -ENODEV;
- } else {
-  r = gchd_stream_stop(d);
- }
- if (r && !d->disconnected) {
-  dev_err(&d->intf->dev,
-          "userspace-compatible stream stop failed: %d; disabling encoder as fallback\n",
-          r);
-  gchd_input_stop(d);
- }
  gchd_ring_free(&d->ring);
  d->ts_partial_len = 0;
 
@@ -650,17 +512,6 @@ static void gchd_stop(struct vb2_queue *q)
   vb2_buffer_done(&b->vb.vb2_buf, VB2_BUF_STATE_ERROR);
  }
  spin_unlock_irqrestore(&d->qlock, flags);
-
- /*
-  * STREAMOFF stops capture, not source monitoring. If no source has been
-  * found, keep the asynchronous detector alive so a later connection works
-  * without requiring another open/input switch.
-  */
- if (!d->disconnected && !READ_ONCE(d->signal_present)) {
-  WRITE_ONCE(d->detect_requested, true);
-  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
- }
- mutex_unlock(&d->lifecycle_lock);
 }
 
 static const struct vb2_ops gchd_vb2_ops={
@@ -739,10 +590,6 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   * after a signal-loss or STREAMOFF race. The stop helper is a no-op in STOP
   * or IDLE and performs the userspace-compatible drain sequence otherwise.
   */
- if (d->rx_thread) {
-  kthread_stop(d->rx_thread);
-  d->rx_thread = NULL;
- }
  if (READ_ONCE(d->hw_initialized)) {
   r = gchd_stream_stop(d);
   if (r) {
@@ -1156,27 +1003,9 @@ static int gchd_fop_release(struct file *file)
   d->open_count--;
 
  if (!d->open_count && !d->disconnected) {
-  /*
-   * Keep hardware initialized and source detection independent of V4L2
-   * open/close cycles. vb2_fops.release() has already stopped any active
-   * stream; the encoder remains configured in IDLE until disconnect or
-   * system shutdown. If signal is absent, keep the probe worker retrying.
-   */
   WRITE_ONCE(d->streaming, false);
-  mutex_lock(&d->lifecycle_lock);
-  if (d->rx_thread) {
-   kthread_stop(d->rx_thread);
-   d->rx_thread = NULL;
-  }
-  gchd_ring_free(&d->ring);
-  d->ts_partial_len = 0;
-  if (!READ_ONCE(d->signal_present) && READ_ONCE(d->hw_initialized)) {
-   WRITE_ONCE(d->detect_requested, true);
-   schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
-  }
   dev_info(&d->intf->dev,
-           "V4L2 closed: keeping device initialized for connection-time detection\n");
-  mutex_unlock(&d->lifecycle_lock);
+           "V4L2 closed: connection-owned USB reception and tracing continue\n");
  }
  mutex_unlock(&d->users_lock);
  kref_put(&d->refcount, gchd_release_ref);
@@ -1280,46 +1109,54 @@ static int gchd_probe(struct usb_interface *i,
  gchd_trace_init(d);
 
  /*
-  * This debug branch initializes the device as soon as USB binds, then
-  * probes the selected input independently of any V4L2 client. That makes
-  * USB control traffic and signal detection observable even when no capture
-  * application is open.
+  * The USB connection owns initialization, the bulk-IN reader and tracing.
+  * Start them before V4L2 registration or input detection. V4L2 is optional
+  * and must not decide whether raw USB packets can be collected.
   */
  usb_set_intfdata(i, d);
- r = gchd_v4l2_register(d);
- if (r) {
-  usb_set_intfdata(i, NULL);
-  goto err;
- }
-
  mutex_lock(&d->lifecycle_lock);
  d->input_forced = true;
  r = gchd_hw_init(d);
  if (r) {
   int sr;
-
   dev_err(&i->dev, "hardware initialization on USB connect failed: %d\n", r);
   sr = gchd_hw_shutdown(d);
   d->hw_initialized = (sr != 0);
   d->hw_init_failed = (sr != 0);
   if (sr)
-   dev_warn(&i->dev, "cleanup after USB-connect initialization failure failed: %d\n",
-            sr);
+   dev_warn(&i->dev, "cleanup after USB-connect initialization failure failed: %d\n", sr);
  } else {
   d->hw_initialized = true;
   d->hw_init_failed = false;
   d->input_configured = false;
   d->input_prepared = false;
   d->encoder_started = false;
+  d->capture_started = false;
   d->signal_present = false;
   d->detect_requested = true;
   dev_info(&i->dev,
-           "USB connected: hardware initialized; starting input detection for input %u\n",
+           "USB connected: hardware initialized; starting raw bulk-IN receiver for input %u\n",
            d->input);
+ }
+ d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+ if (IS_ERR(d->rx_thread)) {
+  int rr = PTR_ERR(d->rx_thread);
+  d->rx_thread = NULL;
+  dev_err(&i->dev, "could not start connection-owned bulk-IN receiver: %d\n", rr);
+  if (!r)
+   r = rr;
  }
  mutex_unlock(&d->lifecycle_lock);
 
- if (!r)
+ {
+  int vr = gchd_v4l2_register(d);
+  if (vr) {
+   dev_warn(&i->dev, "V4L2 registration failed (%d); USB tracing remains active\n", vr);
+  } else {
+   WRITE_ONCE(d->v4l2_registered, true);
+  }
+ }
+ if (READ_ONCE(d->hw_initialized) && READ_ONCE(d->detect_requested))
   schedule_delayed_work(&d->detect_work, 0);
  return 0;
 
@@ -1349,7 +1186,10 @@ static void gchd_disconnect(struct usb_interface *i)
  gchd_trace_destroy(d);
 
  /* The interface may already be gone: never issue USB commands here. */
- gchd_v4l2_unregister(d);
+ if (READ_ONCE(d->v4l2_registered)) {
+  gchd_v4l2_unregister(d);
+  WRITE_ONCE(d->v4l2_registered, false);
+ }
  gchd_ring_free(&d->ring);
  kref_put(&d->refcount, gchd_release_ref);
 }
