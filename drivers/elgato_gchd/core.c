@@ -1408,6 +1408,7 @@ static int gchd_fop_release(struct file *file)
 
   /* Never wait for work while holding lifecycle_lock: the worker takes it. */
   cancel_delayed_work_sync(&d->detect_work);
+  cancel_delayed_work_sync(&d->mode_work);
   mutex_lock(&d->lifecycle_lock);
 
   if (d->rx_thread) {
