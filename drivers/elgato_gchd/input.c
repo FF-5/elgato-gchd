@@ -980,10 +980,10 @@ int gchd_input_detect_signal(struct gchd *d)
     d->input_interlaced = false;
    else if (mode != 0x7e)
     dev_dbg(&d->intf->dev,
-            "analog format status not locked yet: 0x%02x; defaulting to 480i\\n",
+            "analog format status not locked yet: 0x%02x; defaulting to 480i\n",
             mode);
    dev_info(&d->intf->dev,
-            "analog format lock: status=0x%02x mode=%s\\n",
+            "analog format lock: status=0x%02x mode=%s\n",
             mode, d->input_interlaced ? "480i" : "240p");
   } else if (v == 7) {
    d->input_width=720; d->input_height=576;
@@ -1199,7 +1199,11 @@ static int gchd_configure_composite_exact(struct gchd *d)
  M3(0x89,0x89,0xfa); MRP(0x33);
  v &= 0x0f;
  d->signal_present = (v == 6 || v == 7);
- if (v == 6) { d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60; d->input_fps_den=1; }
+ if (v == 6) {
+  d->input_width=720; d->input_height=480;
+  /* Preserve the 240p/480i decision made by gchd_input_detect_signal(). */
+  d->input_fps_num=60; d->input_fps_den=1;
+ }
  else if (v == 7) { d->input_width=720; d->input_height=576; d->input_interlaced=true; d->input_fps_num=50; d->input_fps_den=1; }
  else if (!d->input_height) {
   u8 x;
