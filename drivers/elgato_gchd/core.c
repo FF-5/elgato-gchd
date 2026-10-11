@@ -307,7 +307,7 @@ static void gchd_deliver(struct gchd *d)
  spin_lock_irqsave(&d->qlock,flags);
  if(list_empty(&d->queued)){
   spin_unlock_irqrestore(&d->qlock,flags);
-  dev_dbg(&d->intf->dev, "discarding payload: bytes=%zu, no V4L2 buffer queued\\n", f->len);
+  dev_dbg(&d->intf->dev, "discarding payload: bytes=%zu, no V4L2 buffer queued\n", f->len);
   kvfree(f->data);kfree(f);return;
  }
  b=list_first_entry(&d->queued,struct gchd_buffer,list);list_del(&b->list);
@@ -315,13 +315,13 @@ static void gchd_deliver(struct gchd *d)
  dst=vb2_plane_vaddr(&b->vb.vb2_buf,0);
  if(!dst || f->len>d->sizeimage) {
   dev_warn_ratelimited(&d->intf->dev,
-                       "V4L2 buffer error: dst=%p payload=%zu sizeimage=%u\\n",
+                       "V4L2 buffer error: dst=%p payload=%zu sizeimage=%u\n",
                        dst, f->len, d->sizeimage);
   vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);
  } else {
   memcpy(dst,f->data,f->len);vb2_set_plane_payload(&b->vb.vb2_buf,0,f->len);
   b->vb.sequence=f->sequence;b->vb.vb2_buf.timestamp=ktime_get_ns();
-  dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%llu bytes=%zu sizeimage=%u\\n",
+  dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%llu bytes=%zu sizeimage=%u\n",
           (unsigned long long)f->sequence, f->len, d->sizeimage);
   vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_DONE);
  }
@@ -338,7 +338,7 @@ static int gchd_rx(void *arg)
  pes=kvmalloc(GCHD_MAX_FRAME,GFP_KERNEL);if(!pes)return-ENOMEM;
  ep = usb_pipe_endpoint(d->udev, usb_rcvbulkpipe(d->udev, GCHD_EP_IN));
  dev_info(&d->intf->dev,
-          "bulk-IN reader starting: ep=0x%02x endpoint=%s maxpacket=%u speed=%u alt=%u start_pending=%u\\n",
+          "bulk-IN reader starting: ep=0x%02x endpoint=%s maxpacket=%u speed=%u alt=%u start_pending=%u\n",
           GCHD_EP_IN, ep ? "present" : "missing",
           ep ? usb_endpoint_maxp(&ep->desc) : 0, d->udev->speed,
           d->intf->cur_altsetting->desc.bAlternateSetting,
@@ -355,14 +355,14 @@ static int gchd_rx(void *arg)
    rx_timeouts++;
    if (rx_reads < 5)
     dev_info(&d->intf->dev,
-             "bulk-IN during START/stream: result=%d actual=%d reads=%llu bytes=%llu\\n",
+             "bulk-IN during START/stream: result=%d actual=%d reads=%llu bytes=%llu\n",
              ret, actual, (unsigned long long)rx_reads,
              (unsigned long long)rx_bytes);
    gchd_signal_check(d);
    gchd_deliver(d);
    if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
     dev_info(&d->intf->dev,
-             "bulk-IN stats: reads=%llu bytes=%llu empty=%llu timeouts=%llu start_pending=%u\\n",
+             "bulk-IN stats: reads=%llu bytes=%llu empty=%llu timeouts=%llu start_pending=%u\n",
              (unsigned long long)rx_reads, (unsigned long long)rx_bytes,
              (unsigned long long)rx_empty, (unsigned long long)rx_timeouts,
              READ_ONCE(d->start_pending));
@@ -372,7 +372,7 @@ static int gchd_rx(void *arg)
   }
   if (ret) {
    dev_err(&d->intf->dev,
-           "bulk-IN reader failed: ret=%d actual=%d reads=%llu bytes=%llu\\n",
+           "bulk-IN reader failed: ret=%d actual=%d reads=%llu bytes=%llu\n",
            ret, actual, (unsigned long long)rx_reads,
            (unsigned long long)rx_bytes);
    break;
@@ -384,12 +384,12 @@ static int gchd_rx(void *arg)
    rx_empty++;
   if (rx_reads <= 5)
    dev_info(&d->intf->dev,
-            "bulk-IN data: read=%llu ret=0 actual=%d total_bytes=%llu\\n",
+            "bulk-IN data: read=%llu ret=0 actual=%d total_bytes=%llu\n",
             (unsigned long long)rx_reads, actual,
             (unsigned long long)rx_bytes);
   if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
    dev_info(&d->intf->dev,
-            "bulk-IN stats: reads=%llu bytes=%llu empty=%llu timeouts=%llu start_pending=%u\\n",
+            "bulk-IN stats: reads=%llu bytes=%llu empty=%llu timeouts=%llu start_pending=%u\n",
             (unsigned long long)rx_reads, (unsigned long long)rx_bytes,
             (unsigned long long)rx_empty, (unsigned long long)rx_timeouts,
             READ_ONCE(d->start_pending));
@@ -440,7 +440,7 @@ static void gchd_detect_workfn(struct work_struct *work)
      !READ_ONCE(d->detect_requested))
   goto out;
 
- dev_dbg(&d->intf->dev, "input detection started: input=%u streaming=%u\\n",
+ dev_dbg(&d->intf->dev, "input detection started: input=%u streaming=%u\n",
           READ_ONCE(d->input), READ_ONCE(d->streaming));
 
  /* Only the RX thread may own bulk-IN while START is active. */
@@ -495,7 +495,7 @@ static void gchd_detect_workfn(struct work_struct *work)
    */
   r = gchd_input_detect_signal(d);
   if (r == -ENOLINK) {
-   dev_info_ratelimited(&d->intf->dev, "no signal on input=%u; retrying detection\\n",
+   dev_info_ratelimited(&d->intf->dev, "no signal on input=%u; retrying detection\n",
             READ_ONCE(d->input));
    d->input_prepared = false;
    goto retry;
@@ -560,7 +560,7 @@ static void gchd_detect_workfn(struct work_struct *work)
     kthread_stop(d->rx_thread);
     d->rx_thread = NULL;
     dev_warn(&d->intf->dev,
-             "capture start after detection failed: %d; backing off before retry\\n", r);
+             "capture start after detection failed: %d; backing off before retry\n", r);
     /* Do not hammer START every 250ms if the state transition timed out. */
     schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
     goto out;
@@ -828,11 +828,11 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  if (i > 2)
   return -EINVAL;
  dev_info(&d->intf->dev,
-          "input switch requested: old=%u new=%u hw_initialized=%u streaming=%u\\n",
+          "input switch requested: old=%u new=%u hw_initialized=%u streaming=%u\n",
           READ_ONCE(d->input), i, READ_ONCE(d->hw_initialized),
           READ_ONCE(d->streaming));
  if (i == d->input) {
-  dev_dbg(&d->intf->dev, "input switch ignored: input %u already selected\\n", i);
+  dev_dbg(&d->intf->dev, "input switch ignored: input %u already selected\n", i);
   return 0;
  }
 
@@ -910,7 +910,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   */
  if (!READ_ONCE(d->hw_initialized)) {
   dev_info(&d->intf->dev,
-           "input selected: input=%u; detection deferred until STREAMON\\n", i);
+           "input selected: input=%u; detection deferred until STREAMON\n", i);
   mutex_unlock(&d->lifecycle_lock);
   return 0;
  }
@@ -919,7 +919,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  WRITE_ONCE(d->detect_requested, true);
  schedule_delayed_work(&d->detect_work, 0);
  dev_info(&d->intf->dev,
-          "input selected: input=%u; detection scheduled\\n", i);
+          "input selected: input=%u; detection scheduled\n", i);
  mutex_unlock(&d->lifecycle_lock);
  return 0;
 }
