@@ -1,65 +1,66 @@
-# Decoded V4L2 output
+# Plug-and-play decoded V4L2 output
 
-The DKMS driver exposes the Elgato's encoded H.264 stream as a V4L2 **capture**
-device. Decoding is deliberately kept in userspace: FFmpeg can be upgraded
-independently of the kernel module, and decoder crashes or codec changes do not
-take down the kernel.
+## Goal
 
-## Lifecycle
+The installed driver should behave like a normal camera: applications such as
+OBS discover a usable V4L2 video node without the user creating loopback devices,
+finding node numbers, or launching a script.
 
-1. Opening/querying the V4L2 node does not initialize device firmware.
-2. Starting capture (V4L2 STREAMON) performs hardware initialization only if
-   needed, then requests input detection.
-3. The driver's detection worker probes the selected HDMI/component/composite
-   input. It configures the encoder and starts bulk-IN packet capture only
-   after valid signal timing has been detected.
-4. FFmpeg reads the compressed H.264 capture queue, decodes it to YUV frames,
-   and writes those frames to a separate V4L2 output node.
-5. Stopping FFmpeg releases the capture queue; STREAMOFF stops packet capture.
-   The driver can continue its lightweight signal-detection policy when no
-   signal is present so a later source connection can be detected.
+The Elgato sends compressed video. The kernel module should not embed FFmpeg or
+perform software video decoding in kernel space. Use a small, automatically
+installed userspace bridge for decoding and publishing decoded frames.
 
-## Try it
+## Proposed architecture
 
-On Debian/Ubuntu, install the userspace decoder and loopback device:
+- **DKMS kernel module:** USB protocol, lazy hardware initialization, input
+  selection/signal detection, compressed-stream capture, and a V4L2 interface
+  for the encoded stream.
+- **Managed userspace bridge:** FFmpeg libraries or a supervised FFmpeg process
+  decode the compressed stream and write decoded frames to a virtual V4L2
+  output.
+- **Packaging/integration:** Install and enable the bridge and its service
+  configuration together with the driver. The service should associate the
+  correct capture and output nodes automatically; no manual shell commands
+  should be part of normal use.
 
-```sh
-sudo apt install ffmpeg v4l2loopback-dkms v4l-utils
-sudo modprobe v4l2loopback video_nr=10 card_label="Elgato Decoded Video" exclusive_caps=1
-```
+A virtual output is needed because a V4L2 compressed-capture queue is not itself
+a decoded camera feed. `v4l2loopback` is a reasonable first implementation for
+the output node, but it should be created and managed automatically by packaging
+and service logic, not by the end user.
 
-Find the driver's capture node with `v4l2-ctl --list-devices`. Confirm that it
-advertises H.264:
+## Required lifecycle
 
-```sh
-v4l2-ctl --device=/dev/video0 --list-formats
-```
+1. USB probe registers the device and its V4L2 nodes; it must not initialize
+   firmware or start video packet capture merely because the device was plugged
+   in or its node was enumerated.
+2. When an application opens/starts streaming from the decoded output, the
+   bridge becomes active and requests capture from the driver's compressed
+   stream interface.
+3. The driver initializes hardware only on the first real capture request.
+4. Input detection runs before video bulk-IN capture. If no valid signal is
+   present, do not start the video packet stream; keep the detection/retry
+   policy needed to notice a later signal.
+5. Once signal timing is detected and the input is configured, begin bulk-IN
+   capture. The bridge decodes and forwards frames.
+6. When the last consumer stops, stop capture and release resources cleanly.
+   Device removal, signal loss, input changes, and decoder failure must all
+   unwind safely and allow recovery.
 
-Then run the helper (replace the input node if necessary):
+The bridge must be demand-driven: merely starting a system service or creating
+the virtual output must not trigger hardware initialization. If the selected
+loopback mechanism cannot reliably report that a consumer has opened the output,
+use a small V4L2 bridge daemon or another output implementation that can.
 
-```sh
-chmod +x tools/gchd-decode-to-v4l2.sh
-./tools/gchd-decode-to-v4l2.sh /dev/video0 /dev/video10
-```
+## Implementation order
 
-The virtual output should advertise uncompressed formats for applications such
-as OBS. Check it with:
+1. Confirm the kernel V4L2 capture format is valid H.264 and test stream
+   boundaries, timestamps, and decoding against actual hardware.
+2. Implement and test the demand-driven bridge lifecycle.
+3. Add automatic device association and service activation/deactivation.
+4. Package the bridge and virtual-output setup so installation is one-time and
+   normal operation is plug-and-play.
+5. Test plug/unplug, no-signal startup, signal appearance/loss, multiple opens,
+   suspend/resume, and decoder failure.
 
-```sh
-v4l2-ctl --device=/dev/video10 --list-formats-out
-```
-
-## Important implementation note
-
-The device emits MPEG transport stream packets over USB. The current kernel
-path reconstructs 188-byte TS packets, selects video PID 0x1011, strips PES
-headers, and places payload chunks in H.264 V4L2 buffers. The driver marks this
-format as a continuous compressed bytestream, but this path still needs
-hardware-backed testing with FFmpeg to validate access-unit boundaries,
-timestamps, and reconnect behavior. Treat the helper as the initial integration
-path, not as proof that every supported source mode is already stable.
-
-Keep FFmpeg and pixel-format conversion out of the DKMS module. The kernel
-driver should own USB control, input detection, stream lifecycle, and the
-compressed V4L2 queue; userspace should own decoding, color conversion, and
-the virtual uncompressed V4L2 output.
+This is the target design, not a claim that the full automatic lifecycle has
+already been implemented.
