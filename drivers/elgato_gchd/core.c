@@ -424,7 +424,8 @@ static void gchd_detect_workfn(struct work_struct *work)
   d->height = d->input_height;
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
-  v4l2_event_queue(&d->vdev, &ev);
+  if (READ_ONCE(d->v4l2_registered))
+   v4l2_event_queue(&d->vdev, &ev);
 
   /* Reads are already pending before START; retry the command if needed. */
   if (!READ_ONCE(d->capture_started)) {
@@ -600,10 +601,8 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  }
 
  /*
-  * Stop/join RX before taking over bulk-IN. Stop the transport even if the
-  * V4L2 streaming flag is already clear: the device may still be in START
-  * after a signal-loss or STREAMOFF race. The stop helper is a no-op in STOP
-  * or IDLE and performs the userspace-compatible drain sequence otherwise.
+  * Keep the raw bulk-IN reader running while control requests stop and
+  * reconfigure the device. It remains the sole owner of endpoint 0x81.
   */
  if (READ_ONCE(d->hw_initialized)) {
   r = gchd_stream_stop(d);
@@ -632,6 +631,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  /* Clear connector-specific cached state only after reaching IDLE. */
  d->input_configured = false;
  d->input_prepared = false;
+ WRITE_ONCE(d->capture_started, false);
  WRITE_ONCE(d->signal_present, false);
  gchd_ring_free(&d->ring);
  d->ts_partial_len = 0;
