@@ -120,7 +120,7 @@ State values used by source: `0x00` uninitialized; `0x10` idle firmware loaded b
 
 ## 8. Status values and other observed reads
 
-## 2. Format/status polling
+
 
 All values below are response bytes to reads, not commands sent to the device.
 
@@ -459,16 +459,3 @@ Do not label the `0x98:0x90–0xA3) table “the 240p command” based on the cu
 - Record the capture filename, device/input type, source format, destination format, USB transfer direction/type, exact bytes, response/status, timing, and video outcome for each new finding.
 - Promote an item from **Untested** only after a controlled reproduction. Preserve both the raw trace and the interpretation.
 - Keep observations, hypotheses, and tested conclusions separate. When evidence contradicts a hypothesis, update the interpretation rather than silently rewriting the observed bytes.
-
-
-## Source-first audit
-
-The trace catalogue is accompanied by a source-first audit of the original userspace protocol, including documented SCMD meanings and confirmation, mailbox transport for both Game Capture HD generations, enable-state semantics, per-input configuration facts, transcoder writes, and the original developers' explicit uncertainty notes:
-
-- [SOURCE_AUDIT.md](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/SOURCE_AUDIT.md)
-
-- [SOURCE_COMMAND_LEDGER.md](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/SOURCE_COMMAND_LEDGER.md) — source-order call-site ledger covering 1,434 matching command/configuration operations across the six audited files. It retains line numbers and inline expected-response comments; branches and loops remain conditional and are not presented as one replayable linear sequence.
-
-- [TRANSCODER_COMMAND_LEDGER.md](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/TRANSCODER_COMMAND_LEDGER.md) — 305 source-ordered transcoder configuration call sites, including dynamic setting expressions.
-
-**Correction to earlier trace-only wording:** SCMD meanings and state-confirmation behavior are documented in `src/gchd/commands.cpp` and `src/gchd_hardware.hpp`; those semantics should not be described as unknown at the source level. Individual register-field meanings, some mailbox responses, and the exact effect of the completion acknowledgement remain unresolved. The audit explicitly lists the remaining work before claiming a complete command inventory.
