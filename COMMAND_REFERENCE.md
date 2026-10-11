@@ -1,24 +1,124 @@
-# GCHD Command Reference
+# GCHD command reference
 
-This document is the working inventory of commands and register operations identified so far for the Elgato Game Capture HD (GCHD). It is intentionally conservative: a value seen on the USB wire is **observed**, but its hardware meaning is not considered proven unless noted.
+Compact byte-level reference for commands found in the original userspace implementation and uploaded USB traces. Register values are hexadecimal. “Source” means implemented/commented in C++; “Trace” means observed in capture; “Inferred” means correlation only.
 
-**Evidence currently catalogued:** `drivers/elgato_gchd/trace_analysis.txt` (composite 480i/240p format transitions), `drivers/elgato_gchd/hdmi2composite_trace_analysis.txt` (HDMI-to-composite input switch and SoC pipeline configuration), and `drivers/elgato_gchd/input_switch_trace_analysis.txt` (input switches with no source attached plus comparisons against the earlier trace). These are trace-derived observations, not a complete device protocol specification. Treat interpretations as provisional until controlled hardware tests confirm them.
+## 1. USB transport and generic command forms
 
-## Status legend
+| Operation | Generic bytes / USB fields | Meaning |
+|---|---|---|
+| Vendor control read | USB request type `0xC0`; request/value/index/length depend on operation | Reads a device register/status buffer. Source requires exact requested length. |
+| Vendor control write | USB request type `0x40`; request/value/index/payload depend on operation | Writes a device register/configuration buffer. Source requires exact byte count. |
+| SCMD | Vendor OUT request `0xB8`; original HD payload `00 00 CMD MODE DATA_H DATA_L` (6 bytes); HD New payload `CMD MODE DATA_H DATA_L` (4 bytes) | Firmware/encoder state command. See SCMD table and required follow-up sequence. |
+| Original-HD mailbox write | Vendor OUT request `0xBD`; `wIndex = PORT << 8`; payload is command bytes, unpadded | Sends a command to mailbox port `PORT`. After writing, source restores enable shadow and polls mailbox-ready. |
+| HD-New mailbox write | Write payload to `0x0800:0x00C0` via request `0xBC`; odd byte counts padded with `00`. Then request `0xB9`, `wIndex=0`, payload `09 00 (PORT<<1) LENGTH` | Asynchronous mailbox write. Requires interrupt/status/readiness sequence below. |
+| HD-New mailbox read | Request `0xB9`, `wIndex=0`, payload `09 01 (PORT<<1) LENGTH`; then read `LENGTH+2+(LENGTH&1)` bytes from `0x0800:0x23BE` | Drops two leading bytes and any odd-length pad; remaining bytes are mailbox reply. |
+| Firmware download | Bulk OUT endpoint `0x02`; chunks 16,384 bytes (original HD), 32,768 bytes (HD New) | Loads idle or encode firmware. |
+| Interrupt wait | Interrupt endpoint `0x83`, 3-byte buffer | HD-New mailbox/SCMD synchronization. Source checks transfer status; payload is not generally validated by `interruptPend()`. |
+| Transcoder full-word write (`slsi`) | Vendor OUT `0xBC`; `wIndex=ADDRESS`; 2-byte big-endian DATA | Writes a 16-bit transcoder register; address must be 2-byte aligned. |
+| Transcoder masked write (`sparam`) | Vendor OUT `0xBC`; `wValue=1`; `wIndex=ADDRESS & ~3`; payload `VALUE32_BE MASK32_BE` (8 bytes) | Updates only mask-selected bits in a 32-bit transcoder register. |
+| Transcoder table write | Sequential 16-bit words using transcoder writes; odd trailing byte occupies high byte of final word | Loads table/coefficient blocks; writable range boundaries are not known in source. |
 
-- **Observed** — present in the capture; this does not by itself prove the semantic meaning.
-- **Inferred** — plausible interpretation from context, not confirmed by controlled hardware testing.
-- **Untested in driver** — newly catalogued operation not yet validated as a driver implementation step. Keep it out of the production path until tested.
-- **Unknown** — purpose or protocol semantics are not established.
+## 2. Mailbox generic commands
 
-## 1. USB/protocol command forms
+| Bytes | Port / reply | Meaning |
+|---|---|---|
+| `9D CD INDEX` | Write to port `0x33`, then read 1 byte | Helper named `readDevice0x9DCD`; target/meaning unknown to original author. |
+| `99 89 ED` | Port `0x33`; repeat/read until response bit 6 is set | Poll helper; source identifies bit 6 as poll-complete. |
+| `99 89 EC` | Port `0x33`; repeated read, count supplied by caller | Reads a sequence of bytes; helper currently discards returned values. |
+| `89 89 FA` | Port `0x33`; one-byte reply | Composite video mode detection; low nibble 6 = NTSC/60.0, 7 = PAL/50.0. |
+| `AB A9 0F A4 55` | Port `0x33`; 24-bit magic reply | Device/firmware phase probe. Source observes `33 44 55` and `27 F9 7B`; full meaning unknown. |
+| `29 89 5B` | Port `0x33`; expected reply `91` | Source-annotated handshake; semantic meaning unknown. |
+| `DD CE 3F B2` | Port `0x33`; expected reply `DA 67` | Source-annotated handshake; semantic meaning unknown. |
+| `43 23 84` | Port `0x33`; poll until `F7` | Source-annotated handshake; semantic meaning unknown. |
+| `89 89 FB` | Port `0x33`; expected reply `6E` | Source-annotated handshake; semantic meaning unknown. |
+| `AB 92 3E B4 ...` | Port `0x33`; followed by 56-byte reads | Explicitly not understood in source; retain order and length from call site. |
 
-| Command / wire form | Values / fields observed | Description | Status / notes |
-|---|---|---|---|
-| Mailbox/register read: `89 89 RR 00` | `RR` is the register; response is one byte | Reads status/registers associated with the `0x88` device block. Trace notation: `READ 89 89 reg RR -> VV`. | Observed. Exact transport framing beyond the trace notation should be checked against the USB transfer implementation. |
-| Mailbox/register read: `99 89 RR 00` | `RR` is the register; response is one byte | Reads status/registers associated with the `0x98` device block. | Observed. |
-| Register write transaction | 2-byte write on `0x0800:0x00C0`, followed by `B9 09 00 ADDR 02`; trace labels the target block as `[ADDR]` | Writes a single register/value pair to the selected device block. | Observed trace notation. Confirm the precise low-level framing in the transport code before reimplementing. |
-| SCMD control transfer: `B8 xx xx xx xx` | `B8 04 A0 00 00`; `B8 05 00 00 02`; `B8 05 00 00 04`; `B8 05 00 00 01` | Vendor-specific control transfer, shown in the trace as `SCMD (40 B8 ... wLength 4)`. | Values observed; semantic names and expected acknowledgements are not yet proven. See untested commands below. |
+## 3. SCMD commands and confirmation
+
+| CMD | MODE | DATA | Meaning | Confirmation / notes |
+|---:|---:|---:|---|---|
+| `0x01` IDLE | mode as call site | — | Enter idle; expected state readback `0x11` | State confirmation routine checks readback and completion. |
+| `0x02` RESET | `0x00` or `0x01` | — | Reset firmware state | Modes expect different state readbacks; source says deeper reset interpretation is probable, not fully proven. |
+| `0x04` INIT | `0x00` | `0x0000` | Load/initialize encode firmware; generates interrupt | Firmware-loading path then reads expected version/firmware words. |
+| `0x04` INIT | `0xA0` | `0x0000` | Initialize without reloading encode firmware or generating that interrupt | Used before stream start after input/transcoder setup. |
+| `0x05` STATE_CHANGE | `0x00` | `0x0001` | STOP | Expected state `0x01`; wait for completion bit `0x04`. |
+| `0x05` STATE_CHANGE | `0x00` | `0x0002` | START | Expected state `0x02`; wait for completion bit `0x04`. |
+| `0x05` STATE_CHANGE | `0x00` | `0x0004` | NULL / empty output stream | Expected state `0x04`; wait for completion bit `0x04`. |
+
+State values used by source: `0x00` uninitialized; `0x10` idle firmware loaded before IDLE; `0x11` idle; `0x01` initialized/stopped; `0x02` started; `0x04` null/empty stream; `0x12` special shutdown/reset state (deeper meaning is a theory).
+
+### Required sequence after SCMD
+
+1. Send `0xB8` SCMD payload in the device-generation-specific length.
+2. On HD New where requested by the source, wait for interrupt endpoint `0x83`; read `0x0800:0x0014` until its high byte equals CMD. This is command-receipt/readback, not proof that the state transition completed.
+3. For a state transition, poll `0x0900:0x0074` until bit `0x04` is set.
+4. Read `0x0800:0x2008`, mask with `0x1F`, and check the expected state. Source reads it twice.
+5. Write `0x0004` to `0x0900:0x0074` (believed to clear/acknowledge sticky completion; exact effect unconfirmed), then write `0x0000` to `0x0900:0x01B0` (purpose unknown).
+
+## 4. Enable and readiness registers
+
+| Address | Bytes / bit | Meaning |
+|---|---|---|
+| `0x0900:0x0018` | `ENABLE_REGISTER` | Actual enable register. Source writes and reads back it. |
+| `0x0900:0x0014` | Enable-state shadow | Written after mailbox operations; shadow bits may be marked as touched even when actual bit is cleared. |
+| `0x0900:0x001C` | Bit 0 | Mailbox request ready/busy poll; source waits for bit 0 to be set. |
+| `0x0900:0x0074` | Bit `0x04` | SCMD state-change completion; write `0x0004` after checking state. |
+| `0x0800:0x2008` | Low 5 bits | SCMD state readback. |
+| `0x0800:0x0014` | High byte = CMD (HD New) | SCMD command-receipt/readback after interrupt. |
+| `0x0800:0x0016` | Expected `09 00` (HD New) | Read after mailbox interrupt; source speculates about interrupt status/clear-on-read, meaning not proven. |
+| `0x0900:0x0070` | Write `00 04` during initial firmware setup | Purpose unknown in source. |
+| `0x0900:0x01B0` | Write `00 00` during SCMD completion | Purpose unknown in source. |
+| Enable bit 1 | `EB_FIRMWARE_PROCESSOR` | Believed to enable firmware processor; CPU/reset theory is conjecture. |
+| Enable bit 2 | `EB_ANALOG_INPUT` | Set for composite/component, clear for HDMI. |
+| Enable bit 3 | `EB_ENCODER_ENABLE` | Enables encoder after encode firmware load. |
+| Enable bit 4 | `EB_ENCODER_TRIGGER` | Purpose unknown; source guesses momentary trigger/reset. |
+| Enable bit 8 | `EB_COMPOSITE_MUX` | Source comment says set only for composite. |
+| Enable bit 9 | `EB_ANALOG_MUX` | Source comment says set for composite/component. |
+| `BANKSEL` | Write `0x0000` at setup | Meaning unknown. |
+
+## 5. Input-selection and decoder setup bytes
+
+| Input / stage | Bytes (mailbox port or target block noted) | Meaning / required follow-up |
+|---|---|---|
+| HDMI selector | Port `0x4E`: `51 45`; trace sees target `0x9C:0x51=45` | Select HDMI path. Follow shared HDMI/component setup, detect timing/color space, then mode-specific setup and transcoder configuration. |
+| Component selector | Port `0x4E`: `51 ED`; trace sees target `0x9C:0x51=ED` | Select component path. Follow shared HDMI/component setup, detect timing/scan mode, apply component mode table and transcoder configuration. |
+| HDMI/component shared prefix | Register-style writes include `00 CC`, `AB 4C`, `00 CE`, `1B 33`, `00 CC`, `B7 CE`, `B8 DC`, `B8 CC`, `00 CE`, `07 38`, `07 C8`, `00 CC`, selector `51 45` or `51 ED`, `B7 CC` | These are ordered with reads from `0x9DCD`; do not extract the selector and omit the surrounding setup. |
+| HDMI detect | Read/average `0x66/0x65`, `0x64/0x63`; read `0x34` after `00 CE` | Bit 2 of `0x34` is used as RGB flag. Timing thresholds are heuristics: `0x6463≈0xB6D7` 1080p; `≈0xB081` 1080i; `≈0xB05C` 720p; `≈0xB0C1` 480p/576p midpoint. |
+| Component-specific writes | `24 0C`, `21 CD`, `91 C8`, `0E 8C`, `11 EC`, `71 4C`, `04 CC` | Apply after shared prefix; source notes `0x04` may need another value for non-1080 modes but does not detect it. |
+| Composite mode detect | Port `0x33`: `89 89 FA`, then read one byte | Low nibble 6 → NTSC/60.0; 7 → PAL/50.0. Default scan mode interlaced. |
+| Composite NTSC setup | Target block `0x88`: `07=8A`, `08=9B`, `09=7A`, `28=88`; poll `89 89 FD` for `6E`; then `06=08` | Must follow composite mode detection. |
+| Composite PAL setup | Poll `89 89 F1` for `63`; write port `0x4C` register `04=95` | PAL-specific branch. |
+| Composite/S-video distinction | Target block `0x88`: `02=C9` composite; `02=DC` S-video. Composite return may include `3C=6B`. | Keep the source-specific analog setup sequence. Trace shows composite selector `0x9C:0x51` as `0x44` in one capture and `0xEC` in another; discrepancy unresolved. |
+| Shared analog prefix | Target `0x88`: `06=08`, `03=28`; target `0x9C`: `B3=33`, `27=33` | Seen in analog setup; exact meanings of individual values unknown. |
+| HDMI/component shared path prefix | Target `0x88`: `06=86`, `03=2F`; target `0x9C`: `B3=CC`, `27=CC` | Shared digital/component path setup. |
+| 240p signal-dependent setup | Target `0x98`: `04=95`, `70=D0`, `0F=88`; then coefficient table `90–A3`; then `72=88,C0=88,61=98,63=89,64=96,65=88,04=8D,62=91`; then `0D=C8,0E=05,0E=04`; later `0D=C8,0E=15,0E=14` | Trace-observed after signal lock. Do not treat as a universal input-select command; compare with 480i and preserve order. |
+| Coefficient table | Target `0x98`: `90=01,91=BD,92=9A,93=3A,94=E9,95=AB,96=17,97=88,98=84,99=8A,9A=9C,9B=8C,9C=98,9D=93,9E=83,9F=A9,A0=8B,A1=E8,A2=81,A3=49` | Ordered signal/format table observed in 240p-related trace; meaning unknown. |
+| Intermediate flat table | Target `0x98`: `70=C8`, `90–A3` mostly `77`, `C0=80` then `C0=77` then `C0=88` | Intermediate transition phase; do not substitute for the final coefficient table. |
+
+## 6. Transcoder parameters and setup
+
+| Form / register family | Bytes / values | Meaning / follow-up |
+|---|---|---|
+| `slsi` | `BC`, `wIndex=ADDRESS`, two-byte big-endian value | Write 16-bit transcoder register. |
+| `sparam` | `BC`, `wValue=1`, `wIndex=ADDRESS&~3`, `VALUE32_BE MASK32_BE` | Masked 32-bit field update; preserves bits outside mask. |
+| Transcoder table | Sequential 16-bit words, big-endian; odd final byte in high halfword byte | Used for table/coefficient programming. |
+| Pipeline dimensions | Trace contains `0x02D0=720` and `0x01E0=480` among writes to `0x1124`, `0x1264`, `0x1128`, `0x1268`, `0x152C`, `0x162C`, `0x1530`, `0x1534`, `0x1538`, `0x1630`, `0x1634`, `0x1638` | Consistent with 720×480-related pipeline values; exact field semantics are not all established. |
+| Output configuration | Video format/size/bitrate/H.264, transport-stream/PIDs, audio/AAC, color-description and mirrored `_bl` fields | Configured separately from decoder/mailbox registers. Actual values depend on runtime settings; source bitfield map was recovered from scripts, not a data sheet. |
+
+## 7. Required command sequences
+
+| When | Required order | Why / completion condition |
+|---|---|---|
+| Any mailbox write on original HD | Send `BD` payload → write saved enable shadow to `0900:0014` → poll `0900:001C` bit 0 set | Source implements this readiness handshake; whether every poll is strictly necessary is unknown. |
+| Any mailbox write on HD New | Write/pad payload at `0800:00C0` → `B9` config `09 00 (PORT<<1) LEN` → interrupt `83` → read `0800:0016` → poll `0900:001C` → read 2 dummy bytes at `0800:23BE` → restore `0900:0014` → poll ready | Do not send the next mailbox transaction before the previous asynchronous operation is completed. |
+| Mailbox read on HD New | `B9` config `09 01 (PORT<<1) LEN` → interrupt/status/readiness → read `LEN+2+(LEN&1)` from `0800:23BE` → strip 2 status bytes and odd pad | Reply bytes follow transport header/padding. |
+| Fresh device initialization | Read version/state → if uninitialized load idle firmware and read expected firmware words; otherwise RESET → IDLE → probe magic/cable bits → initialize transcoder defaults → INIT mode 0 → load encode firmware → common mailbox/decoder setup → enable encoder and handshake → input-specific configure/detect → final transcoder configure → INIT mode A0 → START and confirm | Order is significant; input setup alone is not a complete startup sequence. |
+| Input switch | Set required analog/digital enable bits and run that input's full selector + shared + input-specific sequence → wait/poll for signal lock → detect format and apply signal-dependent tables → update transcoder output settings → request/reconfirm START if path was stopped or source does so | Avoid applying the 240p table before the signal-dependent stage; composite uses NTSC/PAL detection. |
+| SCMD START/STOP/NULL | Send SCMD → on HD New command-receipt interrupt/readback when required → poll `0900:0074` bit 2 → check `0800:2008 & 0x1F` against expected state → acknowledge completion `0004` → write `0000` to `0900:01B0` | Completion is the state/readback handshake, not merely successful USB transfer. |
+| Composite autodetection throws | Run source's `0x9DCD` read / `0x4E` write recovery sequence before continuing or aborting | Developer says this avoids a lockup; exact reason unknown. Preserve sequence in a faithful port. |
+| 240p ↔ 480i transition | Poll status; apply the observed intermediate `0x98` table/phase writes; reapply required `0x88` writes; wait for stable status before final format configuration | Trace shows transition writes differ from initial setup; exact semantics remain partly unknown. |
+
+## 8. Status values and other observed reads
 
 ## 2. Format/status polling
 
