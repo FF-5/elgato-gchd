@@ -363,7 +363,7 @@ static int gchd_rx(void *arg)
   gchd_signal_check(d);
   gchd_deliver(d);
  }
- if (n)
+ if (pes_active && n)
   gchd_ring_push(&d->ring, pes, n);
  kvfree(pes);
  return 0;
