@@ -143,17 +143,17 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
  if (p[0] != 0x47)
   return;
 
- /* A transport error or scrambled payload invalidates the partial PES. */
+ pid = ((p[1] & 0x1f) << 8) | p[2];
+ if (pid != 0x1011)
+  return;
+
+ /* A transport error or scrambled video payload invalidates this PES. */
  if ((p[1] & 0x80) || (p[3] & 0xc0)) {
   *n = 0;
   *pes_active = false;
   *cc_valid = false;
   return;
  }
-
- pid = ((p[1] & 0x1f) << 8) | p[2];
- if (pid != 0x1011)
-  return;
 
  afc = (p[3] >> 4) & 3;
  if (!afc)
