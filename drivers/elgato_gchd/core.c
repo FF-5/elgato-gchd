@@ -254,7 +254,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
 
   if (payload > remaining) {
    dev_warn_ratelimited(&d->intf->dev,
-                        "video PES exceeds %u bytes; dropping until next PES\\n",
+                        "video PES exceeds %u bytes; dropping until next PES\n",
                         GCHD_MAX_FRAME);
    *n = 0;
    *pes_active = false;
