@@ -41,7 +41,18 @@ All values below are response bytes to reads, not commands sent to the device.
 | `0x6B` (`99 89 6B`) | `0x6E` | Read during intermediate 480i reconfiguration. | Meaning unknown. |
 | `0x58` (`99 89 58`) | `0x91` | Read during intermediate 480i reconfiguration. | Meaning unknown. |
 
-## 3. Observed writes to device block `0x88`
+## 3. Observed writes to device block `0x9C`
+
+These writes occur early in the initial composite setup, before the `0x88` and `0x98` configuration groups. They are included because they are part of the observed command inventory, although their role is unknown.
+
+| Register | Observed value(s) | Context | Description / status |
+|---|---|---|---|
+| `0xB3` | `0x33` | Initial setup, 8.835 s | Observed write to block `0x9C`; purpose unknown. |
+| `0x00` | `0xCE`, then `0xCC` | Initial setup, after reads of block `0x9D` | Two values observed; possible staged setup, but unconfirmed. |
+| `0x27` | `0x33` | Initial setup, 8.843 s | Observed write; purpose unknown. |
+| `0x51` | `0x44` | Initial setup, 8.854 s | Observed write; purpose unknown. |
+
+## 4. Observed writes to device block `0x88`
 
 The trace shows these writes during initial composite lock and format changes. Their role is not proven solely by observation.
 
@@ -61,9 +72,9 @@ The trace shows these writes during initial composite lock and format changes. T
 | `0x15` | `0x88` | Initial setup | Written with registers `0x10–0x14`. |
 | `0x28` | `0x88`, `0x8A` | `0x88` at initial 480i and return to 480i; `0x8A` at 240p | Strong format correlation in this trace; exact bit semantics remain unknown. |
 
-## 4. Observed writes to device block `0x98`
+## 5. Observed writes to device block `0x98`
 
-### 4.1 Common setup writes
+### 5.1 Common setup writes
 
 | Register | Observed values | Context | Description / status |
 |---|---|---|---|
@@ -80,7 +91,7 @@ The trace shows these writes during initial composite lock and format changes. T
 | `0x72` | `0x88` | Initial/full setup and reconfiguration | Purpose unknown. |
 | `0xC0` | `0x88`, `0x80`, `0x77` | Normal setup and intermediate flat-table phase | Intermediate sequence writes `0x80`, later `0x77`, then returns to `0x88`. Meaning unknown. |
 
-### 4.2 Coefficient/table writes
+### 5.2 Coefficient/table writes
 
 The following table is populated during initial setup and again during the final full configuration when returning to 480i.
 
@@ -107,7 +118,7 @@ The following table is populated during initial setup and again during the final
 | `0xA2` | `0x81` | Observed; semantic purpose unknown. |
 | `0xA3` | `0x49` | Observed; semantic purpose unknown. |
 
-### 4.3 Intermediate table during 240p→480i
+### 5.3 Intermediate table during 240p→480i
 
 This phase appears only in the captured return-to-480i sequence. The driver must **not** assume its purpose or necessity until tested.
 
@@ -118,7 +129,7 @@ This phase appears only in the captured return-to-480i sequence. The driver must
 | `0x91–0xA3` | Mostly `0x77`; `0xA2=0x77` is explicitly written again later | Flat/intermediate table phase; exact purpose unknown. |
 | `0xC0` | `0x80`, then `0x77`, then `0x88` | Staged writes around the intermediate table; purpose unknown. |
 
-## 5. SCMD commands seen in the trace — untested semantics
+## 6. SCMD commands seen in the trace — untested semantics
 
 These exact 4-byte payloads are observed on the wire. The names below are provisional and are not assertions about what the device does.
 
@@ -129,7 +140,7 @@ These exact 4-byte payloads are observed on the wire. The names below are provis
 | `05 00 00 04` | During 240p→480i reconfiguration at 57.985 s | Possible stop/disable or transition-stage command | **Untested.** Do not call it “stop” as a fact. |
 | `05 00 00 01` | At 58.646 s, after `05 00 00 04` and before final full setup | Possible intermediate lifecycle command | **Untested.** Meaning and acknowledgement unknown. |
 
-## 6. Newly catalogued / untested driver operations
+## 7. Newly catalogued / untested driver operations
 
 This section intentionally separates **seen in a reference trace** from **tested as a standalone operation**. Treat these as experimental until reproduced with controlled tests and capture/video health checks.
 
@@ -139,14 +150,14 @@ This section intentionally separates **seen in a reference trace** from **tested
 | Reapply `0x88:0x07–0x09` | `07=8A, 08=9B, 09=7A` | Repeated at both transitions and initial setup. | Compare transition success with/without reapplying this group; restore known-good configuration on failure. |
 | Apply `0x88:0x0A` updates | `0x8F`, later `0x98` on 480i→240p | Appears only during the captured 240p transition. | Test each write separately and record timing relative to lock status and valid frames. |
 | Run the `0x98` intermediate table | `0x70=C8`, `0x90=88`, `0x91–0xA3=77`, staged `0xC0` values | Seen only in the captured 240p→480i transition. | Compare return-to-480i with and without this phase; verify decoder lock, frame integrity, and whether it is actually required. |
-| Replay the final `0x98` table | `0x70=D0`, `0x0F=88`, `0x90–0xA3` values in §4.2, common setup values in §4.1 | Reapplied after the intermediate phase. | First reproduce the full trace sequence; then remove one group at a time while capturing results. |
+| Replay the final `0x98` table | `0x70=D0`, `0x0F=88`, `0x90–0xA3` values in §5.2, common setup values in §5.1 | Reapplied after the intermediate phase. | First reproduce the full trace sequence; then remove one group at a time while capturing results. |
 | Send SCMD `04 A0 00 00` | Exact payload shown above | Repeated at initial setup and after return-to-480i setup. | Capture the control transfer status, any subsequent device state changes, and whether streaming starts; do not infer acknowledgement from timing alone. |
 | Send SCMD `05 00 00 02` | Exact payload shown above | Paired with `04 A0 00 00` in the trace. | Determine required ordering and observable confirmation; test only with recovery path available. |
 | Send SCMD `05 00 00 04` | Exact payload shown above | Appears during 240p→480i transition. | Establish whether it halts capture, resets a block, or does something else by observing stream continuity and control-transfer results. |
 | Send SCMD `05 00 00 01` | Exact payload shown above | Appears after `05 00 00 04`. | Establish purpose and ordering independently; record the device response and subsequent stream state. |
 | Use `0xCA` as a format-state input | `FE`, `7E`, `66`, transient `EE` observed | Most useful current candidate for format/lock detection. | Capture multiple transitions per input type; require stable repeated samples and validate against actual decoded frames before updating V4L2 format. |
 
-## 7. Observed sequences
+## 8. Observed sequences
 
 ### Initial composite lock / 480i setup
 
@@ -160,7 +171,7 @@ This section intentionally separates **seen in a reference trace** from **tested
 
 1. `0xCA` changes from `0x7E` to `0x66`.
 2. Reapply `0x88:0x07–0x09`, change `0x28=8A`, and write `0x06=08`.
-3. Write `0x0A=8F`, later `0x0A=98`; write `0x98:0x0D= C8`, `0x0E=15`, `0x0E=14`.
+3. Write `0x0A=8F`, later `0x0A=98`; write `0x98:0x0D=C8`, `0x0E=15`, `0x0E=14`.
 4. The trace shows no SCMD and no SoC writes during this transition, and capture continues. This is an observation from this one capture, not a universal rule.
 
 ### 240p→480i
@@ -171,7 +182,7 @@ This section intentionally separates **seen in a reference trace** from **tested
 4. Send `B8 05 00 00 04`, then `B8 05 00 00 01`.
 5. Apply the full `0x98` table and common setup; send `B8 04 A0 00 00`, then `B8 05 00 00 02`.
 
-## 8. Evidence gaps and rules for updating this reference
+## 9. Evidence gaps and rules for updating this reference
 
 - This catalogue is based on one composite-input format-switch trace. It is not a complete inventory of every device command.
 - No semantic meaning or expected confirmation response should be assigned to a command just because it occurs before/after a state change.
