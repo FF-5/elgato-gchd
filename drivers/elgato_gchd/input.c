@@ -838,7 +838,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
   r = gchd_read_9dcd(d, 0x6e, reply);
   if (r)
    return r;
-  r = gchd_mail_write(d, 0x4e, (u8[]){0x51,0xcc}, 2);
+  r = gchd_mail_write(d, 0x4e, (u8[]){0x51,0xec}, 2);
   if (r)
    return r;
  }
