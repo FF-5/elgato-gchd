@@ -976,15 +976,20 @@ int gchd_input_detect_signal(struct gchd *d)
    if (r) return r;
    r = gchd_mail_read(d, 0x33, &mode, 1);
    if (r) return r;
-   if (mode == 0x66)
-    d->input_interlaced = false;
-   else if (mode != 0x7e)
+   /*
+    * Start with the known-good 480i receiver/encoder setup, as in the
+    * reference trace. A 240p lock is applied only after capture starts and
+    * the live monitor sees 0x66; this avoids skipping the transition recipe
+    * when 0x66 is already present during initial detection.
+    */
+   if (mode != 0x7e && mode != 0x66)
     dev_dbg(&d->intf->dev,
-            "analog format status not locked yet: 0x%02x; defaulting to 480i\n",
+            "analog format status not locked yet: 0x%02x; starting in 480i\n",
             mode);
    dev_info(&d->intf->dev,
-            "analog format lock: status=0x%02x mode=%s\n",
-            mode, d->input_interlaced ? "480i" : "240p");
+            "analog format initial status=0x%02x; starting in 480i\n",
+            mode);
+   d->input_interlaced = true;
   } else if (v == 7) {
    d->input_width=720; d->input_height=576;
    d->input_interlaced=true; d->input_fps_num=50;
@@ -1344,6 +1349,19 @@ int gchd_input_switch_480i_to_240p(struct gchd *d)
  MW(0x4c,0x0d,0xc8);
  MW(0x4c,0x0e,0x15);
  MW(0x4c,0x0e,0x14);
+
+ /*
+  * The trace waits for the decoder to settle after the encoder reset.
+  * During this interval CA may briefly report EE/FE; do not treat that as
+  * a reverse mode change. Only finalize 240p if CA is still 0x66.
+  */
+ msleep(800);
+ M3(0x89,0x89,0xfa); MR();
+ M3(0x89,0x89,0xca); MR();
+ if (v != 0x66)
+  return -EAGAIN;
+ M3(0x89,0x89,0xe7); MR();
+ M3(0x89,0x89,0xf1); MR();
  MW(0x44,0x0a,0x98);
 #undef MR
 #undef MW
