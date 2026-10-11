@@ -184,7 +184,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   if (*cc_valid && !discontinuity &&
       cc != ((*last_cc + 1) & 0x0f)) {
    dev_warn_ratelimited(&d->intf->dev,
-                        "video TS continuity gap: expected=%u got=%u; dropping partial PES\\n",
+                        "video TS continuity gap: expected=%u got=%u; dropping partial PES\n",
                         (*last_cc + 1) & 0x0f, cc);
    *n = 0;
    *pes_active = false;
@@ -211,7 +211,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   v4l2_event_queue(&d->vdev, &ev);
   WRITE_ONCE(d->signal_present, true);
   dev_info(&d->intf->dev,
-           "signal present: input=%u; first video TS packet on PID 0x1011\\n",
+           "signal present: input=%u; first video TS packet on PID 0x1011\n",
            READ_ONCE(d->input));
  }
 
@@ -221,10 +221,10 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
 
    if (r)
     dev_warn_ratelimited(&d->intf->dev,
-                         "dropping PES payload: bytes=%zu queue_error=%d\\n",
+                         "dropping PES payload: bytes=%zu queue_error=%d\n",
                          *n, r);
    else
-    dev_dbg(&d->intf->dev, "queued PES payload: bytes=%zu\\n", *n);
+    dev_dbg(&d->intf->dev, "queued PES payload: bytes=%zu\n", *n);
   }
   *n = 0;
   *pes_active = false;
@@ -317,7 +317,8 @@ static void gchd_deliver(struct gchd *d)
 
 static int gchd_rx(void *arg)
 {
- struct gchd *d=arg; u8 *pes; size_t n=0; int ret,actual,pos;\n bool pes_active=false, cc_valid=false; u8 last_cc=0;
+ struct gchd *d=arg; u8 *pes; size_t n=0; int ret,actual,pos;
+ bool pes_active=false, cc_valid=false; u8 last_cc=0;
  pes=kvmalloc(GCHD_MAX_FRAME,GFP_KERNEL);if(!pes)return-ENOMEM;
  while(!kthread_should_stop()&&!d->disconnected){
   /* Keep the RX timeout shorter than the signal-loss debounce so the
