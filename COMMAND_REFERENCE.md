@@ -369,4 +369,6 @@ The trace catalogue is accompanied by a source-first audit of the original users
 
 - [SOURCE_COMMAND_LEDGER.md](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/SOURCE_COMMAND_LEDGER.md) — source-order call-site ledger covering 1,434 matching command/configuration operations across the six audited files. It retains line numbers and inline expected-response comments; branches and loops remain conditional and are not presented as one replayable linear sequence.
 
+- [TRANSCODER_COMMAND_LEDGER.md](https://github.com/FF-5/elgato-gchd/blob/diagnostic-input-baseline/TRANSCODER_COMMAND_LEDGER.md) — 305 source-ordered transcoder configuration call sites, including dynamic setting expressions.
+
 **Correction to earlier trace-only wording:** SCMD meanings and state-confirmation behavior are documented in `src/gchd/commands.cpp` and `src/gchd_hardware.hpp`; those semantics should not be described as unknown at the source level. Individual register-field meanings, some mailbox responses, and the exact effect of the completion acknowledgement remain unresolved. The audit explicitly lists the remaining work before claiming a complete command inventory.
