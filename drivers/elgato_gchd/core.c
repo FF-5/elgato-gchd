@@ -566,6 +566,8 @@ static void gchd_detect_workfn(struct work_struct *work)
     schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
     goto out;
    }
+   if (d->input >= 2 && d->input_height == 480)
+    schedule_delayed_work(&d->mode_work, msecs_to_jiffies(250));
 
   } else {
    /* Configured and ready; later STREAMON uses this known-good setup. */
@@ -578,6 +580,108 @@ retry:
      !d->disconnected && READ_ONCE(d->detect_requested))
   schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
 
+out:
+ mutex_unlock(&d->lifecycle_lock);
+}
+
+static void gchd_mode_workfn(struct work_struct *work)
+{
+ struct gchd *d = container_of(to_delayed_work(work), struct gchd,
+                               mode_work);
+ struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
+ bool target_interlaced;
+ int r = 0;
+
+ mutex_lock(&d->lifecycle_lock);
+ if (d->disconnected || !READ_ONCE(d->streaming) ||
+     d->input < 2 || d->input_height != 480 ||
+     !d->input_configured || !READ_ONCE(d->signal_present))
+  goto out;
+
+ r = gchd_input_read_analog_mode(d, &target_interlaced);
+ if (r == -EAGAIN)
+  goto reschedule;
+ if (r) {
+  dev_dbg(&d->intf->dev, "analog mode poll failed: %d\\n", r);
+  goto reschedule;
+ }
+ if (target_interlaced == d->input_interlaced)
+  goto reschedule;
+
+ dev_info(&d->intf->dev, "analog mode change detected: %s -> %s\\n",
+          d->input_interlaced ? "480i" : "240p",
+          target_interlaced ? "480i" : "240p");
+
+ if (!target_interlaced) {
+  r = gchd_input_switch_480i_to_240p(d);
+  if (r) {
+   dev_warn(&d->intf->dev,
+            "480i-to-240p register transition failed: %d\\n", r);
+   goto reschedule;
+  }
+  d->input_interlaced = false;
+ } else {
+  /*
+   * The reverse transition in the trace reconfigures the transport and
+   * encoder pipeline. Stop RX before taking ownership of the USB control
+   * endpoint, return to IDLE, and configure the same analog input as 480i.
+   */
+  if (d->rx_thread) {
+   kthread_stop(d->rx_thread);
+   d->rx_thread = NULL;
+  }
+  r = gchd_stream_stop(d);
+  if (r)
+   goto restart_failed;
+  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
+  if (r)
+   goto restart_failed;
+
+  gchd_ring_free(&d->ring);
+  d->ts_partial_len = 0;
+  d->input_configured = false;
+  d->input_interlaced = true;
+  r = gchd_input_configure_idle(d);
+  if (r)
+   goto restart_failed;
+
+  d->last_video_jiffies = jiffies;
+  WRITE_ONCE(d->start_pending, true);
+  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+  if (IS_ERR(d->rx_thread)) {
+   r = PTR_ERR(d->rx_thread);
+   d->rx_thread = NULL;
+   WRITE_ONCE(d->start_pending, false);
+   goto restart_failed;
+  }
+  r = gchd_input_start(d);
+  WRITE_ONCE(d->start_pending, false);
+  if (r) {
+   kthread_stop(d->rx_thread);
+   d->rx_thread = NULL;
+   goto restart_failed;
+  }
+ }
+
+ d->width = d->input_width;
+ d->height = d->input_height;
+ ev.id = d->input;
+ ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
+ v4l2_event_queue(&d->vdev, &ev);
+ dev_info(&d->intf->dev, "analog mode now %s\\n",
+          d->input_interlaced ? "480i" : "240p");
+ goto reschedule;
+
+restart_failed:
+ dev_warn(&d->intf->dev,
+          "240p-to-480i reconfiguration failed: %d\\n", r);
+ WRITE_ONCE(d->signal_present, false);
+ WRITE_ONCE(d->detect_requested, true);
+ schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
+
+reschedule:
+ if (!d->disconnected && READ_ONCE(d->streaming))
+  schedule_delayed_work(&d->mode_work, msecs_to_jiffies(250));
 out:
  mutex_unlock(&d->lifecycle_lock);
 }
@@ -721,6 +825,8 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   WRITE_ONCE(d->detect_requested, false);
   goto err_streaming;
  }
+ if (d->input >= 2 && d->input_height == 480)
+  schedule_delayed_work(&d->mode_work, msecs_to_jiffies(250));
 
  mutex_unlock(&d->lifecycle_lock);
  return 0;
@@ -743,6 +849,7 @@ static void gchd_stop(struct vb2_queue *q)
  WRITE_ONCE(d->detect_requested, false);
  WRITE_ONCE(d->streaming, false);
  cancel_delayed_work_sync(&d->detect_work);
+ cancel_delayed_work_sync(&d->mode_work);
  mutex_lock(&d->lifecycle_lock);
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
@@ -847,6 +954,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   */
  WRITE_ONCE(d->detect_requested, false);
  cancel_delayed_work_sync(&d->detect_work);
+ cancel_delayed_work_sync(&d->mode_work);
  mutex_lock(&d->lifecycle_lock);
  if (d->disconnected) {
   mutex_unlock(&d->lifecycle_lock);
@@ -1406,6 +1514,7 @@ static int gchd_probe(struct usb_interface *i,
  mutex_init(&d->lifecycle_lock);
  mutex_init(&d->users_lock);
  INIT_DELAYED_WORK(&d->detect_work, gchd_detect_workfn);
+ INIT_DELAYED_WORK(&d->mode_work, gchd_mode_workfn);
  spin_lock_init(&d->qlock);
  INIT_LIST_HEAD(&d->queued);
  spin_lock_init(&d->ring.lock);
@@ -1457,6 +1566,7 @@ static void gchd_disconnect(struct usb_interface *i)
  usb_set_intfdata(i, NULL);
  WRITE_ONCE(d->disconnected, true);
  cancel_delayed_work_sync(&d->detect_work);
+ cancel_delayed_work_sync(&d->mode_work);
  mutex_lock(&d->lifecycle_lock);
  WRITE_ONCE(d->streaming, false);
  if (d->rx_thread) {
@@ -1481,6 +1591,7 @@ static void gchd_shutdown(struct device *dev)
   return;
 
  cancel_delayed_work_sync(&d->detect_work);
+ cancel_delayed_work_sync(&d->mode_work);
  mutex_lock(&d->lifecycle_lock);
  WRITE_ONCE(d->streaming, false);
  if (d->rx_thread) {
