@@ -66,6 +66,7 @@ struct gchd {
  struct list_head queued;
  struct task_struct *rx_thread;
  struct gchd_ring ring;
+ struct gchd_trace *trace;
  u8 *usb_buf;
  u8 ts_partial[188];
  u16 ts_partial_len;
