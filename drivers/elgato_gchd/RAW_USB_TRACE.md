@@ -1,6 +1,6 @@
 # Raw USB stream tracing (debug branch)
 
-This branch adds an opt-in, bounded trace of the device's incoming USB bulk-IN stream. On USB connection, the driver initializes the hardware, probes the currently selected input, and starts the receive thread after a signal is detected; no capture application or STREAMON is required to start that hardware traffic. The trace records bytes **before** MPEG-TS alignment, PID filtering, PES parsing, or V4L2 buffering can change or discard them. Successful reads from both the background receive thread and the stream-drain path are included.
+This branch adds an opt-in, bounded trace of the device's incoming USB bulk-IN stream. On USB connection, the driver initializes the hardware and starts a single connection-owned bulk-IN receive thread before input detection and before V4L2 registration. The receiver stays active through no-signal periods, failed START transitions, V4L2 open/close, and STREAMON/STREAMOFF. V4L2 is an optional consumer; it is not required for tracing. The trace records bytes **before** MPEG-TS alignment, PID filtering, PES parsing, or V4L2 buffering can change or discard them. Successful reads from both the background receive thread and the stream-drain path are included.
 
 The `data` export is text: each transfer has a source (`rx` or `drain`), monotonic timestamp, stream offset, and length, followed by the bytes in hexadecimal. The `raw` export is binary and contains only the captured USB payload bytes concatenated in receive order, without transfer headers.
 
@@ -20,13 +20,13 @@ TRACE=/sys/kernel/debug/elgato_gchd/1-2
 cat "$TRACE/status"
 ```
 
-For a newly connected device, wait for the hardware initialization and signal-detection messages in `dmesg`, then enable tracing. The receive thread can already be running, so tracing can be turned on without starting a capture application. For each test, clear the previous capture, then enable tracing:
+For a newly connected device, enable tracing as soon as the debugfs directory appears. The receiver starts at USB connection, before signal detection, so you do not need to wait for signal detection or start a capture application. For each test, clear the previous capture, then enable tracing:
 
 ```sh
 echo 0 > "$TRACE/enable"
 echo 1 > "$TRACE/clear"
 echo 1 > "$TRACE/enable"
-# Now run the capture application and present the test signal.
+# Present the test signal; a V4L2 capture application is not required.
 # When enough data has been collected:
 echo 0 > "$TRACE/enable"
 cat "$TRACE/status"
@@ -60,4 +60,4 @@ Include the corresponding `status` output and note the source mode and approxima
 - `status`: captured byte/transfer counts, capacities, enabled state, and truncation status.
 - `data`: read-only, human-readable transfer records and hex bytes.\n- `raw`: read-only binary payload bytes concatenated in receive order; suitable for media probing.
 
-If debugfs is unavailable or trace allocation fails, device probing continues and tracing is disabled; normal capture does not depend on this facility.
+If debugfs is unavailable or trace allocation fails, device probing continues and tracing is disabled; normal capture does not depend on this facility. If V4L2 registration fails, the USB interface remains bound and connection-owned raw reception/tracing still run.
