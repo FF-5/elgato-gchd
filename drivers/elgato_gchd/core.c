@@ -1114,29 +1114,10 @@ static int gchd_fop_open(struct file *file)
  }
 
  /*
-  * V4L2 clients often open/close briefly to enumerate inputs and controls.
-  * Opening the node must not load firmware. Defer HW init until STREAMON.
+  * Hardware setup and source detection are started from USB probe. Opening
+  * the V4L2 node must not reset that state: applications may only be
+  * enumerating inputs, and must not be responsible for waking the device.
   */
- if (d->open_count == 0) {
-  /* A previous last-close teardown may have failed; recover before reuse. */
-  if (d->hw_initialized) {
-   r = gchd_hw_shutdown(d);
-   if (r) {
-    dev_err(&d->intf->dev,
-            "retrying previous hardware shutdown before open failed: %d\n", r);
-    goto out;
-   }
-   d->hw_initialized = false;
-   d->hw_init_failed = false;
-  }
-  d->input_configured = false;
-  d->input_prepared = false;
-  d->signal_present = false;
-  d->input_width = 0;
-  d->input_height = 0;
-  d->input_fps_num = 0;
-  d->input_fps_den = 0;
- }
  d->open_count++;
 
 out:
@@ -1163,42 +1144,26 @@ static int gchd_fop_release(struct file *file)
   d->open_count--;
 
  if (!d->open_count && !d->disconnected) {
-  WRITE_ONCE(d->detect_requested, false);
+  /*
+   * Keep hardware initialized and source detection independent of V4L2
+   * open/close cycles. vb2_fops.release() has already stopped any active
+   * stream; the encoder remains configured in IDLE until disconnect or
+   * system shutdown. If signal is absent, keep the probe worker retrying.
+   */
   WRITE_ONCE(d->streaming, false);
-
-  /* Never wait for work while holding lifecycle_lock: the worker takes it. */
-  cancel_delayed_work_sync(&d->detect_work);
   mutex_lock(&d->lifecycle_lock);
-
   if (d->rx_thread) {
    kthread_stop(d->rx_thread);
    d->rx_thread = NULL;
   }
-
-  if (d->hw_initialized) {
-   /*
-    * Do not call gchd_input_stop() here: userspace uninitDevice() owns
-    * encoder/transcoder teardown and must observe the original HW state.
-    */
-   sr = gchd_hw_shutdown(d);
-   if (sr) {
-    dev_warn(&d->intf->dev, "hardware shutdown on last close failed: %d\n", sr);
-    if (!r)
-     r = sr;
-    /* Keep the flag set so the next open retries shutdown before HW init. */
-   } else {
-    dev_info(&d->intf->dev, "V4L2 closed: hardware safely shut down\n");
-    d->hw_initialized = false;
-    d->hw_init_failed = false;
-   }
-  }
-
-  d->input_configured = false;
-  d->input_prepared = false;
-  d->encoder_started = false;
-  d->signal_present = false;
   gchd_ring_free(&d->ring);
   d->ts_partial_len = 0;
+  if (!READ_ONCE(d->signal_present) && READ_ONCE(d->hw_initialized)) {
+   WRITE_ONCE(d->detect_requested, true);
+   schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
+  }
+  dev_info(&d->intf->dev,
+           "V4L2 closed: keeping device initialized for connection-time detection\n");
   mutex_unlock(&d->lifecycle_lock);
  }
  mutex_unlock(&d->users_lock);
@@ -1303,8 +1268,10 @@ static int gchd_probe(struct usb_interface *i,
  gchd_trace_init(d);
 
  /*
-  * Keep the hardware uninitialized until a userspace client opens the V4L2
-  * node. This gives each open/last-close pair a clean HW init/shutdown cycle.
+  * This debug branch initializes the device as soon as USB binds, then
+  * probes the selected input independently of any V4L2 client. That makes
+  * USB control traffic and signal detection observable even when no capture
+  * application is open.
   */
  usb_set_intfdata(i, d);
  r = gchd_v4l2_register(d);
@@ -1312,6 +1279,36 @@ static int gchd_probe(struct usb_interface *i,
   usb_set_intfdata(i, NULL);
   goto err;
  }
+
+ mutex_lock(&d->lifecycle_lock);
+ d->input_forced = true;
+ r = gchd_hw_init(d);
+ if (r) {
+  int sr;
+
+  dev_err(&i->dev, "hardware initialization on USB connect failed: %d\n", r);
+  sr = gchd_hw_shutdown(d);
+  d->hw_initialized = (sr != 0);
+  d->hw_init_failed = (sr != 0);
+  if (sr)
+   dev_warn(&i->dev, "cleanup after USB-connect initialization failure failed: %d\n",
+            sr);
+ } else {
+  d->hw_initialized = true;
+  d->hw_init_failed = false;
+  d->input_configured = false;
+  d->input_prepared = false;
+  d->encoder_started = false;
+  d->signal_present = false;
+  d->detect_requested = true;
+  dev_info(&i->dev,
+           "USB connected: hardware initialized; starting input detection for input %u\n",
+           d->input);
+ }
+ mutex_unlock(&d->lifecycle_lock);
+
+ if (!r)
+  schedule_delayed_work(&d->detect_work, 0);
  return 0;
 
 err:
