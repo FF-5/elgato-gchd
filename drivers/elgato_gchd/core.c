@@ -125,19 +125,31 @@ void gchd_ring_free(struct gchd_ring *r)
 }
 
 /*
- * The transport is MPEG-TS (188-byte packets); PID 0x1011 carries video.
- * This parser still queues one PES payload per V4L2 buffer. That is an
- * interim framing assumption, not a claim that PES boundaries are H.264
- * access-unit boundaries; AU framing is handled separately in a follow-up.
+ * Parse the video PID from the device's MPEG-TS stream.
+ *
+ * USB transfers do not preserve TS/PES boundaries. Keep the PES assembly
+ * state across calls, but abandon the current PES after transport errors or
+ * continuity-counter gaps and wait for the next payload-unit start. That
+ * prevents corrupted bytes from being delivered as valid H.264 data.
  */
-static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n)
+static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
+                    bool *pes_active, bool *cc_valid, u8 *last_cc)
 {
  u16 pid;
  unsigned int off = 4, afc;
- bool start;
+ bool start, discontinuity = false, has_payload;
+ u8 cc;
 
  if (p[0] != 0x47)
   return;
+
+ /* A transport error or scrambled payload invalidates the partial PES. */
+ if ((p[1] & 0x80) || (p[3] & 0xc0)) {
+  *n = 0;
+  *pes_active = false;
+  *cc_valid = false;
+  return;
+ }
 
  pid = ((p[1] & 0x1f) << 8) | p[2];
  if (pid != 0x1011)
@@ -145,19 +157,50 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n)
 
  afc = (p[3] >> 4) & 3;
  if (!afc)
-  return;
- if (afc == 2)
-  return;
- if (afc == 3) {
+  goto reset_pes;
+
+ if (afc == 2 || afc == 3) {
   unsigned int adaptation_len = p[4];
 
-  /* The adaptation field must fit entirely inside this TS packet. */
   if (adaptation_len > 183 || 5 + adaptation_len > 188)
-   return;
+   goto reset_pes;
+  if (adaptation_len)
+   discontinuity = !!(p[5] & 0x80);
   off = 5 + adaptation_len;
-  if (off >= 188)
-   return;
  }
+
+ has_payload = (afc == 1 || afc == 3) && off < 188;
+ start = !!(p[1] & 0x40);
+ cc = p[3] & 0x0f;
+
+ if (discontinuity) {
+  *n = 0;
+  *pes_active = false;
+  *cc_valid = false;
+ }
+
+ /* Continuity counters advance only for packets carrying payload. */
+ if (has_payload) {
+  if (*cc_valid && !discontinuity &&
+      cc != ((*last_cc + 1) & 0x0f)) {
+   dev_warn_ratelimited(&d->intf->dev,
+                        "video TS continuity gap: expected=%u got=%u; dropping partial PES\\n",
+                        (*last_cc + 1) & 0x0f, cc);
+   *n = 0;
+   *pes_active = false;
+   /* Only a fresh PES start is safe to resume from after a gap. */
+   if (!start) {
+    *last_cc = cc;
+    *cc_valid = true;
+    return;
+   }
+  }
+  *last_cc = cc;
+  *cc_valid = true;
+ }
+
+ if (!has_payload)
+  return;
 
  d->last_video_jiffies = jiffies;
  if (!READ_ONCE(d->signal_present)) {
@@ -172,9 +215,8 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n)
            READ_ONCE(d->input));
  }
 
- start = !!(p[1] & 0x40);
  if (start) {
-  if (*n) {
+  if (*pes_active && *n) {
    int r = gchd_ring_push(&d->ring, pes, *n);
 
    if (r)
@@ -185,25 +227,25 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n)
     dev_dbg(&d->intf->dev, "queued PES payload: bytes=%zu\\n", *n);
   }
   *n = 0;
+  *pes_active = false;
 
-  /* PES headers normally start in the first payload TS packet. */
-  if (188 - off >= 9 &&
-      p[off] == 0 && p[off + 1] == 0 && p[off + 2] == 1) {
-   unsigned int header_len;
-
-   if ((p[off + 6] & 0xc0) == 0x80) {
-    header_len = 9 + p[off + 8];
-    if (header_len >= 188 - off)
-     return;
-    off += header_len;
-   } else {
-    /* MPEG-2 PES marker bits are absent: reject malformed header. */
-    return;
-   }
-  } else {
-   /* PUSI says this payload starts a PES packet; don't leak its header. */
+  /* A new PES must begin with a complete MPEG-2 PES header here. */
+  if (188 - off < 9 ||
+      p[off] != 0 || p[off + 1] != 0 || p[off + 2] != 1 ||
+      (p[off + 6] & 0xc0) != 0x80)
    return;
+
+  {
+   unsigned int header_len = 9 + p[off + 8];
+
+   if (header_len >= 188 - off)
+    return;
+   off += header_len;
   }
+  *pes_active = true;
+ } else if (!*pes_active) {
+  /* Ignore continuation payload until the next complete PES start. */
+  return;
  }
 
  if (off < 188 && *n < GCHD_MAX_FRAME) {
@@ -212,6 +254,12 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n)
   memcpy(pes + *n, p + off, m);
   *n += m;
  }
+ return;
+
+reset_pes:
+ *n = 0;
+ *pes_active = false;
+ *cc_valid = false;
 }
 
 static void gchd_signal_check(struct gchd *d)
@@ -269,7 +317,7 @@ static void gchd_deliver(struct gchd *d)
 
 static int gchd_rx(void *arg)
 {
- struct gchd *d=arg; u8 *pes; size_t n=0; int ret,actual,pos;
+ struct gchd *d=arg; u8 *pes; size_t n=0; int ret,actual,pos;\n bool pes_active=false, cc_valid=false; u8 last_cc=0;
  pes=kvmalloc(GCHD_MAX_FRAME,GFP_KERNEL);if(!pes)return-ENOMEM;
  while(!kthread_should_stop()&&!d->disconnected){
   /* Keep the RX timeout shorter than the signal-loss debounce so the
@@ -307,7 +355,7 @@ static int gchd_rx(void *arg)
    pos += take;
 
    if (d->ts_partial_len == 188) {
-    gchd_ts(d, d->ts_partial, pes, &n);
+    gchd_ts(d, d->ts_partial, pes, &n, &pes_active, &cc_valid, &last_cc);
     d->ts_partial_len = 0;
    }
   }
