@@ -230,7 +230,8 @@ static void gchd_signal_check(struct gchd *d)
 
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
-  v4l2_event_queue(&d->vdev, &ev);
+  if (READ_ONCE(d->v4l2_registered))
+   v4l2_event_queue(&d->vdev, &ev);
   WRITE_ONCE(d->signal_present, false);
   /* RX must not issue control transfers or attempt to stop itself here. */
   if (READ_ONCE(d->detect_requested))
@@ -286,8 +287,22 @@ static int gchd_rx(void *arg)
    gchd_deliver(d);
    continue;
   }
-  if (ret)
-   break;
+  if (ret) {
+   if (ret == -ENODEV || ret == -ESHUTDOWN || d->disconnected)
+    break;
+   if (ret == -EPIPE) {
+    int cr = usb_clear_halt(d->udev,
+                            usb_rcvbulkpipe(d->udev, GCHD_EP_IN));
+    if (cr)
+     dev_warn_ratelimited(&d->intf->dev,
+                          "bulk-IN halt recovery failed: %d\\n", cr);
+   } else {
+    dev_warn_ratelimited(&d->intf->dev,
+                         "bulk-IN read failed: %d; receiver will retry\\n", ret);
+   }
+   msleep(20);
+   continue;
+  }
 
   /* Capture the untouched USB bulk-IN bytes before TS alignment/parsing. */
   gchd_trace_capture(d, d->usb_buf, actual, false);
