@@ -2,9 +2,8 @@
 set -Eeuo pipefail
 
 # Decode the driver's compressed H.264 V4L2 capture stream and publish decoded
-# frames to a v4l2loopback output device. Opening/streaming INPUT_DEVICE is
-# intentionally what triggers hardware init and input detection in the DKMS
-# driver; this helper never accesses the USB device directly.
+# frames to a v4l2loopback output device. Starting capture is what triggers
+# hardware init and input detection in the DKMS driver.
 
 INPUT_DEVICE="${1:-/dev/video0}"
 OUTPUT_DEVICE="${2:-/dev/video10}"
@@ -20,15 +19,23 @@ if [[ ! -e "$INPUT_DEVICE" ]]; then
 fi
 
 if [[ ! -e "$OUTPUT_DEVICE" ]]; then
-    cat >&2 <<EOF
+    output_number=""
+    if [[ "$OUTPUT_DEVICE" =~ /dev/video([0-9]+)$ ]]; then
+        output_number="${BASH_REMATCH[1]}"
+    fi
+
+    if [[ -n "$output_number" ]]; then
+        cat >&2 <<EOF
 Output device not found: $OUTPUT_DEVICE
 
-Create a virtual output first, for example:
-  sudo modprobe v4l2loopback video_nr=${OUTPUT_DEVICE##*/video} card_label="Elgato Decoded Video" exclusive_caps=1
+Create a virtual output first:
+  sudo modprobe v4l2loopback video_nr=$output_number card_label="Elgato Decoded Video" exclusive_caps=1
 
-Install v4l2loopback-dkms if the module is not available. If you choose a
-non-numeric output path, load the module manually with a numeric video_nr.
+Install v4l2loopback-dkms if the module is not available.
 EOF
+    else
+        echo "Output device not found: $OUTPUT_DEVICE (load v4l2loopback manually)." >&2
+    fi
     exit 1
 fi
 
