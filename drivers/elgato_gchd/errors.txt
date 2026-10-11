@@ -1,112 +1,172 @@
-ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg | tail -500
-[ 8842.413496] usb 2-1: new high-speed USB device number 8 using ehci-pci
-[ 8842.826638] usb 2-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
-[ 8842.826645] usb 2-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
-[ 8842.826646] usb 2-1: Product: GameCapture HD
-[ 8842.826648] usb 2-1: Manufacturer: Elgato
-[ 8842.826649] usb 2-1: SerialNumber: 04107F1267
-[ 8849.525248] usbcore: registered new interface driver elgato_gchd
-[ 8865.059207] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.062587] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.066015] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.069613] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.073103] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.076504] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.080215] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.083969] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.087205] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.090546] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.093915] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=4016 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.168450] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
-[ 8865.169899] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x01
-[ 8865.809106] elgato_gchd 2-1:1.0: transcoder defaults loaded
-[ 8865.811311] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 00 00 00
-[ 8865.812913] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x04
-[ 8865.816899] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.819173] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.822855] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.826215] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.829979] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.833639] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.836896] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.840473] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.844135] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.847532] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.851237] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.854879] elgato_gchd 2-1:1.0: firmware chunk offset=360448 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.858337] elgato_gchd 2-1:1.0: firmware chunk offset=393216 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.861890] elgato_gchd 2-1:1.0: firmware chunk offset=425984 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.865322] elgato_gchd 2-1:1.0: firmware chunk offset=458752 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.869034] elgato_gchd 2-1:1.0: firmware chunk offset=491520 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.872209] elgato_gchd 2-1:1.0: firmware chunk offset=524288 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.875586] elgato_gchd 2-1:1.0: firmware chunk offset=557056 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.878972] elgato_gchd 2-1:1.0: firmware chunk offset=589824 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.882433] elgato_gchd 2-1:1.0: firmware chunk offset=622592 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.885826] elgato_gchd 2-1:1.0: firmware chunk offset=655360 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.889152] elgato_gchd 2-1:1.0: firmware chunk offset=688128 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.892708] elgato_gchd 2-1:1.0: firmware chunk offset=720896 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.895979] elgato_gchd 2-1:1.0: firmware chunk offset=753664 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.899592] elgato_gchd 2-1:1.0: firmware chunk offset=786432 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.902996] elgato_gchd 2-1:1.0: firmware chunk offset=819200 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.906342] elgato_gchd 2-1:1.0: firmware chunk offset=851968 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.909691] elgato_gchd 2-1:1.0: firmware chunk offset=884736 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.913066] elgato_gchd 2-1:1.0: firmware chunk offset=917504 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.916627] elgato_gchd 2-1:1.0: firmware chunk offset=950272 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.920231] elgato_gchd 2-1:1.0: firmware chunk offset=983040 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.923422] elgato_gchd 2-1:1.0: firmware chunk offset=1015808 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.926702] elgato_gchd 2-1:1.0: firmware chunk offset=1048576 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.930174] elgato_gchd 2-1:1.0: firmware chunk offset=1081344 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.934087] elgato_gchd 2-1:1.0: firmware chunk offset=1114112 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.936714] elgato_gchd 2-1:1.0: firmware chunk offset=1146880 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.940226] elgato_gchd 2-1:1.0: firmware chunk offset=1179648 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.943535] elgato_gchd 2-1:1.0: firmware chunk offset=1212416 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.947089] elgato_gchd 2-1:1.0: firmware chunk offset=1245184 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.950672] elgato_gchd 2-1:1.0: firmware chunk offset=1277952 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.953881] elgato_gchd 2-1:1.0: firmware chunk offset=1310720 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.957383] elgato_gchd 2-1:1.0: firmware chunk offset=1343488 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.960779] elgato_gchd 2-1:1.0: firmware chunk offset=1376256 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.964046] elgato_gchd 2-1:1.0: firmware chunk offset=1409024 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.967797] elgato_gchd 2-1:1.0: firmware chunk offset=1441792 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8865.971057] elgato_gchd 2-1:1.0: firmware chunk offset=1474560 size=26224 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8866.013096] elgato_gchd 2-1:1.0: device idle, processor state 0x27f97b
-[ 8866.013102] elgato_gchd 2-1:1.0: capture requested: hardware initialized, detecting input 0
-[ 8866.202197] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8866.642415] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8867.084127] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8868.311665] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8868.753577] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8869.196357] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8869.631801] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8870.067867] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8870.499197] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8870.936285] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8871.369357] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8871.807768] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection\n
-[ 8871.909036] elgato_gchd 2-1:1.0: input switch requested: old=0 new=2 hw_initialized=1 streaming=1\n
-[ 8871.913517] elgato_gchd 2-1:1.0: input selected: input=2; detection scheduled\n
-[ 8871.996672] elgato_gchd 2-1:1.0: signal detected: input=2 mode=720x480 fps=60/1 interlaced=1
-[ 8871.996679] elgato_gchd 2-1:1.0: capture setup: input=2 mode=720x480 fps=60/1 interlaced=1
-[ 8877.804753] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
-[ 8878.138995] elgato_gchd 2-1:1.0: capture setup: encoder start completed
-[ 8891.930147] elgato_gchd 2-1:1.0: capture setup: input configuration completed
-[ 8891.979872] elgato_gchd 2-1:1.0: capture setup: transcoder final configuration completed
-[ 8892.230488] elgato_gchd 2-1:1.0: capture setup: transcoder setup completed
-[ 8892.233542] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
-[ 8892.233554] elgato_gchd 2-1:1.0: capture setup: SCMD_INIT submitted
-[ 8892.243346] elgato_gchd 2-1:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x030e (r=0) completion=0x011e (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x030e
-[ 8892.245474] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 02
-[ 8892.246907] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
-[ 8906.555646] elgato_gchd 2-1:1.0: state-change timeout: current=0x01 expected=0x02 state=0x0001 completion=0x011a
-[ 8906.565289] elgato_gchd 2-1:1.0: START failed: ret=-110 state=0x0001 (r=0) enable_state=0xd39e (r=0) enable=0x030e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x030e
-[ 8906.565305] elgato_gchd 2-1:1.0: capture start transition failed: -110
-[ 8906.565309] elgato_gchd 2-1:1.0: capture start after detection failed: -110
-[ 8906.834932] elgato_gchd 2-1:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x030e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x030e
-[ 8906.837249] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 02
-[ 8906.838799] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
-[ 8917.266679] guvcview[8766]: segfault at 7e30639b61a0 ip 00007e3071188eeb sp 00007e306571e708 error 4 in libc.so.6[7e3071028000+189000] likely on CPU 1 (core 1, socket 0)
-[ 8917.266697] Code: 00 00 00 48 3b 15 65 23 08 00 0f 87 cf 01 00 00 4c 8d 04 11 49 31 c8 49 c1 e8 3f 81 e1 00 0f 00 00 44 01 c1 0f 84 8a 00 00 00 <c5> fe 6f 6c 16 e0 c5 fe 6f 74 16 c0 48 89 f9 48 83 cf 1f c5 fe 6f
-[ 8918.018800] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 04
-[ 8918.021095] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
-[ 8919.722919] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 01
-[ 8919.724229] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
+ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ cd ~/elgato-gchd
+git pull
+
+cd drivers/elgato_gchd
+make clean
+make
+Already up to date.
+make -C /lib/modules/6.8.0-146-generic/build M=/home/ff5/elgato-gchd/drivers/elgato_gchd clean
+make[1]: Entering directory '/usr/src/linux-headers-6.8.0-146-generic'
+make[1]: Leaving directory '/usr/src/linux-headers-6.8.0-146-generic'
+make -C /lib/modules/6.8.0-146-generic/build M=/home/ff5/elgato-gchd/drivers/elgato_gchd modules
+make[1]: Entering directory '/usr/src/linux-headers-6.8.0-146-generic'
+warning: the compiler differs from the one used to build the kernel
+  The kernel was built by: x86_64-linux-gnu-gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+  You are using:           gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/core.o
+  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/fops.o
+  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/usb.o
+  CC [M]  /home/ff5/elgato-gchd/drivers/elgato_gchd/trace.o
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c: In function ‘gchd_trace_init’:
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:364:12: error: ‘struct gchd’ has no member named ‘trace’; did you mean ‘bitrate’?
+  364 |         d->trace = t;
+      |            ^~~~~
+      |            bitrate
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c: In function ‘gchd_trace_destroy’:
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:374:35: error: ‘struct gchd’ has no member named ‘trace’; did you mean ‘bitrate’?
+  374 |         struct gchd_trace *t = d->trace;
+      |                                   ^~~~~
+      |                                   bitrate
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:378:12: error: ‘struct gchd’ has no member named ‘trace’; did you mean ‘bitrate’?
+  378 |         d->trace = NULL;
+      |            ^~~~~
+      |            bitrate
+In file included from <command-line>:
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c: In function ‘gchd_trace_capture’:
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:45: error: ‘struct gchd’ has no member named ‘trace’; did you mean ‘bitrate’?
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                             ^~~~~
+././include/linux/compiler_types.h:475:23: note: in definition of macro ‘__compiletime_assert’
+  475 |                 if (!(condition))                                       \
+      |                       ^~~~~~~~~
+././include/linux/compiler_types.h:495:9: note: in expansion of macro ‘_compiletime_assert’
+  495 |         _compiletime_assert(condition, msg, __compiletime_assert_, __COUNTER__)
+      |         ^~~~~~~~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:36:9: note: in expansion of macro ‘compiletime_assert’
+   36 |         compiletime_assert(__native_word(t) || sizeof(t) == sizeof(long long),  \
+      |         ^~~~~~~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:36:28: note: in expansion of macro ‘__native_word’
+   36 |         compiletime_assert(__native_word(t) || sizeof(t) == sizeof(long long),  \
+      |                            ^~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:49:9: note: in expansion of macro ‘compiletime_assert_rwonce_type’
+   49 |         compiletime_assert_rwonce_type(x);                              \
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:32: note: in expansion of macro ‘READ_ONCE’
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                ^~~~~~~~~
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:45: error: ‘struct gchd’ has no member named ‘trace’; did you mean ‘bitrate’?
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                             ^~~~~
+././include/linux/compiler_types.h:475:23: note: in definition of macro ‘__compiletime_assert’
+  475 |                 if (!(condition))                                       \
+      |                       ^~~~~~~~~
+././include/linux/compiler_types.h:495:9: note: in expansion of macro ‘_compiletime_assert’
+  495 |         _compiletime_assert(condition, msg, __compiletime_assert_, __COUNTER__)
+      |         ^~~~~~~~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:36:9: note: in expansion of macro ‘compiletime_assert’
+   36 |         compiletime_assert(__native_word(t) || sizeof(t) == sizeof(long long),  \
+      |         ^~~~~~~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:36:28: note: in expansion of macro ‘__native_word’
+   36 |         compiletime_assert(__native_word(t) || sizeof(t) == sizeof(long long),  \
+      |                            ^~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:49:9: note: in expansion of macro ‘compiletime_assert_rwonce_type’
+   49 |         compiletime_assert_rwonce_type(x);                              \
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:32: note: in expansion of macro ‘READ_ONCE’
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                ^~~~~~~~~
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:45: error: ‘struct gchd’ has no member named ‘trace’; did you mean ‘bitrate’?
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                             ^~~~~
+././include/linux/compiler_types.h:475:23: note: in definition of macro ‘__compiletime_assert’
+  475 |                 if (!(condition))                                       \
+      |                       ^~~~~~~~~
+././include/linux/compiler_types.h:495:9: note: in expansion of macro ‘_compiletime_assert’
+  495 |         _compiletime_assert(condition, msg, __compiletime_assert_, __COUNTER__)
+      |         ^~~~~~~~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:36:9: note: in expansion of macro ‘compiletime_assert’
+   36 |         compiletime_assert(__native_word(t) || sizeof(t) == sizeof(long long),  \
+      |         ^~~~~~~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:36:28: note: in expansion of macro ‘__native_word’
+   36 |         compiletime_assert(__native_word(t) || sizeof(t) == sizeof(long long),  \
+      |                            ^~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:49:9: note: in expansion of macro ‘compiletime_assert_rwonce_type’
+   49 |         compiletime_assert_rwonce_type(x);                              \
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:32: note: in expansion of macro ‘READ_ONCE’
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                ^~~~~~~~~
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:45: error: ‘struct gchd’ has no member named ‘trace’; did you mean ‘bitrate’?
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                             ^~~~~
+././include/linux/compiler_types.h:475:23: note: in definition of macro ‘__compiletime_assert’
+  475 |                 if (!(condition))                                       \
+      |                       ^~~~~~~~~
+././include/linux/compiler_types.h:495:9: note: in expansion of macro ‘_compiletime_assert’
+  495 |         _compiletime_assert(condition, msg, __compiletime_assert_, __COUNTER__)
+      |         ^~~~~~~~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:36:9: note: in expansion of macro ‘compiletime_assert’
+   36 |         compiletime_assert(__native_word(t) || sizeof(t) == sizeof(long long),  \
+      |         ^~~~~~~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:36:28: note: in expansion of macro ‘__native_word’
+   36 |         compiletime_assert(__native_word(t) || sizeof(t) == sizeof(long long),  \
+      |                            ^~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:49:9: note: in expansion of macro ‘compiletime_assert_rwonce_type’
+   49 |         compiletime_assert_rwonce_type(x);                              \
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:32: note: in expansion of macro ‘READ_ONCE’
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                ^~~~~~~~~
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:45: error: ‘struct gchd’ has no member named ‘trace’; did you mean ‘bitrate’?
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                             ^~~~~
+././include/linux/compiler_types.h:475:23: note: in definition of macro ‘__compiletime_assert’
+  475 |                 if (!(condition))                                       \
+      |                       ^~~~~~~~~
+././include/linux/compiler_types.h:495:9: note: in expansion of macro ‘_compiletime_assert’
+  495 |         _compiletime_assert(condition, msg, __compiletime_assert_, __COUNTER__)
+      |         ^~~~~~~~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:36:9: note: in expansion of macro ‘compiletime_assert’
+   36 |         compiletime_assert(__native_word(t) || sizeof(t) == sizeof(long long),  \
+      |         ^~~~~~~~~~~~~~~~~~
+./include/asm-generic/rwonce.h:49:9: note: in expansion of macro ‘compiletime_assert_rwonce_type’
+   49 |         compiletime_assert_rwonce_type(x);                              \
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:32: note: in expansion of macro ‘READ_ONCE’
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                ^~~~~~~~~
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:45: error: ‘struct gchd’ has no member named ‘trace’; did you mean ‘bitrate’?
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                             ^~~~~
+././include/linux/compiler_types.h:451:27: note: in definition of macro ‘__unqual_scalar_typeof’
+  451 |                 _Generic((x),                                           \
+      |                           ^
+./include/asm-generic/rwonce.h:50:9: note: in expansion of macro ‘__READ_ONCE’
+   50 |         __READ_ONCE(x);                                                 \
+      |         ^~~~~~~~~~~
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:32: note: in expansion of macro ‘READ_ONCE’
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                ^~~~~~~~~
+In file included from ./arch/x86/include/generated/asm/rwonce.h:1,
+                 from ./include/linux/compiler.h:253,
+                 from ./include/linux/export.h:5,
+                 from ./include/linux/linkage.h:7,
+                 from ./include/linux/fs.h:5,
+                 from ./include/linux/debugfs.h:15,
+                 from /home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:2:
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:45: error: ‘struct gchd’ has no member named ‘trace’; did you mean ‘bitrate’?
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                             ^~~~~
+./include/asm-generic/rwonce.h:44:73: note: in definition of macro ‘__READ_ONCE’
+   44 | ine __READ_ONCE(x)  (*(const volatile __unqual_scalar_typeof(x) *)&(x))
+      |                                                                     ^
+
+/home/ff5/elgato-gchd/drivers/elgato_gchd/trace.c:397:32: note: in expansion of macro ‘READ_ONCE’
+  397 |         struct gchd_trace *t = READ_ONCE(d->trace);
+      |                                ^~~~~~~~~
+make[3]: *** [scripts/Makefile.build:243: /home/ff5/elgato-gchd/drivers/elgato_gchd/trace.o] Error 1
+make[2]: *** [/usr/src/linux-headers-6.8.0-146-generic/Makefile:1946: /home/ff5/elgato-gchd/drivers/elgato_gchd] Error 2
+make[1]: *** [Makefile:240: __sub-make] Error 2
+make[1]: Leaving directory '/usr/src/linux-headers-6.8.0-146-generic'
+make: *** [Makefile:6: all] Error 2
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ 
