@@ -191,6 +191,42 @@ static const struct file_operations gchd_trace_data_fops = {
 	.release = gchd_trace_data_release,
 };
 
+/* Binary export: payload bytes only, in receive order, with no text headers. */
+static int gchd_trace_raw_open(struct inode *inode, struct file *file)
+{
+	struct gchd_trace *t = inode->i_private;
+
+	kref_get(&t->ref);
+	file->private_data = t;
+	return 0;
+}
+
+static int gchd_trace_raw_release(struct inode *inode, struct file *file)
+{
+	gchd_trace_put(file->private_data);
+	return 0;
+}
+
+static ssize_t gchd_trace_raw_read(struct file *file, char __user *buf,
+				   size_t count, loff_t *ppos)
+{
+	struct gchd_trace *t = file->private_data;
+	ssize_t r;
+
+	mutex_lock(&t->lock);
+	r = simple_read_from_buffer(buf, count, ppos, t->data, t->used);
+	mutex_unlock(&t->lock);
+	return r;
+}
+
+static const struct file_operations gchd_trace_raw_fops = {
+	.owner = THIS_MODULE,
+	.open = gchd_trace_raw_open,
+	.read = gchd_trace_raw_read,
+	.llseek = default_llseek,
+	.release = gchd_trace_raw_release,
+};
+
 static int gchd_trace_enable_open(struct inode *inode, struct file *file)
 {
 	struct gchd_trace *t = inode->i_private;
@@ -361,6 +397,8 @@ int gchd_trace_init(struct gchd *d)
 			    &gchd_trace_status_fops);
 	debugfs_create_file("data", 0400, t->dir, t,
 			    &gchd_trace_data_fops);
+	debugfs_create_file("raw", 0400, t->dir, t,
+			    &gchd_trace_raw_fops);
 	d->trace = t;
 	dev_info(&d->intf->dev,
 		 "raw USB trace available at debugfs/elgato_gchd/%s (capacity=%zu bytes, initially disabled)\n",
