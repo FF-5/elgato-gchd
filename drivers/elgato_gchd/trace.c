@@ -39,6 +39,12 @@ struct gchd_trace {
 	unsigned int transfer_capacity;
 	bool enabled;
 	bool truncated;
+	u64 rx_reads;
+	u64 rx_successes;
+	u64 rx_timeouts;
+	u64 rx_errors;
+	u64 rx_bytes;
+	int rx_last_error;
 };
 
 static struct dentry *gchd_trace_root;
@@ -64,9 +70,14 @@ static int gchd_trace_status_show(struct seq_file *s, void *unused)
 	struct gchd_trace *t = s->private;
 
 	mutex_lock(&t->lock);
-	seq_printf(s, "enabled=%u\nbytes_captured=%zu\ncapacity_bytes=%zu\ntransfers_captured=%u\ntransfer_capacity=%u\ntruncated=%u\n",
+	seq_printf(s, "enabled=%u\nbytes_captured=%zu\ncapacity_bytes=%zu\ntransfers_captured=%u\ntransfer_capacity=%u\ntruncated=%u\nrx_reads=%llu\nrx_successes=%llu\nrx_timeouts=%llu\nrx_errors=%llu\nrx_bytes=%llu\nrx_last_error=%d\n",
 		   t->enabled, t->used, t->capacity, t->transfer_count,
-		   t->transfer_capacity, t->truncated);
+		   t->transfer_capacity, t->truncated,
+		   (unsigned long long)t->rx_reads,
+		   (unsigned long long)t->rx_successes,
+		   (unsigned long long)t->rx_timeouts,
+		   (unsigned long long)t->rx_errors,
+		   (unsigned long long)t->rx_bytes, t->rx_last_error);
 	mutex_unlock(&t->lock);
 	return 0;
 }
@@ -428,6 +439,28 @@ void gchd_trace_destroy(struct gchd *d)
 	}
 	mutex_unlock(&gchd_trace_root_lock);
 	gchd_trace_put(t);
+}
+
+void gchd_trace_note_rx(struct gchd *d, int status, int actual)
+{
+	struct gchd_trace *t = READ_ONCE(d->trace);
+
+	if (!t)
+		return;
+
+	mutex_lock(&t->lock);
+	t->rx_reads++;
+	if (!status) {
+		t->rx_successes++;
+		if (actual > 0)
+			t->rx_bytes += actual;
+	} else if (status == -ETIMEDOUT || status == -EAGAIN) {
+		t->rx_timeouts++;
+	} else {
+		t->rx_errors++;
+		t->rx_last_error = status;
+	}
+	mutex_unlock(&t->lock);
 }
 
 void gchd_trace_capture(struct gchd *d, const u8 *data, size_t len, bool draining)
