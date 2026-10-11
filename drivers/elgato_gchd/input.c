@@ -1490,12 +1490,12 @@ static int gchd_input_configure_mode(struct gchd *d)
  }
  dev_info(&d->intf->dev, "capture setup: transcoder setup completed\n");
 
- r = gchd_scmd(d, 4, 0xa0, 0);
- if (r) {
-  dev_err(&d->intf->dev, "capture setup: SCMD_INIT failed: %d\n", r);
-  return r;
- }
- dev_info(&d->intf->dev, "capture setup: SCMD_INIT submitted\n");
+ /*
+  * gchd_input_finalize() already issued SCMD_INIT before connector-specific
+  * setup, matching the userspace configureDevice() sequence. Do not issue a
+  * second INIT here: it leaves a pending state-completion flag immediately
+  * before STREAMON's START transition.
+  */
 
  /* A successfully configured input stays configured while hardware is idle. */
  d->input_prepared = false;
