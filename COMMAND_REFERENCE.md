@@ -2,7 +2,7 @@
 
 This document is the working inventory of commands and register operations identified so far for the Elgato Game Capture HD (GCHD). It is intentionally conservative: a value seen on the USB wire is **observed**, but its hardware meaning is not considered proven unless noted.
 
-**Evidence currently catalogued:** `drivers/elgato_gchd/trace_analysis.txt`, trace `gchd_240p-480i_switch_to_composite.pcapng` on branch `diagnostic-input-baseline`. The trace is specifically for **composite input** and format changes between 480i and 240p; do not assume HDMI behaviour is identical.
+**Evidence currently catalogued:** `drivers/elgato_gchd/trace_analysis.txt` (composite 480i/240p format transitions) and `drivers/elgato_gchd/hdmi2composite_trace_analysis.txt` (HDMI-to-composite input switch and SoC pipeline configuration). These are trace-derived observations, not a complete device protocol specification. Treat interpretations as provisional until controlled hardware tests confirm them.
 
 ## Status legend
 
@@ -182,9 +182,88 @@ This section intentionally separates **seen in a reference trace** from **tested
 4. Send `B8 05 00 00 04`, then `B8 05 00 00 01`.
 5. Apply the full `0x98` table and common setup; send `B8 04 A0 00 00`, then `B8 05 00 00 02`.
 
-## 9. Evidence gaps and rules for updating this reference
+## 9. Input selection and HDMI/composite differences (second trace)
 
-- This catalogue is based on one composite-input format-switch trace. It is not a complete inventory of every device command.
+**Evidence:** `drivers/elgato_gchd/hdmi2composite_trace_analysis.txt`, trace identified there as `gchd_240p_switch_to_composite.pcapng`. Device reported by the analysis as VID `0x0FD9`, PID `0x005D`. Times below are relative to that capture.
+
+### 9.1 Input-select candidate
+
+| Register | HDMI observed value | Composite observed value | Current interpretation | Status |
+|---|---:|---:|---|---|
+| `0x51` | `0x45` at 5.691 s | `0x44` at 9.608 s | Strong candidate for input selection: `0x45` correlates with HDMI and `0x44` with composite. | **Inferred**, not proven from this trace alone. Component selector value remains unknown. |
+
+Do not assume `0x51` is the only input-selection control. Both input transitions are accompanied by other register writes.
+
+### 9.2 Input-specific register writes
+
+These are the values reported around the input-selection events. They appear to be part of a larger setup sequence, not necessarily a complete selector table.
+
+| Register | HDMI value(s) | Composite value(s) | Description / status |
+|---|---|---|---|
+| `0x06` | `0x86` | `0x08` | Changes with the selected input; purpose unknown. |
+| `0x03` | `0x2F` | `0x28` | Changes with the selected input; purpose unknown. |
+| `0xB3` | `0xCC` | `0x33` | Changes with the selected input; exact bank/block interpretation requires confirmation. |
+| `0x27` | `0xCC` | `0x33` | Written after `0x00=0xCE`; likely part of a banked sequence, but semantics unknown. |
+| `0x51` | `0x45` | `0x44` | Input-select candidate as above. |
+| `0x1B` | `0x33` | Not observed in the composite-switch event list | HDMI-side write in a sequence bracketed by writes to register `0x00`; not enough evidence to infer its purpose. |
+| `0x07` | `0x38`, then `0xC8` | Not observed in the composite-switch event list | HDMI-side writes; meaning unknown. |
+| `0xB7` | `0xCE`, then `0xCC` | Not observed in the composite-switch event list | HDMI-side writes around the selection sequence. |
+| `0xB8` | `0xDC`, then `0xCC` | Not observed in the composite-switch event list | HDMI-side writes; do not confuse these register writes with the USB vendor request opcode `B8`. |
+
+The analysis notes repeated writes of `0x00=0xCE` and `0x00=0xCC` around some HDMI writes. This is consistent with a bank/page-selection mechanism, but the trace alone does not establish the mechanism. Keep the exact write order in the raw analysis file.
+
+### 9.3 Transaction/framing words observed around register writes
+
+| USB control request / payload | Observed use | Current interpretation / caveat |
+|---|---|---|
+| `40 BC 00 08 C0 00 02 00 <reg> <val>` | Two-byte writes such as `51 45` and `51 44` | Reported as a register/value write through port `0x0800:0x00C0`. The I²C-like bridge interpretation is plausible, not confirmed. |
+| `40 BC 00 08 C0 00 04 00 <p0 p1 reg 00>` | Four-byte read requests; response reported at `C0 BC 00 08 BE 23` | Reported read framing. Prefixes `99 89`, `89 89`, and `9D CD` appear in requests. |
+| `40 B9 00 00 00 00 04 00 09 00 88 02` | Appears around writes targeting the `0x88` block | Transaction/framing word associated with the following register access. Exact sequencing semantics remain unproven. |
+| `40 B9 00 00 00 00 04 00 09 00 98 02` | Appears around writes targeting the `0x98` block | Same caveat; do not model as an acknowledgement unless the transport implementation or further captures prove that. |
+
+### 9.4 SoC/pipeline register writes
+
+The second trace reports many writes using request `40 BC 01 00 <addr16> 08 00 <8 bytes>`, where the 8 data bytes are interpreted as a big-endian value and mask pair. This interpretation is trace-derived and should be verified against the implementation.
+
+| SoC address | Observed value | Mask | Description / status |
+|---|---:|---:|---|
+| `0x1124` | `0x00001011` | `0x00001FFF` | Pipeline configuration write; field semantics unknown. |
+| `0x1264` | `0x00001011` | `0x00001FFF` | Paired with `0x1124`; likely related pipeline block, exact relationship unknown. |
+| `0x1128` | `0x010F0000` | `0x1FFF0000` | Pipeline configuration write; field semantics unknown. |
+| `0x1268` | `0x010F0000` | `0x1FFF0000` | Paired with `0x1128`; field semantics unknown. |
+| `0x152C` | `0x02D00000`, then `0x000001E0` | `0xFFFF0000`, then `0x0000FFFF` | Two half-word writes encode `0x02D0` (720) and `0x01E0` (480) in the trace's value/mask interpretation. Strong evidence of a 720×480-related pipeline setting, but the precise register semantics are not established. |
+| `0x162C` | `0x02D00000`, then `0x000001E0` | `0xFFFF0000`, then `0x0000FFFF` | Same values as `0x152C` in a second block; exact function unknown. |
+| `0x1530` | `0x00002BF2` | `0x0000FFFF` | Pipeline configuration; meaning unknown. |
+| `0x1534` | `0x278D0000`, then `0x000015F9` | `0xFFFF0000`, then `0x0000FFFF` | Pipeline configuration; meaning unknown. |
+| `0x1538` | `0x0AFC0000` | `0xFFFF0000` | Pipeline configuration; meaning unknown. |
+| `0x1630` | `0x00002BF2` | `0x0000FFFF` | Mirrors `0x1530` in the second block. |
+| `0x1634` | `0x278D0000`, then `0x000015F9` | `0xFFFF0000`, then `0x0000FFFF` | Mirrors `0x1534` in the second block. |
+| `0x1638` | `0x0AFC0000`, then `0x00000000` | `0xFFFF0000`, then `0x0000FFFF` | Pipeline configuration; meaning unknown. |
+
+The trace contains many additional SoC writes. This table is a selected index, not a complete register dump; the full sequence remains in `hdmi2composite_trace_analysis.txt`. Do not infer that the source is necessarily 240p solely from a 720×480-related output setting. The capture records an input switch and the source timing is not independently established by this register sequence.
+
+### 9.5 SCMD at pipeline start
+
+| Payload after USB request `B8` | Observed time | Context | Status |
+|---|---:|---|---|
+| `04 A0 00 00` | 11.159 s | At the end of the SoC/pipeline register burst | Observed; semantics unknown. |
+| `05 00 00 02` | 11.159 s | Immediately after the previous payload | Observed; semantics and expected confirmation unknown. |
+
+This independently corroborates the sequence seen in the composite format trace, but it still does not establish the commands' meanings or acknowledgement requirements.
+
+### 9.6 New untested experiments
+
+| Experiment | Hypothesis to test | Evidence needed |
+|---|---|---|
+| Switch HDMI↔composite while streaming | `0x51=0x45/0x44` selects the input as part of a larger register sequence. | Repeat both directions, record every write and read, and verify the actual resulting input and stable frames. |
+| Find component selector | Component may use the same `0x51` register, but the value cannot be safely predicted from `0x44` and `0x45`. | Capture a deliberate switch to component; do not guess the value. |
+| Minimize input-switch sequence | Some input-specific writes may be required in addition to `0x51`. | Remove one write group at a time with a known-good recovery path; record lock and frame outcome. |
+| Validate SoC width/height fields | `0x152C` and `0x162C` appear to receive `720` and `480` as upper/lower halves. | Correlate with supported output modes and a known source format; confirm by comparing other traces and driver/decompiled code. |
+| Validate read-modify-write framing | The 8-byte payload appears to be a value/mask pair. | Compare the bytes with the transport function implementation and observe readback/state changes. |
+
+## 10. Evidence gaps and rules for updating this reference
+
+- This catalogue now draws on two trace analyses: one for composite 480i/240p transitions and one for HDMI-to-composite switching. It is still not a complete inventory of every device command.
 - No semantic meaning or expected confirmation response should be assigned to a command just because it occurs before/after a state change.
 - Record the capture filename, device/input type, source format, destination format, USB transfer direction/type, exact bytes, response/status, timing, and video outcome for each new finding.
 - Promote an item from **Untested** only after a controlled reproduction. Preserve both the raw trace and the interpretation.
