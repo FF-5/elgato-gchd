@@ -966,10 +966,28 @@ int gchd_input_detect_signal(struct gchd *d)
            "gchd-diag detect composite: raw_status=0x%02x masked_mode=0x%01x\n",
            v, v & 0x0f);
   v &= 0x0f;
-  if ((v&0x0f)==6) {
-   d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60;
-  } else if ((v&0x0f)==7) {
-   d->input_width=720; d->input_height=576; d->input_interlaced=true; d->input_fps_num=50;
+  if (v == 6) {
+   u8 mode;
+
+   d->input_width=720; d->input_height=480;
+   d->input_interlaced=true; d->input_fps_num=60;
+   /* 0xCA is the decoder's authoritative 240p/480i lock indicator. */
+   r = gchd_mail_write(d, 0x33, (u8[]){0x89,0x89,0xca}, 3);
+   if (r) return r;
+   r = gchd_mail_read(d, 0x33, &mode, 1);
+   if (r) return r;
+   if (mode == 0x66)
+    d->input_interlaced = false;
+   else if (mode != 0x7e)
+    dev_dbg(&d->intf->dev,
+            "analog format status not locked yet: 0x%02x; defaulting to 480i\\n",
+            mode);
+   dev_info(&d->intf->dev,
+            "analog format lock: status=0x%02x mode=%s\\n",
+            mode, d->input_interlaced ? "480i" : "240p");
+  } else if (v == 7) {
+   d->input_width=720; d->input_height=576;
+   d->input_interlaced=true; d->input_fps_num=50;
   } else return -ENOLINK;
   d->input_fps_den=1;
  }
@@ -1221,8 +1239,11 @@ static int gchd_configure_composite_exact(struct gchd *d)
   return -ENOLINK;
 
  if (d->input_height==480) {
-  MW(0x44,0x07,0x8a); MW(0x44,0x08,0x9b); MW(0x44,0x09,0x7a); MW(0x44,0x28,0x88);
+  MW(0x44,0x07,0x8a); MW(0x44,0x08,0x9b); MW(0x44,0x09,0x7a);
+  MW(0x44,0x28, d->input_interlaced ? 0x88 : 0x8a);
   M3(0x89,0x89,0xfd); MRP(0x33); MW(0x44,0x06,0x08);
+  if (!d->input_interlaced)
+   MW(0x44,0x0a,0x98);
  }
  M3(0x89,0x89,0xe7); MRP(0x33);
  if (d->input_height==576) { M3(0x89,0x89,0xf1); MRP(0x33); MW(0x4c,0x04,0x95); }
@@ -1258,6 +1279,72 @@ static int gchd_configure_composite_exact(struct gchd *d)
 #undef MW
 #undef MRP
 #undef R9
+}
+
+
+int gchd_input_read_analog_mode(struct gchd *d, bool *interlaced)
+{
+ u8 status;
+ int r;
+
+ if (d->input < 2 || d->input_height != 480)
+  return -EOPNOTSUPP;
+ r = gchd_mail_write(d, 0x33, (u8[]){0x89,0x89,0xca}, 3);
+ if (r)
+  return r;
+ r = gchd_mail_read(d, 0x33, &status, 1);
+ if (r)
+  return r;
+
+ /* FE is unlocked and EE is transitional: neither is a mode change. */
+ if (status == 0x66)
+  *interlaced = false;
+ else if (status == 0x7e)
+  *interlaced = true;
+ else
+  return -EAGAIN;
+ return 0;
+}
+
+/*
+ * The captured 480i -> 240p transition does not stop the USB transport or
+ * issue an SoC state change. Keep this short register sequence in-place.
+ */
+int gchd_input_switch_480i_to_240p(struct gchd *d)
+{
+ u8 v;
+ int r;
+
+#define M3(a,b,c) do { u8 x[] = {a,b,c}; r = gchd_mail_write(d,0x33,x,3); if(r) return r; } while (0)
+#define MW(p,a,b) do { u8 x[] = {a,b}; r = gchd_mail_write(d,p,x,2); if(r) return r; } while (0)
+#define MR() do { r = gchd_mail_read(d,0x33,&v,1); if(r) return r; } while (0)
+
+ M3(0x89,0x89,0xfa); MR();
+ M3(0x89,0x89,0xca); MR();
+ if (v != 0x66)
+  return -EAGAIN;
+ MW(0x44,0x07,0x8a);
+ MW(0x44,0x08,0x9b);
+ MW(0x44,0x09,0x7a);
+ MW(0x44,0x28,0x8a);
+ M3(0x89,0x89,0xfd); MR();
+ MW(0x44,0x06,0x08);
+ M3(0x89,0x89,0xe7); MR();
+ M3(0x89,0x89,0xf1); MR();
+ MW(0x44,0x0a,0x8f);
+ M3(0x89,0x89,0xcb); MR();
+ M3(0x89,0x89,0xca); MR();
+ M3(0x99,0x89,0xfd); MR();
+ M3(0x99,0x89,0xfc); MR();
+ M3(0x99,0x89,0xf3); MR();
+ MW(0x4c,0x0d,0xc8);
+ MW(0x4c,0x0e,0x15);
+ MW(0x4c,0x0e,0x14);
+ MW(0x44,0x0a,0x98);
+#undef MR
+#undef MW
+#undef M3
+ return 0;
 }
 
 static int gchd_configure_component_exact(struct gchd *d)
