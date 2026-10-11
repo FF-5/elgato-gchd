@@ -15,7 +15,7 @@ MODULE_VERSION("0.2.0");
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
 static const char * const gchd_input_menu[] = {
- "HDMI", "Component", "Composite", NULL,
+ "HDMI", "Component", "Composite", "S-Video", NULL,
 };
 
 /* Preserve the VB2 read/poll/mmap/ioctl operations while adding lifecycle hooks. */
@@ -81,6 +81,7 @@ static bool gchd_mode_allowed(const struct gchd *d,
  case 1:
   return true;
  case 2:
+ case 3:
   return m->interlaced && m->width == 720 &&
          (m->height == 480 || m->height == 576);
  default:
@@ -790,15 +791,17 @@ static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
  struct gchd *d = video_drvdata(f);
  unsigned int index = in->index;
 
- if (index > 2) return -EINVAL;
+ if (index > 3) return -EINVAL;
  memset(in, 0, sizeof(*in));
  in->index = index;
  if (index == 0) {
   strscpy(in->name, "HDMI", sizeof(in->name));
  } else if (index == 1) {
   strscpy(in->name, "Component", sizeof(in->name));
- } else {
+ } else if (index == 2) {
   strscpy(in->name, "Composite", sizeof(in->name));
+ } else {
+  strscpy(in->name, "S-Video", sizeof(in->name));
  }
  in->type = V4L2_INPUT_TYPE_CAMERA;
 
@@ -825,7 +828,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 {
  int r;
 
- if (i > 2)
+ if (i > 3)
   return -EINVAL;
  dev_info(&d->intf->dev,
           "input switch requested: old=%u new=%u hw_initialized=%u streaming=%u\n",
@@ -947,7 +950,7 @@ static int gchd_query_dv_timings(struct file *f, void *p,
  struct gchd *d = video_drvdata(f);
  u64 clock;
 
- if (d->input == 2)
+ if (d->input >= 2)
   return -ENODATA;
  if (!READ_ONCE(d->signal_present)) {
   if (READ_ONCE(d->hw_initialized)) {
