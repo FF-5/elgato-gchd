@@ -519,6 +519,7 @@ static void gchd_detect_workfn(struct work_struct *work)
     goto out;
    }
 
+  } else {
    /* Configured and ready; later STREAMON uses this known-good setup. */
    WRITE_ONCE(d->detect_requested, false);
   }
