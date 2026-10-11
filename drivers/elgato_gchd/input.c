@@ -838,7 +838,13 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
   r = gchd_read_9dcd(d, 0x6e, reply);
   if (r)
    return r;
-  r = gchd_mail_write(d, 0x4e, (u8[]){0x51,0xec}, 2);
+  /*
+   * Traces with a valid analog signal select Composite with 0x4E:0x51=0x44.
+   * Keep the observed no-signal route for S-Video unchanged pending more
+   * traces of that input with a locked signal.
+   */
+  r = gchd_mail_write(d, 0x4e,
+   d->input == 2 ? (u8[]){0x51,0x44} : (u8[]){0x51,0xec}, 2);
   if (r)
    return r;
  }
