@@ -273,6 +273,10 @@ reset_pes:
 
 static void gchd_signal_check(struct gchd *d)
 {
+ /* START can take longer than the normal signal-loss debounce. */
+ if (READ_ONCE(d->start_pending))
+  return;
+
  if (!READ_ONCE(d->signal_present) &&
      time_after(jiffies, READ_ONCE(d->last_video_jiffies) +
                 msecs_to_jiffies(500)))
@@ -638,22 +642,34 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   return 0;
  }
 
- r = gchd_input_start(d);
- if (r == -ENOLINK) {
-  schedule_delayed_work(&d->detect_work, 0);
-  mutex_unlock(&d->lifecycle_lock);
-  return 0;
- }
- if (r)
-  goto err_streaming;
-
+ /*
+  * Start bulk-IN before issuing START. The receiver must be alive during
+  * the device's state-change handshake, not only after it has completed.
+  */
  d->last_video_jiffies = jiffies;
+ WRITE_ONCE(d->start_pending, true);
  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
  if (IS_ERR(d->rx_thread)) {
   r = PTR_ERR(d->rx_thread);
   d->rx_thread = NULL;
-  if (gchd_stream_stop(d))
-   gchd_input_stop(d);
+  WRITE_ONCE(d->start_pending, false);
+  goto err_streaming;
+ }
+
+ r = gchd_input_start(d);
+ WRITE_ONCE(d->start_pending, false);
+ if (r == -ENOLINK) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+  schedule_delayed_work(&d->detect_work, 0);
+  mutex_unlock(&d->lifecycle_lock);
+  return 0;
+ }
+ if (r) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+  /* Don't repeat a failed START from the detector's short retry loop. */
+  WRITE_ONCE(d->detect_requested, false);
   goto err_streaming;
  }
 
