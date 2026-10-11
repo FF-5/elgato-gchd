@@ -1005,7 +1005,7 @@ static int gchd_enum_dv_timings(struct file *f, void *p,
  };
  unsigned int n = 0, i;
 
- if (d->input == 2)
+ if (d->input >= 2)
   return -ENODATA;
 
  for (i = 0; i < ARRAY_SIZE(modes); ++i) {
