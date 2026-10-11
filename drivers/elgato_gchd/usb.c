@@ -41,6 +41,11 @@ MODULE_FIRMWARE("gchd/MB86M01_ASSP_NSEC_ENC_H");
 #define EB_ENCODER_ENABLE BIT(3)
 #define EB_ENCODER_TRIGGER BIT(4)
 
+/* Enable ordered raw mailbox traces for 480i/240p comparison. */
+static bool trace_mailbox;
+module_param(trace_mailbox, bool, 0644);
+MODULE_PARM_DESC(trace_mailbox, "Log raw mailbox commands and replies for input-detection diagnostics");
+
 static int gchd_ctrl_read(struct gchd *d, u8 req, u16 value, u16 index,
                           void *buf, u16 len)
 {
@@ -318,6 +323,9 @@ int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
 
  if (len > 254)
   return -EINVAL;
+ if (trace_mailbox)
+  dev_info(&d->intf->dev, "gchd-diag mailbox TX port=0x%02x len=%u data=%*ph\n",
+           port, len, (int)len, data);
 
  if (d->family == GCHD_FAMILY_OLD) {
   r = gchd_ctrl_write(d, MAIL_REG, (u16)port << 8, 0, data, len);
@@ -375,8 +383,13 @@ int gchd_mail_read(struct gchd *d, u8 port, u8 *data, u8 len)
  if (len > 255)
   return -EINVAL;
 
- if (d->family == GCHD_FAMILY_OLD)
-  return gchd_ctrl_read(d, MAIL_REG, (u16)port << 8, 0, data, len);
+ if (d->family == GCHD_FAMILY_OLD) {
+  r = gchd_ctrl_read(d, MAIL_REG, (u16)port << 8, 0, data, len);
+  if (!r && trace_mailbox)
+   dev_info(&d->intf->dev, "gchd-diag mailbox RX port=0x%02x len=%u data=%*ph\n",
+            port, len, (int)len, data);
+  return r;
+ }
 
  r = gchd_ctrl_write(d, 0xb9, 0x0000, HDNEW_MAIL_CONFIG_INDEX,
                      cfg, sizeof(cfg));
@@ -398,6 +411,9 @@ int gchd_mail_read(struct gchd *d, u8 port, u8 *data, u8 len)
  if (r)
   return r;
  memcpy(data, tmp + 2, len);
+ if (trace_mailbox)
+  dev_info(&d->intf->dev, "gchd-diag mailbox RX port=0x%02x len=%u data=%*ph\n",
+           port, len, (int)len, data);
  return 0;
 }
 
