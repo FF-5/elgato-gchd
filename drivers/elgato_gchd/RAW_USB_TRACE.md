@@ -1,6 +1,6 @@
 # Raw USB stream tracing (debug branch)
 
-This branch adds an opt-in, bounded trace of the device's incoming USB bulk-IN stream. It records bytes **before** MPEG-TS alignment, PID filtering, PES parsing, or V4L2 buffering can change or discard them. Successful reads from both the normal receive thread and the stream-drain path are included.
+This branch adds an opt-in, bounded trace of the device's incoming USB bulk-IN stream. On USB connection, the driver initializes the hardware, probes the currently selected input, and starts the receive thread after a signal is detected; no capture application or STREAMON is required to start that hardware traffic. The trace records bytes **before** MPEG-TS alignment, PID filtering, PES parsing, or V4L2 buffering can change or discard them. Successful reads from both the background receive thread and the stream-drain path are included.
 
 The trace is text when exported: each transfer has a source (`rx` or `drain`), monotonic timestamp, stream offset, and length, followed by the bytes in hexadecimal. No binary capture file is required.
 
@@ -20,7 +20,7 @@ TRACE=/sys/kernel/debug/elgato_gchd/1-2
 cat "$TRACE/status"
 ```
 
-For each test, clear the previous capture, then enable tracing:
+For a newly connected device, wait for the hardware initialization and signal-detection messages in `dmesg`, then enable tracing. The receive thread can already be running, so tracing can be turned on without starting a capture application. For each test, clear the previous capture, then enable tracing:
 
 ```sh
 echo 0 > "$TRACE/enable"
@@ -39,16 +39,17 @@ Change `1-2` to the actual device directory. The trace is per device and initial
 modprobe elgato_gchd trace_bytes=33554432
 ```
 
-If the buffer or transfer-metadata table fills, tracing automatically stops rather than overwriting earlier bytes. Check `status` for `truncated=1`; if it is set, increase `trace_bytes` or collect a shorter sample. Each transfer is kept intact in the metadata; an exhausted metadata table also stops capture and marks it truncated. The trace buffer is allocated per detected device even while tracing is disabled, so this debug branch reserves about 16 MiB plus metadata per device by default.
+If the buffer or transfer-metadata table fills, tracing automatically stops rather than overwriting earlier bytes. Check `status` for `truncated=1`; if it is set, increase `trace_bytes` or collect a shorter sample. Each transfer is kept intact in the metadata; an exhausted metadata table also stops capture and marks it truncated. The trace buffer is allocated per detected device even while tracing is disabled, so this debug branch reserves about 16 MiB plus metadata per device by default. Automatic startup currently probes the selected input; it does not yet scan all three connectors to discover which one has a signal.
 
 ## Suggested evidence set
 
 Use the same input connector and capture settings wherever possible. Save a separate text dump for each test:
 
-1. Composite with a stable 240p source.
-2. Composite with a stable 480i source.
-3. Composite while switching from 240p to 480i, including a few seconds before and after the switch.
-4. Repeat for another output/input type if available (for example, component or HDMI).
+1. Connect the device with a stable source on the driver's currently selected input (the default is HDMI unless changed in code or remembered during this module lifetime).
+2. Composite with a stable 240p source, selecting Composite through V4L2 if needed.
+3. Composite with a stable 480i source.
+4. Composite while switching from 240p to 480i, including a few seconds before and after the switch.
+5. Repeat for another input type if available (for example, component or HDMI).
 
 Include the corresponding `status` output and note the source mode and approximate transition time in each filename or accompanying notes. The trace preserves the raw USB transfer boundaries and arrival timestamps, so we can compare transport packets, continuity counters, PES timestamps, and H.264 data without assuming that V4L2 buffer boundaries correspond to frames.
 
