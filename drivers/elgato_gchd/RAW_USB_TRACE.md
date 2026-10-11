@@ -57,7 +57,7 @@ Include the corresponding `status` output and note the source mode and approxima
 
 - `enable`: read/write `0` or `1`.
 - `clear`: write `1` to clear the current capture and truncation state.
-- `status`: captured byte/transfer counts, capacities, enabled state, and truncation status.
+- `status`: captured byte/transfer counts, capacities, enabled state, and truncation status. It also reports receiver counters (`rx_reads`, `rx_successes`, `rx_timeouts`, `rx_errors`, `rx_bytes`, `rx_last_error`) independently of whether raw tracing is enabled. These distinguish a receiver that is running but timing out from one that is successfully receiving USB payloads.
 - `data`: read-only, human-readable transfer records and hex bytes.\n- `raw`: read-only binary payload bytes concatenated in receive order; suitable for media probing.
 
 If debugfs is unavailable or trace allocation fails, device probing continues and tracing is disabled; normal capture does not depend on this facility. If V4L2 registration fails, the USB interface remains bound and connection-owned raw reception/tracing still run.
