@@ -2,7 +2,7 @@
 
 This document is the working inventory of commands and register operations identified so far for the Elgato Game Capture HD (GCHD). It is intentionally conservative: a value seen on the USB wire is **observed**, but its hardware meaning is not considered proven unless noted.
 
-**Evidence currently catalogued:** `drivers/elgato_gchd/trace_analysis.txt` (composite 480i/240p format transitions) and `drivers/elgato_gchd/hdmi2composite_trace_analysis.txt` (HDMI-to-composite input switch and SoC pipeline configuration). These are trace-derived observations, not a complete device protocol specification. Treat interpretations as provisional until controlled hardware tests confirm them.
+**Evidence currently catalogued:** `drivers/elgato_gchd/trace_analysis.txt` (composite 480i/240p format transitions), `drivers/elgato_gchd/hdmi2composite_trace_analysis.txt` (HDMI-to-composite input switch and SoC pipeline configuration), and `drivers/elgato_gchd/input_switch_trace_analysis.txt` (input switches with no source attached plus comparisons against the earlier trace). These are trace-derived observations, not a complete device protocol specification. Treat interpretations as provisional until controlled hardware tests confirm them.
 
 ## Status legend
 
@@ -190,7 +190,7 @@ This section intentionally separates **seen in a reference trace** from **tested
 
 | Register | HDMI observed value | Composite observed value | Current interpretation | Status |
 |---|---:|---:|---|---|
-| `0x51` | `0x45` at 5.691 s | `0x44` at 9.608 s | Strong candidate for input selection: `0x45` correlates with HDMI and `0x44` with composite. | **Inferred**, not proven from this trace alone. Component selector value remains unknown. |
+| `0x51` | `0x45` at 5.691 s | `0x44` at 9.608 s | Strong candidate for input selection: `0x45` correlates with HDMI and `0x44` with composite. | **Inferred**, not proven from this trace alone. The later no-source trace reports component `0xED`; this is observed in that trace, but still needs controlled reproduction. |
 
 Do not assume `0x51` is the only input-selection control. Both input transitions are accompanied by other register writes.
 
@@ -204,7 +204,7 @@ These are the values reported around the input-selection events. They appear to 
 | `0x03` | `0x2F` | `0x28` | Changes with the selected input; purpose unknown. |
 | `0xB3` | `0xCC` | `0x33` | Changes with the selected input; exact bank/block interpretation requires confirmation. |
 | `0x27` | `0xCC` | `0x33` | Written after `0x00=0xCE`; likely part of a banked sequence, but semantics unknown. |
-| `0x51` | `0x45` | `0x44` | Input-select candidate as above. |
+| `0x51` | `0x45` | `0x44` in the earlier trace; `0xEC` in the no-source trace | Input-select candidate. The composite values conflict across captures and must not be silently reconciled. |
 | `0x1B` | `0x33` | Not observed in the composite-switch event list | HDMI-side write in a sequence bracketed by writes to register `0x00`; not enough evidence to infer its purpose. |
 | `0x07` | `0x38`, then `0xC8` | Not observed in the composite-switch event list | HDMI-side writes; meaning unknown. |
 | `0xB7` | `0xCE`, then `0xCC` | Not observed in the composite-switch event list | HDMI-side writes around the selection sequence. |
@@ -261,9 +261,100 @@ This independently corroborates the sequence seen in the composite format trace,
 | Validate SoC width/height fields | `0x152C` and `0x162C` appear to receive `720` and `480` as upper/lower halves. | Correlate with supported output modes and a known source format; confirm by comparing other traces and driver/decompiled code. |
 | Validate read-modify-write framing | The 8-byte payload appears to be a value/mask pair. | Compare the bytes with the transport function implementation and observe readback/state changes. |
 
-## 10. Evidence gaps and rules for updating this reference
+## 10. Input-switch transport, target devices, and no-source recipes
 
-- This catalogue now draws on two trace analyses: one for composite 480i/240p transitions and one for HDMI-to-composite switching. It is still not a complete inventory of every device command.
+**Evidence:** `drivers/elgato_gchd/input_switch_trace_analysis.txt`, added in commit `ffc080b2a129fe4220de3d8abb3f3fbafd902fa2`. It summarizes two USBPcap traces and gives ordered writes for HDMI, component, composite, and S-video transitions. The new capture explicitly includes switches with no source attached; the earlier trace includes a 240p source and subsequent signal-dependent configuration.
+
+### 10.1 Register-write framing and target addresses
+
+The analysis reports this write pair for a single register/value operation:
+
+```
+40 BC 00 08 C0 00 02 00 <reg> <val>
+40 B9 00 00 00 00 04 00 09 00 <ADDR> 02
+```
+
+The first transfer carries the two bytes; the following B9 word is described by the trace analysis as a commit naming the target address. The observed target addresses are:
+
+| Target write address | Observed register groups | Interpretation / caveat |
+|---|---|---|
+| `0x9C` | `0x51`, `0x00`, `0xB3`, `0x27`, HDMI-side registers and table | Carries the selector candidate and many input-dependent writes. Target-device role beyond observed traffic is unknown. |
+| `0x88` | `0x02`, `0x03`, `0x06`, `0x10–0x15`, `0x28`, `0x3C` | Carries composite/S-video-side configuration in these traces. |
+| `0x98` | `0x0D`, `0x0E`, plus signal-dependent table and configuration writes | Carries the signal-lock/format-dependent writes in the earlier trace. The no-source trace does not show the full signal-dependent block. |
+
+The trace also reports read requests using a four-byte payload after the port fields, followed by B9 control words and a result transfer reported as `C0 BC 00 08 BE 23 04 00`. The example result `00 00 B2 59` is interpreted as returning `0xB2) in byte 2 by the analysis. Treat the exact bridge protocol and commit/read sequencing as trace-derived until cross-checked against the transport implementation.
+
+Additional recurring traffic reported by the analysis:
+- Polls of `0x0800:0x0016`, `0x0900:0x001C`, and `0x0800:0x23BE`.
+- A write of `D3 9E` to `0x0900:0x0014) between operations.
+- Writes to `0x0900:0x0018) carrying per-input state bytes (below).
+
+These may be handshake/status requirements. The minimum subset required for a successful input switch is **not established**; do not omit them from an initial driver reproduction just because their purpose is unknown.
+
+### 10.2 Input selector and separate state word
+
+| Input | `[0x9C] 0x51` observed | `0x0900:0x0018` bytes observed | Additional observed notes |
+|---|---:|---|---|
+| HDMI | `0x45` | `02 0A` | HDMI-side writes include `0x01`, `0x04`, `0x06`, `0x09`, `0x54`, `0xAC`, `0xCE`, `0xCF`, and a table spanning `0x92–0xAA). |
+| Component | `0xED` | `02 0E` | Observed writes include `0x24=0C`, `0x21=CD`, `0x91=C8`, `0x0E=8C`, `0x11=EC`, `0x54=FC`, `0x71=4C`, and `0x04=CC`. |
+| Composite | `0xEC` in the no-source trace; `0x44` in the earlier trace | `03 0E` | Shared analog-input prefix: `[0x88] 0x06=08`, `[0x88] 0x03=28`, `[0x9C] 0xB3=33`, `[0x9C] 0x27=33`. |
+| S-video | `0xEC` | `03 0E` | Shares the composite selector/state bytes in this trace; separated by `[0x88] 0x02=DC` rather than composite's `0x02=C9`. |
+
+The `0x0900:0x0018` word is not the same thing as register `0x51`: it is a separate control/state write, encoded as `40 BC 00 09 18 00 02 00 <b0> <b1>`. The trace reports three writes per input state in some transitions, including intermediate old-state bytes during a switch. That repetition and the other recurring handshake traffic may matter.
+
+**Important unresolved discrepancy:** composite is `0x44` in `hdmi2composite_trace_analysis.txt` but `0xEC` in `input_switch_trace_analysis.txt`. These differ by more than the one-bit change discussed in the earlier hypothesis, so the theory that all selectors are formed by simply clearing bit 0 is not supported as a general rule. Possible causes include a different initial register/bank state, a difference in how the traces were decoded, or a context-dependent value; none is confirmed. Preserve both observations until a controlled read/write test determines why they differ.
+
+### 10.3 Composite versus S-video
+
+The new trace shows the following difference at the `0x88` target:
+
+| Transition | Ordered writes shown in the trace | Status |
+|---|---|---|
+| Composite → S-video | `[0x88] 0x02=DC`, then `0x14=D2`; later `0x28=88`, `0x03=28`, `[0x9C] 0xB3=33`, `0x27=33`, then `0x51=EC`; state word `03 0E` is written repeatedly | Observed in the no-source trace. The exact necessity/order of every write is untested. |
+| S-video → composite | `[0x88] 0x02=C9`, then `0x14=D2`, `0x3C=6B`; later `0x28=88`, `0x03=28`, `[0x9C] 0xB3=33`, `0x27=33`, then `0x51=EC` | Observed in the no-source trace. `0x3C=6B` appears on this direction only in the summarized event. |
+
+This supports `[0x88] 0x02` as the clearest observed composite/S-video discriminator in this capture. It does **not** yet prove that `0x02` alone is sufficient, or that `0x3C=6B` is always required when switching back to composite.
+
+### 10.4 Shared prefixes and HDMI/component differences
+
+The new analysis identifies a recurring analog-input prefix:
+- `[0x88] 0x06=08`
+- `[0x88] 0x03=28`
+- `[0x9C] 0xB3=33`
+- `[0x9C] 0x27=33)
+
+The HDMI/component group instead starts with:
+- `[0x88] 0x06=86)
+- `[0x88] 0x03=2F`
+- `[0x9C] 0xB3=CC)
+- `[0x9C] 0x27=CC)
+
+HDMI and component then share a longer prefix of writes including `[0x9C] 0xAB=4C`, `0x1B=33`, `0xB7=CE), `0xB8=DC) followed by `0xB8=CC), and `0x07=38) followed by `0x07=C8), before the `0x51` write. Component then has its own observed tail. These are register writes to target `0x9C`; register `0xB8` here is distinct from the USB request opcode `B8` used for SCMD.
+
+The trace gives **ordered observed recipes**, not a proven minimal sequence. Some writes may be staged bank selection, latching, recovery from the prior input, or redundant state synchronization. Keep the full order in `input_switch_trace_analysis.txt` rather than reducing it to just the selector value.
+
+### 10.5 Signal-dependent writes remain a separate phase
+
+The new capture was made with no source attached and does not show the full `0x98) signal-dependent coefficient/configuration sequence. The earlier trace with a 240p source shows that block being written after the analog-input switch and subsequent lock-related activity. This strengthens the distinction between:
+1. selecting/configuring the physical input path, and
+2. configuring the decoder after a signal is detected and lock/status changes.
+
+Do not label the `0x98:0x90–0xA3) table “the 240p command” based on the current evidence. A 480i-with-source trace is still needed to determine which writes are format-specific.
+
+### 10.6 New controlled tests
+
+| Test | Question it answers | Evidence to capture |
+|---|---|---|
+| Repeat composite selection from a known reset/known prior input | Why does `0x51` appear as both `0x44` and `0xEC`? | Initial readback, all writes to target `0x9C`, state-word writes, source connection state, and post-switch readback. |
+| Capture component from each analog input | Is `0x51=ED` repeatable and what writes are essential? | Exact ordered transactions in both directions, handshake/status traffic, and final readback. |
+| Toggle only `[0x88] 0x02` between `C9` and `DC` | Is it sufficient to distinguish composite and S-video? | Stable video outcome, status, and any required companion writes. |
+| Omit/reinstate `[0x88] 0x3C=6B` on return to composite | Is the direction-specific write essential? | Repeated switch outcomes and recovery after a failed attempt. |
+| Reduce repeated `0x0900:0x0018` writes and handshake polling | Which repetitions and polls are required? | One change at a time, exact USB status, state readback if available, and whether switching completes. |
+| Capture composite with a known 480i source and compare to the 240p trace | Which `0x98` writes are format-dependent? | Full ordered `0x98` write diff, lock/status transitions, and actual output frame format. |
+
+## 11. Evidence gaps and rules for updating this reference
+
+- This catalogue now draws on three trace analyses: composite 480i/240p transitions, HDMI-to-composite switching, and input-switch transitions captured with no source attached. It is still not a complete inventory of every device command.
 - No semantic meaning or expected confirmation response should be assigned to a command just because it occurs before/after a state change.
 - Record the capture filename, device/input type, source format, destination format, USB transfer direction/type, exact bytes, response/status, timing, and video outcome for each new finding.
 - Promote an item from **Untested** only after a controlled reproduction. Preserve both the raw trace and the interpretation.
