@@ -769,7 +769,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  if (r)
   return r;
 
- if (d->input != 2) {
+ if (d->input < 2) {
   r = gchd_mail_write(d, 0x44, (u8[]){0x06,0x86}, 2);
   if (r)
    return r;
@@ -783,7 +783,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  }
 
  /* Exact source-routing enable order from configureDevice(). */
- r = gchd_do_enable(d, BIT(8), d->input == 2 ? BIT(8) : 0);
+ r = gchd_do_enable(d, BIT(8), d->input >= 2 ? BIT(8) : 0);
  if (r)
   return r;
  r = gchd_do_enable(d, BIT(2), d->input != 0 ? BIT(2) : 0);
@@ -801,7 +801,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
   return r;
 
  r = gchd_mail_write(d, 0x44,
-   d->input == 2 ? (u8[]){0x03,0x28} : (u8[]){0x03,0x2f}, 2);
+   d->input >= 2 ? (u8[]){0x03,0x28} : (u8[]){0x03,0x2f}, 2);
  if (r)
   return r;
 
@@ -813,7 +813,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  if (r)
   return r;
  r = gchd_mail_write(d, 0x4e,
-   d->input == 2 ? (u8[]){0xb3,0x33} : (u8[]){0xb3,0xcc}, 2);
+   d->input >= 2 ? (u8[]){0xb3,0x33} : (u8[]){0xb3,0xcc}, 2);
  if (r)
   return r;
  r = gchd_read_9dcd(d, 0x3f, reply);
@@ -824,11 +824,11 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  if (r)
   return r;
  r = gchd_mail_write(d, 0x4e,
-   d->input == 2 ? (u8[]){0x27,0x33} : (u8[]){0x27,0xcc}, 2);
+   d->input >= 2 ? (u8[]){0x27,0x33} : (u8[]){0x27,0xcc}, 2);
  if (r)
   return r;
 
- if (d->input == 2) {
+ if (d->input >= 2) {
   r = gchd_read_9dcd(d, 0x3f, reply);
   if (r)
    return r;
@@ -1466,7 +1466,7 @@ static int gchd_input_configure_mode(struct gchd *d)
 
  if (d->input == 0)
   r = gchd_configure_hdmi_exact(d);
- else if (d->input == 2)
+ else if (d->input >= 2)
   r = gchd_configure_composite_exact(d);
  else
   r = gchd_configure_component_exact(d);
