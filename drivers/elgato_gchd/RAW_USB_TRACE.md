@@ -45,7 +45,7 @@ If the buffer or transfer-metadata table fills, tracing automatically stops rath
 
 Use the same input connector and capture settings wherever possible. Save a separate text dump for each test:
 
-1. Connect the device with a stable source on the driver's currently selected input (the default is HDMI unless changed in code or remembered during this module lifetime).
+1. Connect the device with a stable source on the driver's currently selected input (the debug branch now defaults to Composite (input index 2), unless changed through V4L2 during this module lifetime).
 2. Composite with a stable 240p source, selecting Composite through V4L2 if needed.
 3. Composite with a stable 480i source.
 4. Composite while switching from 240p to 480i, including a few seconds before and after the switch.
