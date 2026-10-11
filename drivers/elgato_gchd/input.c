@@ -1500,7 +1500,7 @@ static int gchd_input_configure_mode(struct gchd *d)
   */
  r = gchd_scmd(d, 4, 0xa0, 0);
  if (r) {
-  dev_err(&d->intf->dev, "capture setup: final SCMD_INIT failed: %d\\n", r);
+  dev_err(&d->intf->dev, "capture setup: final SCMD_INIT failed: %d\n", r);
   return r;
  }
 
