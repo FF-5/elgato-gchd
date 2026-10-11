@@ -42,9 +42,9 @@ struct gchd_mode {
  bool interlaced;
 };
 
-/* The device defaults to HDMI; remember the last selected input across rebinds. */
+/* This debug branch defaults to Composite and remembers selection across rebinds. */
 static DEFINE_MUTEX(gchd_last_input_lock);
-static unsigned int gchd_last_input;
+static unsigned int gchd_last_input = 2;
 
 static const struct gchd_mode gchd_modes[] = {
  {1920, 1080, 60, 1, false},
