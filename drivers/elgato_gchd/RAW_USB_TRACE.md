@@ -2,7 +2,7 @@
 
 This branch adds an opt-in, bounded trace of the device's incoming USB bulk-IN stream. On USB connection, the driver initializes the hardware, probes the currently selected input, and starts the receive thread after a signal is detected; no capture application or STREAMON is required to start that hardware traffic. The trace records bytes **before** MPEG-TS alignment, PID filtering, PES parsing, or V4L2 buffering can change or discard them. Successful reads from both the background receive thread and the stream-drain path are included.
 
-The trace is text when exported: each transfer has a source (`rx` or `drain`), monotonic timestamp, stream offset, and length, followed by the bytes in hexadecimal. No binary capture file is required.
+The `data` export is text: each transfer has a source (`rx` or `drain`), monotonic timestamp, stream offset, and length, followed by the bytes in hexadecimal. The `raw` export is binary and contains only the captured USB payload bytes concatenated in receive order, without transfer headers.
 
 ## Enable and collect
 
@@ -30,7 +30,7 @@ echo 1 > "$TRACE/enable"
 # When enough data has been collected:
 echo 0 > "$TRACE/enable"
 cat "$TRACE/status"
-cat "$TRACE/data" > composite-240p.txt
+cat "$TRACE/data" > composite-240p.txt\ncat "$TRACE/raw" > composite-240p.bin
 ```
 
 Change `1-2` to the actual device directory. The trace is per device and initially disabled. The default raw-byte capacity is 16 MiB; `trace_bytes` can be set at module load time, up to 64 MiB, for example:
@@ -58,6 +58,6 @@ Include the corresponding `status` output and note the source mode and approxima
 - `enable`: read/write `0` or `1`.
 - `clear`: write `1` to clear the current capture and truncation state.
 - `status`: captured byte/transfer counts, capacities, enabled state, and truncation status.
-- `data`: read-only, human-readable transfer records and hex bytes.
+- `data`: read-only, human-readable transfer records and hex bytes.\n- `raw`: read-only binary payload bytes concatenated in receive order; suitable for media probing.
 
 If debugfs is unavailable or trace allocation fails, device probing continues and tracing is disabled; normal capture does not depend on this facility.
