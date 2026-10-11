@@ -232,7 +232,7 @@ static void gchd_signal_check(struct gchd *d)
   v4l2_event_queue(&d->vdev, &ev);
   WRITE_ONCE(d->signal_present, false);
   /* RX must not issue control transfers or attempt to stop itself here. */
-  if (READ_ONCE(d->streaming) && READ_ONCE(d->detect_requested))
+  if (READ_ONCE(d->detect_requested))
    schedule_delayed_work(&d->detect_work, 0);
   pr_info("elgato_gchd: input %u signal lost; scheduling redetection\n",
           d->input);
@@ -435,7 +435,12 @@ static void gchd_detect_workfn(struct work_struct *work)
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
 
-  if (READ_ONCE(d->streaming)) {
+  /*
+   * Start the device transport immediately, even without an open V4L2
+   * client. The RX thread feeds the raw USB trace before parsing and only
+   * hands payloads to V4L2 when streaming is true.
+   */
+  if (!d->rx_thread) {
    r = gchd_input_start(d);
    if (r) {
     dev_warn(&d->intf->dev, "capture start after detection failed: %d\n", r);
@@ -449,9 +454,6 @@ static void gchd_detect_workfn(struct work_struct *work)
     gchd_stream_stop(d);
     goto retry;
    }
-  } else {
-   /* Configured and ready; later STREAMON uses this known-good setup. */
-   WRITE_ONCE(d->detect_requested, false);
   }
  }
 
@@ -569,6 +571,16 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
  WRITE_ONCE(d->detect_requested, true);
  if (!d->input_configured || !READ_ONCE(d->signal_present)) {
   schedule_delayed_work(&d->detect_work, 0);
+  mutex_unlock(&d->lifecycle_lock);
+  return 0;
+ }
+
+ /*
+  * The connection-time detector may already have started the hardware RX
+  * thread. In that case STREAMON only enables V4L2 delivery; do not issue a
+  * second START command or create a second reader for endpoint 0x81.
+  */
+ if (d->rx_thread) {
   mutex_unlock(&d->lifecycle_lock);
   return 0;
  }
@@ -1133,7 +1145,7 @@ out:
 static int gchd_fop_release(struct file *file)
 {
  struct gchd *d = video_drvdata(file);
- int r = 0, sr;
+ int r = 0;
 
  /* VB2 must release buffers and invoke stop_streaming before HW shutdown. */
  if (vb2_fops.release)
