@@ -602,13 +602,13 @@ static void gchd_mode_workfn(struct work_struct *work)
  if (r == -EAGAIN)
   goto reschedule;
  if (r) {
-  dev_dbg(&d->intf->dev, "analog mode poll failed: %d\\n", r);
+  dev_dbg(&d->intf->dev, "analog mode poll failed: %d\n", r);
   goto reschedule;
  }
  if (target_interlaced == d->input_interlaced)
   goto reschedule;
 
- dev_info(&d->intf->dev, "analog mode change detected: %s -> %s\\n",
+ dev_info(&d->intf->dev, "analog mode change detected: %s -> %s\n",
           d->input_interlaced ? "480i" : "240p",
           target_interlaced ? "480i" : "240p");
 
@@ -616,7 +616,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   r = gchd_input_switch_480i_to_240p(d);
   if (r) {
    dev_warn(&d->intf->dev,
-            "480i-to-240p register transition failed: %d\\n", r);
+            "480i-to-240p register transition failed: %d\n", r);
    goto reschedule;
   }
   d->input_interlaced = false;
@@ -668,13 +668,13 @@ static void gchd_mode_workfn(struct work_struct *work)
  ev.id = d->input;
  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
  v4l2_event_queue(&d->vdev, &ev);
- dev_info(&d->intf->dev, "analog mode now %s\\n",
+ dev_info(&d->intf->dev, "analog mode now %s\n",
           d->input_interlaced ? "480i" : "240p");
  goto reschedule;
 
 restart_failed:
  dev_warn(&d->intf->dev,
-          "240p-to-480i reconfiguration failed: %d\\n", r);
+          "240p-to-480i reconfiguration failed: %d\n", r);
  WRITE_ONCE(d->signal_present, false);
  WRITE_ONCE(d->detect_requested, true);
  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
