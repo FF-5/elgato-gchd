@@ -238,7 +238,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   {
    unsigned int header_len = 9 + p[off + 8];
 
-   if (header_len >= 188 - off)
+   if (header_len > 188 - off)
     return;
    off += header_len;
   }
@@ -248,11 +248,20 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   return;
  }
 
- if (off < 188 && *n < GCHD_MAX_FRAME) {
-  size_t m = min_t(size_t, 188 - off, GCHD_MAX_FRAME - *n);
+ if (off < 188) {
+  size_t remaining = GCHD_MAX_FRAME - *n;
+  size_t payload = 188 - off;
 
-  memcpy(pes + *n, p + off, m);
-  *n += m;
+  if (payload > remaining) {
+   dev_warn_ratelimited(&d->intf->dev,
+                        "video PES exceeds %u bytes; dropping until next PES\\n",
+                        GCHD_MAX_FRAME);
+   *n = 0;
+   *pes_active = false;
+   return;
+  }
+  memcpy(pes + *n, p + off, payload);
+  *n += payload;
  }
  return;
 
