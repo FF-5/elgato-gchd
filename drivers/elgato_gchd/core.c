@@ -489,20 +489,32 @@ static void gchd_detect_workfn(struct work_struct *work)
   v4l2_event_queue(&d->vdev, &ev);
 
   if (READ_ONCE(d->streaming)) {
-   r = gchd_input_start(d);
-   if (r) {
-    dev_warn(&d->intf->dev, "capture start after detection failed: %d\n", r);
-    goto retry;
-   }
+   /*
+    * Match the userspace architecture: keep an independent bulk-IN reader
+    * running while the device processes the START state transition.
+    */
    d->last_video_jiffies = jiffies;
+   WRITE_ONCE(d->start_pending, true);
    d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
    if (IS_ERR(d->rx_thread)) {
     r = PTR_ERR(d->rx_thread);
     d->rx_thread = NULL;
-    gchd_stream_stop(d);
+    WRITE_ONCE(d->start_pending, false);
     goto retry;
    }
-  } else {
+
+   r = gchd_input_start(d);
+   WRITE_ONCE(d->start_pending, false);
+   if (r) {
+    kthread_stop(d->rx_thread);
+    d->rx_thread = NULL;
+    dev_warn(&d->intf->dev,
+             "capture start after detection failed: %d; backing off before retry\\n", r);
+    /* Do not hammer START every 250ms if the state transition timed out. */
+    schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
+    goto out;
+   }
+
    /* Configured and ready; later STREAMON uses this known-good setup. */
    WRITE_ONCE(d->detect_requested, false);
   }
