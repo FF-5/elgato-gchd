@@ -887,6 +887,9 @@ int gchd_input_detect_signal(struct gchd *d)
   if (r) return r;
   value6665 = sum6665 / count6665;
   value6463 = sum6463 / count6463;
+  dev_info(&d->intf->dev,
+           "gchd-diag detect HDMI: samples6665=%u avg6665=0x%04x samples6463=%u avg6463=0x%04x rgb=%u\n",
+           count6665, value6665, count6463, value6463, d->rgb_input);
   if (!gchd_hdmi_timing_valid(value6463) ||
       abs((int)value6665 - 0xad4d) < 10)
    return -ENOLINK;
@@ -918,6 +921,9 @@ int gchd_input_detect_signal(struct gchd *d)
   r = gchd_mail_write(d,0x33,(u8[]){0x9d,0xcd,0x67},3); if(r)return r;
   r = gchd_mail_read(d,0x33,&lo,1); if(r)return r;
   value6867|=lo;
+  dev_info(&d->intf->dev,
+           "gchd-diag detect component: raw6665=0x%04x raw6867=0x%04x\n",
+           (u16)sum6665, (u16)value6867);
   if (!gchd_component_timing_valid(value6867) ||
       abs((int)sum6665-0xad4d)<10)
    return -ENOLINK;
@@ -956,6 +962,9 @@ int gchd_input_detect_signal(struct gchd *d)
   if (r) return r;
   r = gchd_mail_read(d, 0x33, &v, 1);
   if (r) return r;
+  dev_info(&d->intf->dev,
+           "gchd-diag detect composite: raw_status=0x%02x masked_mode=0x%01x\n",
+           v, v & 0x0f);
   v &= 0x0f;
   if ((v&0x0f)==6) {
    d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60;
@@ -965,6 +974,10 @@ int gchd_input_detect_signal(struct gchd *d)
   d->input_fps_den=1;
  }
  WRITE_ONCE(d->signal_present,true);
+ dev_info(&d->intf->dev,
+          "gchd-diag detected input=%u mode=%ux%u fps=%u/%u interlaced=%u signal_present=%u\n",
+          d->input, d->input_width, d->input_height, d->input_fps_num,
+          d->input_fps_den, d->input_interlaced, d->signal_present);
  return 0;
 }
 
@@ -1533,14 +1546,23 @@ int gchd_input_start(struct gchd *d)
   * dimensions and no recognized signal.  A later change can replace this
   * with asynchronous re-detection while keeping STREAMON pending.
   */
- if (!d->signal_present)
+ if (!d->signal_present) {
+  dev_info(&d->intf->dev,
+           "gchd-diag refusing START: no signal; input=%u mode=%ux%u interlaced=%u\n",
+           d->input, d->input_width, d->input_height, d->input_interlaced);
   return -ENOLINK;
+ }
 
+ dev_info(&d->intf->dev,
+          "gchd-diag issuing START: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
+          d->input, d->input_width, d->input_height, d->input_fps_num,
+          d->input_fps_den, d->input_interlaced);
  r = gchd_state_cmd(d, 5, 0, 0x0002, 0x0002);
  if (r) {
   dev_err(&d->intf->dev, "capture start transition failed: %d\n", r);
   return r;
  }
+ dev_info(&d->intf->dev, "gchd-diag START transition completed\n");
  return 0;
 }
 
