@@ -341,6 +341,29 @@ static int gchd_rx(void *arg)
  return 0;
 }
 
+static int gchd_rx_start_locked(struct gchd *d)
+{
+ if (d->disconnected)
+  return -ENODEV;
+ if (d->rx_thread)
+  return 0;
+ d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+ if (IS_ERR(d->rx_thread)) {
+  int r = PTR_ERR(d->rx_thread);
+  d->rx_thread = NULL;
+  return r;
+ }
+ return 0;
+}
+
+static void gchd_rx_stop_locked(struct gchd *d)
+{
+ if (d->rx_thread) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+ }
+}
+
 static void gchd_detect_workfn(struct work_struct *work)
 {
  struct gchd *d = container_of(to_delayed_work(work), struct gchd,
@@ -601,14 +624,16 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  }
 
  /*
-  * Keep the raw bulk-IN reader running while control requests stop and
-  * reconfigure the device. It remains the sole owner of endpoint 0x81.
+  * STOP drains endpoint 0x81 synchronously, so briefly quiesce the reader
+  * only for this explicit connector switch (not for STREAMON/OFF or close).
   */
+ gchd_rx_stop_locked(d);
  if (READ_ONCE(d->hw_initialized)) {
   r = gchd_stream_stop(d);
   if (r) {
    dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\n", r);
    WRITE_ONCE(d->streaming, false);
+   gchd_rx_start_locked(d);
    mutex_unlock(&d->lifecycle_lock);
    return r;
   }
@@ -623,6 +648,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
    dev_err(&d->intf->dev,
            "input switch: transition to IDLE failed: %d\n", r);
    WRITE_ONCE(d->streaming, false);
+   gchd_rx_start_locked(d);
    mutex_unlock(&d->lifecycle_lock);
    return r;
   }
@@ -654,14 +680,16 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   * untouched until capture is requested.
   */
  if (!READ_ONCE(d->hw_initialized)) {
+  gchd_rx_start_locked(d);
   dev_info(&d->intf->dev,
-           "input selected: input=%u; detection deferred until STREAMON\\n", i);
+           "input selected: input=%u; detection deferred until hardware init\\n", i);
   mutex_unlock(&d->lifecycle_lock);
   return 0;
  }
 
  /* Detect/configure asynchronously so VIDIOC_S_INPUT stays non-blocking. */
  WRITE_ONCE(d->detect_requested, true);
+ gchd_rx_start_locked(d);
  schedule_delayed_work(&d->detect_work, 0);
  dev_info(&d->intf->dev,
           "input selected: input=%u; detection scheduled\\n", i);
