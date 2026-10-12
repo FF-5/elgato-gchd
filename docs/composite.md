@@ -68,3 +68,26 @@ The sequence below includes a working PAL-family, 288p-equivalent bring-up. The 
 | No-signal switch | `0x9C:51=EC` | Selector observed; complete sequence not documented. |
 
 Session-dependent handshake bytes at `0900:0014` and `0900:001C` must not be hard-coded.
+
+
+## Format-by-format comparison
+
+The [side-by-side analog format comparison](analog-format-comparison.md) aligns the composite and S-video sequences by stage.
+
+### 240p / 288p
+
+| Composite | S-video |
+|---|---|
+| NTSC-family 240p: working full bring-up reaches START. PAL-family 288p-equivalent: working sequence; frames received. | NTSC-family 240p: working full bring-up reaches START. PAL-family 288p-equivalent: working sequence; frames received. |
+
+### 480i / 576i
+
+| Composite | S-video |
+|---|---|
+| Complete sequence **NOT CAPTURED**. | Complete sequence **NOT CAPTURED**. |
+
+### 480p / 576p
+
+| Composite | S-video |
+|---|---|
+| Complete sequence **NOT CAPTURED**. | Complete sequence **NOT CAPTURED**. |
