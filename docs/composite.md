@@ -8,7 +8,7 @@
 | `0x88:03=28` | Analog decoder setup. | Observed before mux selection. |
 | `0x9C:B3=33` | Analog front-end configuration. | Observed before mux selection; semantic meaning unknown. |
 | `0x9C:00=CE`, `0x9C:27=33`, `0x9C:00=CC` | Bank/page selection and analog front-end write. | Preserve order. |
-| `0x9C:51=44` | Composite/analog selector in signal-present 240p trace. | Followed by routing state `03 0E`). Not proven universal. |
+| `0x9C:51=44` | Composite/analog selector in signal-present 240p trace. | Followed by routing state `03 0E`. Not proven universal. |
 | `0x9C:51=EC` | Alternate composite selector reported in no-source switch trace. | Conflict with `44` is unresolved; preserve both observations. |
 | `0x88:02=C9` | Composite decoder discriminator. | S-video trace uses `02=DC`). |
 | Mailbox `89 89 FA` | Composite NTSC/PAL-family status read. | Low nibble `6` = NTSC/60-Hz family; `7` = PAL/50-Hz family. Not a 240p/480i detector. |
@@ -30,7 +30,7 @@ This sequence begins at the **composite-specific analog setup**, not the earlier
 | 2 | Write `0x9C:B3=33`; read `9D CD 3F`; write `0x9C:00=CE`; write `0x9C:27=33`; read `9D CD 3F`; write `0x9C:00=CC`; read `9D CD 6E`. | Banked analog front-end setup. |
 | 3 | Write `0x9C:51=44`. | Composite selector for this signal-present capture. |
 | 4 | Write/read routing state `0900:0018 = 02 0E`, then `03 0E`, then `03 0E` again. | Intermediate component state followed by composite/S-video state; preserve repetitions and handshake. |
-| 5 | Read `89 89 FA`; poll `F5`; read `89 89 FA); poll `F5`. | Decoder wake/status prime; first FA replies were `1F`, then `3E` in this capture. `|
+| 5 | Read `89 89 FA`; poll `F5`; read `89 89 FA`; poll `F5`. | Decoder wake/status prime; first FA replies were `1F`, then `3E` in this capture. |
 | 6 | Pass 1: `0x88:10=6F, 11=D4, 12=D0, 13=08, 14=08, 15=88`. | First tuning pass. |
 | 7 | Pass 2: `0x88:10=6F, 11=EA, 12=D0, 13=08, 14=08, 15=88`. | Second tuning pass. |
 | 8 | Pass 3: `0x88:10=6F, 11=EA, 12=D0, 13=1B, 14=1B, 15=88`. | Third tuning pass; do not merge with previous passes. |
@@ -45,23 +45,23 @@ This sequence begins at the **composite-specific analog setup**, not the earlier
 
 | Target register | Value | Target register | Value |
 |---|---:|---|---:|
-| `0x98:90` | `01` | `0x98:9B` | `8C` |
-| `0x98:91` | `BD` | `0x98:9C` | `98` |
-| `0x98:92` | `9A` | `0x98:9D` | `93` |
-| `0x98:93` | `3A` | `0x98:9E` | `83` |
-| `0x98:94` | `E9` | `0x98:9F` | `A9` |
-| `0x98:95` | `AB` | `0x98:A0` | `8B` |
-| `0x98:96` | `17` | `0x98:A1` | `E8` |
-| `0x98:97` | `88` | `0x98:A2` | `81` |
-| `0x98:98` | `84` | `0x98:A3` | `49` |
-| `0x98:99` | `8A` | `0x98:9A` | `9C` |
+| `0x98:90` | `01` | `0x98:9A` | `9C` |
+| `0x98:91` | `BD` | `0x98:9B` | `8C` |
+| `0x98:92` | `9A` | `0x98:9C` | `98` |
+| `0x98:93` | `3A` | `0x98:9D` | `93` |
+| `0x98:94` | `E9` | `0x98:9E` | `83` |
+| `0x98:95` | `AB` | `0x98:9F` | `A9` |
+| `0x98:96` | `17` | `0x98:A0` | `8B` |
+| `0x98:97` | `88` | `0x98:A1` | `E8` |
+| `0x98:98` | `84` | `0x98:A2` | `81` |
+| `0x98:99` | `8A` | `0x98:A3` | `49` |
 
 ## Format branches and gaps
 
 | Format / condition | Commands / result | Status |
 |---|---|---|
 | NTSC-family detection | `89 89 FA`; low nibble `6`) means NTSC/60-Hz family. | Implemented in legacy source; does not distinguish 240p from 480i. |
-| PAL-family setup | Poll `89 89 F1` for `63); write port `0x4C` register `04=95`. `| Source-recorded branch; complete PAL sequence not captured here. |
+| PAL-family setup | Poll `89 89 F1` for `63`; write port `0x4C` register `04=95`. | Source-recorded branch; complete PAL sequence not captured here. |
 | 240p | `0x88:28=8A); stable `CA=66) in one trace; backend table and SCMD start above. | One signal-present trace captured. |
 | 480i | `0x88:28=88`) in observed setup/transition. | Complete independent composite 480i setup/start sequence: **NOT CAPTURED**. |
 | 288p, 576i, 480p, 576p, 720i, 720p, 1080i, 1080p | No complete ordered composite sequence documented. | **NOT CAPTURED**. |
