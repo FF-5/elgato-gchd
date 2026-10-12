@@ -1,6 +1,6 @@
 # Component input reference
 
-## Known commands
+## Common commands and configuration
 
 | Target / operation | Bytes written or expected read | Notes |
 |---:|---|---|---|
@@ -76,10 +76,47 @@
 
 The bytes `06 86`, `03 2F` and `B3 CC` also occur during earlier setup. The sequence ending with `51 ED` is accompanied by the routing-state change to `02 0E` and is the documented component-switch path.
 
-## Format coverage
+## Sequences
 
-Complete component sequences for 240p, 288p, 480i, 576i, 480p, 576p, 720i, 720p, 1080i and 1080p: **NOT CAPTURED**. Do not copy HDMI mode detection or composite decoder values without evidence.
+### 240p / 288p
 
-## Relation to the idle/keep-alive loop
 
-The repeating `AB 4C` / `9D CD 6A` / `99 89 F5` / `9D CD 94` loop (documented in [hardware.md](hardware.md)) is the state the device is in immediately before the component prefix begins. The loop is interrupted by the first prefix write (`06 86`). Whether an analogous loop exists when the device is already configured for component is unknown.
+#### NTSC-family / 60 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | Complete NTSC-family 240p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+#### PAL-family / 50 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | Complete PAL-family 288p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+### 480i / 576i
+
+#### NTSC-family / 60 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | NTSC-family 480i sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+#### PAL-family / 50 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | PAL-family 576i sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+### 480p / 576p
+
+#### NTSC-family / 60 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | NTSC-family 480p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+#### PAL-family / 50 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | PAL-family 576p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
