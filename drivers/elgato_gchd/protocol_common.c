@@ -348,14 +348,14 @@ int gchd_common_block_b2(struct gchd *d)
 		mask=status & 0x10;
 		GCHD_MW(d, GCHD_MAIL_PORT_VIDEO, 0x0e, (uint8_t) (mask | 0x65));
 		GCHD_MW(d, GCHD_MAIL_PORT_VIDEO, 0x0e, (uint8_t) (mask | 0x64));
-		GCHD_MW(d, GCHD_MAIL_PORT_VIDEO, 0x0d, 0xc8);
+		GCHD_MW(d, GCHD_MAIL_PORT_VIDEO, GCHD_BACKEND_REG_RETRIGGER, GCHD_BACKEND_RETRIGGER_VALUE);
 	}
 
 	GCHD_MR1(d, 0x33, status);
 	mask=value & 0x10;
 	GCHD_MW(d, GCHD_MAIL_PORT_VIDEO, 0x0e, (uint8_t) (mask | 0x65));
 	GCHD_MW(d, GCHD_MAIL_PORT_VIDEO, 0x0e, (uint8_t) (mask | 0x64));
-	GCHD_MW(d, GCHD_MAIL_PORT_VIDEO, 0x0d, 0xc8); //This comes before
+	GCHD_MW(d, GCHD_MAIL_PORT_VIDEO, GCHD_BACKEND_REG_RETRIGGER, GCHD_BACKEND_RETRIGGER_VALUE); //This comes before
 	//previous 2 statements
 	//in some captures.
 
