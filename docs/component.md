@@ -4,7 +4,7 @@
 
 | Order | Target / bytes | Description | Confirmation / status |
 |---:|---|---|---|
-| 1 | `0x88:06=86` | Digital/component-side prefix | **Observed** (`filtered_init_switch_to_component.pcapng`) |
+| 1 | `0x88:06=86` | Digital/component-side prefix | **Observed** |
 | 2 | `89 89 F8` (read helper) | Read before `0x88:03` | **Observed** |
 | 3 | `0x88:03=2F` | Digital/component-side prefix | **Observed** |
 | 4 | `0x9C:B3=CC` | Digital/component-side prefix | **Observed** |
@@ -16,8 +16,7 @@
 
 ## Ordered component selection (HD-New)
 
-**Evidence:** `filtered_init_switch_to_component.pcapng`  
-Init started configured for HDMI (no signal), then the host switched to component. Capture stops at the selector.
+**Observed sequence:** initialization starts configured for HDMI (no signal), then switches to component. The sequence ends at the selector.
 
 1. Run common device initialization in [hardware.md](hardware.md) (firmware loads, IDLE, INIT, etc.).
 2. (In this trace) HDMI path and front-end were already programmed and the device was sitting in the idle/keep-alive loop described in [hardware.md](hardware.md).
@@ -75,7 +74,7 @@ Init started configured for HDMI (no signal), then the host switched to componen
 
 ## Notes on earlier occurrences of the same prefix bytes
 
-The bytes `06 86`, `03 2F` and `B3 CC` also appear once earlier in the same trace (during the initial HDMI-oriented setup, long before the final switch). The late sequence that ends with `51 ED` is the one that is accompanied by the state-word change to `02 0E` and is therefore the authoritative component-switch path for this capture.
+The bytes `06 86`, `03 2F` and `B3 CC` also occur during earlier setup. The sequence ending with `51 ED` is accompanied by the routing-state change to `02 0E` and is the documented component-switch path.
 
 ## Format coverage
 
