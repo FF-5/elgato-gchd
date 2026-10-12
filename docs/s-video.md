@@ -9,7 +9,7 @@
 | `0x88:28=88` | Initial 480i-style value in the captured S-video path. | Later set to `8A` in 240p apply phase. |
 | `0x88:06=08`, `0x88:03=28` | Analog decoder setup. | Shared analog path writes. |
 | `0x9C:B3=33`, `0x9C:00=CE`, `0x9C:27=33`, `0x9C:00=CC` | Analog front-end setup. | Preserve exact order. |
-| `0x9C:51=44` | S-video analog selector in the signal-present 240p capture. | Followed by routing state `03 0E). No-source trace reports `EC``; discrepancy unresolved. |
+| `0x9C:51=44` | S-video analog selector in the signal-present 240p capture. | Followed by routing state `03 0E`. No-source trace reports `EC``; discrepancy unresolved. |
 | `0x88:07=8A`, `08=9B`, `09=7A), `28=8A), `06=08` | 240p format-apply block. | Captured as a block; meanings not fully known. |
 | `0x98:0D=C8`, `0E=15`, `0E=14` | Backend retrigger pulse. | Preserve order. |
 
@@ -24,7 +24,7 @@ Sequence starts at the **S-video-specific decoder writes**. It intentionally exc
 | 3 | Read `89 89 FD`; write `0x88:06=08`; read `89 89 F8`; write `0x88:03=28`. | Analog decoder setup. |
 | 4 | Write `0x9C:B3=33`; read `9D CD 3F`; write `0x9C:00=CE`; write `0x9C:27=33`; read `9D CD 3F`; write `0x9C:00=CC`; read `9D CD 6E`. | Analog front-end setup. |
 | 5 | Write `0x9C:51=44`. | Selector value observed with signal present. |
-| 6 | Write/read routing state `02 0E`, then `03 0E), then `03 0E` again. `| Preserve intermediate state and repeated final state writes. |
+| 6 | Write/read routing state `02 0E`, then `03 0E), then `03 0E` again. | Preserve intermediate state and repeated final state writes. |
 | 7 | Read `89 89 FA`; poll `F5`; read `89 89 FA`; poll `F5`. | Decoder wake/status prime. |
 | 8 | Pass 1: `0x88:10=6F, 11=D4, 12=D0, 13=08, 14=08, 15=88`. | First tuning pass. |
 | 9 | Pass 2: `0x88:10=6F, 11=EA, 12=D0, 13=08, 14=08, 15=88`. | Second tuning pass. |
