@@ -14,7 +14,7 @@
 | 8 | `0x9C:51=ED` (mailbox `51 ED`) | Component selector | **Observed** \u2013 trace ends at this write |
 | Component-specific tail | `24 0C`, `21 CD`, `91 C8`, `0E 8C`, `11 EC`, `54 FC`, `71 4C`, `04 CC` | Full transaction context **NOT CAPTURED**. |
 
-## Ordered component selection (HD-New)
+### Ordered component selection (HD-New)
 
 **Observed sequence:** initialization starts configured for HDMI (no signal), then switches to component. The sequence ends at the selector.
 
@@ -72,7 +72,7 @@
 7. Component-specific tail, signal detection, per-format decoder configuration, final transcoder setup, and lock criteria: **NOT CAPTURED**.
 8. Shared SCMD / capture-start sequence (see [hardware.md](hardware.md)) only after the above is validated with a real signal.
 
-## Notes on earlier occurrences of the same prefix bytes
+### Notes on earlier occurrences of the same prefix bytes
 
 The bytes `06 86`, `03 2F` and `B3 CC` also occur during earlier setup. The sequence ending with `51 ED` is accompanied by the routing-state change to `02 0E` and is the documented component-switch path.
 
