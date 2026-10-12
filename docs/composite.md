@@ -10,14 +10,14 @@
 | `0x9C:00=CE`, `0x9C:27=33`, `0x9C:00=CC` | Bank/page selection and analog front-end write. | Preserve order. |
 | `0x9C:51=44` | Composite/analog selector in signal-present 240p trace. | Followed by routing state `03 0E`. Not proven universal. |
 | `0x9C:51=EC` | Alternate composite selector reported in no-source switch trace. | Conflict with `44` is unresolved; preserve both observations. |
-| `0x88:02=C9` | Composite decoder discriminator. | S-video trace uses `02=DC`). |
+| `0x88:02=C9` | Composite decoder discriminator. | S-video trace uses `02=DC`. |
 | Mailbox `89 89 FA` | Composite NTSC/PAL-family status read. | Low nibble `6` = NTSC/60-Hz family; `7` = PAL/50-Hz family. Not a 240p/480i detector. |
 | Mailbox `89 89 FD` | Poll used in composite NTSC setup. | Source notes expected `6E` in this path. |
 | Mailbox `89 89 F1` | Poll used in PAL branch. | Source notes expected `63`. |
 | `0x88:07=8A`, `08=9B`, `09=7A`, `28=88` | Base decoder setup observed in NTSC-family setup. | Trace-dependent; exact semantic meanings unknown. |
 | `0x88:28=8A` | Value correlated with 240p in one transition trace. | Format correlation only; not universal. |
 | `0x88:10=6F, 11=D4/EA, 12=D0, 13=08/1B, 14=08/1B, 15=88` | Three ordered decoder tuning passes. | Values/pass order below. |
-| `0x98:0D=C8`, `0E=15`, `0E=14` | Backend retrigger pulse. | Preserve exact order; pulse semantics inferred. |
+| `0x98:0D=C8`, `0x98:0E=15`, `0x98:0E=14` | Backend retrigger pulse. | Preserve exact order; pulse semantics inferred. |
 | `0x98:04=95`, `0x98:70=D0`, `0x98:0F=88`, `0x98:61=98`, `0x98:62=91`, `0x98:63=89`, `0x98:64=96`, `0x98:65=88`, `0x98:72=88`, `0x98:C0=88` | Backend configuration observed after lock. | Individual field meanings not fully known. |
 
 ## Ordered composite 240p configuration (signal present)
@@ -35,10 +35,10 @@ This sequence begins at the **composite-specific analog setup**, not the earlier
 | 7 | Pass 2: `0x88:10=6F, 11=EA, 12=D0, 13=08, 14=08, 15=88`. | Second tuning pass. |
 | 8 | Pass 3: `0x88:10=6F, 11=EA, 12=D0, 13=1B, 14=1B, 15=88`. | Third tuning pass; do not merge with previous passes. |
 | 9 | Auxiliary device commands `94 41 37`, `94 4A B7`, `94 4B B7`, each committed with `09 00 66 03` + `HS`, no read-fetch stage. | Exact auxiliary bytes in this capture. Other traces used `4A BB` / `4B BB`; values vary by trace. |
-| 10 | Loop reads: `89 89 FA`, `89 89 CA`, `89 89 E7`; poll `F5`; reads `99 89 FD`, `99 89 FC`, `99 89 F3`; repeat retrigger cycle `0x98:0D=C8`, `0E=15`, `0E=14` while status is unstable. | In captured lock sequence, `CA` changes from `E6` to `66`. |
+| 10 | Loop reads: `89 89 FA`, `89 89 CA`, `89 89 E7`; poll `F5`; reads `99 89 FD`, `99 89 FC`, `99 89 F3`; repeat retrigger cycle `0x98:0D=C8`, `0x98:0E=15`, `0x98:0E=14` while status is unstable. | In captured lock sequence, `CA` changes from `E6` to `66`. |
 | 11 | Verify lock reads `CA=66`, `E7=69`, `F1=7E`, `CB=6E`. | These were observed as the stable 240p-associated values in this capture; validate on repeated traces. |
-| 12 | Program backend: `0x98:04=95`, `0x98:70=D0`, `0x98:0F=88`; write coefficient table `90–A3` (see below); then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91`. | Backend configuration order from the observed trace. |
-| 13 | Retrigger/apply: `0x98:0D=C8`, `0E=05`, `0E=04`; perform status/readback loop and wait for settle (~0.4 s in this trace). | Do not treat USB completion alone as successful apply. |
+| 12 | Program backend: `0x98:04=95`, `0x98:70=D0`, `0x98:0F=88`; write coefficient table `90–A3` (see below); then `0x98:72=88`, `0x98:C0=88`, `0x98:61=98`, `0x98:63=89`, `0x98:64=96`, `0x98:65=88`, `0x98:04=8D`, `0x98:62=91`. | Backend configuration order from the observed trace. |
+| 13 | Retrigger/apply: `0x98:0D=C8`, `0x98:0E=05`, `0x98:0E=04`; perform status/readback loop and wait for settle (~0.4 s in this trace). | Do not treat USB completion alone as successful apply. |
 | 14 | Configure SoC pipeline and queue bulk IN URBs on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`. | Confirm state/completion and actual bulk video payload. Shared SCMD semantics in [hardware.md](hardware.md). |
 
 ### Backend coefficient table
