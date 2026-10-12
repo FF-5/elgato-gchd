@@ -923,7 +923,8 @@ int gchd_input_detect_signal(struct gchd *d)
   value6665 = sum6665 / count6665;
   value6463 = sum6463 / count6463;
   dev_info(&d->intf->dev,
-           "gchd-diag detect HDMI: samples6665=%u avg6665=0x%04x samples6463=%u avg6463=0x%04x rgb=%u\n",
+           "gchd-diag detect HDMI: samples6665=%u avg6665=0x%04x samples6463=%u avg6463=0x%04x rgb=%u
+",
            count6665, value6665, count6463, value6463, d->rgb_input);
   if (!gchd_hdmi_timing_valid(value6463) ||
       abs((int)value6665 - 0xad4d) < 10)
@@ -957,7 +958,8 @@ int gchd_input_detect_signal(struct gchd *d)
   r = gchd_mail_read(d,GCHD_MAIL_PORT_SYSTEM,&lo,1); if(r)return r;
   value6867|=lo;
   dev_info(&d->intf->dev,
-           "gchd-diag detect component: raw6665=0x%04x raw6867=0x%04x\n",
+           "gchd-diag detect component: raw6665=0x%04x raw6867=0x%04x
+",
            (u16)sum6665, (u16)value6867);
   if (!gchd_component_timing_valid(value6867) ||
       abs((int)sum6665-0xad4d)<10)
@@ -998,7 +1000,8 @@ int gchd_input_detect_signal(struct gchd *d)
   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
   if (r) return r;
   dev_info(&d->intf->dev,
-           "gchd-diag detect composite: raw_status=0x%02x masked_mode=0x%01x\n",
+           "gchd-diag detect composite: raw_status=0x%02x masked_mode=0x%01x
+",
            v, v & 0x0f);
   v &= 0x0f;
   if (v == 6) {
@@ -1019,10 +1022,12 @@ int gchd_input_detect_signal(struct gchd *d)
     */
    if (mode != GCHD_REPLY_STATUS_SVIDEO && mode != GCHD_REPLY_STATUS_COMPOSITE)
     dev_dbg(&d->intf->dev,
-            "analog format status not locked yet: 0x%02x; starting in 480i\n",
+            "analog format status not locked yet: 0x%02x; starting in 480i
+",
             mode);
    dev_info(&d->intf->dev,
-            "analog format initial status=0x%02x; starting in 480i\n",
+            "analog format initial status=0x%02x; starting in 480i
+",
             mode);
    d->input_interlaced = true;
   } else if (v == 7) {
@@ -1033,7 +1038,8 @@ int gchd_input_detect_signal(struct gchd *d)
  }
  WRITE_ONCE(d->signal_present,true);
  dev_info(&d->intf->dev,
-          "gchd-diag detected input=%u mode=%ux%u fps=%u/%u interlaced=%u signal_present=%u\n",
+          "gchd-diag detected input=%u mode=%ux%u fps=%u/%u interlaced=%u signal_present=%u
+",
           d->input, d->input_width, d->input_height, d->input_fps_num,
           d->input_fps_den, d->input_interlaced, d->signal_present);
  return 0;
@@ -1421,7 +1427,15 @@ static int gchd_configure_component_exact(struct gchd *d)
  MW(0x00,0xce); MW(0x1b,0x33); R9(GCHD_VALUE_3F); MW(0x00,0xcc); R9(GCHD_VALUE_88);
  MW(0xb7,0xce); MW(0xb8,0xdc); MW(0xb8,0xcc); R9(GCHD_VALUE_3F);
  MW(0x00,0xce); MW(0x07,0x38); MW(0x07,0xc8); R9(GCHD_VALUE_3F);
- MW(0x00,0xcc);\n {\n  static const struct gchd_mail_cmd select_component[] = {\n   GCHD_INPUT_SELECT_COMPONENT,\n  };\n  r = gchd_seq(d, select_component, ARRAY_SIZE(select_component));\n  if (r) return r;\n }\n R9(GCHD_VALUE_88); MW(0xb7,0xce);
+ MW(0x00,0xcc);
+ {
+  static const struct gchd_mail_cmd select_component[] = {
+   GCHD_INPUT_SELECT_COMPONENT,
+  };
+  r = gchd_seq(d, select_component, ARRAY_SIZE(select_component));
+  if (r) return r;
+ }
+ R9(GCHD_VALUE_88); MW(0xb7,0xce);
  r=gchd_do_enable(d,0,0); if(r)return r;
  MW(0x24,0x0c); MW(0x21,0xcd); MW(0x91,0xc8); MW(0x0e,0x8c);
  MW(0x11,0xec); MW(0x71,0x4c); MW(0x04,0xcc);
@@ -1599,18 +1613,21 @@ static int gchd_input_configure_mode(struct gchd *d)
   return 0;
 
  dev_info(&d->intf->dev,
-          "capture setup: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
+          "capture setup: input=%u mode=%ux%u fps=%u/%u interlaced=%u
+",
           d->input, d->input_width, d->input_height, d->input_fps_num,
           d->input_fps_den, d->input_interlaced);
 
  if (!d->encoder_started) {
   r = gchd_encoder_start(d);
   if (r) {
-   dev_err(&d->intf->dev, "capture setup: encoder start failed: %d\n", r);
+   dev_err(&d->intf->dev, "capture setup: encoder start failed: %d
+", r);
    return r;
   }
   d->encoder_started = true;
-  dev_info(&d->intf->dev, "capture setup: encoder start completed\n");
+  dev_info(&d->intf->dev, "capture setup: encoder start completed
+");
  }
 
  if (d->input == 0)
@@ -1632,25 +1649,31 @@ static int gchd_input_configure_mode(struct gchd *d)
    */
   gchd_state_cmd(d, SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   d->input_prepared = false;
-  dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\n", r);
+  dev_err(&d->intf->dev, "capture setup: input configuration failed: %d
+", r);
   return r;
  }
- dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
+ dev_info(&d->intf->dev, "capture setup: input configuration completed
+");
 
  /* Match the userspace tail common to HDMI, Component and Composite. */
  r = gchd_transcoder_final_configure(d);
  if (r) {
-  dev_err(&d->intf->dev, "capture setup: transcoder final configuration failed: %d\n", r);
+  dev_err(&d->intf->dev, "capture setup: transcoder final configuration failed: %d
+", r);
   return r;
  }
- dev_info(&d->intf->dev, "capture setup: transcoder final configuration completed\n");
+ dev_info(&d->intf->dev, "capture setup: transcoder final configuration completed
+");
 
  r = gchd_transcoder_setup(d);
  if (r) {
-  dev_err(&d->intf->dev, "capture setup: transcoder setup failed: %d\n", r);
+  dev_err(&d->intf->dev, "capture setup: transcoder setup failed: %d
+", r);
   return r;
  }
- dev_info(&d->intf->dev, "capture setup: transcoder setup completed\n");
+ dev_info(&d->intf->dev, "capture setup: transcoder setup completed
+");
 
  /*
   * The userspace connector-specific configure routines all finish with:
@@ -1662,7 +1685,8 @@ static int gchd_input_configure_mode(struct gchd *d)
   */
  r = gchd_scmd(d, SCMD_INIT, GCHD_SCMD_MODE_HDNEW, 0);
  if (r) {
-  dev_err(&d->intf->dev, "capture setup: final SCMD_INIT failed: %d\n", r);
+  dev_err(&d->intf->dev, "capture setup: final SCMD_INIT failed: %d
+", r);
   return r;
  }
 
@@ -1697,21 +1721,25 @@ int gchd_input_start(struct gchd *d)
   */
  if (!d->signal_present) {
   dev_info(&d->intf->dev,
-           "gchd-diag refusing START: no signal; input=%u mode=%ux%u interlaced=%u\n",
+           "gchd-diag refusing START: no signal; input=%u mode=%ux%u interlaced=%u
+",
            d->input, d->input_width, d->input_height, d->input_interlaced);
   return -ENOLINK;
  }
 
  dev_info(&d->intf->dev,
-          "gchd-diag issuing START: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
+          "gchd-diag issuing START: input=%u mode=%ux%u fps=%u/%u interlaced=%u
+",
           d->input, d->input_width, d->input_height, d->input_fps_num,
           d->input_fps_den, d->input_interlaced);
  r = gchd_state_cmd(d, SCMD_STATE_CHANGE, 0, GCHD_STATE_START, GCHD_STATE_START);
  if (r) {
-  dev_err(&d->intf->dev, "capture start transition failed: %d\n", r);
+  dev_err(&d->intf->dev, "capture start transition failed: %d
+", r);
   return r;
  }
- dev_info(&d->intf->dev, "gchd-diag START transition completed\n");
+ dev_info(&d->intf->dev, "gchd-diag START transition completed
+");
  return 0;
 }
 
