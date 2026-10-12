@@ -1,17 +1,13 @@
-# GCHD command-sequence reference
+# GCHD protocol reference
 
-**Start here:** [Sequence matrix](sequence-matrix.md). This is an implementation-checking reference: ordered command tables, expected responses, and trace links.
+This directory has one reference per hardware path. Each reference records command bytes, known meanings, ordered configuration, expected confirmation, and stream start.
 
-- [Hardware init](hardware-init.md)
+- [Hardware](hardware.md) — USB command primitives, shared setup/start sequence, acknowledgements.
 - [HDMI](hdmi.md)
 - [Component](component.md)
 - [Composite](composite.md)
 - [S-video](s-video.md)
-- [Capture engine](capture-engine.md)
-- [Composite 240p sequence](composite-240p-sequence.md)
-- [S-video 240p sequence](s-video-240p-sequence.md)
-- [Legacy byte-level reference](../COMMAND_REFERENCE.md)
 
-Raw traces: [Composite 240p](../drivers/elgato_gchd/gchd_composite_240p_full_bringup.txt) · [S-video 240p](../drivers/elgato_gchd/gchd_svideo_240p_full_bringup.txt).
+**Evidence rule:** values from a trace are not automatically universal constants. Session-dependent values are labeled. Unsupported input/format combinations are `NOT CAPTURED`.
 
-Every completed sequence must table the exact ordered commands, USB transfer/payload, expected reply/state, and evidence. `NOT CAPTURED` means no defensible sequence exists yet; never fill gaps with guesses.
+Raw packet-level traces remain under `drivers/elgato_gchd/`; input documents link to their relevant traces. The legacy [COMMAND_REFERENCE.md](../COMMAND_REFERENCE.md) remains available for older command notes.
