@@ -1,0 +1,439 @@
+GCHD Elgato Game Capture HD - full bring-up: HDMI select -> S-VIDEO select -> lock (240p) -> capture start
+trace: filtered_240p_svideo.pcapng. Slice starts at the 51=45 write (t=0). Steps run through SCMD 05 00 00 02 (t=6.910 s).
+Phase names are my interpretation. "[identical]" = same bytes/order as gchd_composite_240p_full_bringup.txt.
+
+SESSION CONSTANTS DIFFER IN THIS CAPTURE (all handshakes still complete normally):
+    OUT 0900:0014 data      : 03 1E   (all other captures: D3 9E)       -> read back from 0900:0014 echoes it
+    IN  0900:001C           : 6E EB before the state-word triple, 6F EF after   (others: 2E 6B / 2F 6F)
+    IN  99 89 8B (read)     : 6E   (composite capture: 2E)
+    IN  0900:01B0 after start: 00 10  (composite capture: 01 50)
+  Treat the 0014 value and the 001C readings as per-session/per-device values, not protocol constants.
+
+PRIMITIVES: same as in the composite file (W[ADDR], READ, CMD, HS, HSR, STATE18, SOC, SCMD). HS here =
+     INT IN EP 0x83 -> 10 00 00 ; IN 0800:0016 -> 09 00 ; IN 0900:001C -> (6E EB | 6F EF) ; IN 0800:23BE len 2 -> 00 00 ;
+     OUT 0900:0014 = 03 1E ; IN 0900:001C again.   No retries occur anywhere in this capture.
+NOTE: bulk URB submissions (36 on EP 0x81 + 8 on EP 0x84 in the composite capture, queued during the SoC burst) are NOT in this
+     slice; only post-start completions/resubmits appear (65536-byte transfers from t=7.40 s).
+
+
+=== P1  SELECT HDMI INPUT (input mux commit)   [identical to composite trace] ===
+  1 t= 0.0000  W[9c] 51=45   <-- INPUT SELECT (45=HDMI, 44 here for S-video)
+  2 t= 0.0030  READ 9d cd 88 -> b0
+  3 t= 0.0080  W[9c] b7=cc
+      -- WAIT 322 ms (no traffic) --
+
+=== P3  SET ROUTING STATE WORD for HDMI   [identical] ===
+  4 t= 0.3300  STATE18 0900:0018 <= 02 0a   <-- routing state word
+
+=== P4  HDMI FRONT-END REGISTER PAGES   [identical] ===
+  5 t= 0.3310  READ 9d cd 3f -> b2
+  6 t= 0.3350  W[9c] 00=ce   <-- bank: page CE
+  7 t= 0.3370  READ 9d cd 3e -> d3
+  8 t= 0.3420  W[9c] 01=ad
+  9 t= 0.3440  READ 9d cd 3b -> b3
+ 10 t= 0.3490  W[9c] 04=cd
+ 11 t= 0.3510  W[9c] 06=c4
+ 12 t= 0.3540  READ 9d cd 36 -> ba
+ 13 t= 0.3590  W[9c] 09=e4
+ 14 t= 0.3610  READ 9d cd 3f -> b0
+ 15 t= 0.3660  W[9c] 00=cc   <-- bank: default page CC
+ 16 t= 0.3680  READ 9d cd 6b -> 82
+ 17 t= 0.3730  W[9c] 54=ec
+ 18 t= 0.3750  READ 9d cd 93 -> b2
+ 19 t= 0.3800  W[9c] ac=4c
+ 20 t= 0.3820  READ 9d cd 3f -> b2
+ 21 t= 0.3880  W[9c] 00=4c   <-- bank: page 4C
+ 22 t= 0.3900  READ 9d cd 3f -> 32
+ 23 t= 0.3950  W[9c] 00=cc   <-- bank: default page CC
+ 24 t= 0.3970  READ 9d cd f1 -> b2
+ 25 t= 0.4020  W[9c] ce=4c
+ 26 t= 0.4040  READ 9d cd f0 -> b2
+ 27 t= 0.4090  W[9c] cf=ce
+ 28 t= 0.4110  READ 9d cd 3f -> b2
+ 29 t= 0.4160  W[9c] 00=cc   <-- bank: default page CC
+
+=== P5  HDMI PARAMETER TABLE LOAD   [identical] ===
+ 30 t= 0.4880  READ 9d cd 6a -> b1
+ 31 t= 0.4920  W[9c] b0=e8   <-- open table window
+ 32 t= 0.4940  W[9c] b1=0c
+ 33 t= 0.4970  W[9c] 92=8c
+ 34 t= 0.5000  W[9c] 93=cb
+ 35 t= 0.5030  W[9c] 94=ca
+ 36 t= 0.5060  W[9c] 95=c8
+ 37 t= 0.5090  W[9c] 96=d1
+ 38 t= 0.5120  W[9c] 97=b1
+ 39 t= 0.5150  W[9c] 98=6e
+ 40 t= 0.5180  W[9c] 99=b6
+ 41 t= 0.5210  W[9c] 9a=d1
+ 42 t= 0.5250  W[9c] 9b=c4
+ 43 t= 0.5280  W[9c] 9c=dc
+ 44 t= 0.5310  W[9c] 9d=b7
+ 45 t= 0.5350  W[9c] 9e=94
+ 46 t= 0.5370  W[9c] 9f=b2
+ 47 t= 0.5410  W[9c] a0=11
+ 48 t= 0.5430  W[9c] a1=cd
+ 49 t= 0.5460  W[9c] a2=5d
+ 50 t= 0.5490  W[9c] a3=cb
+ 51 t= 0.5520  W[9c] a4=ca
+ 52 t= 0.5550  W[9c] a5=ec
+ 53 t= 0.5580  W[9c] a6=cc
+ 54 t= 0.5620  W[9c] a7=c8
+ 55 t= 0.5640  W[9c] a8=cc
+ 56 t= 0.5670  W[9c] a9=ec
+ 57 t= 0.5700  W[9c] aa=cc
+ 58 t= 0.5730  W[9c] ad=c9
+ 59 t= 0.5760  READ 9d cd 8f -> 96
+ 60 t= 0.5810  W[9c] b0=e9   <-- close/commit table window
+
+=== P6  HDMI IDLE / KEEP-ALIVE LOOP (no source)   [+ 0x94 aux commands at 0.930 - not in composite trace] ===
+ 61 t= 0.5840  POLL F5 x1 {'62': 1}
+      -- WAIT 346 ms (no traffic) --
+ 62 t= 0.9301  CMD 94 41 37   (09 00 66 03 + HS, no 09 01 66 01 fetch)
+ 63 t= 0.9321  CMD 94 4a bb   (09 00 66 03 + HS, no 09 01 66 01 fetch)
+ 64 t= 0.9351  CMD 94 4b bb   (09 00 66 03 + HS, no 09 01 66 01 fetch)
+ 65 t= 0.9381  READ 9d cd 94 -> 32
+ 66 t= 0.9431  W[9c] ab=4c
+ 67 t= 0.9951  READ 9d cd 6a -> b1
+ 68 t= 0.9991  POLL F5 x1 {'62': 1}
+ 69 t= 1.0301  READ 9d cd 94 -> 32
+ 70 t= 1.0341  W[9c] ab=4c
+ 71 t= 1.0861  READ 9d cd 6a -> b1
+ 72 t= 1.0901  POLL F5 x1 {'62': 1}
+ 73 t= 1.0941  OUT 0900:0000 = 00 00   (housekeeping tick)
+ 74 t= 1.0941  IN  0900:0014 -> 03 1E
+ 75 t= 1.0941  IN  0800:2008 -> 00 01   (device-ready status)
+ 76 t= 1.1301  READ 9d cd 94 -> 32
+ 77 t= 1.1341  W[9c] ab=4c
+ 78 t= 1.1861  READ 9d cd 6a -> b1
+ 79 t= 1.1901  POLL F5 x1 {'62': 1}
+ 80 t= 1.2301  READ 9d cd 94 -> 32
+ 81 t= 1.2341  W[9c] ab=4c
+ 82 t= 1.2861  READ 9d cd 6a -> b1
+ 83 t= 1.2901  POLL F5 x1 {'62': 1}
+ 84 t= 1.3301  READ 9d cd 94 -> 32
+ 85 t= 1.3351  W[9c] ab=4c
+ 86 t= 1.3871  READ 9d cd 6a -> b1
+ 87 t= 1.3911  POLL F5 x1 {'62': 1}
+ 88 t= 1.4301  READ 9d cd 94 -> 32
+ 89 t= 1.4351  W[9c] ab=4c
+ 90 t= 1.4871  READ 9d cd 6a -> b1
+ 91 t= 1.4911  POLL F5 x1 {'62': 1}
+ 92 t= 1.5301  READ 9d cd 94 -> 32
+ 93 t= 1.5341  W[9c] ab=4c
+ 94 t= 1.5861  READ 9d cd 6a -> b1
+ 95 t= 1.5901  POLL F5 x1 {'62': 1}
+ 96 t= 1.5951  OUT 0900:0000 = 00 00   (housekeeping tick)
+ 97 t= 1.5951  IN  0900:0014 -> 03 1E
+ 98 t= 1.5951  IN  0800:2008 -> 00 01   (device-ready status)
+ 99 t= 1.6301  READ 9d cd 94 -> 32
+100 t= 1.6341  W[9c] ab=4c
+101 t= 1.6861  READ 9d cd 6a -> b1
+102 t= 1.6901  POLL F5 x1 {'62': 1}
+103 t= 1.7301  READ 9d cd 94 -> 32
+104 t= 1.7341  W[9c] ab=4c
+105 t= 1.7861  READ 9d cd 6a -> b1
+106 t= 1.7901  POLL F5 x1 {'62': 1}
+107 t= 1.8301  READ 9d cd 94 -> 32
+108 t= 1.8421  W[9c] ab=4c
+109 t= 1.9331  READ 9d cd 6a -> b1
+110 t= 1.9371  POLL F5 x1 {'62': 1}
+      -- WAIT 293 ms (no traffic) --
+111 t= 2.2301  READ 9d cd 94 -> 32
+112 t= 2.2351  W[9c] ab=4c
+113 t= 2.2871  READ 9d cd 6a -> b1
+114 t= 2.2911  POLL F5 x1 {'62': 1}
+      -- WAIT 489 ms (no traffic) --
+115 t= 2.7802  READ 9d cd 94 -> 32
+116 t= 2.7842  W[9c] ab=4c
+117 t= 2.8372  READ 9d cd 6a -> b1
+118 t= 2.8412  POLL F5 x1 {'62': 1}
+119 t= 2.8452  OUT 0900:0000 = 00 00   (housekeeping tick)
+120 t= 2.8452  IN  0900:0014 -> 03 1E
+121 t= 2.8452  IN  0800:2008 -> 00 01   (device-ready status)
+      -- WAIT 485 ms (no traffic) --
+122 t= 3.3302  READ 9d cd 94 -> 32
+123 t= 3.3342  W[9c] ab=4c
+124 t= 3.3862  READ 9d cd 6a -> b1
+125 t= 3.3902  POLL F5 x1 {'62': 1}
+      -- WAIT 490 ms (no traffic) --
+126 t= 3.8802  READ 9d cd 94 -> 32
+127 t= 3.8852  W[9c] ab=4c
+128 t= 3.9372  READ 9d cd 6a -> b1
+129 t= 3.9412  POLL F5 x1 {'62': 1}
+      -- WAIT 530 ms (no traffic) --
+
+=== P7a S-VIDEO Y/C PATH SELECT   [NEW vs composite] ===
+130 t= 4.4713  W[88] 02=dc   <-- S-VIDEO input (composite uses 02=C9)
+131 t= 4.4743  W[88] 14=d2   <-- S-video path param (also seen in s-video/composite swaps)
+      -- WAIT 206 ms (no traffic) --
+132 t= 4.6803  READ 89 89 fa -> ed
+133 t= 4.6843  W[88] 28=88   <-- 0x28 = 88 (480i-style value)
+
+=== P7b ANALOG-PATH SELECT (same steps as composite) ===
+134 t= 4.6863  READ 89 89 fd -> 60
+135 t= 4.6913  W[88] 06=08   <-- analog decoder mode
+136 t= 4.6933  READ 89 89 f8 -> c9
+137 t= 4.6983  W[88] 03=28   <-- analog decoder mode
+138 t= 4.7003  W[9c] b3=33   <-- analog-path front-end config
+139 t= 4.7033  READ 9d cd 3f -> b2
+140 t= 4.7083  W[9c] 00=ce   <-- bank: page CE
+141 t= 4.7103  W[9c] 27=33   <-- analog-path front-end config
+142 t= 4.7133  READ 9d cd 3f -> b0
+143 t= 4.7183  W[9c] 00=cc   <-- bank: default page CC
+144 t= 4.7203  READ 9d cd 6e -> 3b
+145 t= 4.7253  W[9c] 51=44   <-- INPUT SELECT (45=HDMI, 44 here for S-video)
+146 t= 4.7273  STATE18 0900:0018 <= 02 0e   <-- routing state word
+147 t= 4.7293  STATE18 0900:0018 <= 03 0e   <-- routing state word
+148 t= 4.7303  STATE18 0900:0018 <= 03 0e   <-- routing state word
+
+=== P8  ANALOG DECODER WAKE + STATUS PRIME ===
+149 t= 4.7313  READ 89 89 fa -> 2f
+150 t= 4.7353  POLL F5 x1 {'62': 1}
+151 t= 4.8813  READ 89 89 fa -> 2e
+152 t= 4.9863  POLL F5 x1 {'62': 1}
+
+=== P9  DECODER TIMING/GAIN TUNING (3 passes on 0x88) ===
+153 t= 5.0303  W[88] 10=6f
+154 t= 5.0323  W[88] 11=d4
+155 t= 5.0353  W[88] 12=d0
+156 t= 5.0383  W[88] 13=08
+157 t= 5.0413  W[88] 14=08
+158 t= 5.0443  W[88] 15=88
+159 t= 5.0983  W[88] 10=6f
+160 t= 5.1003  W[88] 11=ea
+161 t= 5.1033  W[88] 12=d0
+162 t= 5.1063  W[88] 13=08
+163 t= 5.1093  W[88] 14=08
+164 t= 5.1123  W[88] 15=88
+165 t= 5.1353  W[88] 10=6f
+166 t= 5.1373  W[88] 11=ea
+167 t= 5.1403  W[88] 12=d0
+168 t= 5.1433  W[88] 13=1b
+169 t= 5.1463  W[88] 14=1b
+170 t= 5.1493  W[88] 15=88
+
+=== P10 240p FORMAT-APPLY BLOCK   [NEW vs composite: written at initial lock] ===
+171 t= 5.2303  READ 89 89 fa -> 06
+172 t= 5.2353  READ 89 89 ca -> 66
+173 t= 5.2393  W[88] 07=8a   (240p apply block)
+174 t= 5.2413  W[88] 08=9b   (240p apply block)
+175 t= 5.2443  W[88] 09=7a   (240p apply block)
+176 t= 5.2473  W[88] 28=8a   <-- 0x28 = 8A (240p value)
+177 t= 5.2503  READ 89 89 fd -> 6e
+178 t= 5.2553  W[88] 06=08   <-- analog decoder mode
+      -- WAIT 425 ms (no traffic) --
+
+=== P11 LOCK WAIT (reads FA/CA/E7 until E7: E9 -> 69) + housekeeping tick ===
+179 t= 5.6803  READ 89 89 e7 -> e9
+180 t= 5.6843  POLL F5 x1 {'62': 1}
+181 t= 5.6893  OUT 0900:0000 = 00 00   (housekeeping tick)
+182 t= 5.6893  IN  0900:0014 -> 03 1E
+183 t= 5.6893  IN  0800:2008 -> 00 01   (device-ready status)
+184 t= 5.7303  READ 89 89 fa -> 06
+185 t= 5.7343  READ 89 89 ca -> e6
+186 t= 5.7383  READ 89 89 e7 -> e9
+187 t= 5.7423  POLL F5 x1 {'62': 1}
+188 t= 5.7803  READ 89 89 fa -> 16
+189 t= 5.7843  READ 89 89 ca -> 66
+190 t= 5.7883  READ 89 89 e7 -> e9
+191 t= 5.7923  POLL F5 x1 {'62': 1}
+192 t= 5.8303  READ 89 89 fa -> 06
+193 t= 5.8343  READ 89 89 ca -> 66
+194 t= 5.8383  READ 89 89 e7 -> e9
+195 t= 5.8423  POLL F5 x1 {'62': 1}
+196 t= 5.8803  READ 89 89 fa -> 16
+197 t= 5.8843  READ 89 89 ca -> 66
+198 t= 5.8883  READ 89 89 e7 -> 69
+199 t= 5.8923  READ 89 89 f1 -> 7e
+
+=== P12 BACK-END CONFIG FOR LOCKED VIDEO (0x98 coefficients + timing) ===
+200 t= 5.8963  W[98] 04=95
+201 t= 5.8983  READ 99 89 8b -> 6e
+202 t= 5.9033  W[98] 70=d0
+203 t= 5.9053  W[98] 0f=88
+204 t= 5.9083  W[98] 90=01
+205 t= 5.9113  W[98] 91=bd
+206 t= 5.9143  W[98] 92=9a
+207 t= 5.9173  W[98] 93=3a
+208 t= 5.9203  W[98] 94=e9
+209 t= 5.9233  W[98] 95=ab
+210 t= 5.9263  W[98] 96=17
+211 t= 5.9293  W[98] 97=88
+212 t= 5.9323  W[98] 98=84
+213 t= 5.9353  W[98] 99=8a
+214 t= 5.9383  W[98] 9a=9c
+215 t= 5.9413  W[98] 9b=8c
+216 t= 5.9443  W[98] 9c=98
+217 t= 5.9473  W[98] 9d=93
+218 t= 5.9503  W[98] 9e=83
+219 t= 5.9533  W[98] 9f=a9
+220 t= 5.9563  W[98] a0=8b
+221 t= 5.9593  W[98] a1=e8
+222 t= 5.9623  W[98] a2=81
+223 t= 5.9653  W[98] a3=49
+224 t= 5.9683  READ 99 89 89 -> 6e
+225 t= 5.9733  W[98] 72=88
+226 t= 5.9753  W[98] c0=88
+227 t= 5.9783  W[98] 61=98
+228 t= 5.9813  W[98] 63=89
+229 t= 5.9843  W[98] 64=96
+230 t= 5.9873  W[98] 65=88
+231 t= 5.9903  READ 99 89 ff -> 73
+232 t= 5.9953  W[98] 04=8d
+233 t= 5.9973  W[98] 62=91
+234 t= 6.0083  POLL F5 x1 {'f2': 1}
+
+=== P13 APPLY / RETRIGGER PULSES (0D/0E) + settle ===
+235 t= 6.0133  READ 99 89 fd -> 6e
+236 t= 6.0243  READ 99 89 fc -> 6e
+237 t= 6.0413  READ 99 89 f3 -> 7e
+238 t= 6.0453  POLL F5 x1 {'e2': 1}
+239 t= 6.0503  W[98] 0d=c8   <-- retrigger prep
+240 t= 6.0543  POLL F5 x1 {'e2': 1}
+241 t= 6.0593  W[98] 0e=05   <-- alt pulse high
+242 t= 6.0613  W[98] 0e=04   <-- alt pulse low
+243 t= 6.0643  POLL F5 x11 {'62': 10, 'f2': 1}
+244 t= 6.1123  READ 99 89 fd -> 6e
+245 t= 6.1173  READ 99 89 fc -> 6e
+246 t= 6.1214  READ 99 89 f3 -> 7e
+247 t= 6.1253  POLL F5 x1 {'f2': 1}
+248 t= 6.1294  W[98] 0d=c8   <-- retrigger prep
+249 t= 6.1314  POLL F5 x1 {'f2': 1}
+250 t= 6.1364  W[98] 0e=15   <-- pulse high
+251 t= 6.1384  W[98] 0e=14   <-- pulse low (applies)
+252 t= 6.1414  POLL F5 x19 {'72': 19}
+      -- WAIT 573 ms (no traffic) --
+
+=== P14 FINAL STATUS CHECK + IDLE SETTLE ===
+253 t= 6.7144  READ 89 89 fa -> 16
+254 t= 6.7194  READ 89 89 ca -> 66
+255 t= 6.7234  READ 89 89 e7 -> 69
+256 t= 6.7274  READ 89 89 f1 -> 7e
+257 t= 6.7314  POLL F5 x31 {'72': 31}
+
+=== P15 CAPTURE-ENGINE (SoC) CONFIGURATION   [identical 120 writes] ===
+258 t= 6.8804  SOC 1124  v=00001011  m=00001fff   [interface config, chain A]
+259 t= 6.8804  SOC 1264  v=00001011  m=00001fff   [interface config, chain B]
+260 t= 6.8804  SOC 1128  v=010f0000  m=1fff0000   [interface config, chain A]
+261 t= 6.8804  SOC 1268  v=010f0000  m=1fff0000   [interface config, chain B]
+262 t= 6.8814  SOC 1004  v=01000000  m=03000000   [clock/pin-mux + reset gating]
+263 t= 6.8814  SOC 1504  v=03000000  m=07000000   [input/scaler block A]
+264 t= 6.8814  SOC 1500  v=00000004  m=000000ff   [input/scaler block A]
+265 t= 6.8814  SOC 1510  v=00000000  m=00007f00   [input/scaler block A]
+266 t= 6.8824  SOC 1504  v=00020000  m=00030000   [input/scaler block A]
+267 t= 6.8824  SOC 1000  v=00000010  m=00000010   [clock/pin-mux + reset gating]
+268 t= 6.8824  SOC 1000  v=00000010  m=00000010   [clock/pin-mux + reset gating]
+269 t= 6.8824  SOC 1a00  v=00000000  m=00000003   [capture/output control A]
+270 t= 6.8834  SOC 1a08  v=00000000  m=00010000   [capture/output control A]
+271 t= 6.8834  SOC 1a08  v=00000000  m=00020000   [capture/output control A]
+272 t= 6.8834  SOC 1a08  v=00000000  m=00040000   [capture/output control A]
+273 t= 6.8834  SOC 1a08  v=00080000  m=00080000   [capture/output control A]
+274 t= 6.8844  SOC 1a08  v=00200000  m=00300000   [capture/output control A]
+275 t= 6.8844  SOC 1a08  v=00400000  m=00400000   [capture/output control A]
+276 t= 6.8844  SOC 1a08  v=00800000  m=00800000   [capture/output control A]
+277 t= 6.8844  SOC 1a08  v=00000000  m=07000000   [capture/output control A]
+278 t= 6.8854  SOC 1a08  v=00000000  m=18000000   [capture/output control A]
+279 t= 6.8854  SOC 1a08  v=00000000  m=20000000   [capture/output control A]
+280 t= 6.8854  SOC 1a08  v=00000000  m=40000000   [capture/output control A]
+281 t= 6.8854  SOC 1a08  v=00000000  m=80000000   [capture/output control A]
+282 t= 6.8864  SOC 1a0c  v=00000000  m=ffff0000   [capture/output control A]
+283 t= 6.8864  SOC 1588  v=00000000  m=00001000   [input/scaler block A]
+284 t= 6.8864  SOC 1688  v=00000000  m=00001000   [input/scaler block B]
+285 t= 6.8864  SOC 1570  v=00010000  m=00010000   [input/scaler block A]
+286 t= 6.8874  SOC 1670  v=00010000  m=00010000   [input/scaler block B]
+287 t= 6.8874  SOC 1574  v=00000000  m=80000000   [input/scaler block A]
+288 t= 6.8874  SOC 1574  v=00030000  m=001f0000   [input/scaler block A]
+289 t= 6.8874  SOC 1104  v=30fb0000  m=ffff0000   [interface config, chain A]
+290 t= 6.8884  SOC 1104  v=00000000  m=0000ffff   [interface config, chain A]
+291 t= 6.8884  SOC 1510  v=00200000  m=00200000   [input/scaler block A]
+292 t= 6.8884  SOC 1518  v=00030000  m=00ff0000   [input/scaler block A]
+293 t= 6.8884  SOC 1518  v=0e000000  m=ff000000   [input/scaler block A]
+294 t= 6.8894  SOC 1510  v=00000000  m=00080000   [input/scaler block A]
+295 t= 6.8894  SOC 1514  v=00000000  m=07000000   [input/scaler block A]
+296 t= 6.8894  SOC 1510  v=00000000  m=00030000   [input/scaler block A]
+297 t= 6.8894  SOC 1530  v=00002bf2  m=0000ffff   [input/scaler block A]
+298 t= 6.8904  SOC 1534  v=278d0000  m=ffff0000   [input/scaler block A]
+299 t= 6.8904  SOC 1534  v=000015f9  m=0000ffff   [input/scaler block A]
+300 t= 6.8904  SOC 1538  v=0afc0000  m=ffff0000   [input/scaler block A]
+301 t= 6.8904  SOC 152c  v=02d00000  m=ffff0000   [input/scaler block A]  720x480
+302 t= 6.8914  SOC 152c  v=000001e0  m=0000ffff   [input/scaler block A]  720x480
+303 t= 6.8914  SOC 1000  v=00000000  m=00000002   [clock/pin-mux + reset gating]
+304 t= 6.8914  SOC 1584  v=00000000  m=ffff0000   [input/scaler block A]
+305 t= 6.8914  SOC 1584  v=00000000  m=0000ffff   [input/scaler block A]
+306 t= 6.8924  SOC 1588  v=00000000  m=ffff0000   [input/scaler block A]
+307 t= 6.8924  SOC 1518  v=00000000  m=0000ffff   [input/scaler block A]
+308 t= 6.8924  SOC 151c  v=00000000  m=ffff0000   [input/scaler block A]
+309 t= 6.8924  SOC 151c  v=00000000  m=001f0000   [input/scaler block A]
+310 t= 6.8934  SOC 1524  v=00000100  m=0000ff00   [input/scaler block A]
+311 t= 6.8934  SOC 1524  v=0000001f  m=000000ff   [input/scaler block A]
+312 t= 6.8934  SOC 1a00  v=00000000  m=00000003   [capture/output control A]
+313 t= 6.8934  SOC 1a14  v=00000000  m=00000001   [capture/output control A]
+314 t= 6.8944  SOC 1a14  v=00000000  m=00000006   [capture/output control A]
+315 t= 6.8944  SOC 1a14  v=00000000  m=00000008   [capture/output control A]
+316 t= 6.8944  SOC 1a14  v=00000010  m=00000010   [capture/output control A]
+317 t= 6.8944  SOC 1a14  v=00000000  m=00000060   [capture/output control A]
+318 t= 6.8954  SOC 1a04  v=01400000  m=ffff0000   [capture/output control A]
+319 t= 6.8954  SOC 1580  v=10000000  m=10000000   [input/scaler block A]
+320 t= 6.8954  SOC 1580  v=00060000  m=00ff0000   [input/scaler block A]
+321 t= 6.8954  SOC 1580  v=00000100  m=0000ff00   [input/scaler block A]
+322 t= 6.8964  SOC 1580  v=00000006  m=000000ff   [input/scaler block A]
+323 t= 6.8964  SOC 157c  v=00000000  m=00000001   [input/scaler block A]
+324 t= 6.8964  SOC 157c  v=00001000  m=00001000   [input/scaler block A]
+325 t= 6.8964  SOC 157c  v=00000050  m=00000070   [input/scaler block A]
+326 t= 6.8974  SOC 157c  v=00000000  m=00000001   [input/scaler block A]
+327 t= 6.8974  SOC 1674  v=00000000  m=80000000   [input/scaler block B]
+328 t= 6.8974  SOC 1674  v=00030000  m=001f0000   [input/scaler block B]
+329 t= 6.8974  SOC 1244  v=30fb0000  m=ffff0000   [interface config, chain B]
+330 t= 6.8984  SOC 1244  v=00000000  m=0000ffff   [interface config, chain B]
+331 t= 6.8984  SOC 1610  v=00200000  m=00200000   [input/scaler block B]
+332 t= 6.8984  SOC 1610  v=00000200  m=00007f00   [input/scaler block B]
+333 t= 6.8984  SOC 1618  v=00030000  m=00ff0000   [input/scaler block B]
+334 t= 6.8994  SOC 1618  v=0e000000  m=ff000000   [input/scaler block B]
+335 t= 6.8994  SOC 1610  v=00000000  m=00080000   [input/scaler block B]
+336 t= 6.8994  SOC 1610  v=00000000  m=00030000   [input/scaler block B]
+337 t= 6.8994  SOC 1614  v=00000000  m=07000000   [input/scaler block B]
+338 t= 6.9004  SOC 1630  v=00002bf2  m=0000ffff   [input/scaler block B]
+339 t= 6.9004  SOC 1634  v=278d0000  m=ffff0000   [input/scaler block B]
+340 t= 6.9004  SOC 1634  v=000015f9  m=0000ffff   [input/scaler block B]
+341 t= 6.9004  SOC 1638  v=0afc0000  m=ffff0000   [input/scaler block B]
+342 t= 6.9014  SOC 1638  v=00000000  m=0000ffff   [input/scaler block B]
+343 t= 6.9014  SOC 162c  v=02d00000  m=ffff0000   [input/scaler block B]  720x480
+344 t= 6.9014  SOC 162c  v=000001e0  m=0000ffff   [input/scaler block B]  720x480
+345 t= 6.9014  SOC 1610  v=00000000  m=00007f00   [input/scaler block B]
+346 t= 6.9024  SOC 1504  v=00020000  m=00030000   [input/scaler block A]
+347 t= 6.9024  SOC 1618  v=00000000  m=0000ffff   [input/scaler block B]
+348 t= 6.9024  SOC 161c  v=00000000  m=ffff0000   [input/scaler block B]
+349 t= 6.9024  SOC 161c  v=00000000  m=001f0000   [input/scaler block B]
+350 t= 6.9034  SOC 1624  v=00000100  m=0000ff00   [input/scaler block B]
+351 t= 6.9034  SOC 1624  v=0000001f  m=000000ff   [input/scaler block B]
+352 t= 6.9034  SOC 1684  v=00000000  m=ffff0000   [input/scaler block B]
+353 t= 6.9034  SOC 1684  v=00000000  m=0000ffff   [input/scaler block B]
+354 t= 6.9044  SOC 1688  v=00000000  m=ffff0000   [input/scaler block B]
+355 t= 6.9044  SOC 1a24  v=00000000  m=00000001   [capture/output control B]
+356 t= 6.9044  SOC 1a34  v=00000000  m=00000001   [capture/output control B]
+357 t= 6.9044  SOC 1a34  v=00000000  m=00000006   [capture/output control B]
+358 t= 6.9054  SOC 1a34  v=00000000  m=00000008   [capture/output control B]
+359 t= 6.9054  SOC 1a34  v=00000010  m=00000010   [capture/output control B]
+360 t= 6.9054  SOC 1a34  v=00000000  m=00000060   [capture/output control B]
+361 t= 6.9054  SOC 1a24  v=01400000  m=ffff0000   [capture/output control B]
+362 t= 6.9064  SOC 1680  v=10000000  m=10000000   [input/scaler block B]
+363 t= 6.9064  SOC 1680  v=00060000  m=00ff0000   [input/scaler block B]
+364 t= 6.9064  SOC 1680  v=00000100  m=0000ff00   [input/scaler block B]
+365 t= 6.9064  SOC 1680  v=00000006  m=000000ff   [input/scaler block B]
+366 t= 6.9074  SOC 167c  v=00000000  m=00000001   [input/scaler block B]
+367 t= 6.9074  SOC 167c  v=00001000  m=00001000   [input/scaler block B]
+368 t= 6.9074  SOC 167c  v=00000050  m=00000070   [input/scaler block B]
+369 t= 6.9074  SOC 167c  v=00000000  m=00000001   [input/scaler block B]
+370 t= 6.9084  SOC 1008  v=00000000  m=0000f000   [clock/pin-mux + reset gating]
+371 t= 6.9084  SOC 1008  v=00000000  m=00000f00   [clock/pin-mux + reset gating]
+372 t= 6.9084  SOC 1008  v=00000010  m=000000f0   [clock/pin-mux + reset gating]
+373 t= 6.9084  SOC 100c  v=00200000  m=00f00000   [clock/pin-mux + reset gating]
+374 t= 6.9094  SOC 100c  v=30000000  m=f0000000   [clock/pin-mux + reset gating]
+375 t= 6.9094  SOC 1008  v=00000000  m=0000000f   [clock/pin-mux + reset gating]
+376 t= 6.9094  SOC 100c  v=00000000  m=000f0000   [clock/pin-mux + reset gating]
+377 t= 6.9094  SOC 100c  v=00000000  m=0f000000   [clock/pin-mux + reset gating]
+
+=== P16 START CAPTURE (SCMD) ===
+378 t= 6.9104  SCMD 04 a0 00 00   <-- capture setup
+379 t= 6.9104  IN  0800:2008 -> 00 01   (device-ready status)
+380 t= 6.9104  SCMD 05 00 00 02   <-- START CAPTURE
