@@ -466,7 +466,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   d->ts_partial_len = 0;
   d->input_configured = false;
   d->input_prepared = false;
-  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
+  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) {
    dev_warn(&d->intf->dev,
             "redetection: transition to IDLE failed: %d\n", r);
@@ -481,7 +481,7 @@ static void gchd_detect_workfn(struct work_struct *work)
    */
   d->input_configured = false;
   d->input_prepared = false;
-  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
+  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) {
    dev_warn(&d->intf->dev,
             "redetection: transition to IDLE after signal loss failed: %d\n", r);
@@ -633,7 +633,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   r = gchd_stream_stop(d);
   if (r)
    goto restart_failed;
-  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
+  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r)
    goto restart_failed;
 
@@ -985,7 +985,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
    * input-specific teardown. gchd_state_cmd skips an already-completed IDLE
    * transition, which matters when switching between no-signal inputs.
    */
-  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
+  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) {
    dev_err(&d->intf->dev,
            "input switch: transition to IDLE failed: %d\n", r);
