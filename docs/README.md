@@ -1,11 +1,10 @@
-# GCHD protocol reference
+# GCHD protocol references
 
-One reference per hardware/input path:
+- [Hardware](hardware.md) — firmware lifecycle, device initialization, USB transport, shared capture startup.
+- [HDMI](hdmi.md) — HDMI-specific commands and configuration.
+- [Component](component.md) — component-specific commands and configuration.
+- [Composite](composite.md) — composite-specific commands and captured signal-present sequence.
+- [S-video](s-video.md) — S-video-specific commands and captured signal-present sequence.
+- [Commands and unknowns](commands.md) — shared mailbox/SCMD inventory, status registers, transcoder operations, and unresolved commands.
 
-- [Hardware](hardware.md) — USB command primitives, shared acknowledgements, capture start.
-- [HDMI](hdmi.md)
-- [Component](component.md)
-- [Composite](composite.md)
-- [S-video](s-video.md)
-
-Each input page records known command bytes, meanings, ordered setup, confirmation, and format coverage. Unsupported sequences are marked `NOT CAPTURED`, not inferred. Raw packet traces remain under `drivers/elgato_gchd/`; [legacy command reference](../COMMAND_REFERENCE.md) remains available.
+All links in this documentation set stay within `docs/`. Every sequence is labeled by evidence status. **Observed** does not automatically mean understood or universal. Missing byte sequences are marked `NOT CAPTURED`.
