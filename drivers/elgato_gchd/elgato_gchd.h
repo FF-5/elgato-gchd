@@ -106,6 +106,45 @@
 #define GCHD_REPLY_PROCESSOR_TRANSIENT 0x334455
 #define GCHD_REPLY_ENCODER_ACTIVE      0x78e040
 #define GCHD_REPLY_ENCODER_MASK        0xf8f0f0
+/* Subcommands for the 0x89/0x89 mailbox query family. */
+#define GCHD_QUERY_ENCODER_INIT        0xfb
+#define GCHD_QUERY_ENCODER_STATUS      0xfa
+#define GCHD_QUERY_ENCODER_CONFIG      0xca
+#define GCHD_QUERY_ENCODER_READY        0xe7
+#define GCHD_QUERY_ENCODER_FORMAT      0xfd
+#define GCHD_QUERY_ENCODER_VARIANT     0xf8
+#define GCHD_QUERY_ENCODER_HEIGHT      0xf1
+#define GCHD_QUERY_ENCODER_FINALIZE    0xcb
+
+/* Other named command triplets used by the input bring-up sequence. */
+#define GCHD_CMD_PROCESSOR_START       0x29
+#define GCHD_CMD_PROCESSOR_START_ARG   0x5b
+#define GCHD_CMD_COMPONENT_QUERY      0x94
+#define GCHD_CMD_COMPONENT_QUERY_EXT  0x43
+#define GCHD_CMD_COMPONENT_QUERY_ARG  0xb7
+#define GCHD_CMD_COMPONENT_QUERY_ALT  0x4e
+
+/* Additional observed one-byte command responses. */
+#define GCHD_REPLY_COMMAND_EC          0xec
+#define GCHD_REPLY_COMMAND_E1          0xe1
+#define GCHD_REPLY_COMMAND_6B          0x6b
+#define GCHD_REPLY_COMMAND_7F          0x7f
+#define GCHD_REPLY_COMMAND_6A          0x6a
+#define GCHD_REPLY_COMMAND_7C          0x7c
+#define GCHD_REPLY_COMMAND_2A          0x2a
+#define GCHD_REPLY_COMMAND_6C          0x6c
+#define GCHD_REPLY_COMMAND_76          0x76
+#define GCHD_REPLY_COMMAND_73          0x73
+#define GCHD_REPLY_COMMAND_PENDING     0x02
+
+/* Bit masks and signatures used to recognize encoder status replies. */
+#define GCHD_REPLY_ENCODER_HIGH_MASK   0xf8
+#define GCHD_REPLY_ENCODER_HIGH_VALUE  0x78
+#define GCHD_REPLY_ENCODER_MID_MASK    0xf0
+#define GCHD_REPLY_ENCODER_MID_VALUE   0xe0
+#define GCHD_REPLY_ENCODER_LOW_MASK    0xf0
+#define GCHD_REPLY_ENCODER_LOW_VALUE   0x40
+
 
 
 
