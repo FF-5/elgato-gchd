@@ -1,6 +1,6 @@
 # Composite input reference
 
-## Commands
+## Common commands and configuration
 
 | Target / operation | Bytes written or expected read | Notes |
 |---|---|---|
@@ -21,9 +21,40 @@
 | `0x98:0D`, `0x98:0E` | `C8`, `05`, `04` | Apply pulse after backend programming. |
 | `0x98` backend | See ordered sequence and coefficient table | Register meanings are not fully decoded. |
 
-## Ordered composite configuration (signal present)
 
-The sequence below includes a working PAL-family, 288p-equivalent bring-up. The capture was stopped after video frames began arriving.
+
+## Backend coefficient table
+
+| Target | Value | Target | Value |
+|---|---:|---|---:|
+| `0x98:90` | `01` | `0x98:9A` | `9C` |
+| `0x98:91` | `BD` | `0x98:9B` | `8C` |
+| `0x98:92` | `9A` | `0x98:9C` | `98` |
+| `0x98:93` | `3A` | `0x98:9D` | `93` |
+| `0x98:94` | `E9` | `0x98:9E` | `83` |
+| `0x98:95` | `AB` | `0x98:9F` | `A9` |
+| `0x98:96` | `17` | `0x98:A0` | `8B` |
+| `0x98:97` | `88` | `0x98:A1` | `E8` |
+| `0x98:98` | `84` | `0x98:A2` | `81` |
+| `0x98:99` | `8A` | `0x98:A3` | `49` |
+
+
+## Sequences
+
+### 240p / 288p
+
+#### NTSC-family 240p — working full bring-up
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | Start from HDMI selector `0x9C:51=45`; switch to composite `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` | Full working bring-up in the DKMS driver trace. |
+| 2 | Decoder `0x88:02=C9`; `0x88:06=08`; `0x88:03=28`; front end `0x9C:B3=33`, page `CE`, `0x9C:27=33`, page `CC` | Preserve bank/page and handshake order. |
+| 3 | Three tuning passes to `0x88:10–15`: `6F D4 D0 08 08 88`; `6F EA D0 08 08 88`; `6F EA D0 1B 1B 88` | Three distinct passes. |
+| 4 | Auxiliary device `0x94`: `41 37`, `4A B7`, `4B B7`; backend `04=95`, `70=D0`, `0F=88`, coefficient table above, then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | Ordered auxiliary/backend configuration. |
+| 5 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`, later `15 → 14`; pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | Working capture reaches START. |
+
+
+#### PAL-family 288p-equivalent — working, frames received
 
 | Step | Command / bytes written or read | Notes |
 |---:|---|---|
@@ -42,52 +73,31 @@ The sequence below includes a working PAL-family, 288p-equivalent bring-up. The 
 | 13 | Write `0x98:0D=C8`, `0x98:0E=05`, `0x98:0E=04`; poll status and allow settle | Apply backend settings. |
 | 14 | Configure SoC pipeline; queue bulk IN on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | Capture starts; video frames were received after START. |
 
-## Backend coefficient table
-
-| Target | Value | Target | Value |
-|---|---:|---|---:|
-| `0x98:90` | `01` | `0x98:9A` | `9C` |
-| `0x98:91` | `BD` | `0x98:9B` | `8C` |
-| `0x98:92` | `9A` | `0x98:9C` | `98` |
-| `0x98:93` | `3A` | `0x98:9D` | `93` |
-| `0x98:94` | `E9` | `0x98:9E` | `83` |
-| `0x98:95` | `AB` | `0x98:9F` | `A9` |
-| `0x98:96` | `17` | `0x98:A0` | `8B` |
-| `0x98:97` | `88` | `0x98:A1` | `E8` |
-| `0x98:98` | `84` | `0x98:A2` | `81` |
-| `0x98:99` | `8A` | `0x98:A3` | `49` |
-
-## Format coverage
-
-| Format / condition | Commands / result | Notes |
-|---|---|---|
-| NTSC-family | `89 89 FA` low nibble `6` | Identifies 60-Hz family; not 240p/480i. |
-| PAL-family, 288p-equivalent | Sequence above; stable status then SCMD START and video frames | Working signal-present sequence. |
-| 480i | `0x88:28=88` seen in setup/transition | Complete independent setup: **NOT CAPTURED**. |
-| 576i, 480p, 576p, 720i, 720p, 1080i, 1080p | — | Complete ordered sequences: **NOT CAPTURED**. |
-| No-signal switch | `0x9C:51=EC` | Selector observed; complete sequence not documented. |
-
-Session-dependent handshake bytes at `0900:0014` and `0900:001C` must not be hard-coded.
-
-
-## Format-by-format comparison
-
-The [side-by-side analog format comparison](analog-format-comparison.md) aligns the composite and S-video sequences by stage.
-
-### 240p / 288p
-
-| Composite | S-video |
-|---|---|
-| NTSC-family 240p: working full bring-up reaches START. PAL-family 288p-equivalent: working sequence; frames received. | NTSC-family 240p: working full bring-up reaches START. PAL-family 288p-equivalent: working sequence; frames received. |
 
 ### 480i / 576i
 
-| Composite | S-video |
-|---|---|
-| Complete sequence **NOT CAPTURED**. | Complete sequence **NOT CAPTURED**. |
+#### NTSC-family / 60 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | `0x88:28=88` is seen in setup observations; full 480i sequence **NOT CAPTURED**. | Observed mode-related value only; not a complete sequence. |
+
+#### PAL-family / 50 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | PAL-family 576i sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
 
 ### 480p / 576p
 
-| Composite | S-video |
-|---|---|
-| Complete sequence **NOT CAPTURED**. | Complete sequence **NOT CAPTURED**. |
+#### NTSC-family / 60 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | 480p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+#### PAL-family / 50 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | 576p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
