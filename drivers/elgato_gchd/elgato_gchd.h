@@ -28,8 +28,28 @@
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
 
-#define SCMD_IDLE 1
-#define SCMD_RESET 2
+/*
+ * SCMD protocol commands and state values.
+ * Keep command IDs separate from the state values used to confirm them.
+ */
+#define SCMD_IDLE                 0x01
+#define SCMD_RESET                0x02
+#define SCMD_INIT                 0x04
+#define SCMD_STATE_CHANGE         0x05
+
+#define GCHD_STATE_BOOT           0x00
+#define GCHD_STATE_STOP           0x01
+#define GCHD_STATE_START          0x02
+#define GCHD_STATE_NULL           0x04
+#define GCHD_STATE_RESET          0x10
+#define GCHD_STATE_IDLE           0x11
+#define GCHD_STATE_SHUTDOWN       0x12
+
+#define GCHD_STATE_READ_REQUEST   0x0800
+#define GCHD_STATE_STATUS_REQUEST 0x0900
+#define GCHD_STATE_COMPLETE_ACK   0x0004
+#define GCHD_STATE_COMPLETE_CLEAR_INDEX 0x01b0
+
 
 struct gchd_frame { u8 *data; size_t len; u64 sequence; };
 struct gchd_ring {
