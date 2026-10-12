@@ -101,6 +101,39 @@
 #define GCHD_REPLY_STATUS_COMPOSITE    0x66
 #define GCHD_REPLY_STATUS_SVIDEO       0x7e
 
+
+/* Decoder tuning register indices and observed tuning-pass bytes. */
+#define GCHD_DECODER_REG_TUNE_10       0x10
+#define GCHD_DECODER_REG_TUNE_11       0x11
+#define GCHD_DECODER_REG_TUNE_12       0x12
+#define GCHD_DECODER_REG_TUNE_13       0x13
+#define GCHD_DECODER_REG_TUNE_14       0x14
+#define GCHD_DECODER_REG_TUNE_15       0x15
+#define GCHD_DECODER_TUNE_6F           0x6f
+#define GCHD_DECODER_TUNE_D4           0xd4
+#define GCHD_DECODER_TUNE_EA           0xea
+#define GCHD_DECODER_TUNE_D0           0xd0
+#define GCHD_DECODER_TUNE_08           0x08
+#define GCHD_DECODER_TUNE_1B           0x1b
+#define GCHD_DECODER_TUNE_88           0x88
+
+/* Mailbox query subcommands documented in the input traces. */
+#define GCHD_QUERY_ENCODER_POLL        0xf5
+#define GCHD_QUERY_ENCODER_POLL_FD     0xfd
+#define GCHD_QUERY_ENCODER_POLL_FC     0xfc
+#define GCHD_QUERY_ENCODER_POLL_F3     0xf3
+#define GCHD_QUERY_ENCODER_POLL_FF     0xff
+#define GCHD_QUERY_ENCODER_POLL_A3     0xa3
+
+/* Backend retrigger/apply pulse values observed during analog setup. */
+#define GCHD_BACKEND_REG_RETRIGGER     0x0d
+#define GCHD_BACKEND_REG_APPLY         0x0e
+#define GCHD_BACKEND_RETRIGGER_VALUE   0xc8
+#define GCHD_BACKEND_APPLY_PREPARE     0x15
+#define GCHD_BACKEND_APPLY_COMMIT      0x14
+#define GCHD_BACKEND_APPLY_PREPARE_ALT 0x05
+#define GCHD_BACKEND_APPLY_COMMIT_ALT  0x04
+
 /* Processor state signatures returned by the 0x33 mailbox. */
 #define GCHD_REPLY_PROCESSOR_ACTIVE    0x27f97b
 #define GCHD_REPLY_PROCESSOR_TRANSIENT 0x334455
