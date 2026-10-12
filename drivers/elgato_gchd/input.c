@@ -683,9 +683,15 @@ static int __maybe_unused gchd_post_encoder_setup(struct gchd *d)
   return r;
 
  if (d->input == 0)
-  r = gchd_seq(d, (const struct gchd_mail_cmd[]){GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_ENCODER_REG_08, GCHD_VALUE_9B),GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_ENCODER_REG_09, GCHD_VALUE_7A), 2);
+  r = gchd_seq(d, (const struct gchd_mail_cmd[]){
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_ENCODER_REG_08, GCHD_VALUE_9B),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_ENCODER_REG_09, GCHD_VALUE_7A)
+  }, 2);
  else
-  r = gchd_seq(d, (const struct gchd_mail_cmd[]){GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_ENCODER_REG_08, GCHD_VALUE_91),GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_ENCODER_REG_09, GCHD_VALUE_A8), 2);
+  r = gchd_seq(d, (const struct gchd_mail_cmd[]){
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_ENCODER_REG_08, GCHD_VALUE_91),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_ENCODER_REG_09, GCHD_VALUE_A8)
+  }, 2);
  if (r)
   return r;
 
