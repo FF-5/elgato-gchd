@@ -2,16 +2,16 @@
 
 ## S-video-specific command inventory
 
-| Target / command bytes | Description | Confirmation / status |
+| Target / operation | Bytes written or expected read | Notes |
 |---|---|---|
-| `0x88:02=DC` | S-video Y/C decoder path discriminator. | Composite uses `02=C9` in the captured traces. |
-| `0x88:14=D2` | S-video path parameter. | Observed in the no-source S-video path; not established as universal. |
-| `0x88:28=88` | Initial 480i-style value in the captured S-video path. | Later set to `8A` in 240p apply phase. |
-| `0x88:06=08`, `0x88:03=28` | Analog decoder setup. | Shared analog path writes. |
-| `0x9C:B3=33`, `0x9C:00=CE`, `0x9C:27=33`, `0x9C:00=CC` | Analog front-end setup. | Preserve exact order. |
-| `0x9C:51=44` | S-video analog selector in the signal-present 240p capture. | Followed by routing state `03 0E`. No-source trace reports `EC`; discrepancy unresolved. |
-| `0x88:07=8A`, `08=9B`, `09=7A`, `28=8A`, `06=08` | 240p format-apply block. | Captured as a block; meanings not fully known. |
-| `0x98:0D=C8`, `0E=15`, `0E=14` | Backend retrigger pulse. | Preserve order. |
+| `0x88:02` | Write `DC` | S-video Y/C decoder path discriminator; composite uses `C9`. |
+| `0x88:14` | Write `D2` | S-video path parameter; universality not established. |
+| `0x88:28` | Write `88`, later `8A` | Initial mode-style value; later value correlates with 240p apply. |
+| `0x88:06`, `0x88:03` | Write `08`, `28` | Shared analog decoder setup. |
+| `0x9C:B3`, `0x9C:00`, `0x9C:27` | Write `33`, `CE`, `33`, `CC` in order | Analog front-end setup. |
+| `0x9C:51` | Write `44`; `EC` is an alternate no-source value | Signal-present selector; preserve the context-dependent difference. |
+| `0x88:07–09`, `0x88:28`, `0x88:06` | Write `8A 9B 7A 8A 08` | 240p apply block; individual meanings UNKNOWN. |
+| `0x98:0D`, `0x98:0E` | Write `C8`, `15`, `14` | Backend retrigger pulse; preserve order. |
 
 ## Ordered S-video 240p configuration (signal present)
 
