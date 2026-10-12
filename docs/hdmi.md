@@ -2,16 +2,16 @@
 
 ## Known HDMI commands
 
-| Order | Target / bytes | Description | Confirmation / status |
+| Target / operation | Bytes written or expected read | Notes |
 |---:|---|---|---|
-| 1 | `0x9C:51=45` | HDMI mux selector observed in traces. | **Observed.** Full standalone HDMI recipe still incomplete. |
-| 2 | Read `9D CD 88`; write `0x9C:B7=CC` | Initial read and follow-up write after selector. | Wait ~330 ms in the analog-trace prefix; timing is trace-specific. |
-| 3 | State word `0900:0018 = 02 0A` | Set HDMI routing state. | Trace writes and reads back the state word. |
-| 4 | Bank/page and front-end setup below | Configure HDMI front end. | Exact values observed in analog trace prefix and reconfirmed in the no-signal init trace; not verified across all HDMI modes. |
+| `0x9C:51` | Write `45` | HDMI mux selector; full standalone recipe remains incomplete. |
+| `0x9C:B7`; mailbox read | Write `CC`; read `9D CD 88` | Initial read/follow-up write; allow about 330 ms in this observed path. |
+| `0900:0018` | Write/read `02 0A` | HDMI routing state word. |
+| HDMI front-end registers | See ordered sequence below | Input setup; not verified across all HDMI modes. |
 
 ## Front-end register sequence observed in trace prefix
 
-| Order | Target write/read | Description / note |
+| Step | Command / bytes written or read | Notes |
 |---:|---|---|
 | 1 | Read `9D CD 3F \u2192 B2`; write `00=CE` | Select page `CE`. |
 | 2 | Read `9D CD 3E \u2192 D3`; write `01=AD` | Front-end setup; meaning unknown. |
