@@ -257,7 +257,7 @@ static int gchd_encoder_start(struct gchd *d)
 
  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x28,0x28}, 2);
  if (r) return r;
- r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x29,0x89,0x5b}, 3);
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){GCHD_CMD_PROCESSOR_START,GCHD_CMD_QUERY_EXT,GCHD_CMD_PROCESSOR_START_ARG}, 3);
  if (r) return r;
  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, reply, 1);
  if (r) return r;
@@ -284,7 +284,7 @@ static int gchd_encoder_start(struct gchd *d)
  r = gchd_do_enable(d, BIT(4), 0);
  if (r) return r;
 
- r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x89,0x89,0xfb}, 3);
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_INIT}, 3);
  if (r) return r;
  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, reply, 1);
  if (r) return r;
@@ -311,7 +311,7 @@ static int gchd_encoder_start(struct gchd *d)
 
 static int gchd_read_9dcd(struct gchd *d, u8 index, u8 *value)
 {
- u8 cmd[3] = {0x9d, 0xcd, index};
+ u8 cmd[3] = {GCHD_CMD_REGISTER_READ, GCHD_CMD_REGISTER_READ_EXT, index};
  int r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, cmd, sizeof(cmd));
  if (r)
   return r;
@@ -332,10 +332,10 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  MW(GCHD_MAIL_PORT_ENCODER,0x02,0xc9);
  MW(GCHD_MAIL_PORT_ENCODER,0x14,0xd2);
  MW(GCHD_MAIL_PORT_ENCODER,0x3c,0x6b);
- M3(0x89,0x89,0xfa); MR1();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_STATUS); MR1();
 
- M3(0x89,0x89,0xca); MR1();
- M3(0x89,0x89,0xe7); MR1();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_CONFIG); MR1();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_READY); MR1();
  MW(GCHD_MAIL_PORT_ENCODER,0x03,0x2a);
  MW(GCHD_MAIL_PORT_ENCODER,0x05,0x89);
 
@@ -362,7 +362,7 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  MW(GCHD_MAIL_PORT_ENCODER,0x02,0xc9);
  MW(GCHD_MAIL_PORT_ENCODER,0x14,0xd2);
  MW(GCHD_MAIL_PORT_ENCODER,0x3c,0x6b);
- M3(0x89,0x89,0xfa); MR1();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_STATUS); MR1();
 
  MW(GCHD_MAIL_PORT_ENCODER,0x28,0x88);
  MW(GCHD_MAIL_PORT_ENCODER,0x10,0x88);
@@ -374,8 +374,8 @@ static int gchd_post_encoder_prefix(struct gchd *d)
 
  M3(0x94,0x47,0xf9);
  M3(0x94,0x40,0xf3);
- M3(0x94,0x43,0xb7);
- M3(0x94,0x4e,0xb7);
+ M3(GCHD_CMD_COMPONENT_QUERY,GCHD_CMD_COMPONENT_QUERY_EXT,GCHD_CMD_COMPONENT_QUERY_ARG);
+ M3(GCHD_CMD_COMPONENT_QUERY,GCHD_CMD_COMPONENT_QUERY_ALT,GCHD_CMD_COMPONENT_QUERY_ARG);
  M3(0x94,0x4f,0xb7);
  M3(0x94,0x48,0xb7);
  M3(0x94,0x49,0xb7);
@@ -517,7 +517,7 @@ static int __maybe_unused gchd_post_encoder_calibration(struct gchd *d)
   {GCHD_MAIL_PORT_ENCODER,2,{0x12,0xd0}}, {GCHD_MAIL_PORT_ENCODER,2,{0x13,0x08}}, {GCHD_MAIL_PORT_ENCODER,2,{0x14,0x08}},
   {GCHD_MAIL_PORT_ENCODER,2,{0x15,0x88}},
   {GCHD_MAIL_PORT_SYSTEM,3,{0x94,0x47,0xf9}}, {GCHD_MAIL_PORT_SYSTEM,3,{0x94,0x40,0xf3}},
-  {GCHD_MAIL_PORT_SYSTEM,3,{0x94,0x43,0xb7}}, {GCHD_MAIL_PORT_SYSTEM,3,{0x94,0x4e,0xb7}},
+  {GCHD_MAIL_PORT_SYSTEM,3,{GCHD_CMD_COMPONENT_QUERY,GCHD_CMD_COMPONENT_QUERY_EXT,GCHD_CMD_COMPONENT_QUERY_ARG}}, {GCHD_MAIL_PORT_SYSTEM,3,{GCHD_CMD_COMPONENT_QUERY,GCHD_CMD_COMPONENT_QUERY_ALT,GCHD_CMD_COMPONENT_QUERY_ARG}},
   {GCHD_MAIL_PORT_SYSTEM,3,{0x94,0x4f,0xb7}}, {GCHD_MAIL_PORT_SYSTEM,3,{0x94,0x48,0xb7}},
   {GCHD_MAIL_PORT_SYSTEM,3,{0x94,0x49,0xb7}}, {GCHD_MAIL_PORT_SYSTEM,3,{0x94,0x58,0x77}},
   {GCHD_MAIL_PORT_SYSTEM,3,{0x94,0x40,0xf1}}, {GCHD_MAIL_PORT_SYSTEM,3,{0x94,0x4d,0xf5}},
@@ -598,15 +598,15 @@ static int __maybe_unused gchd_post_encoder_setup(struct gchd *d)
 {
  static const struct gchd_mail_cmd tail[] = {
   {GCHD_MAIL_PORT_SYSTEM,1,{0x28}},
-  {GCHD_MAIL_PORT_SYSTEM,3,{0x29,0x89,0x5b}},
+  {GCHD_MAIL_PORT_SYSTEM,3,{GCHD_CMD_PROCESSOR_START,GCHD_CMD_QUERY_EXT,GCHD_CMD_PROCESSOR_START_ARG}},
   {GCHD_MAIL_PORT_SYSTEM,4,{0xdd,0xce,0x3f,0xb2}},
  };
  static const struct gchd_mail_cmd finish[] = {
-  {GCHD_MAIL_PORT_SYSTEM,3,{0x89,0x89,0xfb}},
+  {GCHD_MAIL_PORT_SYSTEM,3,{GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_INIT}},
   {GCHD_MAIL_PORT_ENCODER,2,{0x02,0xc9}}, {GCHD_MAIL_PORT_ENCODER,2,{0x14,0xd2}}, {GCHD_MAIL_PORT_ENCODER,2,{0x3c,0x6b}},
-  {GCHD_MAIL_PORT_SYSTEM,3,{0x89,0x89,0xfa}},
-  {GCHD_MAIL_PORT_SYSTEM,3,{0x89,0x89,0xca}},
-  {GCHD_MAIL_PORT_SYSTEM,3,{0x89,0x89,0xe7}},
+  {GCHD_MAIL_PORT_SYSTEM,3,{GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_STATUS}},
+  {GCHD_MAIL_PORT_SYSTEM,3,{GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_CONFIG}},
+  {GCHD_MAIL_PORT_SYSTEM,3,{GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_READY}},
   {GCHD_MAIL_PORT_ENCODER,2,{0x03,0x2a}}, {GCHD_MAIL_PORT_ENCODER,2,{0x05,0x89}},
   {GCHD_MAIL_PORT_ENCODER,2,{0x19,0xde}}, {GCHD_MAIL_PORT_ENCODER,2,{0x1a,0x87}},
   {GCHD_MAIL_PORT_ENCODER,2,{0x1b,0x88}}, {GCHD_MAIL_PORT_ENCODER,2,{0x29,0x8b}},
@@ -649,7 +649,7 @@ static int __maybe_unused gchd_post_encoder_setup(struct gchd *d)
  if (r)
   return r;
 
- r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x89,0x89,0xfb}, 3);
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_INIT}, 3);
  if (r)
   return r;
  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, reply, 1);
@@ -745,9 +745,9 @@ static int gchd_post_encoder_state(struct gchd *d)
   r = gchd_do_enable(d, BIT(2), BIT(2));
   if (r)
    return r;
-  if ((reply[0] & 0xf8) == 0x78 &&
-      (reply[1] & 0xf0) == 0xe0 &&
-      (reply[2] & 0xf0) == 0x40)
+  if ((reply[0] & GCHD_REPLY_ENCODER_HIGH_MASK) == GCHD_REPLY_ENCODER_HIGH_VALUE &&
+      (reply[1] & GCHD_REPLY_ENCODER_MID_MASK) == GCHD_REPLY_ENCODER_MID_VALUE &&
+      (reply[2] & GCHD_REPLY_ENCODER_LOW_MASK) == GCHD_REPLY_ENCODER_LOW_VALUE)
    break;
  }
  if (i == 5)
@@ -774,7 +774,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
   if (r)
    return r;
  } else {
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x89,0x89,0xfd}, 3);
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_FORMAT}, 3);
   if (r)
    return r;
   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, reply, 1);
@@ -793,7 +793,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  if (r)
   return r;
 
- r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x89,0x89,0xf8}, 3);
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_VARIANT}, 3);
  if (r)
   return r;
  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, reply, 1);
@@ -964,7 +964,7 @@ int gchd_input_detect_signal(struct gchd *d)
   if (r) return r;
   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x94,0x4b,0xaf}, 3);
   if (r) return r;
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x89,0x89,0xfa}, 3);
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_STATUS}, 3);
   if (r) return r;
   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
   if (r) return r;
@@ -978,7 +978,7 @@ int gchd_input_detect_signal(struct gchd *d)
    d->input_width=720; d->input_height=480;
    d->input_interlaced=true; d->input_fps_num=60;
    /* 0xCA is the decoder's authoritative 240p/480i lock indicator. */
-   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x89,0x89,0xca}, 3);
+   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_CONFIG}, 3);
    if (r) return r;
    r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &mode, 1);
    if (r) return r;
@@ -988,7 +988,7 @@ int gchd_input_detect_signal(struct gchd *d)
     * the live monitor sees 0x66; this avoids skipping the transition recipe
     * when 0x66 is already present during initial detection.
     */
-   if (mode != 0x7e && mode != 0x66)
+   if (mode != GCHD_REPLY_STATUS_SVIDEO && mode != GCHD_REPLY_STATUS_COMPOSITE)
     dev_dbg(&d->intf->dev,
             "analog format status not locked yet: 0x%02x; starting in 480i\n",
             mode);
@@ -1207,7 +1207,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
  MW(GCHD_MAIL_PORT_ENCODER,0x3c,0x6b);
 
  M3(0x94,0x41,0x37); M3(0x94,0x4a,0xaf); M3(0x94,0x4b,0xaf);
- M3(0x89,0x89,0xfa); MRP(0x33);
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_STATUS); MRP(0x33);
  v &= 0x0f;
  d->signal_present = (v == 6 || v == 7);
  if (v == 6) {
@@ -1256,12 +1256,12 @@ static int gchd_configure_composite_exact(struct gchd *d)
  if (d->input_height==480) {
   MW(GCHD_MAIL_PORT_ENCODER,0x07,0x8a); MW(GCHD_MAIL_PORT_ENCODER,0x08,0x9b); MW(GCHD_MAIL_PORT_ENCODER,0x09,0x7a);
   MW(GCHD_MAIL_PORT_ENCODER,0x28, d->input_interlaced ? 0x88 : 0x8a);
-  M3(0x89,0x89,0xfd); MRP(0x33); MW(GCHD_MAIL_PORT_ENCODER,0x06,0x08);
+  M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_FORMAT); MRP(0x33); MW(GCHD_MAIL_PORT_ENCODER,0x06,0x08);
   if (!d->input_interlaced)
    MW(GCHD_MAIL_PORT_ENCODER,0x0a,0x98);
  }
- M3(0x89,0x89,0xe7); MRP(0x33);
- if (d->input_height==576) { M3(0x89,0x89,0xf1); MRP(0x33); MW(GCHD_MAIL_PORT_VIDEO,0x04,0x95); }
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_READY); MRP(0x33);
+ if (d->input_height==576) { M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_HEIGHT); MRP(0x33); MW(GCHD_MAIL_PORT_VIDEO,0x04,0x95); }
 
  r=gchd_setup_subblock_exact(d); if(r)return r;
  r=gchd_common_block_b1(d,false); if(r)return r;
@@ -1304,7 +1304,7 @@ int gchd_input_read_analog_mode(struct gchd *d, bool *interlaced)
 
  if (d->input < 2 || d->input_height != 480)
   return -EOPNOTSUPP;
- r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x89,0x89,0xca}, 3);
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_CONFIG}, 3);
  if (r)
   return r;
  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &status, 1);
@@ -1334,21 +1334,21 @@ int gchd_input_switch_480i_to_240p(struct gchd *d)
 #define MW(p,a,b) do { u8 x[] = {a,b}; r = gchd_mail_write(d,p,x,2); if(r) return r; } while (0)
 #define MR() do { r = gchd_mail_read(d,GCHD_MAIL_PORT_SYSTEM,&v,1); if(r) return r; } while (0)
 
- M3(0x89,0x89,0xfa); MR();
- M3(0x89,0x89,0xca); MR();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_STATUS); MR();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_CONFIG); MR();
  if (v != GCHD_REPLY_STATUS_COMPOSITE)
   return -EAGAIN;
  MW(GCHD_MAIL_PORT_ENCODER,0x07,0x8a);
  MW(GCHD_MAIL_PORT_ENCODER,0x08,0x9b);
  MW(GCHD_MAIL_PORT_ENCODER,0x09,0x7a);
  MW(GCHD_MAIL_PORT_ENCODER,0x28,0x8a);
- M3(0x89,0x89,0xfd); MR();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_FORMAT); MR();
  MW(GCHD_MAIL_PORT_ENCODER,0x06,0x08);
- M3(0x89,0x89,0xe7); MR();
- M3(0x89,0x89,0xf1); MR();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_READY); MR();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_HEIGHT); MR();
  MW(GCHD_MAIL_PORT_ENCODER,0x0a,0x8f);
- M3(0x89,0x89,0xcb); MR();
- M3(0x89,0x89,0xca); MR();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_FINALIZE); MR();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_CONFIG); MR();
  M3(GCHD_CMD_QUERY,GCHD_CMD_QUERY_EXT,0xfd); MR();
  M3(GCHD_CMD_QUERY,GCHD_CMD_QUERY_EXT,0xfc); MR();
  M3(GCHD_CMD_QUERY,GCHD_CMD_QUERY_EXT,0xf3); MR();
@@ -1362,12 +1362,12 @@ int gchd_input_switch_480i_to_240p(struct gchd *d)
   * a reverse mode change. Only finalize 240p if CA is still 0x66.
   */
  msleep(800);
- M3(0x89,0x89,0xfa); MR();
- M3(0x89,0x89,0xca); MR();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_STATUS); MR();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_CONFIG); MR();
  if (v != GCHD_REPLY_STATUS_COMPOSITE)
   return -EAGAIN;
- M3(0x89,0x89,0xe7); MR();
- M3(0x89,0x89,0xf1); MR();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_READY); MR();
+ M3(GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_HEIGHT); MR();
  MW(GCHD_MAIL_PORT_ENCODER,0x0a,0x98);
 #undef MR
 #undef MW
