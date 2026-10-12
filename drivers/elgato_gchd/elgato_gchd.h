@@ -68,6 +68,38 @@
 #define GCHD_STATE_STATUS_REQUEST 0x0900
 #define GCHD_STATE_COMPLETE_ACK   0x0004
 #define GCHD_STATE_COMPLETE_CLEAR_INDEX 0x01b0
+ 
+/* Mailbox ports used by the device command protocol. */
+#define GCHD_MAIL_PORT_SYSTEM          0x33
+#define GCHD_MAIL_PORT_ENCODER         0x44
+#define GCHD_MAIL_PORT_VIDEO           0x4c
+#define GCHD_MAIL_PORT_COMPONENT       0x4e
+
+/* Mailbox command opcodes and command-family selectors. */
+#define GCHD_CMD_QUERY                 0x99
+#define GCHD_CMD_QUERY_EXT             0x89
+#define GCHD_CMD_REGISTER_READ         0x9d
+#define GCHD_CMD_REGISTER_READ_EXT     0xcd
+#define GCHD_CMD_ENCODER_POLL          0xab
+#define GCHD_CMD_ENCODER_POLL_EXT      0xa9
+#define GCHD_CMD_ENCODER_POLL_MODE     0x0f
+#define GCHD_CMD_ENCODER_POLL_ARG      0xa4
+#define GCHD_CMD_ENCODER_STATUS        0x43
+#define GCHD_CMD_ENCODER_STATUS_EXT    0x23
+#define GCHD_CMD_ENCODER_STATUS_ARG    0x84
+
+/* Recognized mailbox response/status bytes. */
+#define GCHD_REPLY_COMMAND_ACK         0x6e
+#define GCHD_REPLY_ENCODER_READY       0xf7
+#define GCHD_REPLY_STATUS_COMPOSITE    0x66
+#define GCHD_REPLY_STATUS_SVIDEO       0x7e
+
+/* Processor state signatures returned by the 0x33 mailbox. */
+#define GCHD_REPLY_PROCESSOR_ACTIVE    0x27f97b
+#define GCHD_REPLY_PROCESSOR_TRANSIENT 0x334455
+#define GCHD_REPLY_ENCODER_ACTIVE      0x78e040
+#define GCHD_REPLY_ENCODER_MASK        0xf8f0f0
+
 
 
 struct gchd_frame { u8 *data; size_t len; u64 sequence; };
