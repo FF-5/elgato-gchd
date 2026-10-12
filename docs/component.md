@@ -14,7 +14,7 @@
 
 1. Run common device initialization in [hardware.md](hardware.md).
 2. Apply the digital/component path prefix in the exact order above, including surrounding bank/page writes and mailbox handshake; the complete packet-level order is **NOT CAPTURED**.
-3. Write selector `0x9C:51=ED); then write/read routing state `02 0E) where applicable.
+3. Write selector `0x9C:51=ED`; then write/read routing state `02 0E` where applicable.
 4. Apply component-specific tail writes; exact full order and required waits are **NOT CAPTURED**.
 5. Component signal detection, per-format decoder configuration, final transcoder setup, and lock criteria: **NOT CAPTURED**.
 6. Use the shared SCMD/capture confirmation sequence in [hardware.md](hardware.md) only after component-specific setup is validated.
