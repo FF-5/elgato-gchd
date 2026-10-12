@@ -1,6 +1,6 @@
 # HDMI input reference
 
-## Known HDMI commands
+## Common commands and configuration
 
 | Target / operation | Bytes written or expected read | Notes |
 |---:|---|---|---|
@@ -56,6 +56,47 @@ This is the same pattern previously noted as \u201cIdle/keep-alive behavior in a
 
 Complete HDMI input setup, per-format programming, device configuration before stream start, and HDMI-specific lock confirmation are **NOT CAPTURED**. The shared firmware lifecycle and SCMD/start confirmation are in [hardware.md](hardware.md); generic unknowns are in [commands.md](commands.md).
 
-## Format coverage
+## Sequences
 
-Complete ordered HDMI sequences for 240p, 288p, 480i, 576i, 480p, 576p, 720i, 720p, 1080i, and 1080p: **NOT CAPTURED**.
+### 240p / 288p
+
+
+#### NTSC-family / 60 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | Complete NTSC-family 240p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+#### PAL-family / 50 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | Complete PAL-family 288p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+### 480i / 576i
+
+#### NTSC-family / 60 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | NTSC-family 480i sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+#### PAL-family / 50 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | PAL-family 576i sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+### 480p / 576p
+
+#### NTSC-family / 60 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | NTSC-family 480p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+#### PAL-family / 50 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | PAL-family 576p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
