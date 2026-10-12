@@ -15,6 +15,16 @@
 | Mailbox status helpers | `89 89 FA`, `89 89 CA`, `89 89 E7`, `89 89 F1`, `99 89 F5` | Polled during decoder setup and lock settling; several meanings remain UNKNOWN. |
 
 
+
+## Session-dependent values
+
+| Target / operation | Bytes written or expected read | Notes |
+|---|---|---|
+| `0900:0014` | Common shadow bytes include `D3 9E` and `03 1E` | Session-dependent; restore observed shadow, do not hard-code. |
+| `0900:001C` | Values vary by session | Mailbox readiness/status; do not hard-code a single reply. |
+| `99 89 8B` | Replies include `6E` and `2E` | Meaning UNKNOWN. |
+| `0900:01B0` after start | Replies vary, including `00 10` and `01 50` | Meaning UNKNOWN. |
+
 ## Sequences
 
 ### 240p / 288p
@@ -90,14 +100,3 @@
 | Step | Command / bytes written or read | Notes |
 |---:|---|---|
 | 1 | PAL-family 576p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
-
-
-
-## Session-dependent values
-
-| Target / operation | Bytes written or expected read | Notes |
-|---|---|---|
-| `0900:0014` | Common shadow bytes include `D3 9E` and `03 1E` | Session-dependent; restore observed shadow, do not hard-code. |
-| `0900:001C` | Values vary by session | Mailbox readiness/status; do not hard-code a single reply. |
-| `99 89 8B` | Replies include `6E` and `2E` | Meaning UNKNOWN. |
-| `0900:01B0` after start | Replies vary, including `00 10` and `01 50` | Meaning UNKNOWN. |
