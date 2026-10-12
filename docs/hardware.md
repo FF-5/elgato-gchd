@@ -19,6 +19,18 @@ These are transport and register-access primitives used by the sequences below. 
 | Transcoder full-word write | USB control OUT request `0xBC`; `wIndex = ADDRESS` | One 16-bit big-endian value | Writes a 16-bit value to an aligned transcoder register address. |
 | Transcoder masked write | USB control OUT request `0xBC`; `wValue = 1`; `wIndex = ADDRESS & ~3` | `VALUE32_BE MASK32_BE` (8 bytes) | Updates selected bits in a 32-bit transcoder register. See [commands.md](commands.md). |
 
+### SCMD commands
+
+| SCMD payload (Original HD / HD-New) | Command / source interpretation | Expected state / notes |
+|---|---|---|
+| Original HD `00 00 01 MODE DATA_H DATA_L`; HD-New `01 MODE DATA_H DATA_L` | IDLE | Expected state `0x11`. |
+| Original HD `00 00 02 MODE DATA_H DATA_L`; HD-New `02 MODE DATA_H DATA_L` | RESET | Used when the device is already initialized; the mode-dependent readback is only partly understood. |
+| Original HD `00 00 04 00 00 00`; HD-New `04 00 00 00` | INIT before encode-firmware download | Verify firmware/version words afterward. |
+| Original HD `00 00 04 A0 00 00`; HD-New `04 A0 00 00` | INIT mode `A0` | Re-enters initialized/stopped state before capture start, without reloading encode firmware. |
+| Original HD `00 00 05 00 00 01`; HD-New `05 00 00 01` | State-change command | Seen during transition; exact standalone meaning needs validation. |
+| Original HD `00 00 05 00 00 02`; HD-New `05 00 00 02` | START | Source expects state `0x02`; observed with bulk video output. |
+| Original HD `00 00 05 00 00 04`; HD-New `05 00 00 04` | NULL/empty stream | Source expects state `0x04`; exact transition use needs validation. |
+
 ### Shared state words observed
 
 | Where / bytes | Notes / description |
@@ -34,21 +46,14 @@ The tables below follow the call order in the userspace implementation, principa
 
 ### SCMD confirmation sequence
 
-1. Send the generation-specific `0xB8` payload.
-2. On HD New where required, wait for interrupt endpoint `0x83`; read `0800:0014` until its high byte equals CMD. This is command receipt, not proof that a state transition completed.
-3. For state-changing commands, poll `0900:0074` until bit `0x04` is set.
-4. Read `0800:2008` twice; compare `value & 0x1F` with the expected state.
-5. Write `00 04` to `0900:0074` (source believes this acknowledges completion; exact effect not proven), then write `00 00` to `0900:01B0` (purpose unknown).
+| Order | Operation / target | Command / condition | Notes / description |
+|---:|---|---|---|
+| 1 | Send SCMD via USB control OUT request `0xB8` | Use the generation-specific payload shown in **Common operations → SCMD commands** | Issues the command; payload differs between Original HD and HD-New. |
+| 2 | HD-New receipt confirmation, where required | Wait for interrupt endpoint `0x83`; read `0800:0014` until its high byte equals `CMD` | Confirms command receipt only, not completion of a state transition. |
+| 3 | State-change completion poll | Read `0900:0074` until bit `0x04` is set | Applied to state-changing commands. |
+| 4 | State readback | Read `0800:2008` twice; compare `value & 0x1F` with the expected state | Checks the resulting SCMD state. |
+| 5 | Completion/cleanup writes | Write `00 04` to `0900:0074`, then `00 00` to `0900:01B0` | Source suggests the first write acknowledges completion, but its exact effect is unproven; the second write's purpose is unknown. |
 
-| SCMD payload | Source interpretation | Expected state / note |
-|---|---|---|
-| `01 MODE ...` | IDLE | `0x11` |
-| `02 00 ...` / `02 01 ...` | RESET | Mode-dependent readback; deeper interpretation partly unconfirmed. |
-| `04 00 00 00` | INIT and encode firmware load | Verify firmware/version words. |
-| `04 A0 00 00` | INIT without encode firmware reload | Used before capture start. |
-| `05 00 00 01` | State change | Seen during transition; exact standalone meaning needs validation. |
-| `05 00 00 02` | START | Source expects state `0x02`; captured with bulk video output. |
-| `05 00 00 04` | NULL/empty stream | Source expects state `0x04`; transition use needs validation. |
 
 ### Common initialization sequence
 
