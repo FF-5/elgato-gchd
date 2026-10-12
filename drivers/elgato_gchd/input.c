@@ -49,8 +49,9 @@ struct gchd_mail_cmd {
  { (port), 3, { (byte0), (byte1), (byte2) } }
 
 /*
- * Input selection uses two-byte register writes on the component mailbox.
- * 0xEC is an alternate analog path, not a universal S-Video selector.
+ * Input selection uses register 0x51 on the component mailbox.
+ * 0x44 is the shared analog selection path for composite/S-Video;
+ * 0xEC is an alternate analog path seen in some traces.
  */
 #define GCHD_INPUT_SELECT(value) \
  GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_COMPONENT, 0x51, (value))
@@ -58,7 +59,7 @@ struct gchd_mail_cmd {
  GCHD_INPUT_SELECT(0x45)
 #define GCHD_INPUT_SELECT_COMPONENT \
  GCHD_INPUT_SELECT(0xed)
-#define GCHD_INPUT_SELECT_COMPOSITE \
+#define GCHD_INPUT_SELECT_ANALOG \
  GCHD_INPUT_SELECT(0x44)
 #define GCHD_INPUT_SELECT_ANALOG_ALT \
  GCHD_INPUT_SELECT(0xec)
@@ -78,7 +79,7 @@ static int gchd_seq(struct gchd *d, const struct gchd_mail_cmd *s, size_t n)
 static int gchd_setup_subblock(struct gchd *d)
 {
  static const struct gchd_mail_cmd common[] = {
-  GCHD_MAIL_CMD3(GCHD_MAIL_PORT_SYSTEM, GCHD_CMD_QUERY, GCHD_CMD_QUERY_EXT, 0x8b),
+  GCHD_MAIL_CMD3(GCHD_MAIL_PORT_SYSTEM, GCHD_CMD_QUERY, GCHD_CMD_QUERY_EXT, GCHD_QUERY_ENCODER_PROBE),
  };
  static const struct gchd_mail_cmd hdmi[] = {
   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_VIDEO, GCHD_VIDEO_REG_70, GCHD_VALUE_C8),
@@ -866,7 +867,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
    */
   if (d->input == 2) {
    static const struct gchd_mail_cmd select_composite[] = {
-    GCHD_INPUT_SELECT_COMPOSITE,
+    GCHD_INPUT_SELECT_ANALOG,
    };
    r = gchd_seq(d, select_composite, ARRAY_SIZE(select_composite));
   } else {
