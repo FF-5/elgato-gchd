@@ -653,25 +653,25 @@ int gchd_stream_stop(struct gchd *d)
  r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, GCHD_REG_STATE, &state);
  if (r) return r;
  state &= 0x1f;
- if (state == 0x01 || state == 0x11) {
+ if (state == GCHD_STATE_STOP || state == GCHD_STATE_IDLE) {
   /* STOP/IDLE leaves the selected input's setup intact. */
   return 0;
  }
- if (state != 0x02 && state != 0x04)
+ if (state != GCHD_STATE_START && state != GCHD_STATE_NULL)
   return -EINVAL;
 
- r = gchd_scmd(d, SCMD_STATE_CHANGE, 0, 0x0004);
+ r = gchd_scmd(d, SCMD_STATE_CHANGE, 0, GCHD_STATE_NULL);
  if (r) return r;
  r = gchd_drain_stream(d, 200);
  if (r) return r;
- r = gchd_complete_state_change_draining(d, 0x02, 0x04);
+ r = gchd_complete_state_change_draining(d, GCHD_STATE_START, GCHD_STATE_NULL);
  if (r) return r;
  r = gchd_drain_stream(d, 20);
  if (r) return r;
 
- r = gchd_scmd(d, SCMD_STATE_CHANGE, 0, 0x0001);
+ r = gchd_scmd(d, SCMD_STATE_CHANGE, 0, GCHD_STATE_STOP);
  if (r) return r;
- r = gchd_complete_state_change_draining(d, 0x04, 0x01);
+ r = gchd_complete_state_change_draining(d, GCHD_STATE_NULL, GCHD_STATE_STOP);
  if (r) return r;
  r = gchd_drain_stream(d, 5);
  /* Successful STOP keeps input configuration for the next STREAMON. */
@@ -865,12 +865,12 @@ int gchd_hw_init(struct gchd *d)
    r = gchd_ctrl_read(d, GCHD_REQ_REGISTER, 0x0000, 0x001e, &dummy, sizeof(dummy)); if (r) return r;
   }
  } else {
-  r = gchd_state_cmd(d, SCMD_RESET, 0, 0, 0x10);
+  r = gchd_state_cmd(d, SCMD_RESET, 0, 0, GCHD_STATE_RESET);
   if (r)
    return r;
  }
 
- r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
+ r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
  if (r)
   return r;
 
@@ -1007,7 +1007,7 @@ int gchd_hw_shutdown(struct gchd *d)
   return r;
  state &= 0x1f;
 
- if (state == 0x02 || state == 0x04) {
+ if (state == GCHD_STATE_START || state == GCHD_STATE_NULL) {
   r = gchd_stream_stop(d);
   if (r)
    return r;
@@ -1017,7 +1017,7 @@ int gchd_hw_shutdown(struct gchd *d)
   state &= 0x1f;
  }
 
- if (state == 0x12 || state == 0x00 || state == 0x10) {
+ if (state == GCHD_STATE_SHUTDOWN || state == GCHD_STATE_BOOT || state == GCHD_STATE_RESET) {
   d->hw_enable_state = 0;
   d->hw_enable_register = 0;
   d->saved_enable_state = 0;
@@ -1069,12 +1069,12 @@ int gchd_hw_shutdown(struct gchd *d)
  if (r) return r;
  state &= 0x1f;
  if (state != 0x11) {
-  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, 0x11);
+  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) return r;
  }
 
  /* RESET is the final close-time transition to a known boot state. */
- r = gchd_state_cmd(d, SCMD_RESET, 1, 0, 0x12);
+ r = gchd_state_cmd(d, SCMD_RESET, 1, 0, GCHD_STATE_SHUTDOWN);
  if (r) return r;
 
  d->hw_enable_state = 0;
