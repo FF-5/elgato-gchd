@@ -13,7 +13,7 @@
 
 | Order | Target write/read | Description / note |
 |---:|---|---|
-| 1 | Read `9D CD 3F → B2`; write `00=CE` | Select page `CE`). |
+| 1 | Read `9D CD 3F → B2`; write `00=CE` | Select page `CE`. |
 | 2 | Read `9D CD 3E → D3`; write `01=AD` | Front-end setup; meaning unknown. |
 | 3 | Read `9D CD 3B → B3`; write `04=CD`, `06=C4` | Front-end setup; meaning unknown. |
 | 4 | Read `9D CD 36 → BA`; write `09=E4` | Front-end setup; meaning unknown. |
@@ -25,7 +25,7 @@
 | 10 | Read `9D CD 6A → B1`; write `B0=E8` | Open parameter-table window. |
 | 11 | Write `B1=0C, 92=8C, 93=CB, 94=CA, 95=C8, 96=D1, 97=B1, 98=6E, 99=B6, 9A=D1, 9B=C4, 9C=DC, 9D=B7, 9E=94, 9F=B2, A0=11, A1=CD, A2=5D, A3=CB, A4=CA, A5=EC, A6=CC, A7=C8, A8=CC, A9=EC, AA=CC, AD=C9` | Parameter-table bytes in captured order. Individual meanings unknown. |
 | 12 | Read `9D CD 8F → 96`; write `B0=E9` | Close/commit parameter table. |
-| 13 | Poll `F5) as shown in trace; recurring reads `94`, `6A` and write `AB=4C` `| Idle/keep-alive behavior in analog trace prefix; whether needed for active HDMI source is not established. |
+| 13 | Poll `F5` as shown in trace; recurring reads `94`, `6A` and write `AB=4C` | Idle/keep-alive behavior in analog trace prefix; whether needed for active HDMI source is not established. |
 
 ## HDMI detection and format setup
 
