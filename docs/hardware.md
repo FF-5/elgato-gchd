@@ -35,9 +35,9 @@ This is the lifecycle sequence recorded in the userspace command reference. Some
 | 11 | Issue INIT mode `A0`, data `0000` (`04 A0 00 00` on HD New) | Used without reloading encode firmware before capture start. |
 | 12 | Queue bulk IN URBs and issue START SCMD (`05 00 00 02` on HD New) in the required order | Check device state/completion and verify actual bulk video payload; USB transfer success alone is insufficient. |
 
-### Observed HD-New init from `filtered_init_switch_to_component.pcapng` (no signal)
+### Observed HD-New init (no signal)
 
-Evidence status: **Observed** on a cold init that ends configured for HDMI, then switches toward component. Chunk sizes and SCMD order match the source lifecycle above.
+**Observed:** cold initialization ending in HDMI setup, followed by a component switch. Chunk sizes and SCMD order match the lifecycle above.
 
 | Phase | Observed traffic | Notes |
 |---|---|---|
@@ -52,7 +52,7 @@ Evidence status: **Observed** on a cold init that ends configured for HDMI, then
 | Later INIT (no reload) | `0xB8` payload `04 A0 00 00` | Observed after input-path programming had begun (around the HDMI setup region). |
 | Input path | HDMI selected (`51 45`), front-end programmed, then idle/keep-alive loop; later component switch begins | See [hdmi.md](hdmi.md) and [component.md](component.md). |
 
-This trace does **not** contain a START SCMD or bulk video IN; it stops at the component selector `51 ED`.
+This no-signal switch sequence does **not** contain a START SCMD or bulk video IN; it ends at component selector `51 ED`.
 
 ## SCMD confirmation sequence
 
@@ -84,7 +84,7 @@ This trace does **not** contain a START SCMD or bulk video IN; it stops at the c
 
 ## Idle / keep-alive loop (post-input-setup, no signal)
 
-**Evidence:** `filtered_init_switch_to_component.pcapng` (HD-New).  
+**Observed:** HD-New no-signal HDMI setup followed by a component switch.  
 **When observed:** After HDMI selector + HDMI front-end / parameter-table programming have completed, while the device remains configured for HDMI and no signal is present. The loop continues until the host begins the component-switch prefix.
 
 **Status:** Observed on a no-signal HDMI configuration. It is **not yet known** whether the same loop appears when the device is configured for component, composite or S-video, nor whether it appears when a signal is locked. Treat as shared/generic only after confirmation on other inputs; until then document it as \u201cobserved after HDMI input setup with no signal\u201d.
