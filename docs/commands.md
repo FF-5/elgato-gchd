@@ -66,12 +66,20 @@ State values used by source: `00` uninitialized, `10` idle firmware loaded befor
 | `0800:0016` | Often returns `09 00` in HD-New handshake | Interrupt/status role uncertain. |
 | `0900:0070` | Write `00 04` during initial firmware setup | Purpose unknown. |
 | `0900:01B0` | Write `00 00` after SCMD completion; trace also reads this after start | Purpose unknown; observed values vary. |
-| Enable bit 1 | Source name `EB_FIRMWARE_PROCESSOR` | Processor enable likely; reset/CPU theory is conjecture. |
-| Enable bit 2 | Source name `EB_ANALOG_INPUT` | Set for composite/component, cleared for HDMI in source comments. |
-| Enable bit 3 | Source name `EB_ENCODER_ENABLE` | Encoder enable after encode firmware load. |
-| Enable bit 4 | Source name `EB_ENCODER_TRIGGER` | Purpose unknown; trigger/reset is only a guess. |
-| Enable bit 8 | Source name `EB_COMPOSITE_MUX` | Source comment says composite only. |
-| Enable bit 9 | Source name `EB_ANALOG_MUX` | Source comment says composite/component. |
+### Enable-register bits
+
+These are **bit fields in the 16-bit register at `0x0900:0x0018`**. They are not separate register addresses or standalone commands. The source identifiers in the second column are names used by the code. A bit mask is `1 << bit_index`; setting/clearing a bit changes the full register word, which is written as two bytes. The exact complete word depends on the other bits already set.
+
+| Register address | Bit index | Mask | Source identifier | Observed/source-documented use |
+|---|---:|---:|---|---|
+| `0x0900:0x0018` | 1 | `0x0002` | `EB_FIRMWARE_PROCESSOR` | Named by source; likely processor enable. Reset/CPU interpretation is conjecture. |
+| `0x0900:0x0018` | 2 | `0x0004` | `EB_ANALOG_INPUT` | Source comments: set for composite/component, cleared for HDMI. |
+| `0x0900:0x0018` | 3 | `0x0008` | `EB_ENCODER_ENABLE` | Source comments associate it with enabling the encoder after encode-firmware load. |
+| `0x0900:0x0018` | 4 | `0x0010` | `EB_ENCODER_TRIGGER` | Purpose unknown; trigger/reset is only a guess. |
+| `0x0900:0x0018` | 8 | `0x0100` | `EB_COMPOSITE_MUX` | Source comment says composite only. |
+| `0x0900:0x0018` | 9 | `0x0200` | `EB_ANALOG_MUX` | Source comment says composite/component. |
+
+**What value is written?** The driver writes the combined 16-bit enable/state word to `0x0900:0x0018`; the rows above identify masks, not complete write values. For example, setting only bit 2 would produce word `0x0004` (bytes `00 04`), but that is **not** evidence that `00 04` is the correct full value for an input switch. Preserve unrelated bits and use the exact per-input words recorded in §10.2 of `COMMAND_REFERENCE.md` only as trace observations: HDMI `02 0A`, component `02 0E`, composite/S-video `03 0E`. Those observed words include other state bits and must not be derived by OR-ing only the masks in this table.
 | `BANKSEL` | Write `0000` at setup | Meaning unknown. |
 | `0xCA` via `89 89 CA` | `FE`, `7E`, `66`, transient `EE` | Inferred: `66) associated with 240p lock and `7E) with 480i lock in one trace; validate across captures. |
 | `0xFA` via `89 89 FA` | `3F`, `06`, `16`) | Polled during setup/format transitions; exact meaning unknown. |
