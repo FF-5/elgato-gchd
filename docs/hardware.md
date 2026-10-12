@@ -1,6 +1,8 @@
 # Hardware and shared lifecycle reference
 
-## USB operations
+## Common operations
+
+### USB operations
 
 | Operation | USB fields / payload | Sequence and expected response |
 |---|---|---|
@@ -15,7 +17,7 @@
 | Transcoder full-word write | Vendor OUT request `0xBC`; `wIndex=ADDRESS`; 16-bit big-endian data | Writes one aligned 16-bit transcoder register. |
 | Transcoder masked write | Vendor OUT `0xBC`; `wValue=1`; `wIndex=ADDRESS & ~3`; payload `VALUE32_BE MASK32_BE` (8 bytes) | Masked 32-bit update; see [commands.md](commands.md). |
 
-## SCMD confirmation sequence
+### SCMD confirmation sequence
 
 1. Send the generation-specific `0xB8` payload.
 2. On HD New where required, wait for interrupt endpoint `0x83`; read `0800:0014` until its high byte equals CMD. This is command receipt, not proof that a state transition completed.
@@ -46,7 +48,6 @@ The tables below follow the call order in the userspace implementation, principa
 | 3 | Read `0900:0014` | Save the current enable-state shadow before changing hardware state. |
 | 4 | Read `0800:2008` and mask to `0x1F` | Determine the current SCMD state. Original HD uses `completeStateChange(0, 0)`; HD-New handles the interrupt path separately if the state is `0x00`. |
 | 5A | **Only if state is `0x00`:** bulk OUT endpoint `0x02`, load idle firmware | Chunk size is 16,384 bytes on Original HD and 32,768 bytes on HD-New. The source does not add a separate state-confirmation step immediately after the transfer. |
-| 5B | **Otherwise, if already initialized:** SCMD RESET, mode `00`, data `0000` — Original HD payload `00 00 02 00 00 00`; HD-New payload `02 00 00 00` | `stateConfirmedScmd()` expects state `0x10`. Firmware is not reloaded in this branch. |
 | 6A | Write `0900:0070 = 00 04` | Purpose unknown; executed after idle-firmware download. |
 | 7A | Read `0900:0014`, then `0900:0018`; read `0000:0010`, `0012`, `0014`, `0016`, `0018`, `001A`, `001C`, `001E` (2 bytes each) | Reads after idle-firmware download. The source comments say the returned values appear to repeat across two banks; their purpose is unknown. |
 | 5B | **Otherwise, if already initialized:** SCMD RESET, mode `00`, data `0000` — Original HD payload `00 00 02 00 00 00`; HD-New payload `02 00 00 00` | `stateConfirmedScmd()` expects state `0x10`. Firmware is not reloaded in this branch. |
@@ -79,7 +80,7 @@ The tables below follow the call order in the userspace implementation, principa
 | 5 | SCMD START, mode `00`, data `0002` — Original HD `00 00 05 00 00 02`; HD-New `05 00 00 02` | State-change request; source expects state `0x02`. Follow completion confirmation. |
 | 6 | Observe bulk IN completions on `0x81` / `0x84` | In the referenced trace, transfers were 65,536 bytes. Validate payload contents; USB completion alone is not proof of valid video. |
 
-## Shared capture-start sequence observed on analog 240p
+### Shared capture-start sequence observed on analog 240p
 
 | Order | Command / operation | Confirmation |
 |---:|---|---|
@@ -89,7 +90,7 @@ The tables below follow the call order in the userspace implementation, principa
 | 4 | SCMD `05 00 00 02` | Confirm state/completion and data flow. |
 | 5 | Observe bulk IN completions on `0x81` / `0x84` | Captured transfers were 65,536 bytes; verify payload is actual video. |
 
-## Idle / keep-alive loop (post-input-setup, no signal)
+### Idle / keep-alive loop (post-input-setup, no signal)
 
 **Observed:** HD-New no-signal HDMI setup followed by a component switch.  
 **When observed:** After HDMI selector + HDMI front-end / parameter-table programming have completed, while the device remains configured for HDMI and no signal is present. The loop continues until the host begins the component-switch prefix.
@@ -117,7 +118,7 @@ The four-command cycle repeats many times (dozens of iterations in this trace). 
 
 Cross-reference from input-specific documents; keep the authoritative description here so later captures can be compared in one place.
 
-## Shared state words observed
+### Shared state words observed
 
 | Target / bytes | Meaning |
 |---|---|
