@@ -1,53 +1,77 @@
 # S-video input reference
 
-## S-video-specific command inventory
+## Commands
 
 | Target / operation | Bytes written or expected read | Notes |
 |---|---|---|
-| `0x88:02` | Write `DC` | S-video Y/C decoder path discriminator; composite uses `C9`. |
-| `0x88:14` | Write `D2` | S-video path parameter; universality not established. |
-| `0x88:28` | Write `88`, later `8A` | Initial mode-style value; later value correlates with 240p apply. |
-| `0x88:06`, `0x88:03` | Write `08`, `28` | Shared analog decoder setup. |
-| `0x9C:B3`, `0x9C:00`, `0x9C:27` | Write `33`, `CE`, `33`, `CC` in order | Analog front-end setup. |
-| `0x9C:51` | Write `44`; `EC` is an alternate no-source value | Signal-present selector; preserve the context-dependent difference. |
-| `0x88:07–09`, `0x88:28`, `0x88:06` | Write `8A 9B 7A 8A 08` | 240p apply block; individual meanings UNKNOWN. |
-| `0x98:0D`, `0x98:0E` | Write `C8`, `15`, `14` | Backend retrigger pulse; preserve order. |
+| `0x88:02` | Write `DC` | S-video Y/C decoder path. Composite uses `C9`. |
+| `0x88:14` | Write `D2` | S-video path parameter. |
+| `0x88:28` | Write `88`; some 240p paths later write `8A` | Mode-correlated value; format semantics are not fully decoded. |
+| `0x88:06`, `0x88:03` | Write `08`, `28` | Analog decoder setup. |
+| `0x9C:B3`, `0x9C:00`, `0x9C:27` | Write `33`, `CE`, `33`, `CC` in order | Analog front-end bank/page setup. |
+| `0x9C:51` | Write `45`, then later `44` | Initial HDMI selector followed by S-video selector during the switch. |
+| `0x88:10–15` | `6F D4 D0 08 08 88`; then `6F EA D0 08 08 88`; then `6F EA D0 1B 1B 88` | Three distinct decoder-tuning passes. |
+| `0x98:0D`, `0x98:0E` | `C8`, `05`, `04`; later `C8`, `15`, `14` | Backend retrigger/apply pulses; preserve order and timing. |
+| Mailbox status helpers | `89 89 FA`, `89 89 CA`, `89 89 E7`, `89 89 F1`, `99 89 F5` | Polled during decoder setup and lock settling; several meanings remain UNKNOWN. |
 
-## Ordered S-video 240p configuration (signal present)
+## Ordered S-video PAL 288p-equivalent switch (frames received)
 
-Sequence starts at the **S-video-specific decoder writes**. It intentionally excludes the HDMI prefix.
+This sequence starts at the HDMI selector `0x9C:51=45` and follows the switch to S-video. The host started streaming and received video frames.
 
-| Step | Ordered command(s) | Expected response / notes |
+| Step | Command / bytes written or read | Notes |
 |---:|---|---|
-| 1 | Write `0x88:02=DC`; write `0x88:14=D2`; wait ~206 ms in the captured sequence. | S-video path setup. |
-| 2 | Read `89 89 FA`; write `0x88:28=88`. | Initial mode-style decoder value. |
-| 3 | Read `89 89 FD`; write `0x88:06=08`; read `89 89 F8`; write `0x88:03=28`. | Analog decoder setup. |
-| 4 | Write `0x9C:B3=33`; read `9D CD 3F`; write `0x9C:00=CE`; write `0x9C:27=33`; read `9D CD 3F`; write `0x9C:00=CC`; read `9D CD 6E`. | Analog front-end setup. |
-| 5 | Write `0x9C:51=44`. | Selector value observed with signal present. |
-| 6 | Write/read routing state `02 0E`, then `03 0E`, then `03 0E` again. | Preserve intermediate state and repeated final state writes. |
-| 7 | Read `89 89 FA`; poll `F5`; read `89 89 FA`; poll `F5`. | Decoder wake/status prime. |
-| 8 | Pass 1: `0x88:10=6F, 11=D4, 12=D0, 13=08, 14=08, 15=88`. | First tuning pass. |
-| 9 | Pass 2: `0x88:10=6F, 11=EA, 12=D0, 13=08, 14=08, 15=88`. | Second tuning pass. |
-| 10 | Pass 3: `0x88:10=6F, 11=EA, 12=D0, 13=1B, 14=1B, 15=88`. | Third tuning pass. |
-| 11 | Read `89 89 FA`, `89 89 CA`; write `0x88:07=8A`, `08=9B`, `09=7A`, `28=8A`; read `89 89 FD`; write `0x88:06=08`. | Format-apply block observed after `CA=66`. |
-| 12 | Wait ~425 ms; repeat lock reads `89 89 FA`, `CA`, `E7`; poll `F5` until stable. | Captured final lock values: `CA=66`, `E7=69`, `F1=7E`; values can vary by session. |
-| 13 | Program backend in trace order: `0x98:04=95`, `0x98:70=D0`, `0x98:0F=88`; coefficient table `90–A3`; `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91`. | Coefficient values are the table in [commands.md](commands.md); they are observed values, not semantically decoded coefficients. |
-| 14 | Retrigger/apply: `0x98:0D=C8`, `0E=05`, `0E=04`; poll status and settle. | Backend apply pulse. |
-| 15 | Configure SoC pipeline; queue bulk IN URBs on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`. | Confirm state/completion and actual bulk video payload. Shared start confirmation in [hardware.md](hardware.md). |
+| 1 | Write `0x9C:51=45`; write routing word `0900:0018 = 02 0A` | Trace begins at the HDMI selector; routing state is initially HDMI. |
+| 2 | HDMI no-signal keep-alive loop: `0x9C:AB=4C`; read `9D CD 6A 00`; read `99 89 F5 00`; read `9D CD 94 00` | Repeats before the input change. |
+| 3 | Write `0x88:02=DC`, `0x88:14=D2`; read `89 89 FA`; write `0x88:28=88` | Select S-video decoder path and initialize it. |
+| 4 | Read `89 89 FD`; write `0x88:06=08`; read `89 89 F8`; write `0x88:03=28` | Decoder setup. |
+| 5 | Write `0x9C:B3=33`; read `9D CD 3F 00`; write `0x9C:00=CE`, `0x9C:27=33`; read `9D CD 3F 00`; write `0x9C:00=CC`; read `9D CD 6E 00` | Analog front-end bank/page setup. |
+| 6 | Write `0x9C:51=44` | S-video selector. |
+| 7 | Write routing word `0900:0018 = 02 0E`, then `03 0E`, then `03 0E` again | Preserve intermediate state and repeated final write. |
+| 8 | Read `89 89 FA`; poll `99 89 F5`; read `99 89 FD`, `99 89 FC`, `99 89 F3`; poll `99 89 F5` | Decoder status/wake sequence. |
+| 9 | Write `0x98:0D=C8`; poll `99 89 F5`; write `0x98:0E=05`, then `0x98:0E=04` | First backend retrigger pulse. |
+| 10 | Read `89 89 FA`, `89 89 CA`, `89 89 E7`; poll `99 89 F5` | Status checks before decoder tuning. |
+| 11 | Pass 1: `0x88:10–15 = 6F D4 D0 08 08 88` | First tuning pass. |
+| 12 | Pass 2: `0x88:10–15 = 6F EA D0 08 08 88` | Second tuning pass. |
+| 13 | Pass 3: `0x88:10–15 = 6F EA D0 1B 1B 88` | Third tuning pass. |
+| 14 | Read `89 89 FA`, `89 89 CA`, `89 89 E7`, `89 89 F1`; read `99 89 8B` | Status checks after tuning. Values are not treated as universal lock constants. |
+| 15 | Write backend values in order: `0x98:04=95`, `70=D0`, `0F=88`, `90=D8`, `91=BF`, `95=9D`, `96=1B`, `97=88`, `A0=8A`, `A1=D8`, `A2=B2`, `A3=59` | PAL S-video backend writes observed in this path. This is a sparse set of writes, not a complete `90–A3` coefficient table. |
+| 16 | Read `99 89 89`; write `0x98:72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`; read `99 89 FF`; write `0x98:04=8D`, `62=91` | Continue backend configuration in observed order. |
+| 17 | Poll `99 89 F5`, `99 89 FD`, `99 89 FC`, `99 89 F3`; poll `99 89 F5` repeatedly | Backend/status settling. |
+| 18 | Write `0x98:0D=C8`; poll `99 89 F5`; write `0x98:0E=15`, then `0x98:0E=14` | Second backend retrigger pulse. |
+| 19 | Continue status polling; configure pipeline and queue bulk IN transfers on endpoints `0x81` and `0x84` | Pipeline setup precedes stream start. |
+| 20 | SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`; confirm state/completion | INIT without firmware reload, then START. Video frames were received. |
+| 21 | Bulk IN traffic on `0x81` | Initial stream packets appear before the trace ends. |
+
+## Ordered S-video NTSC-family 240p configuration
+
+This earlier observed sequence is retained separately; do not merge its values with the PAL 288p-equivalent path above.
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | Write `0x88:02=DC`, `0x88:14=D2`; wait about 206 ms | S-video decoder setup. |
+| 2 | Read `89 89 FA`; write `0x88:28=88` | Initial mode-style value. |
+| 3 | Read `89 89 FD`; write `0x88:06=08`; read `89 89 F8`; write `0x88:03=28` | Decoder setup. |
+| 4 | Write `0x9C:B3=33`; page `CE`; write `0x9C:27=33`; return page `CC`; read `9D CD 6E` | Analog front-end setup. |
+| 5 | Write `0x9C:51=44`; routing state `02 0E`, `03 0E`, `03 0E` | Selector and routing state. |
+| 6 | Three tuning passes: `6F D4 D0 08 08 88`; `6F EA D0 08 08 88`; `6F EA D0 1B 1B 88` to `0x88:10–15` | Preserve all passes. |
+| 7 | Apply block: `0x88:07=8A`, `08=9B`, `09=7A`, `28=8A`, `06=08` | Observed in the NTSC-family 240p path; not observed in the PAL sequence above. |
+| 8 | Program backend and retrigger `0x98:0D=C8`, `0E=05`, `0E=04` | See [commands.md](commands.md) for the separate coefficient reference. |
+| 9 | SCMD `04 A0 00 00`; state readback; SCMD `05 00 00 02` | Start capture after pipeline setup. |
 
 ## Session-dependent values
 
-| Read/write | Value in this S-video capture | Notes |
+| Target / operation | Bytes written or expected read | Notes |
 |---|---|---|
-| Write `0900:0014` | `03 1E` | Composite capture used `D3 9E`; session-dependent. |
-| Read `0900:001C` | `6E EB` before state update, `6F EF` after | Composite capture differed; do not hard-code. |
-| Read `99 89 8B` | `6E` | Composite capture returned `2E`; unknown meaning. |
-| Read `0900:01B0` after start | `00 10` | Composite capture read `01 50`; meaning unknown. |
+| `0900:0014` | Common shadow bytes include `D3 9E` and `03 1E` | Session-dependent; restore observed shadow, do not hard-code. |
+| `0900:001C` | Values vary by session | Mailbox readiness/status; do not hard-code a single reply. |
+| `99 89 8B` | Replies include `6E` and `2E` | Meaning UNKNOWN. |
+| `0900:01B0` after start | Replies vary, including `00 10` and `01 50` | Meaning UNKNOWN. |
 
 ## Format coverage
 
-| Format / condition | Status |
-|---|---|
-| 240p NTSC-family, signal present | One full bring-up trace captured. |
-| 288p, 480i, 576i, 480p, 576p, 720i, 720p, 1080i, 1080p | Complete ordered S-video setup/start sequence **NOT CAPTURED**. |
-| No-source switch | Selector `0x9C:51=EC` observed; full sequence **NOT CAPTURED**. |
+| Format / condition | Status | Notes |
+|---|---|---|
+| NTSC-family 240p, signal present | Observed working sequence | Keep separate from PAL-family sequence. |
+| PAL-family 288p-equivalent, signal present | Observed working sequence; stream frames received | Sequence documented above. |
+| 480i, 576i, 480p, 576p, 720i, 720p, 1080i, 1080p | Complete ordered sequence **NOT CAPTURED** | Do not infer from 240p/288p paths. |
+| No-source switch | Selector `0x9C:51=EC` observed | Complete sequence not documented. |
