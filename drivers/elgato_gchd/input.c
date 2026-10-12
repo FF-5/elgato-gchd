@@ -42,24 +42,26 @@ struct gchd_mail_cmd {
  u8 data[8];
 };
 
-/* Input selectors are single-byte protocol values; commands stay whole. */
-#define GCHD_INPUT_SELECT_COMPOSITE 0x44
-#define GCHD_INPUT_SELECT_SVIDEO    0xec
-
-static const struct gchd_mail_cmd gchd_cmd_select_composite = {
- GCHD_MAIL_PORT_COMPONENT, 2,
- { GCHD_COMPONENT_REG_51, GCHD_INPUT_SELECT_COMPOSITE }
-};
-static const struct gchd_mail_cmd gchd_cmd_select_svideo = {
- GCHD_MAIL_PORT_COMPONENT, 2,
- { GCHD_COMPONENT_REG_51, GCHD_INPUT_SELECT_SVIDEO }
-};
-
 /* Complete mailbox command initializers; keep each command as one entry. */
 #define GCHD_MAIL_CMD2(port, reg, value) \
  { (port), 2, { (reg), (value) } }
 #define GCHD_MAIL_CMD3(port, byte0, byte1, byte2) \
  { (port), 3, { (byte0), (byte1), (byte2) } }
+
+/*
+ * Input selection is a complete register/value operation. Keep the observed
+ * pairs together so call sites cannot accidentally combine the wrong value
+ * with register 0x51. 0xEC is an alternate analog-path value, not a
+ * universal S-Video selector.
+ */
+static const struct gchd_mail_cmd gchd_cmd_select_hdmi =
+ GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, GCHD_COMPONENT_REG_51, 0x45);
+static const struct gchd_mail_cmd gchd_cmd_select_component =
+ GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, GCHD_COMPONENT_REG_51, 0xed);
+static const struct gchd_mail_cmd gchd_cmd_select_composite =
+ GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, GCHD_COMPONENT_REG_51, 0x44);
+static const struct gchd_mail_cmd gchd_cmd_select_analog_alt =
+ GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, GCHD_COMPONENT_REG_51, 0xec);
 
 static int gchd_seq(struct gchd *d, const struct gchd_mail_cmd *s, size_t n)
 {
@@ -859,11 +861,11 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
    return r;
   /*
    * Traces with a valid analog signal select Composite with 0x4E:0x51=0x44.
-   * Keep the observed no-signal route for S-Video unchanged pending more
-   * traces of that input with a locked signal.
+   * The observed 0x51=0xEC path is retained for the alternate/no-signal
+   * analog case; it is not assumed to be a universal S-Video selector.
    */
   r = gchd_seq(d, d->input == 2 ? &gchd_cmd_select_composite :
-                                   &gchd_cmd_select_svideo, 1);
+                                   &gchd_cmd_select_analog_alt, 1);
   if (r)
    return r;
  }
