@@ -27,7 +27,7 @@
 | 12 | Read `9D CD 8F \u2192 96`; write `B0=E9` | Close/commit parameter table. |
 | 13 | Recurring `AB 4C` / `9D CD 6A` / `99 89 F5` / `9D CD 94` | Idle/keep-alive after front-end setup (see below). |
 
-## Idle / keep-alive after HDMI front-end setup (no signal)
+### Idle / keep-alive after HDMI front-end setup (no signal)
 
 **Observed:** no-signal HDMI configuration.
 
@@ -46,7 +46,7 @@ This is the same pattern previously noted as \u201cIdle/keep-alive behavior in a
 
 **Authoritative description, open questions (generic vs input-specific), and evidence status** are kept in [hardware.md](hardware.md) so that later captures on other inputs can be compared in one place.
 
-## HDMI detection and format setup
+### HDMI detection and format setup
 
 | Command / data | Description | Status |
 |---|---|---|
