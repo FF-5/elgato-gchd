@@ -49,19 +49,18 @@ struct gchd_mail_cmd {
  { (port), 3, { (byte0), (byte1), (byte2) } }
 
 /*
- * Input selection is a complete register/value operation. Keep the observed
- * pairs together so call sites cannot accidentally combine the wrong value
- * with register 0x51. 0xEC is an alternate analog-path value, not a
- * universal S-Video selector.
+ * Whole input-selection mailbox commands. Keep each observed register/value
+ * pair in one definition. 0xEC is an alternate analog path, not a universal
+ * S-Video selector.
  */
-static const struct gchd_mail_cmd gchd_cmd_select_hdmi =
- GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, GCHD_COMPONENT_REG_51, 0x45);
-static const struct gchd_mail_cmd gchd_cmd_select_component =
- GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, GCHD_COMPONENT_REG_51, 0xed);
-static const struct gchd_mail_cmd gchd_cmd_select_composite =
- GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, GCHD_COMPONENT_REG_51, 0x44);
-static const struct gchd_mail_cmd gchd_cmd_select_analog_alt =
- GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, GCHD_COMPONENT_REG_51, 0xec);
+#define GCHD_INPUT_SELECT_HDMI \
+ GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, 0x51, 0x45)
+#define GCHD_INPUT_SELECT_COMPONENT \
+ GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, 0x51, 0xed)
+#define GCHD_INPUT_SELECT_COMPOSITE \
+ GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, 0x51, 0x44)
+#define GCHD_INPUT_SELECT_ANALOG_ALT \
+ GCHD_MAIL_CMD2(GCHD_MAIL_PORT_COMPONENT, 0x51, 0xec)
 
 static int gchd_seq(struct gchd *d, const struct gchd_mail_cmd *s, size_t n)
 {
@@ -864,8 +863,17 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
    * The observed 0x51=0xEC path is retained for the alternate/no-signal
    * analog case; it is not assumed to be a universal S-Video selector.
    */
-  r = gchd_seq(d, d->input == 2 ? &gchd_cmd_select_composite :
-                                   &gchd_cmd_select_analog_alt, 1);
+  if (d->input == 2) {
+   static const struct gchd_mail_cmd select_composite[] = {
+    GCHD_INPUT_SELECT_COMPOSITE,
+   };
+   r = gchd_seq(d, select_composite, ARRAY_SIZE(select_composite));
+  } else {
+   static const struct gchd_mail_cmd select_analog_alt[] = {
+    GCHD_INPUT_SELECT_ANALOG_ALT,
+   };
+   r = gchd_seq(d, select_analog_alt, ARRAY_SIZE(select_analog_alt));
+  }
   if (r)
    return r;
  }
