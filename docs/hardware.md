@@ -5,9 +5,9 @@
 | Operation | USB fields / payload | Sequence and expected response |
 |---|---|---|
 | Vendor control read | Request type `0xC0`; request/value/index/length depend on operation | Read exactly the length requested by the source; short reads are errors. |
-| Vendor control write | Request type `0x40); request/value/index/payload depend on operation | Write exactly the payload length expected by the source. |
+| Vendor control write | Request type `0x40`); request/value/index/payload depend on operation | Write exactly the payload length expected by the source. |
 | Firmware download | Bulk OUT endpoint `0x02`; chunks of 16,384 bytes (Original HD) or 32,768 bytes (HD New) | Firmware image and generation-specific startup order must match the device path. |
-| SCMD | Vendor OUT request `0xB8); Original HD payload `00 00 CMD MODE DATA_H DATA_L` (6 bytes), HD New payload `CMD MODE DATA_H DATA_L` (4 bytes) | Follow command-receipt, completion, state readback, and acknowledgement steps below. |
+| SCMD | Vendor OUT request `0xB8); Original HD payload `00 00 CMD MODE DATA_H DATA_L` (6 bytes), HD New payload `CMD MODE DATA_H DATA_L` (4 bytes`) | Follow command-receipt, completion, state readback, and acknowledgement steps below. |
 | Original-HD mailbox write | Vendor OUT request `0xBD`; `wIndex=PORT<<8`; unpadded command bytes | Write command → restore enable shadow → poll mailbox ready. |
 | HD-New mailbox write | Write payload to `0800:00C0` via request `0xBC` (odd length padded with `00`); then request `0xB9` payload `09 00 (PORT<<1) LENGTH` | Interrupt `0x83` → status/readiness reads → restore enable shadow → poll ready before next command. |
 | HD-New mailbox read | Request `0xB9` payload `09 01 (PORT<<1) LENGTH`; read `LENGTH+2+(LENGTH&1)` bytes from `0800:23BE` | Strip two leading status bytes and odd-length pad. |
@@ -45,7 +45,7 @@ This is the lifecycle sequence recorded in the userspace command reference. Some
 
 | SCMD payload | Source interpretation | Expected state / note |
 |---|---|---|
-| `01 MODE ...` | IDLE | `0x11) |
+| `01 MODE ...` | IDLE | `0x11`) |
 | `02 00 ...` / `02 01 ...` | RESET | Mode-dependent readback; deeper interpretation partly unconfirmed. |
 | `04 00 00 00` | INIT and encode firmware load | Verify firmware/version words. |
 | `04 A0 00 00` | INIT without encode firmware reload | Used before capture start. |
