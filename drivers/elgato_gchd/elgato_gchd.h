@@ -408,7 +408,6 @@
 #define GCHD_REPLY_COMMAND_6C          0x6c
 #define GCHD_REPLY_COMMAND_76          0x76
 #define GCHD_REPLY_COMMAND_73          0x73
-#define GCHD_REPLY_COMMAND_PENDING     0x02
 
 /* Bit masks and signatures used to recognize encoder status replies. */
 #define GCHD_REPLY_ENCODER_HIGH_MASK   0xf8
