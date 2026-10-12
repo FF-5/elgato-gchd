@@ -402,16 +402,63 @@ static int gchd_mail_write33(struct gchd *d, const u8 *data, u8 len)
  return gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, data, len);
 }
 
+/*
+ * Named SCMD operations keep their complete wire payloads together. The
+ * original-HD transport has a two-byte prefix; HD-New sends the four-byte
+ * command payload directly.
+ */
+struct gchd_scmd_definition {
+ u8 command;
+ u8 mode;
+ u16 data;
+ u8 old_payload[6];
+ u8 hdnew_payload[4];
+};
+
+static const struct gchd_scmd_definition gchd_scmd_idle = {
+ SCMD_IDLE, 0, 0,
+ { 0x00, 0x00, SCMD_IDLE, 0x00, 0x00, 0x00 },
+ { SCMD_IDLE, 0x00, 0x00, 0x00 }
+};
+
+static const struct gchd_scmd_definition gchd_scmd_start = {
+ SCMD_STATE_CHANGE, 0, GCHD_STATE_START,
+ { 0x00, 0x00, SCMD_STATE_CHANGE, 0x00, 0x00, GCHD_STATE_START },
+ { SCMD_STATE_CHANGE, 0x00, 0x00, GCHD_STATE_START }
+};
+
+static const struct gchd_scmd_definition gchd_scmd_init_hdnew = {
+ SCMD_INIT, GCHD_SCMD_MODE_HDNEW, 0,
+ { 0x00, 0x00, SCMD_INIT, GCHD_SCMD_MODE_HDNEW, 0x00, 0x00 },
+ { SCMD_INIT, GCHD_SCMD_MODE_HDNEW, 0x00, 0x00 }
+};
+
 int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
 {
  u8 b_old[6] = { 0, 0, command, mode, data >> 8, data };
  u8 b_new[4] = { command, mode, data >> 8, data };
+ const u8 *payload_old = b_old, *payload_new = b_new;
+ const struct gchd_scmd_definition *definition = NULL;
  int r;
 
+ if (command == SCMD_IDLE && mode == 0 && data == 0)
+  definition = &gchd_scmd_idle;
+ else if (command == SCMD_STATE_CHANGE && mode == 0 &&
+          data == GCHD_STATE_START)
+  definition = &gchd_scmd_start;
+ else if (command == SCMD_INIT && mode == GCHD_SCMD_MODE_HDNEW &&
+          data == 0)
+  definition = &gchd_scmd_init_hdnew;
+
+ if (definition) {
+  payload_old = definition->old_payload;
+  payload_new = definition->hdnew_payload;
+ }
+
  if (d->family == GCHD_FAMILY_HDNEW)
-  r = gchd_ctrl_write(d, GCHD_REQ_SCMD, 0, 0, b_new, sizeof(b_new));
+  r = gchd_ctrl_write(d, GCHD_REQ_SCMD, 0, 0, payload_new, 4);
  else
-  r = gchd_ctrl_write(d, GCHD_REQ_SCMD, 0, 0, b_old, sizeof(b_old));
+  r = gchd_ctrl_write(d, GCHD_REQ_SCMD, 0, 0, payload_old, 6);
  if (r)
   return r;
 
@@ -419,8 +466,8 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
      (command == SCMD_IDLE || command == SCMD_INIT ||
       command == SCMD_STATE_CHANGE))
   dev_info(&d->intf->dev,
-           "SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=%02x %02x %02x %02x\n",
-           b_new[0], b_new[1], b_new[2], b_new[3]);
+           "SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=%02x %02x %02x %02x\\n",
+           payload_new[0], payload_new[1], payload_new[2], payload_new[3]);
 
  if (d->family == GCHD_FAMILY_OLD)
   return 0;
@@ -439,7 +486,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
   if (r)
    return r;
   dev_info(&d->intf->dev,
-           "SCMD interrupt completed: command=0x%02x\n", command);
+           "SCMD interrupt completed: command=0x%02x\\n", command);
   for (tries = 0; tries < 500; ++tries) {
    r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, GCHD_REG_HDNEW_SCMD_READBACK, &rb);
    if (r)
@@ -448,7 +495,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
     return 0;
   }
   dev_err(&d->intf->dev,
-          "SCMD timeout: command=0x%02x mode=0x%02x data=0x%04x readback=0x%04x polls=%d\n",
+          "SCMD timeout: command=0x%02x mode=0x%02x data=0x%04x readback=0x%04x polls=%d\\n",
           command, mode, data, rb, tries);
   return -ETIMEDOUT;
  }
