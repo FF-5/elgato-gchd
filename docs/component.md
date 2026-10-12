@@ -2,17 +2,17 @@
 
 ## Known commands
 
-| Order | Target / bytes | Description | Confirmation / status |
+| Target / operation | Bytes written or expected read | Notes |
 |---:|---|---|---|
-| 1 | `0x88:06=86` | Digital/component-side prefix | **Observed** |
-| 2 | `89 89 F8` (read helper) | Read before `0x88:03` | **Observed** |
-| 3 | `0x88:03=2F` | Digital/component-side prefix | **Observed** |
-| 4 | `0x9C:B3=CC` | Digital/component-side prefix | **Observed** |
+| `0x88:06` | Write `86` | Digital/component prefix. |
+| Port `0x33` read helper | `89 89 F8` | Read before `0x88:03`; meaning UNKNOWN. |
+| `0x88:03` | Write `2F` | Digital/component prefix. |
+| `0x9C:B3` | Write `CC` | Digital/component prefix. |
 | 5 | page `CE` \u2192 `0x9C:27=CC` \u2192 page `CC` | Page select around `27=CC` | **Observed** |
-| 6 | State word `0900:0018 = 02 0E` | Component route/state | **Observed** (written *before* the final selector; see ordered sequence) |
-| 7 | Shared path: `0x9C:AB=4C`, `0x9C:1B=33`, `0x9C:B7=CE`, `0x9C:B8=DC`, `0x9C:B8=CC`, `0x9C:07=38`, `0x9C:07=C8` | Common path writes before selector | **Observed** in the exact order below |
+| `0900:0018` | Write `02 0E` | Component routing state; written before final selector. |
+| `0x9C` shared path | `AB=4C`, `1B=33`, `B7=CE`, `B8=DC`, `B8=CC`, `07=38`, `07=C8` | Common path writes before selector; preserve order. |
 | 8 | `0x9C:51=ED` (mailbox `51 ED`) | Component selector | **Observed** \u2013 trace ends at this write |
-| 9 | `24 0C`, `21 CD`, `91 C8`, `0E 8C`, `11 EC`, `54 FC`, `71 4C`, `04 CC` | Component-specific tail (older inventory) | Exact full transaction context still **NOT CAPTURED** |
+| Component-specific tail | `24 0C`, `21 CD`, `91 C8`, `0E 8C`, `11 EC`, `54 FC`, `71 4C`, `04 CC` | Full transaction context **NOT CAPTURED**. |
 
 ## Ordered component selection (HD-New)
 
