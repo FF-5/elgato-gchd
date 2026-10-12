@@ -466,7 +466,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
      (command == SCMD_IDLE || command == SCMD_INIT ||
       command == SCMD_STATE_CHANGE))
   dev_info(&d->intf->dev,
-           "SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=%02x %02x %02x %02x\\n",
+           "SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=%02x %02x %02x %02x\n",
            payload_new[0], payload_new[1], payload_new[2], payload_new[3]);
 
  if (d->family == GCHD_FAMILY_OLD)
@@ -486,7 +486,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
   if (r)
    return r;
   dev_info(&d->intf->dev,
-           "SCMD interrupt completed: command=0x%02x\\n", command);
+           "SCMD interrupt completed: command=0x%02x\n", command);
   for (tries = 0; tries < 500; ++tries) {
    r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, GCHD_REG_HDNEW_SCMD_READBACK, &rb);
    if (r)
@@ -495,7 +495,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
     return 0;
   }
   dev_err(&d->intf->dev,
-          "SCMD timeout: command=0x%02x mode=0x%02x data=0x%04x readback=0x%04x polls=%d\\n",
+          "SCMD timeout: command=0x%02x mode=0x%02x data=0x%04x readback=0x%04x polls=%d\n",
           command, mode, data, rb, tries);
   return -ETIMEDOUT;
  }
