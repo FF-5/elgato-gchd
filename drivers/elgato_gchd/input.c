@@ -49,18 +49,19 @@ struct gchd_mail_cmd {
  { (port), 3, { (byte0), (byte1), (byte2) } }
 
 /*
- * Whole input-selection mailbox commands. Keep each observed register/value
- * pair in one definition. 0xEC is an alternate analog path, not a universal
- * S-Video selector.
+ * Input selection uses two-byte register writes on the component mailbox.
+ * 0xEC is an alternate analog path, not a universal S-Video selector.
  */
+#define GCHD_INPUT_SELECT(reg, value) \
+ GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_COMPONENT, (reg), (value))
 #define GCHD_INPUT_SELECT_HDMI \
- GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_COMPONENT, 0x51, 0x45)
+ GCHD_INPUT_SELECT(0x51, 0x45)
 #define GCHD_INPUT_SELECT_COMPONENT \
- GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_COMPONENT, 0x51, 0xed)
+ GCHD_INPUT_SELECT(0x51, 0xed)
 #define GCHD_INPUT_SELECT_COMPOSITE \
- GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_COMPONENT, 0x51, 0x44)
+ GCHD_INPUT_SELECT(0x51, 0x44)
 #define GCHD_INPUT_SELECT_ANALOG_ALT \
- GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_COMPONENT, 0x51, 0xec)
+ GCHD_INPUT_SELECT(0x51, 0xec)
 
 static int gchd_seq(struct gchd *d, const struct gchd_mail_cmd *s, size_t n)
 {
