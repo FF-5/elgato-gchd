@@ -28,6 +28,25 @@
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
 
+/* USB vendor-control protocol identifiers and register indices. */
+#define GCHD_REQ_READ                    0xc0
+#define GCHD_REQ_WRITE                   0x40
+#define GCHD_REQ_REGISTER                0xbc
+#define GCHD_REQ_MAILBOX                 0xbd
+#define GCHD_REQ_SCMD                    0xb8
+
+#define GCHD_REG_BANK_SELECT             0x0000
+#define GCHD_REG_ENABLE                  0x0018
+#define GCHD_REG_ENABLE_STATE            0x0014
+#define GCHD_REG_MAILBOX_READY           0x001c
+#define GCHD_REG_STATE                   0x2008
+#define GCHD_REG_STATE_COMPLETE          0x0074
+#define GCHD_REG_HDNEW_INTERRUPT_STATUS  0x0016
+#define GCHD_REG_HDNEW_SCMD_READBACK     0x0014
+#define GCHD_REG_HDNEW_MAILBOX_READ      0x23be
+#define GCHD_REG_HDNEW_MAILBOX_WRITE     0x00c0
+#define GCHD_REG_HDNEW_MAILBOX_CONFIG    0x0000
+
 /*
  * SCMD protocol commands and state values.
  * Keep command IDs separate from the state values used to confirm them.
