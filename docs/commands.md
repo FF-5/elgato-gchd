@@ -18,12 +18,12 @@ This document collects commands that do not belong exclusively to one input path
 |---|---|---|
 | `99 89 ED` | Port `0x33`; repeat read until reply bit 6 is set | Poll-complete helper according to source. |
 | `99 89 EC` | Port `0x33`; repeated read, count passed by caller | Sequence-read helper; source discards returned values. |
-| `89 89 FA` | Port `0x33`; one-byte reply | Composite NTSC/PAL-family detect: low nibble `6` = NTSC/60-Hz family, `7` = PAL/50-Hz family. Not a 240p/480i detector. `|
+| `89 89 FA` | Port `0x33`; one-byte reply | Composite NTSC/PAL-family detect: low nibble `6` = NTSC/60-Hz family, `7` = PAL/50-Hz family. Not a 240p/480i detector. ||
 | `AB A9 0F A4 55` | Port `0x33`; 24-bit reply | Phase probe. Replies `33 44 55` and `27 F9 7B` observed; full meaning unknown. |
-| `29 89 5B` | Port `0x33`; expected reply `91` `| Source-annotated handshake; semantic meaning unknown. |
-| `DD CE 3F B2` | Port `0x33`; expected reply `DA 67` `| Source-annotated handshake; semantic meaning unknown. |
-| `43 23 84` | Port `0x33`; poll until `F7` `| Source-annotated handshake; semantic meaning unknown. |
-| `89 89 FB` | Port `0x33`; expected reply `6E` `| Source-annotated handshake; semantic meaning unknown. |
+| `29 89 5B` | Port `0x33`; expected reply `91` | Source-annotated handshake; semantic meaning unknown. | Source-annotated handshake; semantic meaning unknown. |
+| `DD CE 3F B2` | Port `0x33`; expected reply `DA 67` | Source-annotated handshake; semantic meaning unknown. | Source-annotated handshake; semantic meaning unknown. |
+| `43 23 84` | Port `0x33`; poll until `F7` | Source-annotated handshake; semantic meaning unknown. | Source-annotated handshake; semantic meaning unknown. |
+| `89 89 FB` | Port `0x33`; expected reply `6E` | Source-annotated handshake; semantic meaning unknown. | Source-annotated handshake; semantic meaning unknown. |
 | `AB 92 3E B4 ...` | Port `0x33`; followed by 56-byte reads | Not understood in source; preserve exact call-site order and length. |
 | `CMD 94 41 37` | HD-New device `0x94`, commit via `09 00 66 03` + handshake; no fetch stage | Observed auxiliary command in S-video trace. |
 | `CMD 94 4A B7/BB` | Device `0x94`; commit + handshake | Value varies by trace: S-video uses `B7`, another trace uses `BB`. |
@@ -40,8 +40,8 @@ SCMD uses vendor OUT request `0xB8`. Original HD payload is six bytes `00 00 CMD
 | `04 00 00 00` | INIT with firmware load | Firmware-load/init path; check firmware version/words afterward. |
 | `04 A0 00 00` | INIT without reloading encode firmware | Seen before stream start after input/transcoder setup. |
 | `05 00 00 01` | State-change command; likely stop/transition phase | Observed in transition trace; exact meaning is untested. |
-| `05 00 00 02` | START according to source; stream-start payload in traces | Expected state `0x02`) when using source's state-confirmation routine. |
-| `05 00 00 04` | NULL/empty stream according to source; transition interpretation remains cautious | Expected state `0x04`) in source routine; trace use during format transition needs separate validation. |
+| `05 00 00 02` | START according to source; stream-start payload in traces | Expected state `0x02` when using source's state-confirmation routine. |
+| `05 00 00 04` | NULL/empty stream according to source; transition interpretation remains cautious | Expected state `0x04` in source routine; trace use during format transition needs separate validation. |
 
 ### SCMD confirmation sequence
 
@@ -83,16 +83,16 @@ These are **bit fields in the 16-bit register at `0x0900:0x0018`**. They are not
 | `BANKSEL` | Write `0000` at setup | Meaning unknown. |
 | `0xCA` via `89 89 CA` | `FE`, `7E`, `66`, transient `EE` | Inferred: `66` associated with 240p lock and `7E` with 480i lock in one trace; validate across captures. |
 | `0xFA` via `89 89 FA` | `3F`, `06`, `16` | Polled during setup/format transitions; exact meaning unknown. |
-| `0xE7` via `89 89 E7` | `69`, `09`, `89`) | Meaning unknown. |
+| `0xE7` via `89 89 E7` | `69`, `09`, `89` | Meaning unknown. |
 | `0xF1` via `89 89 F1` | `7E`, `69` | Meaning unknown. |
 | `0xCB` via `89 89 CB` | `6E`, `44` | Meaning unknown. |
 | `0xFD`, `0xFC`, `0xF3` | Common reads `6E`, `6E`, `7E` in one sequence | Meaning unknown; prefix/address differs by read helper. |
-| `0xF8` via `89 89 F8` | `C9`) | Meaning unknown. |
+| `0xF8` via `89 89 F8` | `C9` | Meaning unknown. |
 | `0x8B` via `99 89 8B` | `2E`, `36` | Meaning unknown. |
 | `0x89` via `99 89 89` | `6E` | Meaning unknown. |
-| `0xFF` via `99 89 FF` | `73`) | Meaning unknown. |
+| `0xFF` via `99 89 FF` | `73` | Meaning unknown. |
 | `0x6B` via `99 89 6B` | `6E` | Meaning unknown. |
-| `0x58` via `99 89 58` | `91`) | Meaning unknown. |
+| `0x58` via `99 89 58` | `91` | Meaning unknown. |
 
 ## Transcoder and pipeline commands
 
@@ -101,7 +101,7 @@ These are **bit fields in the 16-bit register at `0x0900:0x0018`**. They are not
 | Full-word write (`slsi`) | Vendor OUT `0xBC`; `wIndex=ADDRESS`; 16-bit big-endian DATA | Writes one aligned 16-bit transcoder register. |
 | Masked write (`sparam`) | Vendor OUT `0xBC`; `wValue=1`; `wIndex=ADDRESS & ~3`; 8-byte payload `VALUE32_BE MASK32_BE` | Updates only mask-selected bits. |
 | Table write | Sequential 16-bit words, big-endian; odd trailing byte occupies high byte of last word | Coefficient/table load. Writable range boundaries not known. |
-| Pipeline dimension candidates | `0x152C`, `0x162C`: value/mask writes encode `0x02D0` (720) and `0x01E0` (480) | Consistent with 720×480-related pipeline settings; exact field semantics not established. Other pipeline addresses observed: `1124`, `1264`, `1128`, `1268`, `1530`, `1534`, `1538`, `1630`, `1634`, `1638`. `|
+| Pipeline dimension candidates | `0x152C`, `0x162C`: value/mask writes encode `0x02D0` (720) and `0x01E0` (480) | Consistent with 720×480-related pipeline settings; exact field semantics not established. Other pipeline addresses observed: `1124`, `1264`, `1128`, `1268`, `1530`, `1534`, `1538`, `1630`, `1634`, `1638`. |
 
 ## Input-switch / format-transition commands not yet fully classified
 
