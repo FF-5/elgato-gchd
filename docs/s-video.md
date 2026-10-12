@@ -75,3 +75,26 @@ This earlier observed sequence is retained separately; do not merge its values w
 | PAL-family 288p-equivalent, signal present | Observed working sequence; stream frames received | Sequence documented above. |
 | 480i, 576i, 480p, 576p, 720i, 720p, 1080i, 1080p | Complete ordered sequence **NOT CAPTURED** | Do not infer from 240p/288p paths. |
 | No-source switch | Selector `0x9C:51=EC` observed | Complete sequence not documented. |
+
+
+## Format-by-format comparison
+
+The [side-by-side analog format comparison](analog-format-comparison.md) aligns the composite and S-video sequences by stage.
+
+### 240p / 288p
+
+| Composite | S-video |
+|---|---|
+| NTSC-family 240p: working full bring-up reaches START. PAL-family 288p-equivalent: working sequence; frames received. | NTSC-family 240p: working full bring-up reaches START. PAL-family 288p-equivalent: working sequence; frames received. |
+
+### 480i / 576i
+
+| Composite | S-video |
+|---|---|
+| Complete sequence **NOT CAPTURED**. | Complete sequence **NOT CAPTURED**. |
+
+### 480p / 576p
+
+| Composite | S-video |
+|---|---|
+| Complete sequence **NOT CAPTURED**. | Complete sequence **NOT CAPTURED**. |
