@@ -18,12 +18,12 @@ This document collects commands that do not belong exclusively to one input path
 |---|---|---|
 | `99 89 ED` | Port `0x33`; repeat read until reply bit 6 is set | Poll-complete helper according to source. |
 | `99 89 EC` | Port `0x33`; repeated read, count passed by caller | Sequence-read helper; source discards returned values. |
-| `89 89 FA` | Port `0x33`; one-byte reply | Composite NTSC/PAL-family detect: low nibble `6` = NTSC/60-Hz family, `7` = PAL/50-Hz family. Not a 240p/480i detector. ||
+| `89 89 FA` | Port `0x33`; one-byte reply | Composite NTSC/PAL-family detect: low nibble `6` = NTSC/60-Hz family, `7` = PAL/50-Hz family. Not a 240p/480i detector. |
 | `AB A9 0F A4 55` | Port `0x33`; 24-bit reply | Phase probe. Replies `33 44 55` and `27 F9 7B` observed; full meaning unknown. |
-| `29 89 5B` | Port `0x33`; expected reply `91` | Source-annotated handshake; semantic meaning unknown. | Source-annotated handshake; semantic meaning unknown. |
-| `DD CE 3F B2` | Port `0x33`; expected reply `DA 67` | Source-annotated handshake; semantic meaning unknown. | Source-annotated handshake; semantic meaning unknown. |
-| `43 23 84` | Port `0x33`; poll until `F7` | Source-annotated handshake; semantic meaning unknown. | Source-annotated handshake; semantic meaning unknown. |
-| `89 89 FB` | Port `0x33`; expected reply `6E` | Source-annotated handshake; semantic meaning unknown. | Source-annotated handshake; semantic meaning unknown. |
+| `29 89 5B` | Port `0x33`; expected reply `91` | Source-annotated handshake; semantic meaning unknown. |
+| `DD CE 3F B2` | Port `0x33`; expected reply `DA 67` | Source-annotated handshake; semantic meaning unknown. |
+| `43 23 84` | Port `0x33`; poll until `F7` | Source-annotated handshake; semantic meaning unknown. |
+| `89 89 FB` | Port `0x33`; expected reply `6E` | Source-annotated handshake; semantic meaning unknown. |
 | `AB 92 3E B4 ...` | Port `0x33`; followed by 56-byte reads | Not understood in source; preserve exact call-site order and length. |
 | `CMD 94 41 37` | HD-New device `0x94`, commit via `09 00 66 03` + handshake; no fetch stage | Observed auxiliary command in S-video trace. |
 | `CMD 94 4A B7/BB` | Device `0x94`; commit + handshake | Value varies by trace: S-video uses `B7`, another trace uses `BB`. |
@@ -31,7 +31,7 @@ This document collects commands that do not belong exclusively to one input path
 
 ## SCMD commands
 
-SCMD uses vendor OUT request `0xB8`. Original HD payload is six bytes `00 00 CMD MODE DATA_H DATA_L`; HD-New payload is four bytes `CMD MODE DATA_H DATA_L`.`
+SCMD uses vendor OUT request `0xB8`. Original HD payload is six bytes `00 00 CMD MODE DATA_H DATA_L`; HD-New payload is four bytes `CMD MODE DATA_H DATA_L`.
 
 | Payload (HD-New) | Source interpretation | Confirmation / caveat |
 |---|---|---|
@@ -66,6 +66,7 @@ State values used by source: `00` uninitialized, `10` idle firmware loaded befor
 | `0800:0016` | Often returns `09 00` in HD-New handshake | Interrupt/status role uncertain. |
 | `0900:0070` | Write `00 04` during initial firmware setup | Purpose unknown. |
 | `0900:01B0` | Write `00 00` after SCMD completion; trace also reads this after start | Purpose unknown; observed values vary. |
+
 ### Enable-register bits
 
 These are **bit fields in the 16-bit register at `0x0900:0x0018`**. They are not separate register addresses or standalone commands. The source identifiers in the second column are names used by the code. A bit mask is `1 << bit_index`; setting/clearing a bit changes the full register word, which is written as two bytes. The exact complete word depends on the other bits already set.
@@ -80,6 +81,7 @@ These are **bit fields in the 16-bit register at `0x0900:0x0018`**. They are not
 | `0x0900:0x0018` | 9 | `0x0200` | `EB_ANALOG_MUX` | Source comment says composite/component. |
 
 **What value is written?** The driver writes the combined 16-bit enable/state word to `0x0900:0x0018`; the rows above identify masks, not complete write values. For example, setting only bit 2 would produce word `0x0004` (bytes `00 04`), but that is **not** evidence that `00 04` is the correct full value for an input switch. Preserve unrelated bits and use the exact per-input words recorded in §10.2 of `COMMAND_REFERENCE.md` only as trace observations: HDMI `02 0A`, component `02 0E`, composite/S-video `03 0E`. Those observed words include other state bits and must not be derived by OR-ing only the masks in this table.
+
 | `BANKSEL` | Write `0000` at setup | Meaning unknown. |
 | `0xCA` via `89 89 CA` | `FE`, `7E`, `66`, transient `EE` | Inferred: `66` associated with 240p lock and `7E` with 480i lock in one trace; validate across captures. |
 | `0xFA` via `89 89 FA` | `3F`, `06`, `16` | Polled during setup/format transitions; exact meaning unknown. |
@@ -113,6 +115,29 @@ These are **bit fields in the 16-bit register at `0x0900:0x0018`**. They are not
 | `0x98:90–A3` | Full coefficient table: `01 BD 9A 3A E9 AB 17 88 84 8A 9C 8C 98 93 83 A9 8B E8 81 49` | Ordered observed table; individual coefficient meanings unknown. |
 | `0x88:28=88/8A` | Observed in 480i/240p changes | Strong format correlation in one trace, exact bits unknown. |
 | `0x98:0D=C8`; `0x98:0E=05,04` and `0x98:0E=15,14` | Setup/retrigger pairs | Preserve order; latch/command semantics unconfirmed. |
+
+## Idle / keep-alive helpers (observed after HDMI setup, no signal)
+
+The following four mailbox commands form a repeating loop once input setup has finished and no signal is present (see [hardware.md](hardware.md) for full context and open questions):
+
+| Bytes | Port / reply | Meaning / confidence |
+|---|---|---|
+| `AB 4C` | Port `0x9C` (write) | Write `0x9C:AB = 4C`. Part of the keep-alive cycle. |
+| `9D CD 6A 00` | Port `0x33`-style read helper | Read index `6A`; result discarded by host in this loop. |
+| `99 89 F5 00` | Port `0x33`-style sequence-read helper | Poll / sequence read; result discarded. |
+| `9D CD 94 00` | Port `0x33`-style read helper | Read index `94`; result discarded. |
+
+These are the same helpers already alluded to in the HDMI front-end idle/keep-alive note. They are recorded here so the generic command inventory stays complete.
+
+## Additional helper seen in the component-switch prefix
+
+| Bytes | Port / reply | Meaning / confidence |
+|---|---|---|
+| `89 89 F8 00` | Port `0x33`-style read | Observed immediately after `06 86` and before `03 2F` in the component prefix. Semantic meaning unknown; preserve exact placement. |
+
+## State-word timing note
+
+When switching from an HDMI configuration to component, the write of `0900:0018 = 02 0E` was observed **before** the final mailbox selector `51 ED`. A transient re-write of the previous HDMI value `02 0A` immediately preceded the component value. Implementations that assume the state word is written only after the selector should be checked against this ordering.
 
 ## Unknowns policy
 
