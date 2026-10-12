@@ -42,6 +42,19 @@ struct gchd_mail_cmd {
  u8 data[8];
 };
 
+/* Input selectors are single-byte protocol values; commands stay whole. */
+#define GCHD_INPUT_SELECT_COMPOSITE 0x44
+#define GCHD_INPUT_SELECT_SVIDEO    0xec
+
+static const struct gchd_mail_cmd gchd_cmd_select_composite = {
+ GCHD_MAIL_PORT_COMPONENT, 2,
+ { GCHD_COMPONENT_REG_51, GCHD_INPUT_SELECT_COMPOSITE }
+};
+static const struct gchd_mail_cmd gchd_cmd_select_svideo = {
+ GCHD_MAIL_PORT_COMPONENT, 2,
+ { GCHD_COMPONENT_REG_51, GCHD_INPUT_SELECT_SVIDEO }
+};
+
 /* Complete mailbox command initializers; keep each command as one entry. */
 #define GCHD_MAIL_CMD2(port, reg, value) \
  { (port), 2, { (reg), (value) } }
@@ -849,8 +862,8 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
    * Keep the observed no-signal route for S-Video unchanged pending more
    * traces of that input with a locked signal.
    */
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
-   d->input == 2 ? (u8[]){0x51,0x44} : (u8[]){0x51,0xec}, 2);
+  r = gchd_seq(d, d->input == 2 ? &gchd_cmd_select_composite :
+                                   &gchd_cmd_select_svideo, 1);
   if (r)
    return r;
  }
