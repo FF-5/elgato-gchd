@@ -10,7 +10,7 @@
 | `0x88:06=08`, `0x88:03=28` | Analog decoder setup. | Shared analog path writes. |
 | `0x9C:B3=33`, `0x9C:00=CE`, `0x9C:27=33`, `0x9C:00=CC` | Analog front-end setup. | Preserve exact order. |
 | `0x9C:51=44` | S-video analog selector in the signal-present 240p capture. | Followed by routing state `03 0E`. No-source trace reports `EC`; discrepancy unresolved. |
-| `0x88:07=8A`, `08=9B`, `09=7A), `28=8A), `06=08` | 240p format-apply block. | Captured as a block; meanings not fully known. |
+| `0x88:07=8A`, `08=9B`, `09=7A`, `28=8A`, `06=08` | 240p format-apply block. | Captured as a block; meanings not fully known. |
 | `0x98:0D=C8`, `0E=15`, `0E=14` | Backend retrigger pulse. | Preserve order. |
 
 ## Ordered S-video 240p configuration (signal present)
@@ -29,11 +29,11 @@ Sequence starts at the **S-video-specific decoder writes**. It intentionally exc
 | 8 | Pass 1: `0x88:10=6F, 11=D4, 12=D0, 13=08, 14=08, 15=88`. | First tuning pass. |
 | 9 | Pass 2: `0x88:10=6F, 11=EA, 12=D0, 13=08, 14=08, 15=88`. | Second tuning pass. |
 | 10 | Pass 3: `0x88:10=6F, 11=EA, 12=D0, 13=1B, 14=1B, 15=88`. | Third tuning pass. |
-| 11 | Read `89 89 FA), `89 89 CA`; write `0x88:07=8A`, `08=9B`, `09=7A`, `28=8A`; read `89 89 FD); write `0x88:06=08`. | Format-apply block observed after `CA=66`. |
-| 12 | Wait ~425 ms; repeat lock reads `89 89 FA`, `CA`, `E7`; poll `F5` until stable. | Captured final lock values: `CA=66`, `E7=69), `F1=7E); values can vary by session. |
-| 13 | Program backend in trace order: `0x98:04=95`, `70=D0`, `0F=88`; coefficient table `90–A3`; `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91`. | Coefficient values are the table in [commands.md](commands.md); they are observed values, not semantically decoded coefficients. |
+| 11 | Read `89 89 FA`, `89 89 CA`; write `0x88:07=8A`, `08=9B`, `09=7A`, `28=8A`; read `89 89 FD`; write `0x88:06=08`. | Format-apply block observed after `CA=66`. |
+| 12 | Wait ~425 ms; repeat lock reads `89 89 FA`, `CA`, `E7`; poll `F5` until stable. | Captured final lock values: `CA=66`, `E7=69`, `F1=7E`; values can vary by session. |
+| 13 | Program backend in trace order: `0x98:04=95`, `0x98:70=D0`, `0x98:0F=88`; coefficient table `90–A3`; `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91`. | Coefficient values are the table in [commands.md](commands.md); they are observed values, not semantically decoded coefficients. |
 | 14 | Retrigger/apply: `0x98:0D=C8`, `0E=05`, `0E=04`; poll status and settle. | Backend apply pulse. |
-| 15 | Configure SoC pipeline; queue bulk IN URBs on `0x81` and `0x84); SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`. `| Confirm state/completion and actual bulk video payload. Shared start confirmation in [hardware.md](hardware.md). |
+| 15 | Configure SoC pipeline; queue bulk IN URBs on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`. | Confirm state/completion and actual bulk video payload. Shared start confirmation in [hardware.md](hardware.md). |
 
 ## Session-dependent values
 
