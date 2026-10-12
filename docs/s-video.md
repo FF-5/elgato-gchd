@@ -1,6 +1,6 @@
 # S-video input reference
 
-## Commands
+## Common commands and configuration
 
 | Target / operation | Bytes written or expected read | Notes |
 |---|---|---|
@@ -14,9 +14,29 @@
 | `0x98:0D`, `0x98:0E` | `C8`, `05`, `04`; later `C8`, `15`, `14` | Backend retrigger/apply pulses; preserve order and timing. |
 | Mailbox status helpers | `89 89 FA`, `89 89 CA`, `89 89 E7`, `89 89 F1`, `99 89 F5` | Polled during decoder setup and lock settling; several meanings remain UNKNOWN. |
 
-## Ordered S-video PAL 288p-equivalent switch (frames received)
 
-This sequence starts at the HDMI selector `0x9C:51=45` and follows the switch to S-video. The host started streaming and received video frames.
+## Sequences
+
+### 240p / 288p
+
+
+#### NTSC-family 240p — working full bring-up
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | Write `0x88:02=DC`, `0x88:14=D2`; wait about 206 ms | S-video decoder setup. |
+| 2 | Read `89 89 FA`; write `0x88:28=88` | Initial mode-style value. |
+| 3 | Read `89 89 FD`; write `0x88:06=08`; read `89 89 F8`; write `0x88:03=28` | Decoder setup. |
+| 4 | Write `0x9C:B3=33`; page `CE`; write `0x9C:27=33`; return page `CC`; read `9D CD 6E` | Analog front-end setup. |
+| 5 | Write `0x9C:51=44`; routing state `02 0E`, `03 0E`, `03 0E` | Selector and routing state. |
+| 6 | Three tuning passes: `6F D4 D0 08 08 88`; `6F EA D0 08 08 88`; `6F EA D0 1B 1B 88` to `0x88:10–15` | Preserve all passes. |
+| 7 | Apply block: `0x88:07=8A`, `08=9B`, `09=7A`, `28=8A`, `06=08` | Observed in the NTSC-family 240p path; not observed in the PAL sequence above. |
+| 8 | Program backend and retrigger `0x98:0D=C8`, `0E=05`, `0E=04` | See [commands.md](commands.md) for the separate coefficient reference. |
+| 9 | SCMD `04 A0 00 00`; state readback; SCMD `05 00 00 02` | Start capture after pipeline setup. |
+
+
+
+#### PAL-family 288p-equivalent — working, frames received
 
 | Step | Command / bytes written or read | Notes |
 |---:|---|---|
@@ -42,21 +62,36 @@ This sequence starts at the HDMI selector `0x9C:51=45` and follows the switch to
 | 20 | SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`; confirm state/completion | INIT without firmware reload, then START. Video frames were received. |
 | 21 | Bulk IN traffic on `0x81` | Initial stream packets appear before the trace ends. |
 
-## Ordered S-video NTSC-family 240p configuration
 
-This earlier observed sequence is retained separately; do not merge its values with the PAL 288p-equivalent path above.
+### 480i / 576i
+
+#### NTSC-family / 60 Hz
 
 | Step | Command / bytes written or read | Notes |
 |---:|---|---|
-| 1 | Write `0x88:02=DC`, `0x88:14=D2`; wait about 206 ms | S-video decoder setup. |
-| 2 | Read `89 89 FA`; write `0x88:28=88` | Initial mode-style value. |
-| 3 | Read `89 89 FD`; write `0x88:06=08`; read `89 89 F8`; write `0x88:03=28` | Decoder setup. |
-| 4 | Write `0x9C:B3=33`; page `CE`; write `0x9C:27=33`; return page `CC`; read `9D CD 6E` | Analog front-end setup. |
-| 5 | Write `0x9C:51=44`; routing state `02 0E`, `03 0E`, `03 0E` | Selector and routing state. |
-| 6 | Three tuning passes: `6F D4 D0 08 08 88`; `6F EA D0 08 08 88`; `6F EA D0 1B 1B 88` to `0x88:10–15` | Preserve all passes. |
-| 7 | Apply block: `0x88:07=8A`, `08=9B`, `09=7A`, `28=8A`, `06=08` | Observed in the NTSC-family 240p path; not observed in the PAL sequence above. |
-| 8 | Program backend and retrigger `0x98:0D=C8`, `0E=05`, `0E=04` | See [commands.md](commands.md) for the separate coefficient reference. |
-| 9 | SCMD `04 A0 00 00`; state readback; SCMD `05 00 00 02` | Start capture after pipeline setup. |
+| 1 | NTSC-family 480i sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+#### PAL-family / 50 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | PAL-family 576i sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+### 480p / 576p
+
+#### NTSC-family / 60 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | NTSC-family 480p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+#### PAL-family / 50 Hz
+
+| Step | Command / bytes written or read | Notes |
+|---:|---|---|
+| 1 | PAL-family 576p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+
+
 
 ## Session-dependent values
 
@@ -66,35 +101,3 @@ This earlier observed sequence is retained separately; do not merge its values w
 | `0900:001C` | Values vary by session | Mailbox readiness/status; do not hard-code a single reply. |
 | `99 89 8B` | Replies include `6E` and `2E` | Meaning UNKNOWN. |
 | `0900:01B0` after start | Replies vary, including `00 10` and `01 50` | Meaning UNKNOWN. |
-
-## Format coverage
-
-| Format / condition | Status | Notes |
-|---|---|---|
-| NTSC-family 240p, signal present | Observed working sequence | Keep separate from PAL-family sequence. |
-| PAL-family 288p-equivalent, signal present | Observed working sequence; stream frames received | Sequence documented above. |
-| 480i, 576i, 480p, 576p, 720i, 720p, 1080i, 1080p | Complete ordered sequence **NOT CAPTURED** | Do not infer from 240p/288p paths. |
-| No-source switch | Selector `0x9C:51=EC` observed | Complete sequence not documented. |
-
-
-## Format-by-format comparison
-
-The [side-by-side analog format comparison](analog-format-comparison.md) aligns the composite and S-video sequences by stage.
-
-### 240p / 288p
-
-| Composite | S-video |
-|---|---|
-| NTSC-family 240p: working full bring-up reaches START. PAL-family 288p-equivalent: working sequence; frames received. | NTSC-family 240p: working full bring-up reaches START. PAL-family 288p-equivalent: working sequence; frames received. |
-
-### 480i / 576i
-
-| Composite | S-video |
-|---|---|
-| Complete sequence **NOT CAPTURED**. | Complete sequence **NOT CAPTURED**. |
-
-### 480p / 576p
-
-| Composite | S-video |
-|---|---|
-| Complete sequence **NOT CAPTURED**. | Complete sequence **NOT CAPTURED**. |
