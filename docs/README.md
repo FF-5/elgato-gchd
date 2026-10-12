@@ -1,29 +1,17 @@
-# GCHD protocol documentation
+# GCHD command-sequence reference
 
-This directory contains the maintained, topic-separated command and bring-up reference. Driver code remains under `drivers/` and userspace implementation under `src/`.
+**Start here:** [Sequence matrix](sequence-matrix.md). This is an implementation-checking reference: ordered command tables, expected responses, and trace links.
 
-## Protocol references
+- [Hardware init](hardware-init.md)
+- [HDMI](hdmi.md)
+- [Component](component.md)
+- [Composite](composite.md)
+- [S-video](s-video.md)
+- [Capture engine](capture-engine.md)
+- [Composite 240p sequence](composite-240p-sequence.md)
+- [S-video 240p sequence](s-video-240p-sequence.md)
+- [Legacy byte-level reference](../COMMAND_REFERENCE.md)
 
-- [Hardware initialization](hardware-init.md) — device startup, firmware/SCMD state, common USB transport and readiness checks.
-- [HDMI input](hdmi.md) — HDMI selection, detection, format setup and evidence gaps.
-- [Component input](component.md) — component selection and analog decoder path.
-- [Composite input](composite.md) — composite selection, decoder configuration and source-format notes.
-- [S-video input](s-video.md) — S-video selection and decoder configuration.
-- [Capture engine](capture-engine.md) — shared SoC/transcoder setup and capture start/stop.
-- [Source-format matrix](source-format-matrix.md) — status of each input/format combination.
-- [Sequence template](sequence-template.md) — required format for documenting each observed sequence.
-- [Composite 240p/480i trace analysis](composite-240p-480i-trace.md) — existing investigation of composite NTSC detection limits.
+Raw traces: [Composite 240p](../drivers/elgato_gchd/gchd_composite_240p_full_bringup.txt) · [S-video 240p](../drivers/elgato_gchd/gchd_svideo_240p_full_bringup.txt).
 
-## Existing command reference
-
-The root-level [COMMAND_REFERENCE.md](../COMMAND_REFERENCE.md) remains the detailed legacy byte-level reference while its content is being split into these topic files. Avoid silently changing or deleting legacy entries during the split; mark uncertain semantics and preserve raw evidence.
-
-## Evidence conventions
-
-- **Observed** — bytes/order are present in a trace or source code.
-- **Repeated** — independently reproduced in more than one trace/session.
-- **Inferred** — interpretation based on correlation; not yet established as protocol fact.
-- **Unknown** — behavior or semantics not understood.
-- **Session-dependent** — values vary between sessions/devices and must not be promoted to constants without further evidence.
-
-A successful USB transfer is not, by itself, proof that the device accepted a command, locked to the input signal, or started capture. Record the acknowledgement/state check for each sequence.
+Every completed sequence must table the exact ordered commands, USB transfer/payload, expected reply/state, and evidence. `NOT CAPTURED` means no defensible sequence exists yet; never fill gaps with guesses.
