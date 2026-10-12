@@ -721,7 +721,7 @@ int gchd_enable_analog(struct gchd *d)
 
 static int gchd_processor_state(struct gchd *d, u32 *magic)
 {
- u8 cmd[] = { 0xab, 0xa9, 0x0f, 0xa4, 0x55 };
+ u8 cmd[] = { GCHD_CMD_ENCODER_POLL, GCHD_CMD_ENCODER_POLL_EXT, GCHD_CMD_ENCODER_POLL_MODE, GCHD_CMD_ENCODER_POLL_ARG, GCHD_CMD_ENCODER_POLL_CONTINUE };
  u8 reply[3];
  int r;
 
@@ -893,7 +893,7 @@ int gchd_hw_init(struct gchd *d)
    return r;
 
   switch (magic) {
-  case 0x334455:
+  case GCHD_REPLY_PROCESSOR_TRANSIENT:
    /*
     * Exact configureDevice() processor bring-up:
     * sendEnableState(), enableAnalogInput(), then enable the firmware
@@ -913,7 +913,7 @@ int gchd_hw_init(struct gchd *d)
     return r;
    break;
 
-  case 0x27f97b:
+  case GCHD_REPLY_PROCESSOR_ACTIVE:
    /*
     * The first 0x27f97b is NOT the end of initialization.  It is the
     * userspace driver's source-selection/transcoder initialization point.
@@ -1027,7 +1027,7 @@ int gchd_hw_shutdown(struct gchd *d)
  /* The undocumented pre-shutdown mailbox sequence from userspace. */
  r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER, (u8[]){0x06,0x86}, 2);
  if (r) return r;
- r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x89,0x89,0xf8}, 3);
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_VARIANT}, 3);
  if (r) return r;
  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
  if (r) return r;
@@ -1068,7 +1068,7 @@ int gchd_hw_shutdown(struct gchd *d)
  r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, GCHD_REG_STATE, &state);
  if (r) return r;
  state &= 0x1f;
- if (state != 0x11) {
+ if (state != GCHD_STATE_IDLE) {
   r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) return r;
  }
