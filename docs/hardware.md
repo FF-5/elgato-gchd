@@ -11,7 +11,7 @@ These are transport and register-access primitives used by the sequences below. 
 | Vendor control read | USB control IN, request type `0xC0` | Request, value, index and length are operation-specific | Reads the requested number of bytes from the device. The target register/address is encoded in the request fields; short reads are errors. |
 | Vendor control write | USB control OUT, request type `0x40` | Request, value, index and payload are operation-specific | Writes the supplied bytes to the device. The target is encoded in the request fields. |
 | Firmware download | Bulk OUT endpoint `0x02` | Firmware image in chunks: 16,384 bytes on Original HD; 32,768 bytes on HD-New | Transfers firmware to the device. The image and timing depend on the initialization branch. |
-| SCMD | USB control OUT, request `0xB8` | Original HD: `00 00 CMD MODE DATA_H DATA_L` (6 bytes); HD-New: `CMD MODE DATA_H DATA_L` (4 bytes) | Requests a device command/state transition. Command meanings and expected state readback are listed in the SCMD sequence below. |
+| SCMD | USB control OUT, request `0xB8` | Original HD: `00 00 CMD MODE DATA_H DATA_L` (6 bytes); HD-New: `CMD MODE DATA_H DATA_L` (4 bytes) | Requests a device command/state transition. Concrete SCMD command payloads and their state-confirmation transfers are listed in the sequence table. |
 | Original-HD mailbox write | USB control OUT, request `0xBD`; `wIndex = PORT << 8` | Unpadded mailbox command bytes | Writes a command to the selected mailbox port. Userspace restores the enable-state shadow and polls mailbox readiness before continuing. |
 | HD-New mailbox write | First request `0xBC` writes payload to `0800:00C0`; then request `0xB9` | Commit payload: `09 00 (PORT << 1) LENGTH`; odd-length data is padded with `00` | Writes the mailbox payload, then commits it to the selected port. The implementation waits for interrupt endpoint `0x83`, checks readiness, restores the enable-state shadow and polls before the next command. |
 | HD-New mailbox read | USB control OUT request `0xB9`, then control IN from `0800:23BE` | Request payload `09 01 (PORT << 1) LENGTH`; read `LENGTH + 2 + (LENGTH & 1)` bytes | Reads from a mailbox port. The response has two leading status bytes and may include a pad byte for odd-length reads; the helper strips these. |
@@ -44,15 +44,26 @@ These are transport and register-access primitives used by the sequences below. 
 
 The tables below follow the call order in the userspace implementation, principally `src/gchd/configure.cpp`, `src/gchd/commands.cpp`, and `src/gchd/transcoder.cpp`. They describe implementation order; unknown command meanings are explicitly left unresolved.
 
-### SCMD confirmation sequence
+### SCMD state-transition sequence
 
-| Order | Operation / target | Command / condition | Notes / description |
+This table spells out the transfers and register accesses performed when userspace confirms an SCMD state transition. The command payloads below are concrete examples from the initialization and capture paths; all register addresses and byte values needed to follow the handshake are included here.
+
+| Order | Where / direction | Command / bytes / condition | Notes / description |
 |---:|---|---|---|
-| 1 | Send SCMD via USB control OUT request `0xB8` | Use the generation-specific payload shown in **Common operations → SCMD commands** | Issues the command; payload differs between Original HD and HD-New. |
-| 2 | HD-New receipt confirmation, where required | Wait for interrupt endpoint `0x83`; read `0800:0014` until its high byte equals `CMD` | Confirms command receipt only, not completion of a state transition. |
-| 3 | State-change completion poll | Read `0900:0074` until bit `0x04` is set | Applied to state-changing commands. |
-| 4 | State readback | Read `0800:2008` twice; compare `value & 0x1F` with the expected state | Checks the resulting SCMD state. |
-| 5 | Completion/cleanup writes | Write `00 04` to `0900:0074`, then `00 00` to `0900:01B0` | Source suggests the first write acknowledges completion, but its exact effect is unproven; the second write's purpose is unknown. |
+| 1 | USB control OUT, request `0xB8` | **IDLE:** Original HD `00 00 01 00 00 00`; HD-New `01 00 00 00` | Sent during common initialization. The four leading/trailing fields are command `01`, mode `00`, data `00 00`; Original HD prepends two zero bytes. |
+| 1a | USB control OUT, request `0xB8` | **RESET (already initialized):** Original HD `00 00 02 00 00 00`; HD-New `02 00 00 00` | Alternative to the idle-firmware download branch. Mode `00`, data `00 00`; expected state is `0x10`. |
+| 1b | USB control OUT, request `0xB8` | **INIT before encode-firmware download:** Original HD `00 00 04 00 00 00`; HD-New `04 00 00 00` | Requests INIT mode `00`; userspace then downloads encode firmware. |
+| 1c | USB control OUT, request `0xB8` | **INIT before capture:** Original HD `00 00 04 A0 00 00`; HD-New `04 A0 00 00` | Requests INIT mode `A0`; used before START without reloading encode firmware. |
+| 1d | USB control OUT, request `0xB8` | **START:** Original HD `00 00 05 00 00 02`; HD-New `05 00 00 02` | Requests state-change command `05`, mode `00`, data `00 02`; expected state is `0x02`. |
+| 2 | HD-New only, interrupt IN endpoint `0x83` | Wait for one interrupt transfer into a 3-byte buffer | Used by the HD-New SCMD receipt path for IDLE, INIT and state-change commands when mode bits do not disable the interrupt. |
+| 3 | HD-New only, USB control IN from `0800:0014` | Read 2 bytes repeatedly until the high byte equals the command byte (`01`, `04` or `05`) | Confirms that the command was received. It does not by itself confirm that the state transition completed. |
+| 4 | USB control IN from `0900:0074` | Read 2 bytes repeatedly until `value & 0x0004 != 0` | Polls the state-change-complete flag. Original HD uses this in `completeStateChange()`; HD-New uses the interrupt/readback path where applicable. |
+| 5 | USB control IN from `0800:2008` | Read 2 bytes; compute `value & 0x001F` | Reads the current SCMD state. During completion, userspace reads this register twice and uses the second value masked with `0x1F`. |
+| 6 | USB control IN, request `0xBC`, `wValue=0x0900`, `wIndex=0x01B0` | Read 2 bytes; discard the value | An additional read performed inside the Original-HD completion loop. Its purpose is unknown. |
+| 7 | USB control OUT, request `0xBC`, `wValue=0x0900`, `wIndex=0x0074` | Write `00 04` | Clears/acknowledges the sticky completion flag; the exact hardware semantics are not fully established. |
+| 8 | USB control OUT, request `0xBC`, `wValue=0x0900`, `wIndex=0x01B0` | Write `00 00` | Cleanup write after completion. Its purpose remains unknown. |
+
+**Expected state after confirmation:** IDLE → `0x11`; RESET with mode `00` → `0x10`; START (`05 00 00 02`) → `0x02`. INIT is issued through `scmd()` and followed by the firmware/version steps; it is not confirmed through the same `stateConfirmedScmd()` helper as IDLE, RESET and START.
 
 
 ### Common initialization sequence
