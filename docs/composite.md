@@ -43,61 +43,33 @@
 
 ### 240p / 288p
 
-#### NTSC-family 240p — working full bring-up
+#### NTSC-family 240p vs PAL-family 288p-equivalent
 
-| Step | Command / bytes written or read | Notes |
-|---:|---|---|
-| 1 | Start from HDMI selector `0x9C:51=45`; switch to composite `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` | Full working bring-up in the DKMS driver trace. |
-| 2 | Decoder `0x88:02=C9`; `0x88:06=08`; `0x88:03=28`; front end `0x9C:B3=33`, page `CE`, `0x9C:27=33`, page `CC` | Preserve bank/page and handshake order. |
-| 3 | Three tuning passes to `0x88:10–15`: `6F D4 D0 08 08 88`; `6F EA D0 08 08 88`; `6F EA D0 1B 1B 88` | Three distinct passes. |
-| 4 | Auxiliary device `0x94`: `41 37`, `4A B7`, `4B B7`; backend `04=95`, `70=D0`, `0F=88`, coefficient table above, then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | Ordered auxiliary/backend configuration. |
-| 5 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`, later `15 → 14`; pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | Working capture reaches START. |
+The columns are aligned by operation, not by row count. A dash means that no corresponding step is documented in that trace; step numbers within each sequence retain their original order.
 
+| NTSC step | NTSC-family 240p — working full bring-up | PAL step | PAL-family 288p-equivalent — working, frames received |
+|---:|---|---:|---|
+| 1 | Switch to composite `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` | 3–4 | Select composite `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` |
+| 2 | Decoder `0x88:02=C9`, `0x88:06=08`, `0x88:03=28`; front end `0x9C:B3=33`, page `CE`, `0x9C:27=33`, page `CC` | 1–2 | Read `89 89 FD`; decoder `0x88:06=08`, read `89 89 F8`, `0x88:03=28`; front end `0x9C:B3=33`, page `CE`, `0x9C:27=33`, page `CC`, with mailbox reads between writes |
+| 3 | Tuning pass 1: `6F D4 D0 08 08 88` to `0x88:10–15` | 6 | Tuning pass 1: `6F D4 D0 08 08 88` |
+| 4 | Tuning pass 2: `6F EA D0 08 08 88` | 7 | Tuning pass 2: `6F EA D0 08 08 88` |
+| 5 | Tuning pass 3: `6F EA D0 1B 1B 88` | 8 | Tuning pass 3: `6F EA D0 1B 1B 88` |
+| 6 | Auxiliary device `0x94`: `41 37`, `4A B7`, `4B B7`; backend `04=95`, `70=D0`, `0F=88` | 9 | Device `0x94`: `41 37`, `4A B7`, `4B B7`; commit `09 00 66 03` and handshake after each |
+| 7 | Program coefficient table `0x98:90–A3`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | 12 | Backend `04=95`, `70=D0`, `0F=88`; coefficient table `90–A3`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` |
+| 8 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; later `15 → 14` | 13 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; poll status and allow settle |
+| 9 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 5, 10–11 | Decoder wake/status prime; status loop and confirmations `CA=66`, `E7=69`, `F1=7E`, `CB=6E` |
+| — | — | 14 | Configure SoC pipeline; queue bulk IN on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`. Capture starts and frames were received. |
 
-#### PAL-family 288p-equivalent — working, frames received
+#### Other formats
 
-| Step | Command / bytes written or read | Notes |
-|---:|---|---|
-| 1 | Read `89 89 FD`; write `0x88:06=08`; read `89 89 F8`; write `0x88:03=28` | Decoder setup; observed replies `FD=60`, `F8=C9`. |
-| 2 | Write `0x9C:B3=33`; read `9D CD 3F`; write `0x9C:00=CE`; write `0x9C:27=33`; read `9D CD 3F`; write `0x9C:00=CC`; read `9D CD 6E` | Banked analog front-end setup. |
-| 3 | Write `0x9C:51=44` | Select composite input. |
-| 4 | Write routing word `0900:0018 = 02 0E`, then `03 0E`, then `03 0E` again | Preserve the intermediate state and repeated final write. |
-| 5 | Read `89 89 FA`; poll `F5`; read `89 89 FA`; poll `F5` | Decoder wake/status prime. |
-| 6 | Pass 1: `0x88:10–15 = 6F D4 D0 08 08 88` | First tuning pass. |
-| 7 | Pass 2: `0x88:10–15 = 6F EA D0 08 08 88` | Second tuning pass. |
-| 8 | Pass 3: `0x88:10–15 = 6F EA D0 1B 1B 88` | Third tuning pass; do not merge passes. |
-| 9 | Device `0x94`: `41 37`, `4A B7`, `4B B7`; commit `09 00 66 03` + handshake after each | Auxiliary configuration. Other captures may use `4A BB` / `4B BB`. |
-| 10 | Read `89 89 FA`, `89 89 CA`, `89 89 E7`; poll `F5`; read `99 89 FD`, `99 89 FC`, `99 89 F3` | Status loop while lock settles. |
-| 11 | Confirm reads `CA=66`, `E7=69`, `F1=7E`, `CB=6E` | Stable values associated with the working capture; retain as observations, not universal constants. |
-| 12 | Backend: `0x98:04=95`, `70=D0`, `0F=88`; write coefficient table `90–A3`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | Ordered backend configuration. |
-| 13 | Write `0x98:0D=C8`, `0x98:0E=05`, `0x98:0E=04`; poll status and allow settle | Apply backend settings. |
-| 14 | Configure SoC pipeline; queue bulk IN on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | Capture starts; video frames were received after START. |
+##### 480i / 576i
 
+| NTSC step | NTSC-family / 60 Hz | PAL step | PAL-family / 50 Hz |
+|---:|---|---:|---|
+| 1 | `0x88:28=88` seen in setup observations; full 480i sequence **NOT CAPTURED**. | 1 | PAL-family 576i sequence **NOT CAPTURED**. |
 
-### 480i / 576i
+##### 480p / 576p
 
-#### NTSC-family / 60 Hz
-
-| Step | Command / bytes written or read | Notes |
-|---:|---|---|
-| 1 | `0x88:28=88` is seen in setup observations; full 480i sequence **NOT CAPTURED**. | Observed mode-related value only; not a complete sequence. |
-
-#### PAL-family / 50 Hz
-
-| Step | Command / bytes written or read | Notes |
-|---:|---|---|
-| 1 | PAL-family 576i sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
-
-### 480p / 576p
-
-#### NTSC-family / 60 Hz
-
-| Step | Command / bytes written or read | Notes |
-|---:|---|---|
-| 1 | 480p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
-
-#### PAL-family / 50 Hz
-
-| Step | Command / bytes written or read | Notes |
-|---:|---|---|
-| 1 | 576p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+| NTSC step | NTSC-family / 60 Hz | PAL step | PAL-family / 50 Hz |
+|---:|---|---:|---|
+| 1 | 480p sequence **NOT CAPTURED**. | 1 | 576p sequence **NOT CAPTURED**. |
