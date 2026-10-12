@@ -399,7 +399,7 @@ int gchd_mail_read(struct gchd *d, u8 port, u8 *data, u8 len)
 
 static int gchd_mail_write33(struct gchd *d, const u8 *data, u8 len)
 {
- return gchd_mail_write(d, 0x33, data, len);
+ return gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, data, len);
 }
 
 int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
@@ -728,7 +728,7 @@ static int gchd_processor_state(struct gchd *d, u32 *magic)
  r = gchd_mail_write33(d, cmd, sizeof(cmd));
  if (r)
   return r;
- r = gchd_mail_read(d, 0x33, reply, sizeof(reply));
+ r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, reply, sizeof(reply));
  if (r)
   return r;
  *magic = ((u32)reply[0] << 16) | ((u32)reply[1] << 8) | reply[2];
@@ -939,7 +939,7 @@ int gchd_hw_init(struct gchd *d)
     if (r)
      return r;
 
-    r = gchd_scmd(d, SCMD_INIT, 0x00, 0x0000);
+    r = gchd_scmd(d, SCMD_INIT, GCHD_SCMD_MODE_DEFAULT, 0x0000);
     if (r)
      return r;
 
@@ -1025,13 +1025,13 @@ int gchd_hw_shutdown(struct gchd *d)
  }
 
  /* The undocumented pre-shutdown mailbox sequence from userspace. */
- r = gchd_mail_write(d, 0x44, (u8[]){0x06,0x86}, 2);
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER, (u8[]){0x06,0x86}, 2);
  if (r) return r;
- r = gchd_mail_write(d, 0x33, (u8[]){0x89,0x89,0xf8}, 3);
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x89,0x89,0xf8}, 3);
  if (r) return r;
- r = gchd_mail_read(d, 0x33, &v, 1);
+ r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
  if (r) return r;
- r = gchd_mail_write(d, 0x44, (u8[]){0x03,0x2f}, 2);
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER, (u8[]){0x03,0x2f}, 2);
  if (r) return r;
 
  r = gchd_reg_write16(d, GCHD_REG_BANK_SELECT, 0x0000);
@@ -1045,7 +1045,7 @@ int gchd_hw_shutdown(struct gchd *d)
  r = gchd_transcoder_output_enable(d, false);
  if (r) return r;
 
- r = gchd_scmd(d, SCMD_INIT, 0xa0, 0x0000);
+ r = gchd_scmd(d, SCMD_INIT, GCHD_SCMD_MODE_HDNEW, 0x0000);
  if (r) return r;
 
  /* clearEnableState() in userspace clears the state mask before processor-off. */
