@@ -76,6 +76,9 @@
 #define GCHD_MAIL_PORT_COMPONENT       0x4e
 
 /* Mailbox command opcodes and command-family selectors. */
+#define GCHD_SCMD_MODE_DEFAULT         0x00
+#define GCHD_SCMD_MODE_HDNEW           0xa0
+
 #define GCHD_CMD_QUERY                 0x99
 #define GCHD_CMD_QUERY_EXT             0x89
 #define GCHD_CMD_REGISTER_READ         0x9d
