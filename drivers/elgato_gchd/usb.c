@@ -16,8 +16,6 @@ MODULE_FIRMWARE("gchd/MB86M01_ASSP_NSEC_ENC_H");
 #define REG_REQ 0xbc
 #define MAIL_REG 0xbd
 #define SCMD_REG 0xb8
-#define SCMD_INIT 4
-#define SCMD_STATE_CHANGE 5
 
 #define BANKSEL_INDEX 0x0000
 #define ENABLE_INDEX 0x0018
@@ -483,7 +481,7 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
 
  for (;;) {
   for (tries = 0; tries < 2000; ++tries) {
-   r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+   r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
    if (r)
     return r;
    state &= 0x1f;
@@ -494,17 +492,17 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
    }
    first = false;
 
-   r = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
+   r = gchd_req_read16(d, GCHD_STATE_STATUS_REQUEST, STATE_COMPLETE_INDEX, &completion);
    if (r)
     return r;
    /* This read is part of the original completion handshake; its value is discarded. */
    {
     u16 dummy;
-    r = gchd_req_read16(d, 0x0900, 0x01b0, &dummy);
+    r = gchd_req_read16(d, GCHD_STATE_STATUS_REQUEST, GCHD_STATE_COMPLETE_CLEAR_INDEX, &dummy);
     if (r)
      return r;
    }
-   if (completion & 0x0004)
+   if (completion & GCHD_STATE_COMPLETE_ACK)
     break;
    }
   if (tries == 2000) {
@@ -514,13 +512,13 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
    return -ETIMEDOUT;
   }
 
-  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+  r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
   if (r) return r;
-  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+  r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
   if (r) return r;
   state &= 0x1f;
 
-  r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, 0x0004);
+  r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, GCHD_STATE_COMPLETE_ACK);
   if (r) return r;
   r = gchd_reg_write16(d, 0x01b0, 0x0000);
   if (r) return r;
@@ -542,7 +540,7 @@ int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
   * Match stateConfirmedScmd(): read the current state before issuing
   * the command, then complete the transition from that state.
   */
- r = gchd_req_read16(d, 0x0800, STATE_INDEX, &current_state);
+ r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &current_state);
  if (r)
   return r;
  current_state &= 0x1f;
@@ -561,13 +559,13 @@ int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
   return 0;
  }
 
- if (command == SCMD_STATE_CHANGE && expected == 0x02) {
+ if (command == SCMD_STATE_CHANGE && expected == GCHD_STATE_START) {
   u16 enable_state = 0xffff, enable = 0xffff, completion = 0xffff;
   int er1, er2, er3;
 
-  er1 = gchd_req_read16(d, 0x0900, ENABLE_STATE_INDEX, &enable_state);
-  er2 = gchd_req_read16(d, 0x0900, ENABLE_INDEX, &enable);
-  er3 = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
+  er1 = gchd_req_read16(d, GCHD_STATE_STATUS_REQUEST, ENABLE_STATE_INDEX, &enable_state);
+  er2 = gchd_req_read16(d, GCHD_STATE_STATUS_REQUEST, ENABLE_INDEX, &enable);
+  er3 = gchd_req_read16(d, GCHD_STATE_STATUS_REQUEST, STATE_COMPLETE_INDEX, &completion);
   dev_info(&d->intf->dev,
            "START before SCMD: state=0x%04x enable_state=0x%04x (r=%d) enable=0x%04x (r=%d) completion=0x%04x (r=%d) saved=0x%04x hw_state=0x%04x hw_enable=0x%04x\n",
            current_state, enable_state, er1, enable, er2, completion, er3,
@@ -579,15 +577,15 @@ int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
   return r;
 
  r = gchd_complete_state_change(d, current_state, expected);
- if (r && command == SCMD_STATE_CHANGE && expected == 0x02) {
+ if (r && command == SCMD_STATE_CHANGE && expected == GCHD_STATE_START) {
   u16 state = 0xffff, enable_state = 0xffff, enable = 0xffff;
   u16 completion = 0xffff;
   int sr, er1, er2, er3;
 
-  sr = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
-  er1 = gchd_req_read16(d, 0x0900, ENABLE_STATE_INDEX, &enable_state);
-  er2 = gchd_req_read16(d, 0x0900, ENABLE_INDEX, &enable);
-  er3 = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
+  sr = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
+  er1 = gchd_req_read16(d, GCHD_STATE_STATUS_REQUEST, ENABLE_STATE_INDEX, &enable_state);
+  er2 = gchd_req_read16(d, GCHD_STATE_STATUS_REQUEST, ENABLE_INDEX, &enable);
+  er3 = gchd_req_read16(d, GCHD_STATE_STATUS_REQUEST, STATE_COMPLETE_INDEX, &completion);
   dev_err(&d->intf->dev,
           "START failed: ret=%d state=0x%04x (r=%d) enable_state=0x%04x (r=%d) enable=0x%04x (r=%d) completion=0x%04x (r=%d) saved=0x%04x hw_state=0x%04x hw_enable=0x%04x\n",
           r, state, sr, enable_state, er1, enable, er2, completion, er3,
@@ -630,7 +628,7 @@ static int gchd_complete_state_change_draining(struct gchd *d,
 
  for (;;) {
   for (tries = 0; tries < 2000; ++tries) {
-   r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+   r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
    if (r) return r;
    state &= 0x1f;
    if (first && state != current_state && state != next_state)
@@ -639,22 +637,22 @@ static int gchd_complete_state_change_draining(struct gchd *d,
 
    r = gchd_drain_stream(d, 50);
    if (r) return r;
-   r = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
+   r = gchd_req_read16(d, GCHD_STATE_STATUS_REQUEST, STATE_COMPLETE_INDEX, &completion);
    if (r) return r;
-   r = gchd_req_read16(d, 0x0900, 0x01b0, &dummy);
+   r = gchd_req_read16(d, GCHD_STATE_STATUS_REQUEST, GCHD_STATE_COMPLETE_CLEAR_INDEX, &dummy);
    if (r) return r;
-   if (completion & 0x0004)
+   if (completion & GCHD_STATE_COMPLETE_ACK)
     break;
   }
   if (tries == 2000)
    return -ETIMEDOUT;
 
-  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+  r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
   if (r) return r;
-  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+  r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
   if (r) return r;
   state &= 0x1f;
-  r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, 0x0004);
+  r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, GCHD_STATE_COMPLETE_ACK);
   if (r) return r;
   r = gchd_reg_write16(d, 0x01b0, 0x0000);
   if (r) return r;
@@ -670,7 +668,7 @@ int gchd_stream_stop(struct gchd *d)
  int r;
  u16 state;
 
- r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+ r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
  if (r) return r;
  state &= 0x1f;
  if (state == 0x01 || state == 0x11) {
@@ -804,7 +802,7 @@ int gchd_hw_init(struct gchd *d)
   return r;
  d->hw_enable_state = d->saved_enable_state;
 
- r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+ r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
  if (r)
   return r;
  state &= 0x1f;
@@ -824,16 +822,16 @@ int gchd_hw_init(struct gchd *d)
     return r;
 
    for (tries = 0; tries < 1000; ++tries) {
-    r = gchd_req_read16(d, 0x0900, STATE_COMPLETE_INDEX, &completion);
+    r = gchd_req_read16(d, GCHD_STATE_STATUS_REQUEST, STATE_COMPLETE_INDEX, &completion);
     if (r)
      return r;
-    if (completion & 0x0004)
+    if (completion & GCHD_STATE_COMPLETE_ACK)
      break;
      }
    if (tries == 1000)
     return -ETIMEDOUT;
 
-   r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, 0x0004);
+   r = gchd_reg_write16(d, STATE_COMPLETE_INDEX, GCHD_STATE_COMPLETE_ACK);
    if (r)
     return r;
   }
@@ -1022,7 +1020,7 @@ int gchd_hw_shutdown(struct gchd *d)
   * actually in START/NULL, and do not run the teardown sequence twice when
   * the processor is already reset or still in boot state.
   */
- r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+ r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
  if (r)
   return r;
  state &= 0x1f;
@@ -1031,7 +1029,7 @@ int gchd_hw_shutdown(struct gchd *d)
   r = gchd_stream_stop(d);
   if (r)
    return r;
-  r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+  r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
   if (r)
    return r;
   state &= 0x1f;
@@ -1060,7 +1058,7 @@ int gchd_hw_shutdown(struct gchd *d)
  if (r) return r;
 
  /* Preserve the userspace ordering: read state before disabling output. */
- r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+ r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
  if (r) return r;
  r = gchd_transcoder_output_enable(d, false);
  if (r) return r;
@@ -1085,7 +1083,7 @@ int gchd_hw_shutdown(struct gchd *d)
   * the hardware is not already there. RESET is reserved for device close,
   * never for connector switching.
   */
- r = gchd_req_read16(d, 0x0800, STATE_INDEX, &state);
+ r = gchd_req_read16(d, GCHD_STATE_READ_REQUEST, STATE_INDEX, &state);
  if (r) return r;
  state &= 0x1f;
  if (state != 0x11) {
