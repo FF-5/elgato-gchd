@@ -26,7 +26,7 @@ This document collects commands that do not belong exclusively to one input path
 | `89 89 FB` | Port `0x33); expected reply `6E` `| Source-annotated handshake; semantic meaning unknown. |
 | `AB 92 3E B4 ...` | Port `0x33`); followed by 56-byte reads | Not understood in source; preserve exact call-site order and length. |
 | `CMD 94 41 37` | HD-New device `0x94), commit via `09 00 66 03` + handshake`; no fetch stage | Observed auxiliary command in S-video trace. |
-| `CMD 94 4A B7/BB` | Device `0x94), commit + handshake | Value varies by trace: S-video uses `B7`, another trace uses `BB`. `|
+| `CMD 94 4A B7/BB` | Device `0x94`; commit + handshake | Value varies by trace: S-video uses `B7`, another trace uses `BB`. `|
 | `CMD 94 4B B7/BB` | Device `0x94`), commit + handshake | Value varies by trace, as above. |
 
 ## SCMD commands
