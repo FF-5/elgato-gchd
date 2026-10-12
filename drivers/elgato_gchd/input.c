@@ -765,7 +765,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
   * connector-specific setup above establishes the input path; these writes
   * put the device into its streaming state without a userspace daemon.
   */
- r = gchd_scmd(d, SCMD_INIT, 0xa0, 0);
+ r = gchd_scmd(d, SCMD_INIT, GCHD_SCMD_MODE_HDNEW, 0);
  if (r)
   return r;
 
@@ -1631,7 +1631,7 @@ static int gchd_input_configure_mode(struct gchd *d)
   * gchd_input_finalize() is a separate stage before connector configuration.
   * Mode 0xa0 suppresses the INIT interrupt/readback handshake.
   */
- r = gchd_scmd(d, SCMD_INIT, 0xa0, 0);
+ r = gchd_scmd(d, SCMD_INIT, GCHD_SCMD_MODE_HDNEW, 0);
  if (r) {
   dev_err(&d->intf->dev, "capture setup: final SCMD_INIT failed: %d\n", r);
   return r;
