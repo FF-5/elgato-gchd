@@ -87,6 +87,7 @@ Enable-bit masks for `0900:0018`: bit 1 `0x0002` (`EB_FIRMWARE_PROCESSOR`); bit 
 | Decoder transition | `0x88:0A=8F`, later `0A=98` | Seen around 480i→240p transition; meaning UNKNOWN. |
 | Backend intermediate table | `0x98:70=C8`, `90=88`, `91–A3=77`, staged `C0=80/77/88` | Preserve order; necessity and meaning untested. |
 | Backend coefficient table | `0x98:90–A3`: `01 BD 9A 3A E9 AB 17 88 84 8A 9C 8C 98 93 83 A9 8B E8 81 49` | Ordered values; individual coefficient meanings UNKNOWN. |
+| PAL S-video 288p-equivalent backend writes | `0x98:04=95`, `70=D0`, `0F=88`, `90=D8`, `91=BF`, `95=9D`, `96=1B`, `97=88`, `A0=8A`, `A1=D8`, `A2=B2`, `A3=59`; later `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | Sparse, ordered writes from the working PAL S-video path; not a complete `90–A3` table. Keep separate from the composite coefficient sequence. |
 | Decoder format value | `0x88:28=88/8A` | Correlates with 480i/240p in observed transitions; exact bits UNKNOWN. |
 | Backend retrigger | `0x98:0D=C8`; `0x98:0E=05,04` or `15,14` | Preserve exact order; latch/command semantics not confirmed. |
 
