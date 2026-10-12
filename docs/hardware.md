@@ -15,6 +15,24 @@
 | Transcoder full-word write | Vendor OUT request `0xBC`; `wIndex=ADDRESS`; 16-bit big-endian data | Writes one aligned 16-bit transcoder register. |
 | Transcoder masked write | Vendor OUT `0xBC`; `wValue=1`; `wIndex=ADDRESS & ~3`; payload `VALUE32_BE MASK32_BE` (8 bytes) | Masked 32-bit update; see [commands.md](commands.md). |
 
+## SCMD confirmation sequence
+
+1. Send the generation-specific `0xB8` payload.
+2. On HD New where required, wait for interrupt endpoint `0x83`; read `0800:0014` until its high byte equals CMD. This is command receipt, not proof that a state transition completed.
+3. For state-changing commands, poll `0900:0074` until bit `0x04` is set.
+4. Read `0800:2008` twice; compare `value & 0x1F` with the expected state.
+5. Write `00 04` to `0900:0074` (source believes this acknowledges completion; exact effect not proven), then write `00 00` to `0900:01B0` (purpose unknown).
+
+| SCMD payload | Source interpretation | Expected state / note |
+|---|---|---|
+| `01 MODE ...` | IDLE | `0x11` |
+| `02 00 ...` / `02 01 ...` | RESET | Mode-dependent readback; deeper interpretation partly unconfirmed. |
+| `04 00 00 00` | INIT and encode firmware load | Verify firmware/version words. |
+| `04 A0 00 00` | INIT without encode firmware reload | Used before capture start. |
+| `05 00 00 01` | State change | Seen during transition; exact standalone meaning needs validation. |
+| `05 00 00 02` | START | Source expects state `0x02`; captured with bulk video output. |
+| `05 00 00 04` | NULL/empty stream | Source expects state `0x04`; transition use needs validation. |
+
 ## Sequences
 
 The tables below follow the call order in the userspace implementation, principally `src/gchd/configure.cpp`, `src/gchd/commands.cpp`, and `src/gchd/transcoder.cpp`. They describe the implementation's order, not a claim that every operation is fully understood. Conditional branches are called out explicitly; do not flatten them into one unconditional script.
@@ -28,6 +46,7 @@ The tables below follow the call order in the userspace implementation, principa
 | 3 | Read `0900:0014` | Save the current enable-state shadow before changing hardware state. |
 | 4 | Read `0800:2008` and mask to `0x1F` | Determine the current SCMD state. Original HD uses `completeStateChange(0, 0)`; HD-New handles the interrupt path separately if the state is `0x00`. |
 | 5A | **Only if state is `0x00`:** bulk OUT endpoint `0x02`, load idle firmware | Chunk size is 16,384 bytes on Original HD and 32,768 bytes on HD-New. The source does not add a separate state-confirmation step immediately after the transfer. |
+| 5B | **Otherwise, if already initialized:** SCMD RESET, mode `00`, data `0000` — Original HD payload `00 00 02 00 00 00`; HD-New payload `02 00 00 00` | `stateConfirmedScmd()` expects state `0x10`. Firmware is not reloaded in this branch. |
 | 6A | Write `0900:0070 = 00 04` | Purpose unknown; executed after idle-firmware download. |
 | 7A | Read `0900:0014`, then `0900:0018`; read `0000:0010`, `0012`, `0014`, `0016`, `0018`, `001A`, `001C`, `001E` (2 bytes each) | Reads after idle-firmware download. The source comments say the returned values appear to repeat across two banks; their purpose is unknown. |
 | 5B | **Otherwise, if already initialized:** SCMD RESET, mode `00`, data `0000` — Original HD payload `00 00 02 00 00 00`; HD-New payload `02 00 00 00` | `stateConfirmedScmd()` expects state `0x10`. Firmware is not reloaded in this branch. |
@@ -59,24 +78,6 @@ The tables below follow the call order in the userspace implementation, principa
 | 4 | Read `0800:2008` | In the observed analog 240p trace, the readback was `00 01`; this is an observation, not a universal expected value. |
 | 5 | SCMD START, mode `00`, data `0002` — Original HD `00 00 05 00 00 02`; HD-New `05 00 00 02` | State-change request; source expects state `0x02`. Follow completion confirmation. |
 | 6 | Observe bulk IN completions on `0x81` / `0x84` | In the referenced trace, transfers were 65,536 bytes. Validate payload contents; USB completion alone is not proof of valid video. |
-
-## SCMD confirmation sequence
-
-1. Send the generation-specific `0xB8` payload.
-2. On HD New where required, wait for interrupt endpoint `0x83`; read `0800:0014` until its high byte equals CMD. This is command receipt, not proof that a state transition completed.
-3. For state-changing commands, poll `0900:0074` until bit `0x04` is set.
-4. Read `0800:2008` twice; compare `value & 0x1F` with the expected state.
-5. Write `00 04` to `0900:0074` (source believes this acknowledges completion; exact effect not proven), then write `00 00` to `0900:01B0` (purpose unknown).
-
-| SCMD payload | Source interpretation | Expected state / note |
-|---|---|---|
-| `01 MODE ...` | IDLE | `0x11` |
-| `02 00 ...` / `02 01 ...` | RESET | Mode-dependent readback; deeper interpretation partly unconfirmed. |
-| `04 00 00 00` | INIT and encode firmware load | Verify firmware/version words. |
-| `04 A0 00 00` | INIT without encode firmware reload | Used before capture start. |
-| `05 00 00 01` | State change | Seen during transition; exact standalone meaning needs validation. |
-| `05 00 00 02` | START | Source expects state `0x02`; captured with bulk video output. |
-| `05 00 00 04` | NULL/empty stream | Source expects state `0x04`; transition use needs validation. |
 
 ## Shared capture-start sequence observed on analog 240p
 
