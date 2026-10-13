@@ -38,7 +38,7 @@ These are transport and register-access primitives used by the sequences below. 
 | Read `0900:0018` → `02 0A` | Observed HDMI route/state value. |
 | Read `0900:0018` → `02 0E` | Observed component route/state value. |
 | Read `0900:0018` → `03 0E` | Observed composite/S-video route/state value. |
-| Read `0900:0014` | Enable-state shadow used during handshake; values vary by session. `D3 9E` was seen in the late part of the no-signal initialization trace. |
+| Read `0900:0014` | Enable-state shadow used during handshake; values vary by session. `D3 9E` has been observed in the late part of no-signal initialization. |
 
 ## Sequences
 
@@ -66,14 +66,13 @@ This table spells out the transfers and register accesses performed when userspa
 **Expected state after confirmation:** IDLE → `0x11`; RESET with mode `00` → `0x10`; START (`05 00 00 02`) → `0x02`. INIT is issued through `scmd()` and followed by the firmware/version steps; it is not confirmed through the same `stateConfirmedScmd()` helper as IDLE, RESET and START.
 
 
-### Initialization command comparison: hardware trace vs. userspace
+### Initialization command comparison: observed transfers vs. userspace
 
-**Trace:** `filtered_init_switch_to_component.pcapng` (HD-New, no-signal).  
-Capture starts at USB connect. The table below covers only the **common boot / init path** that finishes before any input selector is written. HDMI selection (`51 45`), the post-setup idle/keep-alive loop, and the later component switch (`51 ED`) are input-path material and are documented on the input pages, not here.
+The observed sequence begins at USB connect on HD-New with no signal present. The table below covers only the **common boot / init path** that finishes before any input selector is written. HDMI selection (`51 45`), the post-setup idle/keep-alive loop, and the later component switch (`51 ED`) are input-path material and are documented on the input pages, not here.
 
 **Userspace column** follows the call order in `src/gchd/configure.cpp` / `commands.cpp` for the common initialization path (up to the branch into the selected input configuration). Unknown command meanings are left unresolved.
 
-| Trace step | Hardware trace (this capture) | Userspace step | Userspace implementation |
+| Observed step | Hardware transfers | Userspace step | Userspace implementation |
 |---:|---|---:|---|
 | 1 | Vendor control IN: read `0800:0094` (4 bytes) → `56 31 33 30` (`"V130"`); read `0800:0098` (repeated) | 1 | Read version: HD-New probes `0800:0094` / `0800:0098`; fallback to Original-HD `0800:0010/14/18` if both zero |
 | 2 | Vendor control OUT: write `0900:0000 = 00 00` | 2 | Write `0900:0000 = 00 00` |
@@ -109,8 +108,8 @@ Capture starts at USB connect. The table below covers only the **common boot / i
 (`04 A0 00 00` appears later in the capture during/after transcoder activity and on the capture-start path; it is not part of the common boot sequence above.)
 
 **Notes on alignment**
-- Steps 1–21 are the shared boot path. The hardware trace and userspace follow essentially the same order for the firmware loads, SCMD `01` / `04`, phase probes, encoder enable/trigger, and the early mailbox blocks.
-- **Already-initialized branch:** when the device state is not `0x00`, userspace skips the idle-firmware download and sends SCMD RESET, mode `00`, data `0000` — Original HD `00 00 02 00 00 00`; HD-New `02 00 00 00`. The state-confirmation path expects `0x10`. This branch is not exercised by the trace in the comparison table.
+- Steps 1–21 are the shared boot path. The observed transfers and userspace follow essentially the same order for the firmware loads, SCMD `01` / `04`, phase probes, encoder enable/trigger, and the early mailbox blocks.
+- **Already-initialized branch:** when the device state is not `0x00`, userspace skips the idle-firmware download and sends SCMD RESET, mode `00`, data `0000` — Original HD `00 00 02 00 00 00`; HD-New `02 00 00 00`. The state-confirmation path expects `0x10`. This branch is not represented in the observed sequence.
 - When the device state is `0x00`, userspace takes the first-time path: download idle firmware, write `0900:0070 = 00 04`, perform the post-download register reads, then continue through SCMD IDLE and the shared initialization steps.
 - Input selection (`0x9C:51 = 45` for HDMI, `0x9C:51 = ED` for component, etc.), the post-setup idle/keep-alive loops, and any subsequent input switch belong on the input-specific pages, not in this common init comparison.
 - Enable-state shadow restored after mailbox operations in the late portion of the common path is `D3 9E`.
@@ -125,9 +124,9 @@ See [hdmi.md](hdmi.md), [component.md](component.md), [composite.md](composite.m
 | 1 | Finish selected input setup and signal/format detection; apply transcoder setup/final configuration | Input selector, decoder tables, and output parameters depend on input and detected format. |
 | 2 | Queue bulk IN URBs on endpoints `0x81` and `0x84` where used by the capture path | Queue before START as required by the implementation; queueing alone does not prove capture is active. |
 | 3 | SCMD INIT, mode `A0`, data `0000` — Original HD `00 00 04 A0 00 00`; HD-New `04 A0 00 00` | Re-enters initialized/stopped state without reloading encode firmware. |
-| 4 | Read `0800:2008` | In the observed analog 240p trace, the readback was `00 01`; this is an observation, not a universal expected value. |
+| 4 | Read `0800:2008` | For analog 240p, the readback has been observed as `00 01`; this is an observation, not a universal expected value. |
 | 5 | SCMD START, mode `00`, data `0002` — Original HD `00 00 05 00 00 02`; HD-New `05 00 00 02` | State-change request; source expects state `0x02`. Follow completion confirmation. |
-| 6 | Observe bulk IN completions on `0x81` / `0x84` | In the referenced trace, transfers were 65,536 bytes. Validate payload contents; USB completion alone is not proof of valid video. |
+| 6 | Observe bulk IN completions on `0x81` / `0x84` | Observed bulk IN transfers were 65,536 bytes. Validate payload contents; USB completion alone is not proof of valid video. |
 
 ### Shared capture-start sequence observed on analog 240p
 
@@ -152,7 +151,7 @@ Observed on HD-New after input selection with no source present. Each input has 
 | 3 | `99 89 F5 00` | Sequence-read / poll helper |
 | 4 | `9D CD 94 00` | Read helper index `0x94` |
 
-Observed after HDMI selector + front-end setup in `filtered_init_switch_to_component.pcapng`, during pure HDMI no-signal stay, and after returning to HDMI from component in the multi-switch trace.
+Observed after HDMI selector and front-end setup, during HDMI no-signal idle, and after returning to HDMI from component.
 
 #### Component no-signal idle
 
@@ -165,7 +164,7 @@ Observed after HDMI selector + front-end setup in `filtered_init_switch_to_compo
 | 5 | `99 89 F5 00` | Sequence-read / poll helper |
 | 6 | `9D CD 94 00` | Read helper index `0x94` |
 
-Observed after both component selections in the multi-switch no-input trace (HDMI→component and later composite→component). The three extra `9D CD` helpers (`2B` / `2A` / `60`) replace the single HDMI `6A` helper.
+Observed after component selection from both HDMI and composite. The three extra `9D CD` helpers (`2B` / `2A` / `60`) replace the single HDMI `6A` helper.
 
 #### Composite / S-video no-signal idle
 
@@ -178,13 +177,13 @@ This two-command cycle (~50 ms) is shared by composite and S-video once the anal
 
 #### Source-detection candidate
 
-The analog no-input idle centres on the repeated `89 89 FA` read. In earlier signal-present and no-input→source-found traces the same helper returns a different value (`89 89 CA`) and the FA/F5 loop is exited; that transition is the best current candidate for “source found at the analog input”. The common `99 89 F5` helper appears in every input’s keep-alive and is therefore unlikely to be the sole source detector.
+The analog no-input idle centres on the repeated `89 89 FA` read. With a signal present or when transitioning from no input to source found, the same helper has returned a different value (`89 89 CA`) and the FA/F5 loop is exited; that transition is the best current candidate for “source found at the analog input”. The common `99 89 F5` helper appears in every input’s keep-alive and is therefore unlikely to be the sole source detector.
 
 **Still open**
 - Exact semantics of the component-specific helpers `9D CD 2B` / `2A` / `60`.
 - Whether any of the loops change once a signal is locked (vs. merely present).
 - Whether the read helpers can be elided without breaking the keep-alive.
 
-**State-word timing note:** when switching from HDMI to component in the no-signal trace, the write `0900:0018 = 02 0E` was observed before the final mailbox selector `51 ED`. A transient re-write of the previous HDMI value `02 0A` immediately preceded the component value. On pure HDMI→composite/S-video no-input paths the routing change (`02 0E → 03 0E`) occurs after the selector.
+**State-word timing note:** when switching from HDMI to component with no signal, the write `0900:0018 = 02 0E` was observed before the final mailbox selector `51 ED`. A transient re-write of the previous HDMI value `02 0A` immediately preceded the component value. When switching from HDMI to composite or S-video with no signal the routing change (`02 0E → 03 0E`) occurs after the selector.
 
 See [commands.md](commands.md) for generic mailbox commands, unknown registers, transcoder/pipeline operations, and unresolved status values.
