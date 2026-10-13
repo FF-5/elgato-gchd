@@ -66,21 +66,21 @@ This table spells out the transfers and register accesses performed when userspa
 **Expected state after confirmation:** IDLE → `0x11`; RESET with mode `00` → `0x10`; START (`05 00 00 02`) → `0x02`. INIT is issued through `scmd()` and followed by the firmware/version steps; it is not confirmed through the same `stateConfirmedScmd()` helper as IDLE, RESET and START.
 
 
-### Initialization sequence comparison: baseline vs. HDMI-to-component trace
+### Initialization command comparison: hardware trace vs. userspace
 
-The two columns separate the implementation's full common initialization path from what is visible in `filtered_init_switch_to_component.pcapng`. The capture is a filtered slice: it begins with the HDMI mailbox selector and ends with the component selector, so it does **not** independently show the firmware-download and early initialization steps.
+The supplied filtered capture starts at HDMI selection, so earlier hardware commands are not present in it. The userspace column follows `configure.cpp` up to the HDMI selector.
 
-| Baseline / implementation sequence | Captured trace: HDMI `51 45` → component `51 ED` (no signal) |
-|---|---|
-| Read device-version registers; clear/select bank with `0900:0000 = 00 00`; save the enable-state shadow from `0900:0014`; read current state from `0800:2008`. | These early common-init operations are outside this filtered slice. The first visible selector write is mailbox payload `51 45`. |
-| If state is `0x00`, download idle firmware and perform the associated reads/writes; otherwise issue SCMD RESET (`02 00 00 00` on HD-New). | Not visible in this slice; do not infer which startup branch ran from this capture alone. |
-| Issue SCMD IDLE (`01 00 00 00` on HD-New), probe mailbox port `0x33`, wait for phase `27 F9 7B`, initialize transcoder defaults, issue SCMD INIT (`04 00 00 00`), and download encode firmware. | Not visible in this slice; these steps should remain part of the documented implementation sequence, not be attributed to the filtered capture. |
-| Continue the phase probes and ordered mailbox setup, then configure the selected input. | **Start of captured slice:** mailbox write payload `51 45` (HDMI selector), committed to mailbox port `0x9C` with `09 00 9C 02`. |
-| Input-specific setup follows common initialization; the no-signal keep-alive loop is currently documented as observed after HDMI setup. | A repeated HD-New mailbox activity loop follows. Each mailbox write uses the normal `0xBC` payload write to `0800:00C0`, then `0xB9` commit; the trace repeatedly restores/checks enable-state shadow `0900:0014 = D3 9E`. Observed helper payloads include `9D CD 88 00`, `9D CD 3F 00`, `9D CD 3E 00`, `9D CD 3B 00`, and short writes such as `B7 CC`, `B7 CE`, `00 CE`, and `00 CC`. This is repetitive polling/helper traffic, not a second firmware download. |
-| The shared state word at `0900:0018` is read as part of routing/state observation; values documented elsewhere are HDMI `02 0A` and component `02 0E`. | During the loop, `0900:0018` is read as `02 0A` (HDMI). Near the end, the trace briefly writes the HDMI value `02 0A` again, then writes component value `02 0E`. |
-| Input selector payloads are sent through the mailbox path; the source-specific meanings are documented in the input pages. | **End of captured slice:** mailbox write payload `51 ED` (component selector), committed to port `0x9C` with `09 00 9C 02`. No input signal is present, so the trace does not establish signal-lock or video-start behavior. |
+| Trace order | Hardware trace command | Userspace order | Userspace implementation command |
+|---:|---|---:|---|
+| — | Not present in this capture | 1 | Read version: `0800:0094`, `0800:0098`; fallback `0800:0010`, `0014`, `0018` |
+| — | Not present in this capture | 2 | Write `0900:0000 = 00 00`; read enable shadow `0900:0014`; read state `0800:2008` |
+| — | Not present in this capture | 3 | State `00`: bulk OUT `EP 0x02` idle firmware; otherwise SCMD RESET, request `0xB8`, `02 00 00 00` (HD-New) |
+| — | Not present in this capture | 4 | SCMD IDLE, request `0xB8`, `01 00 00 00` (HD-New) |
+| — | Not present in this capture | 5 | Mailbox port `0x33`: write `AB A9 0F A4 55`; read 3 bytes until `27 F9 7B` |
+| — | Not present in this capture | 6 | Initialize transcoder defaults; SCMD INIT, request `0xB8`, `04 00 00 00`; bulk OUT `EP 0x02` encode firmware |
+| — | Not present in this capture | 7 | Continue phase probes and ordered mailbox setup |
+| 1 | Mailbox selector payload `51 45`; request `0xBC` payload to `0800:00C0`; request `0xB9` commit `09 00 9C 02` (port `0x9C`, length `02`) | 8 | Select HDMI through mailbox port `0x9C`, payload `51 45` |
 
-**Interpretation:** the capture supports the observed no-signal sequence from HDMI selection through the repeated mailbox loop to component selection. It does not prove that this is the complete power-on initialization sequence; the early common-init and firmware steps are not present in this filtered trace.
 
 ### Common initialization sequence
 
