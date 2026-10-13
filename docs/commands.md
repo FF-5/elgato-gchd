@@ -91,18 +91,38 @@ Enable-bit masks for `0900:0018`: bit 1 `0x0002` (`EB_FIRMWARE_PROCESSOR`); bit 
 | Decoder format value | `0x88:28=88/8A` | Correlates with 480i/240p in observed transitions; exact bits UNKNOWN. |
 | Backend retrigger | `0x98:0D=C8`; `0x98:0E=05,04` or `15,14` | Preserve exact order; latch/command semantics not confirmed. |
 
-## Idle / keep-alive loop
+## Idle / keep-alive loops
 
-The HDMI no-signal keep-alive loop repeats after front-end setup while no signal is present.
+These are the steady-state no-signal loops after each input's selector and front-end setup. Each mailbox command is followed by the normal HD-New mailbox handshake.
 
-| Target / operation | Bytes written or expected read | Notes |
-|---|---|---|
-| Write `0x9C:AB` | `4C` | Keep-alive command. |
-| Read helper, port `0x33` | `9D CD 6A 00` | Read index `6A`; result discarded. |
-| Decoder status/keep-alive poll, port `0x33` | `99 89 F5 00` | Repeated during no-signal idle loops; result is not used by the documented caller. |
-| Read helper, port `0x33` | `9D CD 94 00` | Read index `94`; result discarded. |
+### HDMI
 
-The normal HD-New mailbox handshake follows each mailbox command. Composite/S-video use a different two-command idle loop, and component uses a six-command loop. Behaviour after signal lock is not established.
+| Order | Mailbox payload | Notes |
+|---:|---|---|
+| 1 | `AB 4C` | `0x9C:AB = 4C` |
+| 2 | `9D CD 6A 00` | Read helper index `0x6A` |
+| 3 | `99 89 F5 00` | Sequence-read / poll helper |
+| 4 | `9D CD 94 00` | Read helper index `0x94` |
+
+### Component
+
+| Order | Mailbox payload | Notes |
+|---:|---|---|
+| 1 | `AB 4C` | `0x9C:AB = 4C` |
+| 2 | `9D CD 2B 00` | Read helper index `0x2B` |
+| 3 | `9D CD 2A 00` | Read helper index `0x2A` |
+| 4 | `9D CD 60 00` | Read helper index `0x60` |
+| 5 | `99 89 F5 00` | Sequence-read / poll helper |
+| 6 | `9D CD 94 00` | Read helper index `0x94` |
+
+### Composite / S-video
+
+| Order | Mailbox payload | Notes |
+|---:|---|---|
+| 1 | `89 89 FA 00` | Status / source-detect poll |
+| 2 | `99 89 F5 00` | Sequence-read / poll helper |
+
+The analog `89 89 FA` reply can change to `CA` when a source is detected. Whether any loop changes after signal lock is not established.
 
 ## Component-switch helper
 
