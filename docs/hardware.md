@@ -68,18 +68,57 @@ This table spells out the transfers and register accesses performed when userspa
 
 ### Initialization command comparison: hardware trace vs. userspace
 
-The supplied filtered capture starts at HDMI selection, so earlier hardware commands are not present in it. The userspace column follows `configure.cpp` up to the HDMI selector.
+**Trace:** `filtered_init_switch_to_component.pcapng` (HD-New, no-signal).  
+Capture starts at USB connect, device boots into HDMI path (no signal), enters the idle/keep-alive loop, then the host switches to component. Trace ends at the component selector `51 ED`.
 
-| Trace order | Hardware trace command | Userspace order | Userspace implementation command |
+**Userspace column** follows `GCHD::configureDevice()` (and the helpers it calls) in `src/gchd/configure.cpp` / `commands.cpp` up through the point the selected input is configured. Order is the call order in the implementation; unknown command meanings are left unresolved.
+
+| Trace step | Hardware trace (this capture) | Userspace step | Userspace implementation |
 |---:|---|---:|---|
-| — | Not present in this capture | 1 | Read version: `0800:0094`, `0800:0098`; fallback `0800:0010`, `0014`, `0018` |
-| — | Not present in this capture | 2 | Write `0900:0000 = 00 00`; read enable shadow `0900:0014`; read state `0800:2008` |
-| — | Not present in this capture | 3 | State `00`: bulk OUT `EP 0x02` idle firmware; otherwise SCMD RESET, request `0xB8`, `02 00 00 00` (HD-New) |
-| — | Not present in this capture | 4 | SCMD IDLE, request `0xB8`, `01 00 00 00` (HD-New) |
-| — | Not present in this capture | 5 | Mailbox port `0x33`: write `AB A9 0F A4 55`; read 3 bytes until `27 F9 7B` |
-| — | Not present in this capture | 6 | Initialize transcoder defaults; SCMD INIT, request `0xB8`, `04 00 00 00`; bulk OUT `EP 0x02` encode firmware |
-| — | Not present in this capture | 7 | Continue phase probes and ordered mailbox setup |
-| 1 | Mailbox selector payload `51 45`; request `0xBC` payload to `0800:00C0`; request `0xB9` commit `09 00 9C 02` (port `0x9C`, length `02`) | 8 | Select HDMI through mailbox port `0x9C`, payload `51 45` |
+| 1 | Read version: `0800:0094` → `"V130"`, `0800:0098` (repeated) | 1 | `readVersion()` – HD-New probes `0800:0094` / `0800:0098`; fallback to Original-HD `0800:0010/14/18` if both zero |
+| 2 | Write `0900:0000 = 00 00` (BANKSEL) | 2 | Write `0900:0000 = 00 00` |
+| 3 | Read enable-state shadow `0900:0014` | 3 | Read `MAIL_SEND_ENABLE_REGISTER_STATE` (`0900:0014`) into `savedEnableStateRegister_` |
+| 4 | Read `0800:2008` (SCMD state) → `0x00` | 4 | Read `SCMD_STATE_READBACK_REGISTER` (`0800:2008`) & `0x1F`. On HD-New, if state `0x00` also handle interrupt + clear sticky bit on `0900:0074` |
+| 5 | Bulk OUT EP `0x02` idle firmware – 10 × 32 768 + 4 016 = **331 696 B** | 5A | **Only if state was `0x00`:** `dlfirm(firmwareIdle_)` (chunk size 32 768 on HD-New) |
+| 6 | Write `0900:0070 = 00 04` | 6A | Write `0900:0070 = 00 04` (after idle firmware) |
+| 7 | Re-read enable shadow + `0900:0018`; series of 2-byte reads from `0000:0010`…`001E` | 7A | Re-read `0900:0014` / `0900:0018`; read `0000:0010`…`001E` (source comments note the two banks appear identical) |
+| 8 | SCMD IDLE: `01 00 00 00` (request `0xB8`) + interrupt / receipt / ready path | 8 | `stateConfirmedScmd(SCMD_IDLE, 0x00, 0x0000)` – expected state `0x11` |
+| 9 | Mailbox port `0x33`: `AB A9 0F A4 55` + 3-byte read (phase probe) | 9 | Port `0x33` write `AB A9 0F A4 55`, read 3 bytes (expects `33 44 55`) |
+| 10 | Repeat phase probe while reply is `33 44 55`; enable-state restore + analog-input bit + `EB_FIRMWARE_PROCESSOR` | 10 | Loop on phase `33 44 55`: `sendEnableState()`, `enableAnalogInput()`, `doEnable(EB_FIRMWARE_PROCESSOR)` until phase becomes `27 F9 7B` |
+| 11 | On first `27 F9 7B`: transcoder defaults + extensive register programming (wValue=`0x0001` series) | 11 | `transcoderDefaultsInitialize()` (implementation-ordered transcoder table writes) |
+| 12 | SCMD INIT: `04 00 00 00` + interrupt / receipt path | 12 | `scmd(SCMD_INIT, 0x00, 0x0000)` – **userspace issues INIT before encode-firmware download** |
+| 13 | Bulk OUT EP `0x02` encode firmware – 45 × 32 768 + 26 224 = **1 500 784 B** | 13 | `dlfirm(firmwareEnc_)` |
+| 14 | Post-encode reads of `0000:0010`…`0016`; phase may briefly return to `33 44 55` | 14 | Read `0000:0010/12/14/16`; allow temporary return to `33 44 55` |
+| 15 | Up to ~5× phase probe `AB A9 0F A4 5B` + enable refresh; stop when `(reply & 0xF8F0F0) == 0x78E040` | 15 | Same loop (mask `0xF8F0F0 == 0x78E040`); also observed `0x7BEC47` on some hardware |
+| 16 | Enable `EB_ENCODER_ENABLE`; wait for phase `27 F9 7B` again | 16 | `doEnable(EB_ENCODER_ENABLE)`; poll until phase `27 F9 7B` |
+| 17 | Port `0x33`: `28 28`; `29 89 5B` → read 1; `DD CE 3F B2` → read 2 (expects `91`, `DA 67`) | 17 | Identical mailbox sequence; expects `91` / `DA 67` |
+| 18 | Assert `EB_ENCODER_TRIGGER`; poll `43 23 84` until `F7`; clear trigger | 18 | Identical; trigger only held for the poll |
+| 19 | Port `0x33`: `89 89 FB` → read 1 (expects `6E`) | 19 | Identical; expects `6E` |
+| 20 | Long ordered mailbox block on ports `0x44`, `0x33`, `0x4E`, `0x4C` (generation-specific) | 20 | `configureCommonBlockA/B/C` family – order-sensitive; several meanings still UNKNOWN |
+| 21 | Port-`0x33` block-read series (`AB 92 3E B4 …` + 56-byte reads) | 21 | Same block-read series (source explicitly says purpose unknown; do not omit) |
+| 22 | HDMI selector `51 45` + HDMI front-end / page / parameter-table programming | 22 | Branch to `configureHDMI()` (or forced input); selector `0x9C:51 = 45`, route `0900:0018 = 02 0A` |
+| 23 | Enter repeating idle/keep-alive loop (no signal): `AB 4C` / `9D CD 6A 00` / `99 89 F5 00` / `9D CD 94 00` | — | (Userspace does not implement this loop; it proceeds to capture-start when a signal is expected) |
+| 24 | Digital/component prefix: `06 86`, `89 89 F8`, `03 2F`, `B3 CC`, page CE/`27=CC`/CC | — | (Component path lives in `configureComponent()`; not exercised on the HDMI-forced boot path) |
+| 25 | Routing `0900:0018`: transient `02 0A` then `02 0E` **before** selector | — | Component route word is written inside the component configuration path |
+| 26 | Shared path: `AB 4C`, `1B 33`, `B7 CE`, `B8 DC`, `B8 CC`, `07 38`, `07 C8` | — | Same shared writes appear in the component configuration path |
+| 27 | Component selector `0x9C:51 = ED` (trace ends) | — | `0x9C:51 = ED` is the final selector in the component path |
+
+**Firmware sizes observed in this capture**
+- Idle: 331 696 B = 10 × 32 768 + 4 016
+- Encode: 1 500 784 B = 45 × 32 768 + 26 224
+
+**SCMDs observed**
+- `01 00 00 00` – IDLE (after idle firmware)
+- `04 00 00 00` – INIT (before encode firmware)
+- `04 A0 00 00` – INIT mode A0 (later, during/after transcoder / table activity; also used by userspace before START)
+
+**Notes on alignment**
+- Steps 1–21 are the common boot path. The hardware trace and userspace are essentially the same order for the firmware loads, IDLE/INIT, phase probes, encoder enable/trigger, and the early mailbox blocks.
+- The hardware trace continues into a full HDMI configuration + long no-signal idle/keep-alive loop, then performs an explicit HDMI→component switch (steps 24–27). Userspace, when forced to HDMI, stops at the HDMI selector and later uses the capture-start path (`04 A0` + `05 00 00 02`) once a signal is present.
+- The `0900:0018` write of the component value `02 0E` occurs **before** the final mailbox selector `51 ED` (confirmed in this trace and in the component no-input switching captures).
+- Enable-state shadow restored after mailbox operations in the late portion of the trace is `D3 9E`.
+
+See [component.md](component.md) for the complete ordered component-switch sequence that follows step 27, and the “Idle / keep-alive loop” section below for the four-command HDMI no-signal loop.
 
 
 ### Common initialization sequence
@@ -95,7 +134,7 @@ The supplied filtered capture starts at HDMI selection, so earlier hardware comm
 | 6A | Write `0900:0070 = 00 04` | Purpose unknown; executed after idle-firmware download. |
 | 7A | Read `0900:0014`, then `0900:0018`; read `0000:0010`, `0012`, `0014`, `0016`, `0018`, `001A`, `001C`, `001E` (2 bytes each) | Reads after idle-firmware download. The source comments say the returned values appear to repeat across two banks; their purpose is unknown. |
 | 8 | SCMD IDLE, mode `00`, data `0000` — Original HD `00 00 01 00 00 00`; HD-New `01 00 00 00` | State-confirmed; expected readback `0x11`. |
-| 9 | Mailbox port `0x33`: write `AB A9 0F A4 55`; then read 3 bytes | Initial phase probe; source comment expects `33 44 55`. |
+| 9 | Mailbox port `0x33`: write `AB A9 0F A4 55`, then read 3 bytes | Initial phase probe; source comment expects `33 44 55`. |
 | 10 | Repeat port-`0x33` probe `AB A9 0F A4 55` + 3-byte read until phase value changes | While reply is `33 44 55`, source sends the saved enable-state shadow, configures the analog-input bit from selected input, and enables `EB_FIRMWARE_PROCESSOR`. The loop waits for `27 F9 7B`. |
 | 11 | Configure analog-input enable bit; call `transcoderDefaultsInitialize()` | Runs once on the first `27 F9 7B` phase. The detailed transcoder writes are implementation-ordered; see the transcoder initialization code and the relevant transcoder tables. |
 | 12 | SCMD INIT, mode `00`, data `0000` — Original HD `00 00 04 00 00 00`; HD-New `04 00 00 00` | **The userspace implementation sends INIT before downloading encode firmware.** On HD-New, the normal SCMD receipt/interrupt path is used. |
@@ -135,9 +174,7 @@ The supplied filtered capture starts at HDMI selection, so earlier hardware comm
 
 ### Idle / keep-alive loops (post-input-setup, no signal)
 
-**Evidence:** `gchd_input_switch_no_input.pcapng` (HD-New, multi-switch no-source: HDMI → component → composite → S-video → composite → component → HDMI) plus earlier single-switch no-input traces.
-
-Each input has its own steady-state keep-alive once its selector and front-end programming have completed and no source is present. All loops use the normal HD-New mailbox transport (write to `0800:00C0` + `0xB9` commit / interrupt / restore-shadow / poll-ready).
+Observed on HD-New after input selection with no source present. Each input has its own loop body; every mailbox command uses the normal HD-New mailbox handshake (commit / interrupt / restore-shadow / poll-ready).
 
 #### HDMI no-signal idle
 
@@ -148,7 +185,7 @@ Each input has its own steady-state keep-alive once its selector and front-end p
 | 3 | `99 89 F5 00` | Sequence-read / poll helper |
 | 4 | `9D CD 94 00` | Read helper index `0x94` |
 
-Confirmed on pure HDMI no-signal stay, and after returning to HDMI from component in the multi-switch trace.
+Observed after HDMI selector + front-end setup in `filtered_init_switch_to_component.pcapng`, during pure HDMI no-signal stay, and after returning to HDMI from component in the multi-switch trace.
 
 #### Component no-signal idle
 
