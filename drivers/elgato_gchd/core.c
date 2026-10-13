@@ -557,6 +557,7 @@ static void gchd_detect_workfn(struct work_struct *work)
     * Match the userspace architecture: keep an independent bulk-IN reader
     * running while the device processes the START state transition.
     */
+   gchd_set_lifecycle(d, GCHD_LIFECYCLE_STARTING);
    d->last_video_jiffies = jiffies;
    WRITE_ONCE(d->start_pending, true);
    d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
@@ -572,18 +573,21 @@ static void gchd_detect_workfn(struct work_struct *work)
    if (r) {
     kthread_stop(d->rx_thread);
     d->rx_thread = NULL;
+    gchd_set_lifecycle(d, GCHD_LIFECYCLE_ERROR);
     dev_warn(&d->intf->dev,
              "capture start after detection failed: %d; backing off before retry\n", r);
     /* Do not hammer START every 250ms if the state transition timed out. */
     schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
     goto out;
    }
+   gchd_set_lifecycle(d, GCHD_LIFECYCLE_STREAMING);
    if (d->input >= 2 && d->input_height == 480)
     schedule_delayed_work(&d->mode_work, msecs_to_jiffies(250));
 
   } else {
    /* Configured and ready; later STREAMON uses this known-good setup. */
    WRITE_ONCE(d->detect_requested, false);
+   gchd_set_lifecycle(d, GCHD_LIFECYCLE_INPUT_READY);
   }
  }
 
