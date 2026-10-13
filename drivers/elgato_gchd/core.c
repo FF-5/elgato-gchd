@@ -45,6 +45,17 @@ struct gchd_mode {
 static DEFINE_MUTEX(gchd_last_input_lock);
 static unsigned int gchd_last_input;
 
+/* Driver orchestration state is separate from the device GCHD_STATE_* state. */
+static void gchd_set_lifecycle(struct gchd *d, enum gchd_lifecycle_state state)
+{
+ enum gchd_lifecycle_state old = READ_ONCE(d->lifecycle_state);
+
+ if (old == state)
+  return;
+ WRITE_ONCE(d->lifecycle_state, state);
+ dev_dbg(&d->intf->dev, "lifecycle: %u -> %u\\n", old, state);
+}
+
 static const struct gchd_mode gchd_modes[] = {
  {1920, 1080, 60, 1, false},
  {1920, 1080, 60, 1, true},
@@ -441,6 +452,7 @@ static void gchd_detect_workfn(struct work_struct *work)
      !READ_ONCE(d->detect_requested))
   goto out;
 
+ gchd_set_lifecycle(d, GCHD_LIFECYCLE_DETECTING);
  dev_dbg(&d->intf->dev, "input detection started: input=%u streaming=%u\n",
           READ_ONCE(d->input), READ_ONCE(d->streaming));
 
@@ -754,6 +766,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
  }
 
  if (!d->hw_initialized) {
+  gchd_set_lifecycle(d, GCHD_LIFECYCLE_INITIALIZING);
   d->input_forced = true; /* preserve default HDMI or the last chosen input */
   d->input_configured = false;
   d->input_prepared = false;
@@ -777,6 +790,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   }
   d->hw_initialized = true;
   d->hw_init_failed = false;
+  gchd_set_lifecycle(d, GCHD_LIFECYCLE_INPUT_SELECTED);
   dev_info(&d->intf->dev,
            "capture requested: hardware initialized, detecting input %u\n",
            d->input);
@@ -790,6 +804,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
  WRITE_ONCE(d->streaming, true);
  WRITE_ONCE(d->detect_requested, true);
  if (!d->input_configured || !READ_ONCE(d->signal_present)) {
+  gchd_set_lifecycle(d, GCHD_LIFECYCLE_DETECTING);
   schedule_delayed_work(&d->detect_work, 0);
   mutex_unlock(&d->lifecycle_lock);
   return 0;
@@ -799,6 +814,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   * Start bulk-IN before issuing START. The receiver must be alive during
   * the device's state-change handshake, not only after it has completed.
   */
+ gchd_set_lifecycle(d, GCHD_LIFECYCLE_STARTING);
  d->last_video_jiffies = jiffies;
  WRITE_ONCE(d->start_pending, true);
  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
@@ -825,6 +841,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   WRITE_ONCE(d->detect_requested, false);
   goto err_streaming;
  }
+ gchd_set_lifecycle(d, GCHD_LIFECYCLE_STREAMING);
  if (d->input >= 2 && d->input_height == 480)
   schedule_delayed_work(&d->mode_work, msecs_to_jiffies(250));
 
@@ -851,6 +868,7 @@ static void gchd_stop(struct vb2_queue *q)
  cancel_delayed_work_sync(&d->detect_work);
  cancel_delayed_work_sync(&d->mode_work);
  mutex_lock(&d->lifecycle_lock);
+ gchd_set_lifecycle(d, GCHD_LIFECYCLE_STOPPING);
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
@@ -1002,6 +1020,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  gchd_ring_free(&d->ring);
  d->ts_partial_len = 0;
  d->input = i;
+ gchd_set_lifecycle(d, GCHD_LIFECYCLE_INPUT_SELECTED);
  mutex_lock(&gchd_last_input_lock);
  gchd_last_input = i;
  mutex_unlock(&gchd_last_input_lock);
@@ -1028,6 +1047,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 
  /* Detect/configure asynchronously so VIDIOC_S_INPUT stays non-blocking. */
  WRITE_ONCE(d->detect_requested, true);
+ gchd_set_lifecycle(d, GCHD_LIFECYCLE_DETECTING);
  schedule_delayed_work(&d->detect_work, 0);
  dev_info(&d->intf->dev,
           "input selected: input=%u; detection scheduled\n", i);
@@ -1513,6 +1533,7 @@ static int gchd_probe(struct usb_interface *i,
   goto err;
  mutex_init(&d->lock);
  mutex_init(&d->lifecycle_lock);
+ d->lifecycle_state = GCHD_LIFECYCLE_OFFLINE;
  mutex_init(&d->users_lock);
  INIT_DELAYED_WORK(&d->detect_work, gchd_detect_workfn);
  INIT_DELAYED_WORK(&d->mode_work, gchd_mode_workfn);
@@ -1566,6 +1587,7 @@ static void gchd_disconnect(struct usb_interface *i)
   return;
  usb_set_intfdata(i, NULL);
  WRITE_ONCE(d->disconnected, true);
+ WRITE_ONCE(d->lifecycle_state, GCHD_LIFECYCLE_POWERING_OFF);
  cancel_delayed_work_sync(&d->detect_work);
  cancel_delayed_work_sync(&d->mode_work);
  mutex_lock(&d->lifecycle_lock);
