@@ -28,7 +28,7 @@
 
 ## No-signal idle / keep-alive
 
-**Evidence:** `gchd_input_switch_no_input.pcapng` and earlier HDMI→S-video no-input traces.
+
 
 After the S-video selector and front-end programming complete with no source present, the device enters a two-command keep-alive shared with composite:
 
@@ -47,9 +47,9 @@ The repeated `89 89 FA` read is the best current candidate for analog source det
 
 #### NTSC-family 240p vs PAL-family 288p-equivalent
 
-Rows are aligned by logical operation so the two columns can be compared directly. A dash means the corresponding step was not observed (or not required) in that family’s capture. Step numbers are sequential within each column and reflect the order seen in the respective traces. HDMI selector/keep-alive traffic is deliberately excluded.
+Rows are aligned by logical operation so the two columns can be compared directly. A dash means the corresponding step was not observed (or not required) in that family’s sequence. Step numbers are sequential within each column and reflect the order seen in the respective sequences. HDMI selector/keep-alive traffic is deliberately excluded.
 
-Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present capture. Backend coefficient table, retriggers, and SCMD are present after the apply block; the coefficient values match the composite NTSC set (`90=01 … A3=49`), not the different PAL set.
+Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present sequence. Backend coefficient table, retriggers, and SCMD are present after the apply block; the coefficient values match the composite NTSC set (`90=01 … A3=49`), not the different PAL set.
 
 | NTSC step | NTSC-family 240p | PAL step | PAL-family 288p-equivalent |
 |---:|---|---:|---|
@@ -89,17 +89,15 @@ Both NTSC and PAL no-input paths share the same early order (decoder-first) and 
 | 6 | — | Apply block: `07=8A`, `08=9B`, `09=7A`, `28=88` / `8A`, `06=08`. | — | Apply block: `07=8A`, `08=9B`, `09=7A`, `28=88` / `8A`, `06=08`. |
 | 7 | 14–18 | Backend coefficients `90=01…A3=49` (NTSC table) and tail writes; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`), after source recognition. | 16–18 | Backend coefficients `90=01…A3=49` (NTSC table, not the signal-present PAL set) and tail writes; SCMD `04 A0 00 00` → `05 00 00 02`, after source recognition. Capture ends as first stream packets arrive. |
 
-When the previous input was component (or another analog input), the selector written under no-source conditions is `51 EC` rather than `51 44`. See composite.md “Selector 51 EC vs 51 44” for multi-switch evidence. After `51 EC` the same FA/F5 idle and source-found path still apply.
+When the previous input was component (or another analog input), the selector written when no source is present is `51 EC` rather than `51 44`. See composite.md “Selector 51 EC vs 51 44” for multi-switch evidence. After `51 EC` the same FA/F5 idle and source-found path still apply.
 
-#### Other formats
-
-##### 480i / 576i
+### 480i / 576i
 
 | NTSC step | NTSC-family / 60 Hz | PAL step | PAL-family / 50 Hz |
 |---:|---|---:|---|
 | 1 | NTSC-family 480i sequence **NOT CAPTURED**. | 1 | PAL-family 576i sequence **NOT CAPTURED**. |
 
-##### 480p / 576p
+### 480p / 576p
 
 | NTSC step | NTSC-family / 60 Hz | PAL step | PAL-family / 50 Hz |
 |---:|---|---:|---|
