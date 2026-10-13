@@ -93,45 +93,24 @@ The bytes `06 86`, `03 2F` and `B3 CC` also occur during earlier setup. The sequ
 
 ## No-signal idle / keep-alive
 
+Once the component selector `51 ED` and component tail have run with no source present, the device enters this repeating six-command loop. Each mailbox command uses the normal HD-New mailbox handshake.
 
+| Order | Mailbox payload | Notes |
+|---:|---|---|
+| 1 | `AB 4C` | `0x9C:AB = 4C` |
+| 2 | `9D CD 2B 00` | Read helper index `0x2B` |
+| 3 | `9D CD 2A 00` | Read helper index `0x2A` |
+| 4 | `9D CD 60 00` | Read helper index `0x60` |
+| 5 | `99 89 F5 00` | Sequence-read / poll helper |
+| 6 | `9D CD 94 00` | Read helper index `0x94` |
 
-Once the component selector `51 ED` and the component tail have run with no source present, the device enters a six-command keep-alive that differs from the HDMI loop:
-
-```
-AB 4C
-9D CD 2B 00
-9D CD 2A 00
-9D CD 60 00
-99 89 F5 00
-9D CD 94 00
-```
-
-Full description and comparison with HDMI / composite / S-video idles are in [hardware.md](hardware.md).
+See [hardware.md](hardware.md) for the cross-input comparison and unresolved helper semantics.
 
 ## Allowable input formats
 
 The component input format families documented here are **240p, 288p, 480i, 576i, 480p, 576p, 720p, 1080i, and 1080p**. The tables distinguish the format families from the portions of their register sequences that are established. A listed format does not imply that every format-specific register value or lock criterion is known.
 
 ## Sequences
-
-### 240p / 288p
-
-#### NTSC-family 240p vs PAL-family 288p
-
-| NTSC step | NTSC-family 240p sequence | PAL step | PAL-family 288p sequence |
-|---:|---|---:|---|
-| 1 | Component prefix: `06 86`; read helper `89 89 F8`; `03 2F`; `B3 CC` | 1 | Component prefix: `06 86`; read helper `89 89 F8`; `03 2F`; `B3 CC` |
-| 2 | Page setup: page `CE`, `0x9C:27=CC`, return to page `CC` | 2 | Page setup: page `CE`, `0x9C:27=CC`, return to page `CC` |
-| 3 | Route `0900:0018=02 0E`; shared path; selector `0x9C:51=ED` | 3 | Route `0900:0018=02 0E`; shared path; selector `0x9C:51=ED` |
-| 4 | Per-format decoder/transcoder programming and lock confirmation: **not established** | 4 | Per-format decoder/transcoder programming and lock confirmation: **not established** |
-| 5 | Pipeline configuration and stream start: **not established** | 5 | Pipeline configuration and stream start: **not established** |
-
-#### Differences: 240p vs 288p
-
-| Order | NTSC step(s) | NTSC sequence difference | PAL step(s) | PAL sequence difference |
-|---:|---:|---|---:|---|
-| 1 | 1–3 | Common component-selection path is documented; mode-specific setup is not established. | 1–3 | Same documented common path; mode-specific setup is not established. |
-| 2 | 4–5 | Format-specific programming, lock criteria, and stream-start commands are not established. | 4–5 | Format-specific programming, lock criteria, and stream-start commands are not established. |
 
 ### 480i / 576i
 
