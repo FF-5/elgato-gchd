@@ -3,20 +3,20 @@
 ## Common commands and configuration
 
 | Target / operation | Bytes written or expected read | Notes |
-|---:|---|---|---|
+|---|---|---|
 | `0x88:06` | Write `86` | Digital/component prefix. |
-| Port `0x33` read helper | `89 89 F8` | Read before `0x88:03`; meaning UNKNOWN. |
+| Port `0x33` read helper | `89 89 F8` | Read before `0x88:03`; reply meaning is not established. |
 | `0x88:03` | Write `2F` | Digital/component prefix. |
 | `0x9C:B3` | Write `CC` | Digital/component prefix. |
-| 5 | page `CE` → `0x9C:27=CC` → page `CC` | Page select around `27=CC` | **Observed** |
-| `0900:0018` | Write `02 0E` | Component routing state; written before final selector. |
-| `0x9C` shared path | `AB=4C`, `1B=33`, `B7=CE`, `B8=DC`, `B8=CC`, `07=38`, `07=C8` | Common path writes before selector; preserve order. |
-| 8 | `0x9C:51=ED` (mailbox `51 ED`) | Component selector | **Observed** |
-| Component-specific tail | `24 0C`, `21 CD`, `91 C8`, `0E 8C`, `11 EC`, `54 FC`, `71 4C`, `04 CC` | Observed after selector in `gchd_input_switch_no_input.pcapng` (no-source path). |
+| Page selection | Page `CE` → `0x9C:27=CC` → page `CC` | Page-select sequence around `27=CC`. |
+| `0900:0018` | Write `02 0E` | Component routing state; set before the final selector. |
+| `0x9C` shared path | `AB=4C`, `1B=33`, `B7=CE`, `B8=DC`, `B8=CC`, `07=38`, `07=C8` | Shared writes before the selector; preserve order. |
+| `0x9C:51` | Write `ED` | Component input selector. |
+| Component-specific tail | `24 0C`, `21 CD`, `91 C8`, `0E 8C`, `11 EC`, `54 FC`, `71 4C`, `04 CC` | Post-selector component setup. |
 
 ### Ordered component selection (HD-New)
 
-**Observed sequence:** initialization starts configured for HDMI (no signal), then switches to component. Confirmed on both the original switch-to-component trace and the multi-switch no-input trace.
+**Observed sequence:** initialization starts configured for HDMI (no signal), then switches to component. Confirmed on both the the component-selection sequence and repeated input switching.
 
 1. Run common device initialization in [hardware.md](hardware.md) (firmware loads, IDLE, INIT, etc.).
 2. (In this trace) HDMI path and front-end were already programmed and the device was sitting in the idle/keep-alive loop described in [hardware.md](hardware.md).
@@ -69,7 +69,7 @@
 
    Every mailbox write above is followed by the normal HD-New handshake (`0xB9` commit, interrupt, restore `0900:0014` shadow `D3 9E`, poll `0900:001C`).
 
-7. Component-specific tail (observed on no-source path in `gchd_input_switch_no_input.pcapng`):
+7. Component-specific tail (observed on no-source path in `no-input input-switch sequence`):
 
    ```
    00 4C
@@ -85,7 +85,7 @@
 
    (Interleaved with `9D CD` helpers / page selects.) Signal detection, per-format decoder configuration, final transcoder setup, and lock criteria with a real signal remain **NOT CAPTURED**.
 
-8. Shared SCMD / capture-start sequence (see [hardware.md](hardware.md)) only after the above is validated with a real signal.
+8. Shared SCMD / sequence-start sequence (see [hardware.md](hardware.md)) only after the above is validated with a real signal.
 
 ### Notes on earlier occurrences of the same prefix bytes
 
@@ -93,7 +93,7 @@ The bytes `06 86`, `03 2F` and `B3 CC` also occur during earlier setup. The sequ
 
 ## No-signal idle / keep-alive
 
-**Evidence:** `gchd_input_switch_no_input.pcapng` (after both component selections).
+
 
 Once the component selector `51 ED` and the component tail have run with no source present, the device enters a six-command keep-alive that differs from the HDMI loop:
 
@@ -110,45 +110,28 @@ Full description and comparison with HDMI / composite / S-video idles are in [ha
 
 ## Sequences
 
+The tables cover the standard SD formats listed for component input. “Not established” means the format-specific sequence is not documented; it does not imply that the format is unsupported.
+
 ### 240p / 288p
 
-
-#### NTSC-family / 60 Hz
-
-| Step | Command / bytes written or read | Notes |
+| Order | NTSC-family / 60 Hz (240p) | PAL-family / 50 Hz (288p) |
 |---:|---|---|
-| 1 | Complete NTSC-family 240p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
-
-#### PAL-family / 50 Hz
-
-| Step | Command / bytes written or read | Notes |
-|---:|---|---|
-| 1 | Complete PAL-family 288p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+| 1 | Digital/component prefix, routing `02 0E`, shared path, selector `51 ED` | Digital/component prefix, routing `02 0E`, shared path, selector `51 ED` |
+| 2 | Per-format decoder/transcoder programming: **not established** | Per-format decoder/transcoder programming: **not established** |
+| 3 | Pipeline setup and stream start: **not established** | Pipeline setup and stream start: **not established** |
 
 ### 480i / 576i
 
-#### NTSC-family / 60 Hz
-
-| Step | Command / bytes written or read | Notes |
+| Order | NTSC-family / 60 Hz (480i) | PAL-family / 50 Hz (576i) |
 |---:|---|---|
-| 1 | NTSC-family 480i sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
-
-#### PAL-family / 50 Hz
-
-| Step | Command / bytes written or read | Notes |
-|---:|---|---|
-| 1 | PAL-family 576i sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+| 1 | Common component selection path described above | Common component selection path described above |
+| 2 | Per-format programming and lock criteria: **not established** | Per-format programming and lock criteria: **not established** |
+| 3 | Pipeline setup and stream start: **not established** | Pipeline setup and stream start: **not established** |
 
 ### 480p / 576p
 
-#### NTSC-family / 60 Hz
-
-| Step | Command / bytes written or read | Notes |
+| Order | NTSC-family / 60 Hz (480p) | PAL-family / 50 Hz (576p) |
 |---:|---|---|
-| 1 | NTSC-family 480p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
-
-#### PAL-family / 50 Hz
-
-| Step | Command / bytes written or read | Notes |
-|---:|---|---|
-| 1 | PAL-family 576p sequence **NOT CAPTURED**. | Complete ordered bring-up **NOT CAPTURED**. |
+| 1 | Common component selection path described above | Common component selection path described above |
+| 2 | Per-format programming and lock criteria: **not established** | Per-format programming and lock criteria: **not established** |
+| 3 | Pipeline setup and stream start: **not established** | Pipeline setup and stream start: **not established** |
