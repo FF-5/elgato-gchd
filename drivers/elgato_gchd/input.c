@@ -1646,7 +1646,7 @@ static int gchd_input_configure_mode(struct gchd *d)
    * Return to IDLE, but do not tear down the encoder: input changes reuse the
    * initialized encoder and retry only the connector-specific configuration.
    */
-  gchd_state_cmd(d, SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+  gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
   d->input_prepared = false;
   dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\n", r);
   return r;
@@ -1722,7 +1722,7 @@ int gchd_input_start(struct gchd *d)
           "gchd-diag issuing START: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
           d->input, d->input_width, d->input_height, d->input_fps_num,
           d->input_fps_den, d->input_interlaced);
- r = gchd_state_cmd(d, SCMD_STATE_CHANGE, 0, GCHD_STATE_START, GCHD_STATE_START);
+ r = gchd_state_cmd(d, SCMD_STATE_CHANGE, 0, HW_START, HW_START);
  if (r) {
   dev_err(&d->intf->dev, "capture start transition failed: %d\n", r);
   return r;
