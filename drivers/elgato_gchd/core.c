@@ -452,7 +452,7 @@ static void gchd_detect_workfn(struct work_struct *work)
      !READ_ONCE(d->detect_requested))
   goto out;
 
- gchd_set_lifecycle(d, GCHD_DETECTING);
+ gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
  dev_dbg(&d->intf->dev, "input detection started: input=%u streaming=%u\n",
           READ_ONCE(d->input), READ_ONCE(d->streaming));
 
@@ -557,7 +557,7 @@ static void gchd_detect_workfn(struct work_struct *work)
     * Match the userspace architecture: keep an independent bulk-IN reader
     * running while the device processes the START state transition.
     */
-   gchd_set_lifecycle(d, GCHD_STARTING);
+   gchd_set_lifecycle(d, GCHD_CAPTURE_START);
    d->last_video_jiffies = jiffies;
    WRITE_ONCE(d->start_pending, true);
    d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
@@ -587,7 +587,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   } else {
    /* Configured and ready; later STREAMON uses this known-good setup. */
    WRITE_ONCE(d->detect_requested, false);
-   gchd_set_lifecycle(d, GCHD_INPUT_READY);
+   gchd_set_lifecycle(d, GCHD_INPUT_READINESS);
   }
  }
 
@@ -661,7 +661,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   if (r)
    goto restart_failed;
 
-  gchd_set_lifecycle(d, GCHD_STARTING);
+  gchd_set_lifecycle(d, GCHD_CAPTURE_START);
   d->last_video_jiffies = jiffies;
   WRITE_ONCE(d->start_pending, true);
   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
@@ -696,7 +696,7 @@ restart_failed:
           "240p-to-480i reconfiguration failed: %d\n", r);
  WRITE_ONCE(d->signal_present, false);
  WRITE_ONCE(d->detect_requested, true);
- gchd_set_lifecycle(d, GCHD_DETECTING);
+ gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
 
 reschedule:
@@ -774,7 +774,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
  }
 
  if (!d->hw_initialized) {
-  gchd_set_lifecycle(d, GCHD_INITIALIZING);
+  gchd_set_lifecycle(d, GCHD_INITIALIZATION);
   d->input_forced = true; /* preserve default HDMI or the last chosen input */
   d->input_configured = false;
   d->input_prepared = false;
@@ -798,7 +798,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   }
   d->hw_initialized = true;
   d->hw_init_failed = false;
-  gchd_set_lifecycle(d, GCHD_INPUT_SELECTED);
+  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
   dev_info(&d->intf->dev,
            "capture requested: hardware initialized, detecting input %u\n",
            d->input);
@@ -812,7 +812,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
  WRITE_ONCE(d->streaming, true);
  WRITE_ONCE(d->detect_requested, true);
  if (!d->input_configured || !READ_ONCE(d->signal_present)) {
-  gchd_set_lifecycle(d, GCHD_DETECTING);
+  gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
   schedule_delayed_work(&d->detect_work, 0);
   mutex_unlock(&d->lifecycle_lock);
   return 0;
@@ -822,7 +822,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   * Start bulk-IN before issuing START. The receiver must be alive during
   * the device's state-change handshake, not only after it has completed.
   */
- gchd_set_lifecycle(d, GCHD_STARTING);
+ gchd_set_lifecycle(d, GCHD_CAPTURE_START);
  d->last_video_jiffies = jiffies;
  WRITE_ONCE(d->start_pending, true);
  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
@@ -876,7 +876,7 @@ static void gchd_stop(struct vb2_queue *q)
  cancel_delayed_work_sync(&d->detect_work);
  cancel_delayed_work_sync(&d->mode_work);
  mutex_lock(&d->lifecycle_lock);
- gchd_set_lifecycle(d, GCHD_STOPPING);
+ gchd_set_lifecycle(d, GCHD_CAPTURE_STOP);
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
@@ -909,10 +909,10 @@ static void gchd_stop(struct vb2_queue *q)
   */
  if (!d->disconnected && !READ_ONCE(d->signal_present)) {
   WRITE_ONCE(d->detect_requested, true);
-  gchd_set_lifecycle(d, GCHD_DETECTING);
+  gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
   schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
  } else if (READ_ONCE(d->hw_initialized)) {
-  gchd_set_lifecycle(d, GCHD_INPUT_READY);
+  gchd_set_lifecycle(d, GCHD_INPUT_READINESS);
  } else {
   gchd_set_lifecycle(d, GCHD_OFFLINE);
  }
@@ -1033,7 +1033,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  gchd_ring_free(&d->ring);
  d->ts_partial_len = 0;
  d->input = i;
- gchd_set_lifecycle(d, GCHD_INPUT_SELECTED);
+ gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
  mutex_lock(&gchd_last_input_lock);
  gchd_last_input = i;
  mutex_unlock(&gchd_last_input_lock);
@@ -1060,7 +1060,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 
  /* Detect/configure asynchronously so VIDIOC_S_INPUT stays non-blocking. */
  WRITE_ONCE(d->detect_requested, true);
- gchd_set_lifecycle(d, GCHD_DETECTING);
+ gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
  schedule_delayed_work(&d->detect_work, 0);
  dev_info(&d->intf->dev,
           "input selected: input=%u; detection scheduled\n", i);
@@ -1600,7 +1600,7 @@ static void gchd_disconnect(struct usb_interface *i)
   return;
  usb_set_intfdata(i, NULL);
  WRITE_ONCE(d->disconnected, true);
- WRITE_ONCE(d->lifecycle_state, GCHD_POWERING_OFF);
+ WRITE_ONCE(d->lifecycle_state, GCHD_POWER_OFF);
  cancel_delayed_work_sync(&d->detect_work);
  cancel_delayed_work_sync(&d->mode_work);
  mutex_lock(&d->lifecycle_lock);
