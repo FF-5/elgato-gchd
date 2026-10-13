@@ -60,14 +60,6 @@ Complete HDMI input setup, per-format programming, device configuration before s
 
 These tables cover the standard SD modes and HD timing families identified by the current format-detection logic. Where a complete mode-specific setup is not established, that limitation is stated explicitly.
 
-### 240p / 288p
-
-| Order | NTSC-family / 60 Hz (240p) | PAL-family / 50 Hz (288p) |
-|---:|---|---|
-| 1 | HDMI selector `51 45`, routing `02 0A`, common front-end setup | HDMI selector `51 45`, routing `02 0A`, common front-end setup |
-| 2 | Per-format HDMI programming and lock criteria: **not established** | Per-format HDMI programming and lock criteria: **not established** |
-| 3 | Stream-start sequence for this mode: **not established** | Stream-start sequence for this mode: **not established** |
-
 ### 480i / 576i
 
 | Order | NTSC-family / 60 Hz (480i) | PAL-family / 50 Hz (576i) |
