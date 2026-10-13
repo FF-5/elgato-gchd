@@ -110,41 +110,13 @@ Capture starts at USB connect. The table below covers only the **common boot / i
 
 **Notes on alignment**
 - Steps 1–21 are the shared boot path. The hardware trace and userspace follow essentially the same order for the firmware loads, SCMD `01` / `04`, phase probes, encoder enable/trigger, and the early mailbox blocks.
+- **Already-initialized branch:** when the device state is not `0x00`, userspace skips the idle-firmware download and sends SCMD RESET, mode `00`, data `0000` — Original HD `00 00 02 00 00 00`; HD-New `02 00 00 00`. The state-confirmation path expects `0x10`. This branch is not exercised by the trace in the comparison table.
+- When the device state is `0x00`, userspace takes the first-time path: download idle firmware, write `0900:0070 = 00 04`, perform the post-download register reads, then continue through SCMD IDLE and the shared initialization steps.
 - Input selection (`0x9C:51 = 45` for HDMI, `0x9C:51 = ED` for component, etc.), the post-setup idle/keep-alive loops, and any subsequent input switch belong on the input-specific pages, not in this common init comparison.
 - Enable-state shadow restored after mailbox operations in the late portion of the common path is `D3 9E`.
 
 See [hdmi.md](hdmi.md), [component.md](component.md), [composite.md](composite.md), and [s-video.md](s-video.md) for selectors and per-input sequences. The “Idle / keep-alive loops” section below documents the no-signal loops that run *after* an input has been selected.
 
-
-### Common initialization sequence
-
-| Order | Command / bytes | Notes / description |
-|---:|---|---|
-| 1 | Read version registers: HD-New probes `0800:0094` and `0800:0098`; if both are zero, read Original-HD version registers `0800:0010`, `0014`, and `0018` | `readVersion()` selects the device-generation-specific version locations. |
-| 2 | Write `0900:0000 = 00 00` | `BANKSEL`; purpose unknown. |
-| 3 | Read `0900:0014` | Save the current enable-state shadow before changing hardware state. |
-| 4 | Read `0800:2008` and mask to `0x1F` | Determine the current SCMD state. Original HD uses `completeStateChange(0, 0)`; HD-New handles the interrupt path separately if the state is `0x00`. |
-| 5A | **Only if state is `0x00`:** bulk OUT endpoint `0x02`, load idle firmware | Chunk size is 16,384 bytes on Original HD and 32,768 bytes on HD-New. The source does not add a separate state-confirmation step immediately after the transfer. |
-| 5B | **Otherwise, if already initialized:** SCMD RESET, mode `00`, data `0000` — Original HD payload `00 00 02 00 00 00`; HD-New payload `02 00 00 00` | `stateConfirmedScmd()` expects state `0x10`. Firmware is not reloaded in this branch. |
-| 6A | Write `0900:0070 = 00 04` | Purpose unknown; executed after idle-firmware download. |
-| 7A | Read `0900:0014`, then `0900:0018`; read `0000:0010`, `0012`, `0014`, `0016`, `0018`, `001A`, `001C`, `001E` (2 bytes each) | Reads after idle-firmware download. The source comments say the returned values appear to repeat across two banks; their purpose is unknown. |
-| 8 | SCMD IDLE, mode `00`, data `0000` — Original HD `00 00 01 00 00 00`; HD-New `01 00 00 00` | State-confirmed; expected readback `0x11`. |
-| 9 | Mailbox port `0x33`: write `AB A9 0F A4 55`, then read 3 bytes | Initial phase probe; source comment expects `33 44 55`. |
-| 10 | Repeat port-`0x33` probe `AB A9 0F A4 55` + 3-byte read until phase value changes | While reply is `33 44 55`, source sends the saved enable-state shadow, configures the analog-input bit from selected input, and enables `EB_FIRMWARE_PROCESSOR`. The loop waits for `27 F9 7B`. |
-| 11 | Configure analog-input enable bit; call `transcoderDefaultsInitialize()` | Runs once on the first `27 F9 7B` phase. The detailed transcoder writes are implementation-ordered; see the transcoder initialization code and the relevant transcoder tables. |
-| 12 | SCMD INIT, mode `00`, data `0000` — Original HD `00 00 04 00 00 00`; HD-New `04 00 00 00` | **The userspace implementation sends INIT before downloading encode firmware.** On HD-New, the normal SCMD receipt/interrupt path is used. |
-| 13 | Bulk OUT endpoint `0x02`, load encode firmware | Same generation-specific chunk sizes as the idle image. After download, source reads `0000:0010`, `0012`, `0014`, and `0016` (2 bytes each on the first three and a 2-byte read at `0016`). |
-| 14 | Repeat phase probe `AB A9 0F A4 55` until `27 F9 7B` is observed again | The source allows a temporary return to `33 44 55` after encode-firmware load. |
-| 15 | Up to five times: port `0x33` write `AB A9 0F A4 5B`, read 3 bytes, and refresh analog-input enable | Stop early when `(reply & 0xF8F0F0) == 0x78E040`; source comments note another observed value also matches this mask. |
-| 16 | Enable `EB_ENCODER_ENABLE`; repeat `AB A9 0F A4 55` + 3-byte read until reply is `27 F9 7B` | The source notes that enabling the encoder can temporarily return the phase to `33 44 55`. |
-| 17 | Port `0x33`: write `28 28`; write `29 89 5B`, read 1 byte; write `DD CE 3F B2`, read 2 bytes | Expected replies are `91` and `DA 67`. |
-| 18 | Enable `EB_ENCODER_TRIGGER`; poll port `0x33` with write `43 23 84` and 1-byte reads until `F7`; clear `EB_ENCODER_TRIGGER` | Trigger is asserted only for the polling phase. |
-| 19 | Port `0x33`: write `89 89 FB`, read 1 byte | Source expects `6E`. |
-| 20 | Continue ordered mailbox setup on ports `0x44`, `0x33`, `0x4E`, `0x4C` (including the device-generation-specific block) | This is a long, order-sensitive sequence, not a single generic “configure hardware” operation. Preserve the call-site order in `configure.cpp`; several command meanings remain unknown. |
-| 21 | Perform the port-`0x33` block-read series: write `AB 92 3E B4 xx xx`, then read 56 bytes for each entry | The source explicitly says this sequence and the returned data are not understood. It is part of userspace initialization and should not be omitted merely because its purpose is unknown. |
-| 22 | Complete common setup and branch to the selected input configuration | Input-specific programming and signal/format detection are separate from this common initialization. See [hdmi.md](hdmi.md), [component.md](component.md), [composite.md](composite.md), and [s-video.md](s-video.md). |
-
-**Branching rules:** steps 5A–7A run only when the device reports state `0x00`; step 5B is the already-initialized alternative. Steps 11–15 are part of the first-time initialization path. The input source can be autodetected or forced by userspace settings. These are the userspace call-order steps; values labelled unknown remain unknown.
 
 ### Capture-start sequence
 
