@@ -560,6 +560,20 @@ struct gchd_buffer {
  struct vb2_v4l2_buffer vb;
  struct list_head list;
 };
+/* Driver lifecycle is distinct from the device's GCHD_STATE_* protocol state. */
+enum gchd_lifecycle_state {
+ GCHD_LIFECYCLE_OFFLINE,
+ GCHD_LIFECYCLE_INITIALIZING,
+ GCHD_LIFECYCLE_INPUT_SELECTED,
+ GCHD_LIFECYCLE_DETECTING,
+ GCHD_LIFECYCLE_INPUT_READY,
+ GCHD_LIFECYCLE_STARTING,
+ GCHD_LIFECYCLE_STREAMING,
+ GCHD_LIFECYCLE_STOPPING,
+ GCHD_LIFECYCLE_ERROR,
+ GCHD_LIFECYCLE_POWERING_OFF,
+};
+
 enum gchd_family { GCHD_FAMILY_OLD, GCHD_FAMILY_HDNEW };
 
 struct gchd {
@@ -574,6 +588,7 @@ struct gchd {
  struct mutex lock;
  /* Serializes hardware lifecycle changes against asynchronous detection. */
  struct mutex lifecycle_lock;
+ enum gchd_lifecycle_state lifecycle_state;
  /* Serializes V4L2 open/close reference counting and cleanup. */
  struct mutex users_lock;
  unsigned int open_count;
