@@ -53,7 +53,7 @@ static void gchd_set_lifecycle(struct gchd *d, enum gchd_lifecycle_state state)
  if (old == state)
   return;
  WRITE_ONCE(d->lifecycle_state, state);
- dev_dbg(&d->intf->dev, "lifecycle: %u -> %u\\n", old, state);
+ dev_dbg(&d->intf->dev, "lifecycle: %u -> %u\n", old, state);
 }
 
 static const struct gchd_mode gchd_modes[] = {
