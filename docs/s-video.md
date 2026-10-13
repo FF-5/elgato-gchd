@@ -33,7 +33,7 @@
 
 Rows are aligned by logical operation so the two columns can be compared directly. A dash means the corresponding step was not observed (or not required) in that family’s capture. Step numbers are sequential within each column and reflect the order seen in the respective traces. HDMI selector/keep-alive traffic is deliberately excluded.
 
-Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present capture (`filtered_240p_svideo.pcapng`). SCMD `04 A0 00 00` / `05 00 00 02` are present at the end of that capture and are now included in the NTSC column.
+Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present capture (`filtered_240p_svideo.pcapng`). Backend coefficient table, retriggers, and SCMD are present after the apply block; the coefficient values match the composite NTSC set (`90=01 … A3=49`), not the different PAL set.
 
 | NTSC step | NTSC-family 240p | PAL step | PAL-family 288p-equivalent |
 |---:|---|---:|---|
@@ -52,10 +52,10 @@ Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present ca
 | 12 | Tuning pass 2: `6F EA D0 08 08 88` | 13 | Tuning pass 2: `6F EA D0 08 08 88` |
 | 13 | Tuning pass 3: `6F EA D0 1B 1B 88` | 14 | Tuning pass 3: `6F EA D0 1B 1B 88` |
 | 14 | Apply block: `0x88:07=8A`, `08=9B`, `09=7A`, `28=8A`, `06=08` | — | — |
-| — | — | 15 | Status loop: read `89 89 FA`, `CA`, `E7`, `F1`; read `99 89 8B` (values are observations, not universal lock constants) |
-| — | — | 16 | Backend writes: `04=95`, `70=D0`, `0F=88`, `90=D8`, `91=BF`, `95=9D`, `96=1B`, `97=88`, `A0=8A`, `A1=D8`, `A2=B2`, `A3=59`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` |
-| — | — | 17 | Second retrigger `0x98:0D=C8`, `0x98:0E=15 → 14`; poll status |
-| 15 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 18 | Configure pipeline; queue bulk IN on `0x81`, `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`; initial stream packets appear on `0x81` |
+| 15 | Status polls (`FA`, `CA`, `E7`, `F1`); read `99 89 8B` | 15 | Status loop: read `89 89 FA`, `CA`, `E7`, `F1`; read `99 89 8B` (values are observations, not universal lock constants) |
+| 16 | Backend `04=95`, `70=D0`, `0F=88`; coefficient table `90=01 … A3=49`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | 16 | Backend writes: `04=95`, `70=D0`, `0F=88`, `90=D8`, `91=BF`, `95=9D`, `96=1B`, `97=88`, `A0=8A`, `A1=D8`, `A2=B2`, `A3=59`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` |
+| 17 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; later `15 → 14` | 17 | Second retrigger `0x98:0D=C8`, `0x98:0E=15 → 14`; poll status |
+| 18 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 18 | Configure pipeline; queue bulk IN on `0x81`, `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`; initial stream packets appear on `0x81` |
 
 #### Other formats
 
