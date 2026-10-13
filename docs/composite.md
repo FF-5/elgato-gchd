@@ -85,6 +85,23 @@ Step numbers below refer to the **NTSC column of the signal-present table above*
 | — | Apply block `07=8A`, `08=9B`, `09=7A`, `28=88`/`8A`, `06=08` (appears twice) | **Inserted** — same values as S-video apply block; absent from signal-present ordered table. |
 | 13–16 | Backend coeffs `90=01…A3=49` + tail; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`) | Same NTSC table and SCMD; run after source recognition. |
 
+#### No-input / no-signal PAL path (HDMI → composite 288p, source appears later)
+
+Source: `filtered_288p_pal_noinput_composite.pcapng`. Capture starts on HDMI (selector `51 45`), switches to composite with **no source attached**, idles in the FA/F5 loop, then the PAL source is recognized; the host proceeds to apply / coefficients / SCMD. Trace ends when the first bulk stream packets arrive on `0x81`.
+
+Step numbers below refer to the **PAL column of the signal-present table above**. Identical ranges are collapsed; only differences are expanded.
+
+| Signal-present steps | No-input then source-found | Difference |
+|---:|---|---|
+| 1–8 | Decoder `06=08` / `03=28`, front-end, selector `51=44`, routing `02 0E → 03 0E` | Same content and order (decoder/front-end first). |
+| 9 (status prime) | Present after selector in signal-present; not required to re-run here | — |
+| 10–12 (tuning) | **Not run early**; tuning occurs later or is omitted from the visible switch window | **Order difference vs NTSC no-input** — PAL no-input keeps decoder-first order (no early tuning), matching the signal-present PAL path. |
+| 13 | Device `0x94`: `41 37`, `4A B7`, `4B B7` | Identical. |
+| — | **No-input idle loop** `89 89 FA` / `99 89 F5` (~50 ms) | **Inserted** — same loop as NTSC / S-video no-input. |
+| — | Status becomes `89 89 CA` | **Source-found trigger** that exits the FA/F5 idle (identical to NTSC composite no-input). |
+| — | Apply block `07=8A`, `08=9B`, `09=7A`, `28=88`/`8A`, `06=08` | **Inserted** — same values as NTSC / S-video apply block. |
+| 14–17 | Backend coeffs `90=01…A3=49` + tail; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`) | Same coefficient table and SCMD; run after source recognition. Capture starts. |
+
 #### Other formats
 
 ##### 480i / 576i
