@@ -69,9 +69,9 @@ This table spells out the transfers and register accesses performed when userspa
 ### Initialization command comparison: hardware trace vs. userspace
 
 **Trace:** `filtered_init_switch_to_component.pcapng` (HD-New, no-signal).  
-Capture starts at USB connect, device boots into HDMI path (no signal), enters the idle/keep-alive loop, then the host switches to component. Trace ends at the component selector `51 ED`.
+Capture starts at USB connect. The table below covers only the **common boot / init path** that finishes before any input selector is written. HDMI selection (`51 45`), the post-setup idle/keep-alive loop, and the later component switch (`51 ED`) are input-path material and are documented on the input pages, not here.
 
-**Userspace column** follows the call order in `src/gchd/configure.cpp` / `commands.cpp` up through the point the selected input is configured. Unknown command meanings are left unresolved.
+**Userspace column** follows the call order in `src/gchd/configure.cpp` / `commands.cpp` for the common initialization path (up to the branch into the selected input configuration). Unknown command meanings are left unresolved.
 
 | Trace step | Hardware trace (this capture) | Userspace step | Userspace implementation |
 |---:|---|---:|---|
@@ -96,29 +96,24 @@ Capture starts at USB connect, device boots into HDMI path (no signal), enters t
 | 19 | Mailbox port `0x33`: write `89 89 FB` → read 1 byte (`6E`) | 19 | Identical; expects `6E` |
 | 20 | Long ordered mailbox block on ports `0x44`, `0x33`, `0x4E`, `0x4C` (generation-specific payloads) | 20 | Ordered common mailbox blocks on ports `0x44` / `0x33` / `0x4E` / `0x4C`; several meanings still UNKNOWN |
 | 21 | Mailbox port `0x33` block-read series: write `AB 92 3E B4 …`, then 56-byte reads | 21 | Same block-read series (purpose unknown; do not omit) |
-| 22 | Mailbox port `0x9C`: write `51 45` (HDMI selector); HDMI front-end / page-select / parameter-table programming; route word `0900:0018 = 02 0A` | 22 | Select HDMI (`0x9C:51 = 45`); route `0900:0018 = 02 0A`; HDMI front-end setup |
-| 23 | Repeating idle/keep-alive loop (no signal): `AB 4C` / `9D CD 6A 00` / `99 89 F5 00` / `9D CD 94 00` (each with full HD-New mailbox handshake) | — | (Userspace does not implement this loop; it proceeds to capture-start when a signal is expected) |
-| 24 | Digital/component prefix (mailbox): `06 86`, `89 89 F8`, `03 2F`, `B3 CC`, page CE → `27 = CC` → page CC | — | (Component path; not exercised on the HDMI-forced boot path) |
-| 25 | Vendor control OUT: write `0900:0018` – transient `02 0A`, then `02 0E` (**before** the selector) | — | Component route word is written inside the component configuration path |
-| 26 | Shared path (mailbox port `0x9C`): `AB 4C`, `1B 33`, `B7 CE`, `B8 DC`, `B8 CC`, `07 38`, `07 C8` (with page selects and `9D CD` helpers) | — | Same shared writes appear in the component configuration path |
-| 27 | Mailbox port `0x9C`: write `51 ED` (component selector) – **trace ends** | — | `0x9C:51 = ED` is the final selector in the component path |
+| 22 | Common setup complete; next traffic in this capture is the HDMI selector and input path (see [hdmi.md](hdmi.md) / [component.md](component.md)) | 22 | Complete common setup and branch to the selected input configuration |
 
 **Firmware sizes observed in this capture**
 - Idle: 331 696 B = 10 × 32 768 + 4 016
 - Encode: 1 500 784 B = 45 × 32 768 + 26 224
 
-**SCMDs observed (request `0xB8`)**
+**SCMDs observed during common init (request `0xB8`)**
 - `01 00 00 00` – after idle firmware
 - `04 00 00 00` – before encode firmware
-- `04 A0 00 00` – later, during/after transcoder / table activity (also used by userspace before START)
+
+(`04 A0 00 00` appears later in the capture during/after transcoder activity and on the capture-start path; it is not part of the common boot sequence above.)
 
 **Notes on alignment**
-- Steps 1–21 are the common boot path. The hardware trace and userspace follow essentially the same order for the firmware loads, SCMD `01` / `04`, phase probes, encoder enable/trigger, and the early mailbox blocks.
-- The hardware trace continues into a full HDMI configuration + long no-signal idle/keep-alive loop, then performs an explicit HDMI→component switch (steps 24–27). Userspace, when forced to HDMI, stops at the HDMI selector and later uses the capture-start path (`04 A0` + `05 00 00 02`) once a signal is present.
-- The `0900:0018` write of the component value `02 0E` occurs **before** the final mailbox selector `51 ED` (confirmed in this trace and in the component no-input switching captures).
-- Enable-state shadow restored after mailbox operations in the late portion of the trace is `D3 9E`.
+- Steps 1–21 are the shared boot path. The hardware trace and userspace follow essentially the same order for the firmware loads, SCMD `01` / `04`, phase probes, encoder enable/trigger, and the early mailbox blocks.
+- Input selection (`0x9C:51 = 45` for HDMI, `0x9C:51 = ED` for component, etc.), the post-setup idle/keep-alive loops, and any subsequent input switch belong on the input-specific pages, not in this common init comparison.
+- Enable-state shadow restored after mailbox operations in the late portion of the common path is `D3 9E`.
 
-See [component.md](component.md) for the complete ordered component-switch sequence that follows step 27, and the “Idle / keep-alive loops” section below for the per-input no-signal loops.
+See [hdmi.md](hdmi.md), [component.md](component.md), [composite.md](composite.md), and [s-video.md](s-video.md) for selectors and per-input sequences. The “Idle / keep-alive loops” section below documents the no-signal loops that run *after* an input has been selected.
 
 
 ### Common initialization sequence
