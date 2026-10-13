@@ -33,6 +33,8 @@
 
 The columns are aligned by operation, not by row count. A dash means that no corresponding step is documented in that trace; each sequence's step numbers retain their original order. HDMI selector/keep-alive traffic is deliberately excluded because it is not part of the S-video decoder sequence.
 
+Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present capture (`filtered_240p_svideo.pcapng`). The previously documented NTSC steps already matched the packet order (no reordering required).
+
 | NTSC step | NTSC-family 240p — working full bring-up | PAL step | PAL-family 288p-equivalent — working, frames received |
 |---:|---|---:|---|
 | 1 | Write `0x88:02=DC`, `0x88:14=D2`; wait about 206 ms | 3 | Write `0x88:02=DC`, `0x88:14=D2`; read `89 89 FA`; write `0x88:28=88` |
