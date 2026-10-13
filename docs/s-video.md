@@ -6,7 +6,7 @@
 |---|---|---|
 | `0x88:02` | Write `DC` | S-video Y/C decoder path. Composite uses `C9`. |
 | `0x88:14` | Write `D2` | S-video path parameter. |
-| `0x88:28` | Write `88` (signal-present) or `8A` (no-input / no-lock) | Mode- and lock-correlated; early write after status polls uses `8A` when no signal is present. Later apply-block writes can use either value. |
+| `0x88:28` | Write `88` (signal-present path) or `8A` (no-input path, early after switch) | Lock-/path-correlated. On the no-input path the early write after status polls is `8A`; the later apply block may write `88` or `8A`. |
 | `0x88:06`, `0x88:03` | Write `08`, `28` | Analog decoder setup. |
 | `0x9C:B3`, `0x9C:00`, `0x9C:27` | Write `33`, `CE`, `33`, `CC` in order | Analog front-end bank/page setup. |
 | `0x9C:51` | Write `44` | S-video selector in the S-video configuration sequence. HDMI switching traffic is outside this input-specific reference. |
@@ -57,20 +57,46 @@ Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present ca
 | 17 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; later `15 → 14` | 17 | Second retrigger `0x98:0D=C8`, `0x98:0E=15 → 14`; poll status |
 | 18 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 18 | Configure pipeline; queue bulk IN on `0x81`, `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`; initial stream packets appear on `0x81` |
 
-#### No-input / no-signal NTSC path (differences)
+#### No-input / no-signal NTSC path (after switch)
 
-Source: `filtered_240p_noinput_svideo.pcapng` (HDMI `51 45` → idle loop → S-video, no signal).
+Source: `filtered_240p_noinput_svideo.pcapng`. Capture starts on HDMI, switches to S-video with **no source connected**, and never sees a source appear. Pre-switch HDMI keep-alive is out of scope here; only post-switch behaviour is recorded.
 
-| Item | No-input observation | Signal-present | Notes |
-|------|----------------------|----------------|-------|
-| Idle / keep-alive before switch | `AB 4C` / `9D CD 6A 00` / `99 89 F5 00` / `9D CD 94 00` | (same loop, documented under HDMI/hardware) | Identical shared loop; not S-video-specific. Confirmed in this capture. |
-| Early `0x88:28` | `8A` | `88` | After status polls following `02=DC` / `14=D2`. |
-| Early status after decoder path | `FA`, `CA`, `E7`, `F1`, `CB`, `CA` | `FA` then immediate `28=88` | Extra no-lock polls. |
-| Coefficient table | Full NTSC set `90=01 … A3=49` | Full NTSC set | Programmed even with no signal. |
-| Final SCMD | `04 A0 00 00` → `05 00 00 02` → `05 00 00 04` | `04 A0 00 00` → `05 00 00 02` | NULL-stream SCMD appears on no-input. |
-| Selector / routing / tuning | Same as signal-present | Same | No difference. |
+**Post-switch ordered sequence (no source)**
 
-Decoder path still begins with `0x88:02=DC`, `0x88:14=D2` (~200 ms), shared front-end, selector `51=44`, and routing `02 0E → 03 0E`. The full backend (coefficients, dual retrigger, apply block) is executed.
+| Step | Command / bytes | Notes |
+|---:|---|---|
+| 1 | `0x88:02=DC`, `0x88:14=D2`; ~200 ms | Same decoder-path start as signal-present. |
+| 2 | Status polls `89 89 FA`, `CA`, `E7`, `F1`, `CB`, `CA` | Extra polls vs signal-present path. |
+| 3 | `0x88:28=8A` | **Differs** from signal-present early write (`28=88`). |
+| 4 | `0x88:06=08`, `0x88:03=28`; front-end `B3=33`, page `CE`, `27=33`, page `CC` | Same shared decoder/front-end. |
+| 5 | Selector `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` | Switch complete. |
+| 6 | Tuning passes 1–3: `6F D4 D0 08 08 88` → `6F EA D0 08 08 88` → `6F EA D0 1B 1B 88` | Same values as signal-present. |
+| 7 | **No-input idle loop** (see below) | Runs for ~3 s in this capture. |
+| 8 | Status sample `FD` / `FC` / `F3` / `F5`; first retrigger `0x98:0D=C8`, `0E=05→04` | Software advances without observed lock. |
+| 9 | Apply block `07=8A`, `08=9B`, `09=7A`, `28=88`, `06=08` | |
+| 10 | Further status / second apply path; retrigger `0E=15→14` | |
+| 11 | Full coefficient table `90=01 … A3=49` + backend tail (`72=88` … `62=91`) | Same NTSC table as signal-present; programmed even with no source. |
+| 12 | SCMD `04 A0 00 00` → `05 00 00 02` → later `05 00 00 04` | NULL-stream SCMD present on no-input path. |
+
+**Post-switch no-input idle loop**
+
+After tuning and before the apply block the device sits in a tight poll loop (not the HDMI `AB 4C` keep-alive):
+
+```
+89 89 FA 00
+99 89 F5 00
+```
+
+(each with the normal HD-New mailbox handshake). Period is roughly 50 ms. Occasional `0000` commits appear in the same window. This is the observed idle-with-no-source state on S-video after the input switch.
+
+**Not observed in this capture**
+
+| Event | Status |
+|---|---|
+| Source appears / lock detected | **NOT CAPTURED** — no transition that breaks the FA/F5 idle loop because a source was found. |
+| Trigger that starts streaming due to signal present | **NOT CAPTURED** — apply/coefficients/SCMD still run (timeout / proceed-without-lock path). |
+
+A follow-up capture that sits in the post-switch FA/F5 loop and then powers on the source is required to document the source-found trigger and the lock→stream sequence.
 
 #### Other formats
 
