@@ -95,9 +95,9 @@ The observed sequence begins at USB connect on HD-New with no signal present. Th
 | 19 | Mailbox port `0x33`: write `89 89 FB` → read 1 byte (`6E`) | 19 | Identical; expects `6E` |
 | 20 | Long ordered mailbox block on ports `0x44`, `0x33`, `0x4E`, `0x4C` (generation-specific payloads) | 20 | Ordered common mailbox blocks on ports `0x44` / `0x33` / `0x4E` / `0x4C`; several meanings still UNKNOWN |
 | 21 | Mailbox port `0x33` block-read series: write `AB 92 3E B4 …`, then 56-byte reads | 21 | Same block-read series (purpose unknown; do not omit) |
-| 22 | Common setup complete; next traffic in this capture is the HDMI selector and input path (see [hdmi.md](hdmi.md) / [component.md](component.md)) | 22 | Complete common setup and branch to the selected input configuration |
+| 22 | Common setup complete; next observed traffic is the HDMI selector and input path (see [hdmi.md](hdmi.md) / [component.md](component.md)) | 22 | Complete common setup and branch to the selected input configuration |
 
-**Firmware sizes observed in this capture**
+**Observed firmware sizes**
 - Idle: 331 696 B = 10 × 32 768 + 4 016
 - Encode: 1 500 784 B = 45 × 32 768 + 26 224
 
@@ -134,7 +134,7 @@ See [hdmi.md](hdmi.md), [component.md](component.md), [composite.md](composite.m
 |---:|---|---|
 | 1 | Apply the ordered SoC/transcoder register burst after input lock; queue bulk IN URBs on endpoints `0x81` and `0x84` | Queueing is preparation, not proof of active capture. |
 | 2 | SCMD `04 A0 00 00` | Follow command-receipt and ready/readback path. |
-| 3 | Read `0800:2008` | Observed ready value `00 01` in these traces. |
+| 3 | Read `0800:2008` | Observed ready value `00 01` in analog 240p observations. |
 | 4 | SCMD `05 00 00 02` | Confirm state/completion and data flow. |
 | 5 | Observe bulk IN completions on `0x81` / `0x84` | Captured transfers were 65,536 bytes; verify payload is actual video. |
 
