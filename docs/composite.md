@@ -71,15 +71,18 @@ Observed NTSC order is taken from the HDMI→composite 240p NTSC signal-present 
 
 #### No-input then source-found: NTSC and PAL
 
-| No-input trace order (NTSC / PAL) | NTSC step | NTSC no-input then source-found | PAL step | PAL no-input then source-found |
-|---|---:|---|---:|---|
-| 1 / Later or not in visible sequence | 9–11 | Tuning passes 1–3: `6F D4 D0 08 08 88`, `6F EA D0 08 08 88`, `6F EA D0 1B 1B 88`. Runs before decoder/front-end/selector in this path. | 10–12 | Tuning passes are not run early; they occur later or are absent from the visible switch sequence. |
-| 2 / 1 | 1–8 | Decoder `0x88:06=08`, decoder `0x88:03=28`, front-end `0x9C:B3=33`, selector `0x9C:51=44`, routing `02 0E → 03 0E`. | 1–8 | Decoder `0x88:06=08`, decoder `0x88:03=28`, front-end `0x9C:B3=33`, selector `0x9C:51=44`, routing `02 0E → 03 0E`. This setup precedes tuning in the PAL path. |
-| 3 / 2 | 12 | Device `0x94`: `41 37`, `4A B7`, `4B B7`. | 13 | Device `0x94`: `41 37`, `4A B7`, `4B B7`. |
-| 4 / 3 | — | No-input idle loop: `89 89 FA` / `99 89 F5` (about 50 ms). | — | No-input idle loop: `89 89 FA` / `99 89 F5` (about 50 ms). |
-| 5 / 4 | — | Source recognition: status changes to `89 89 CA`, followed by `E7` / `F1` / further status reads; exits the idle loop. | — | Source recognition: status changes to `89 89 CA`; exits the idle loop. |
-| 6 / 5 | — | Apply block: `07=8A`, `08=9B`, `09=7A`, `28=88` / `8A`, `06=08` (the `06=08` write appears twice). | — | Apply block: `07=8A`, `08=9B`, `09=7A`, `28=88` / `8A`, `06=08`. |
-| 7 / 6 | 13–16 | Backend coefficients `0x98:90–A3` and tail writes; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`), after source recognition. | 14–17 | Backend coefficients `0x98:90–A3` and tail writes; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`), after source recognition. |
+The order column numbers rows only. Read the NTSC and PAL step references independently from top to bottom; blank entries mean that sequence has no corresponding step at that position.
+
+| Order | NTSC step(s) | NTSC sequence difference | PAL step(s) | PAL sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 9–11 | Tuning passes 1–3 run before decoder/front-end/selector setup. | 1–8 | Decoder, front-end, selector, and routing setup runs first. |
+| 2 | 1–8 | Decoder `0x88:06=08`, decoder `0x88:03=28`, front-end `0x9C:B3=33`, selector `0x9C:51=44`, routing `02 0E → 03 0E`; follows tuning. | 9 | Status-prime step from the signal-present sequence is not repeated here. |
+| 3 | 12 | Device `0x94`: `41 37`, `4A B7`, `4B B7`. | 10–12 | Tuning passes occur after decoder/front-end/selector setup, unlike NTSC no-input. |
+| 4 | — | No-input idle loop: `89 89 FA` / `99 89 F5` (about 50 ms). | 13 | Device `0x94`: `41 37`, `4A B7`, `4B B7`. |
+| 5 | — | Source recognition: status changes to `89 89 CA`, followed by `E7` / `F1` / further status reads; exits the idle loop. | — | No-input idle loop: `89 89 FA` / `99 89 F5` (about 50 ms). |
+| 6 | — | Apply block: `07=8A`, `08=9B`, `09=7A`, `28=88` / `8A`, `06=08` (the `06=08` write appears twice). | — | Source recognition: status changes to `89 89 CA`; exits the idle loop. |
+| 7 | 13–16 | Backend coefficients `0x98:90–A3` and tail writes; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`), after source recognition. | — | Apply block: `07=8A`, `08=9B`, `09=7A`, `28=88` / `8A`, `06=08`. |
+| 8 | — | — | 14–17 | Backend coefficients `0x98:90–A3` and tail writes; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`), after source recognition. |
 
 #### Other formats
 
