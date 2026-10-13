@@ -661,6 +661,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   if (r)
    goto restart_failed;
 
+  gchd_set_lifecycle(d, GCHD_LIFECYCLE_STARTING);
   d->last_video_jiffies = jiffies;
   WRITE_ONCE(d->start_pending, true);
   d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
@@ -679,6 +680,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   }
  }
 
+ gchd_set_lifecycle(d, GCHD_LIFECYCLE_STREAMING);
  d->width = d->input_width;
  d->height = d->input_height;
  ev.id = d->input;
@@ -689,10 +691,12 @@ static void gchd_mode_workfn(struct work_struct *work)
  goto reschedule;
 
 restart_failed:
+ gchd_set_lifecycle(d, GCHD_LIFECYCLE_ERROR);
  dev_warn(&d->intf->dev,
           "240p-to-480i reconfiguration failed: %d\n", r);
  WRITE_ONCE(d->signal_present, false);
  WRITE_ONCE(d->detect_requested, true);
+ gchd_set_lifecycle(d, GCHD_LIFECYCLE_DETECTING);
  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
 
 reschedule:
