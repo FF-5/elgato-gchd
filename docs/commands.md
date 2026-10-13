@@ -10,7 +10,7 @@ Hex bytes are shown in transfer order. **UNKNOWN** means the command is observed
 | HD-New mailbox write | Write to `0800:00C0` via OUT `0xBC`; commit `09 00 (PORT<<1) LENGTH` via `0xB9` | Pad odd payload with `00`; wait interrupt `0x83`, read `0800:0016`, poll ready, restore shadow. |
 | HD-New mailbox read | `09 01 (PORT<<1) LENGTH` via `0xB9`; read from `0800:23BE` | Read `LENGTH+2+(LENGTH&1)` bytes; strip two status bytes and odd-byte pad. |
 | Interrupt IN | Endpoint `0x83`, 3-byte buffer | Source checks transfer status; payload is not generally validated. |
-| Register read helper | `9D CD INDEX` on port `0x33` | Returns one byte; target meaning UNKNOWN. |
+| Transcoder register read | `9D CD INDEX` on port `0x33` | Reads one byte from the indexed transcoder register. |
 | Transcoder full-word write | Vendor OUT `0xBC`; `wIndex=ADDRESS`; 16-bit big-endian data | Writes one aligned 16-bit register. |
 | Transcoder masked write | Vendor OUT `0xBC`; `wValue=1`; `wIndex=ADDRESS & ~3`; 8-byte `VALUE32_BE MASK32_BE` | Updates mask-selected bits. |
 | Transcoder table write | Sequential big-endian 16-bit words | Odd trailing byte occupies high byte of final word; writable boundaries UNKNOWN. |
@@ -21,7 +21,7 @@ Hex bytes are shown in transfer order. **UNKNOWN** means the command is observed
 |---|---|---|
 | Port `0x33` poll-complete | `99 89 ED`; repeat read until bit 6 set | Poll-complete helper. |
 | Port `0x33` sequence read | `99 89 EC` | Caller supplies repeat count; values discarded by source. |
-| Port `0x33` family detect | `89 89 FA`; one-byte reply | Low nibble `6` = NTSC/60-Hz family; `7` = PAL/50-Hz family. Not a progressive/interlaced detector. |
+| Analog video-standard family detection | `89 89 FA`; one-byte reply | Low nibble `6` = NTSC/60-Hz family; `7` = PAL/50-Hz family. Does not distinguish progressive from interlaced modes. |
 | Port `0x33` phase probe | `AB A9 0F A4 55`; 24-bit reply | Replies `33 44 55` and `27 F9 7B` observed; meaning UNKNOWN. |
 | Port `0x33` handshake | `29 89 5B`; expect `91` | Meaning UNKNOWN. |
 | Port `0x33` handshake | `DD CE 3F B2`; expect `DA 67` | Meaning UNKNOWN. |
@@ -62,11 +62,11 @@ State values used by the source: `00` uninitialized, `10` idle firmware loaded, 
 | `0800:0016` | Often `09 00` during HD-New handshake | Interrupt/status role uncertain. |
 | `0900:0070` | Write `00 04` during firmware setup | Purpose UNKNOWN. |
 | `0900:01B0` | Usually write `00 00` after SCMD completion | Purpose UNKNOWN; readback varies. |
-| `0xCA` via `89 89 CA` | Replies include `FE`, `7E`, `66`, transient `EE` | `66` correlated with 240p lock; `7E` with 480i in one sequence. |
-| `0xFA` via `89 89 FA` | Replies include `3F`, `06`, `16` | Polled during setup; meaning UNKNOWN. |
-| `0xE7` via `89 89 E7` | Replies `69`, `09`, `89` | Meaning UNKNOWN. |
-| `0xF1` via `89 89 F1` | Replies `7E`, `69` | Meaning UNKNOWN. |
-| `0xCB` via `89 89 CB` | Replies `6E`, `44` | Meaning UNKNOWN. |
+| Analog decoder status / source-found candidate (`89 89 CA`) | Replies include `FE`, `7E`, `66`, transient `EE` | `66` correlates with 240p lock and `7E` with 480i in an observed sequence; these are not universal constants. |
+| Analog family/status poll (`89 89 FA`) | Replies include `3F`, `06`, `16` | Used during analog setup and source detection; low nibble `6`/`7` identifies NTSC/PAL family in the family-detection path. Other reply semantics remain unconfirmed. |
+| Analog decoder status poll (`89 89 E7`) | Replies `69`, `09`, `89` | Polled during decoder setup and lock settling; exact bit meanings are unconfirmed. |
+| Analog decoder status poll (`89 89 F1`) | Replies `7E`, `69` | Polled during decoder setup and lock settling; exact bit meanings are unconfirmed. |
+| Analog decoder status poll (`89 89 CB`) | Replies `6E`, `44` | Polled during decoder setup; exact bit meanings are unconfirmed. |
 | `0xFD`, `0xFC`, `0xF3` | Common replies `6E`, `6E`, `7E` | Meaning UNKNOWN; helper prefixes differ. |
 | `0xF8` via `89 89 F8` | Reply `C9` | Meaning UNKNOWN. |
 | `0x8B` via `99 89 8B` | Replies `2E`, `36` | Meaning UNKNOWN. |
@@ -93,16 +93,16 @@ Enable-bit masks for `0900:0018`: bit 1 `0x0002` (`EB_FIRMWARE_PROCESSOR`); bit 
 
 ## Idle / keep-alive loop
 
-The loop repeats after HDMI setup while no signal is present.
+The HDMI no-signal keep-alive loop repeats after front-end setup while no signal is present.
 
 | Target / operation | Bytes written or expected read | Notes |
 |---|---|---|
 | Write `0x9C:AB` | `4C` | Keep-alive command. |
 | Read helper, port `0x33` | `9D CD 6A 00` | Read index `6A`; result discarded. |
-| Sequence-read helper, port `0x33` | `99 89 F5 00` | Poll/read helper; result discarded. |
+| Decoder status/keep-alive poll, port `0x33` | `99 89 F5 00` | Repeated during no-signal idle loops; result is not used by the documented caller. |
 | Read helper, port `0x33` | `9D CD 94 00` | Read index `94`; result discarded. |
 
-The normal HD-New mailbox handshake follows each mailbox command. Whether the loop is shared by other inputs or continues after signal lock is UNKNOWN.
+The normal HD-New mailbox handshake follows each mailbox command. Composite/S-video use a different two-command idle loop, and component uses a six-command loop. Behaviour after signal lock is not established.
 
 ## Component-switch helper
 
