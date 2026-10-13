@@ -73,17 +73,17 @@ Observed NTSC order is taken from the HDMI→composite 240p NTSC signal-present 
 
 Source: `filtered_240p_noinput_composite.pcapng`. Capture starts on HDMI, switches to composite with **no source attached**, idles, then the source is recognized and the host proceeds to apply / coefficients / SCMD.
 
-Rows are ordered relative to the signal-present NTSC table above. Identical steps are collapsed; only differences are expanded.
+Step numbers below refer to the **NTSC column of the signal-present table above**. Identical ranges are collapsed; only differences are expanded.
 
-| Step | No-input then source-found | Notes vs signal-present |
+| Signal-present steps | No-input then source-found | Difference |
 |---:|---|---|
-| 1–3 | Tuning passes 1–3: `6F D4 D0 08 08 88` → `6F EA D0 08 08 88` → `6F EA D0 1B 1B 88` | **Order difference** — tuning runs **before** decoder/front-end/selector (signal-present does decoder first). |
-| 4–8 | Decoder `06=08` / `03=28`, front-end `B3=33` + page, selector `51=44`, routing `02 0E → 03 0E` | Same content; now after tuning. |
-| 9 | Device `0x94`: `41 37`, `4A B7`, `4B B7` | Identical. |
-| 10 | **No-input idle loop** `89 89 FA` / `99 89 F5` (~50 ms) | **Differs** — not present on signal-present path; same loop as S-video no-input (not the HDMI `AB 4C` keep-alive). |
-| 11 | Status becomes `89 89 CA` (then `E7` / `F1` / …) | **Source-found trigger** that exits the FA/F5 idle. |
-| 12 | Apply block `07=8A`, `08=9B`, `09=7A`, `28=88`/`8A`, `06=08` (appears twice) | **Present only on this path** (same values as S-video apply block). |
-| 13–14 | Backend coeffs `90=01…A3=49` + tail; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`) | Same NTSC table and SCMD as signal-present; run after source recognition. |
+| 9–11 (tuning) | Run **first**, before decoder/front-end/selector | **Order difference** — signal-present does steps 1–8 then 9–11; this path does 9–11 then 1–8. |
+| 1–8 | Decoder `06=08` / `03=28`, front-end, selector `51=44`, routing `02 0E → 03 0E` | Same content; now after tuning. |
+| 12 | Device `0x94`: `41 37`, `4A B7`, `4B B7` | Identical. |
+| — | **No-input idle loop** `89 89 FA` / `99 89 F5` (~50 ms) | **Inserted** — not present on signal-present path; same loop as S-video no-input (not the HDMI `AB 4C` keep-alive). |
+| — | Status becomes `89 89 CA` (then `E7` / `F1` / …) | **Source-found trigger** that exits the FA/F5 idle. |
+| — | Apply block `07=8A`, `08=9B`, `09=7A`, `28=88`/`8A`, `06=08` (appears twice) | **Inserted** — same values as S-video apply block; absent from signal-present ordered table. |
+| 13–16 | Backend coeffs `90=01…A3=49` + tail; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`) | Same NTSC table and SCMD; run after source recognition. |
 
 #### Other formats
 

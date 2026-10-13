@@ -61,16 +61,15 @@ Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present ca
 
 Source: `filtered_240p_noinput_svideo.pcapng`. Capture starts on HDMI, switches to S-video with **no source connected**, and never sees a source appear. Pre-switch HDMI keep-alive is out of scope; only post-switch behaviour is recorded.
 
-Rows are ordered relative to the signal-present NTSC table above. Identical steps are collapsed; only differences are expanded.
+Step numbers below refer to the **NTSC column of the signal-present table above**. Identical ranges are collapsed; only differences are expanded.
 
-| Step | No-input (this trace) | Notes vs signal-present |
+| Signal-present steps | No-input (this trace) | Difference |
 |---:|---|---|
 | 1 | Write `0x88:02=DC`, `0x88:14=D2`; ~200 ms | Identical. |
-| 2 | Extra status polls `FA`, `CA`, `E7`, `F1`, `CB`, `CA` | **Differs** — signal-present goes straight to `28=88` after one `FA`. |
-| 3 | `0x88:28=8A` | **Differs** — signal-present uses early `28=88`. |
-| 4–10 | Decoder / front-end / selector `51=44` / routing / tuning passes 1–3 | Identical content and order. |
-| 11 | **No-input idle loop** `89 89 FA` / `99 89 F5` (~50 ms) | **Differs** — not present on signal-present path; same loop as composite no-input (not the HDMI `AB 4C` keep-alive). |
-| 12–14 | Retrigger / apply block / coeffs `90=01…A3=49` / SCMD `04 A0` → `05 00 00 02` (later `05 00 00 04`) | Same values as signal-present; run on a timeout / proceed-without-lock path. |
+| 2 | Extra status polls `FA`, `CA`, `E7`, `F1`, `CB`, `CA`; then `0x88:28=8A` | **Differs** — signal-present does `FA` then early `28=88`; no-input has more polls and early `28=8A`. |
+| 3–13 | Decoder / front-end / selector `51=44` / routing / tuning passes 1–3 | Identical content and order. |
+| — | **No-input idle loop** `89 89 FA` / `99 89 F5` (~50 ms) | **Inserted** — not present on signal-present path; same loop as composite no-input (not the HDMI `AB 4C` keep-alive). |
+| 14–18 | Retrigger / apply block / coeffs `90=01…A3=49` / SCMD `04 A0` → `05 00 00 02` (later `05 00 00 04`) | Same values; run on a timeout / proceed-without-lock path. |
 | — | Source-found trigger | **NOT CAPTURED** — no transition that breaks the FA/F5 idle because a source was found. |
 
 #### Other formats
