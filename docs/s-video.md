@@ -31,25 +31,31 @@
 
 #### NTSC-family 240p vs PAL-family 288p-equivalent
 
-The columns are aligned by operation, not by row count. A dash means that no corresponding step is documented in that trace; each sequence's step numbers retain their original order. HDMI selector/keep-alive traffic is deliberately excluded because it is not part of the S-video decoder sequence.
+Rows are aligned by logical operation so the two columns can be compared directly. A dash means the corresponding step was not observed (or not required) in that family’s capture. Step numbers are sequential within each column and reflect the order seen in the respective traces. HDMI selector/keep-alive traffic is deliberately excluded.
 
-Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present capture (`filtered_240p_svideo.pcapng`). The previously documented NTSC steps already matched the packet order (no reordering required).
+Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present capture (`filtered_240p_svideo.pcapng`). SCMD `04 A0 00 00` / `05 00 00 02` are present at the end of that capture and are now included in the NTSC column.
 
-| NTSC step | NTSC-family 240p — working full bring-up | PAL step | PAL-family 288p-equivalent — working, frames received |
+| NTSC step | NTSC-family 240p | PAL step | PAL-family 288p-equivalent |
 |---:|---|---:|---|
-| 1 | Write `0x88:02=DC`, `0x88:14=D2`; wait about 206 ms | 3 | Write `0x88:02=DC`, `0x88:14=D2`; read `89 89 FA`; write `0x88:28=88` |
-| 2 | Read `89 89 FA`; write `0x88:28=88` | 4 | Read `89 89 FD`; write `0x88:06=08`; read `89 89 F8`; write `0x88:03=28` |
-| 3 | Read `89 89 FD`; write `0x88:06=08`; read `89 89 F8`; write `0x88:03=28` | 5 | Write `0x9C:B3=33`; page `CE`; write `0x9C:27=33`; return page `CC`; mailbox reads during setup |
-| 4 | Write `0x9C:B3=33`; page `CE`; write `0x9C:27=33`; return page `CC`; read `9D CD 6E` | 6–7 | Write `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` |
-| 5 | Write `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` | 8–10 | Read `89 89 FA`; poll `99 89 F5`; read status `FD`, `FC`, `F3`; first backend retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; further status checks |
-| 6 | Tuning pass 1: `6F D4 D0 08 08 88` to `0x88:10–15` | 11 | Tuning pass 1: `6F D4 D0 08 08 88` |
-| 7 | Tuning pass 2: `6F EA D0 08 08 88` | 12 | Tuning pass 2: `6F EA D0 08 08 88` |
-| 8 | Tuning pass 3: `6F EA D0 1B 1B 88` | 13 | Tuning pass 3: `6F EA D0 1B 1B 88` |
-| 9 | Apply block: `0x88:07=8A`, `08=9B`, `09=7A`, `28=8A`, `06=08` | — | — |
-| — | — | 14 | Read `89 89 FA`, `CA`, `E7`, `F1`; read `99 89 8B`; status values are observations, not universal lock constants |
-| — | — | 15–16 | Backend writes: `04=95`, `70=D0`, `0F=88`, `90=D8`, `91=BF`, `95=9D`, `96=1B`, `97=88`, `A0=8A`, `A1=D8`, `A2=B2`, `A3=59`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` |
-| — | — | 17–18 | Poll status; second retrigger `0x98:0D=C8`, `0x98:0E=15 → 14` |
-| — | — | 19–21 | Configure pipeline and queue bulk IN on `0x81`, `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`; initial stream packets appear on `0x81` |
+| 1 | Write `0x88:02=DC`, `0x88:14=D2`; wait ~206 ms | 1 | Write `0x88:02=DC`, `0x88:14=D2` |
+| 2 | Read `89 89 FA`; write `0x88:28=88` | 2 | Read `89 89 FA`; write `0x88:28=88` |
+| 3 | Read `89 89 FD` | 3 | Read `89 89 FD` |
+| 4 | Decoder `0x88:06=08` | 4 | Decoder `0x88:06=08` |
+| 5 | Read `89 89 F8` | 5 | Read `89 89 F8` |
+| 6 | Decoder `0x88:03=28` | 6 | Decoder `0x88:03=28` |
+| 7 | Front-end `0x9C:B3=33` | 7 | Front-end `0x9C:B3=33` |
+| 8 | Page `CE`; `0x9C:27=33`; page `CC`; read `9D CD 6E` | 8 | Page `CE`; `0x9C:27=33`; page `CC` (mailbox reads during setup) |
+| 9 | Selector `0x9C:51=44` | 9 | Selector `0x9C:51=44` |
+| 10 | Routing `02 0E → 03 0E → 03 0E` | 10 | Routing `02 0E → 03 0E → 03 0E` |
+| — | — | 11 | Read `89 89 FA`; poll `99 89 F5`; status reads `FD`, `FC`, `F3`; first retrigger `0x98:0D=C8`, `0x98:0E=05 → 04` |
+| 11 | Tuning pass 1: `6F D4 D0 08 08 88` to `0x88:10–15` | 12 | Tuning pass 1: `6F D4 D0 08 08 88` |
+| 12 | Tuning pass 2: `6F EA D0 08 08 88` | 13 | Tuning pass 2: `6F EA D0 08 08 88` |
+| 13 | Tuning pass 3: `6F EA D0 1B 1B 88` | 14 | Tuning pass 3: `6F EA D0 1B 1B 88` |
+| 14 | Apply block: `0x88:07=8A`, `08=9B`, `09=7A`, `28=8A`, `06=08` | — | — |
+| — | — | 15 | Status loop: read `89 89 FA`, `CA`, `E7`, `F1`; read `99 89 8B` (values are observations, not universal lock constants) |
+| — | — | 16 | Backend writes: `04=95`, `70=D0`, `0F=88`, `90=D8`, `91=BF`, `95=9D`, `96=1B`, `97=88`, `A0=8A`, `A1=D8`, `A2=B2`, `A3=59`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` |
+| — | — | 17 | Second retrigger `0x98:0D=C8`, `0x98:0E=15 → 14`; poll status |
+| 15 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 18 | Configure pipeline; queue bulk IN on `0x81`, `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`; initial stream packets appear on `0x81` |
 
 #### Other formats
 
