@@ -58,44 +58,81 @@ Complete HDMI input setup, per-format programming, device configuration before s
 
 ## Sequences
 
-These tables cover the standard SD modes and HD timing families identified by the current format-detection logic. Where a complete mode-specific setup is not established, that limitation is stated explicitly.
+These tables use the same sequence-comparison layout as the analog input references: four columns for the ordered NTSC/PAL sequences, followed by five columns that summarize differences while retaining each sequence's own step numbers. For HD timing families without an NTSC/PAL pair, the tables compare HDMI with component input.
 
 ### 480i / 576i
 
-| Order | NTSC-family / 60 Hz (480i) | PAL-family / 50 Hz (576i) |
-|---:|---|---|
-| 1 | HDMI selector and common front-end setup | HDMI selector and common front-end setup |
-| 2 | Timing candidate and complete mode programming: **not established** | Timing candidate and complete mode programming: **not established** |
-| 3 | Lock confirmation and stream start: **not established** | Lock confirmation and stream start: **not established** |
+| NTSC step | NTSC-family 480i sequence | PAL step | PAL-family 576i sequence |
+|---:|---|---:|---|
+| 1 | HDMI selector `0x9C:51=45`; route `0900:0018=02 0A` | 1 | HDMI selector `0x9C:51=45`; route `0900:0018=02 0A` |
+| 2 | Common HDMI front-end and parameter-table setup | 2 | Common HDMI front-end and parameter-table setup |
+| 3 | Timing candidate and complete mode programming: **not established** | 3 | Timing candidate and complete mode programming: **not established** |
+| 4 | Lock confirmation and stream start: **not established** | 4 | Lock confirmation and stream start: **not established** |
+
+#### Differences: 480i vs 576i
+
+| Order | NTSC step(s) | NTSC sequence difference | PAL step(s) | PAL sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1–2 | HDMI selection and common front-end setup are documented. | 1–2 | Same common HDMI selection and front-end setup. |
+| 2 | 3–4 | 480i-specific timing, mode programming, lock confirmation, and stream start are not established. | 3–4 | 576i-specific timing, mode programming, lock confirmation, and stream start are not established. |
 
 ### 480p / 576p
 
-| Order | NTSC-family / 60 Hz (480p) | PAL-family / 50 Hz (576p) |
-|---:|---|---|
-| 1 | HDMI selector and common front-end setup | HDMI selector and common front-end setup |
-| 2 | Timing heuristic near `0xB0C1`, shared with 576p; full mode programming: **not established** | Timing heuristic near `0xB0C1`, shared with 480p; full mode programming: **not established** |
-| 3 | Lock confirmation and stream start: **not established** | Lock confirmation and stream start: **not established** |
+| NTSC step | NTSC-family 480p sequence | PAL step | PAL-family 576p sequence |
+|---:|---|---:|---|
+| 1 | HDMI selector `0x9C:51=45`; route `0900:0018=02 0A` | 1 | HDMI selector `0x9C:51=45`; route `0900:0018=02 0A` |
+| 2 | Common HDMI front-end and parameter-table setup | 2 | Common HDMI front-end and parameter-table setup |
+| 3 | Timing heuristic near `0xB0C1`; complete per-mode programming: **not established** | 3 | Timing heuristic near `0xB0C1`; complete per-mode programming: **not established** |
+| 4 | Lock confirmation and stream start: **not established** | 4 | Lock confirmation and stream start: **not established** |
+
+#### Differences: 480p vs 576p
+
+| Order | NTSC step(s) | NTSC sequence difference | PAL step(s) | PAL sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1–2 | HDMI selection and common front-end setup are documented. | 1–2 | Same common HDMI selection and front-end setup. |
+| 2 | 3–4 | 480p shares the current `0xB0C1` timing heuristic; mode-specific programming and stream start are not established. | 3–4 | 576p shares the current `0xB0C1` timing heuristic; mode-specific programming and stream start are not established. |
 
 ### 720p
 
-| Order | HDMI 720p |
-|---:|---|
-| 1 | HDMI selector and common front-end setup |
-| 2 | Timing candidate near `0xB05C`; per-mode programming and lock criteria: **not established** |
-| 3 | Stream-start sequence: **not established** |
+| HDMI step | HDMI 720p sequence | Component step | Component 720p sequence |
+|---:|---|---:|---|
+| 1 | HDMI selector `51 45`, route `02 0A`, common front-end setup | 1 | Component selector `51 ED`, route `02 0E`, shared path |
+| 2 | Timing candidate near `0xB05C`; per-mode programming and lock criteria: **not established** | 2 | Component-specific 720p programming and lock criteria: **not established** |
+| 3 | Stream-start sequence: **not established** | 3 | Pipeline configuration and stream start: **not established** |
+
+#### Differences: HDMI 720p vs component 720p
+
+| Order | HDMI step(s) | HDMI sequence difference | Component step(s) | Component sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1 | HDMI uses selector `51 45` and route `02 0A`, then configures the HDMI front end. | 1 | Component uses selector `51 ED` and route `02 0E`, with a component-specific shared path. |
+| 2 | 2–3 | HDMI timing candidate is near `0xB05C`; full mode setup and stream start are not established. | 2–3 | Component-specific timing, lock criteria, and stream start are not established. |
 
 ### 1080i
 
-| Order | HDMI 1080i |
-|---:|---|
-| 1 | HDMI selector and common front-end setup |
-| 2 | Timing candidate near `0xB081`; per-mode programming and lock criteria: **not established** |
-| 3 | Stream-start sequence: **not established** |
+| HDMI step | HDMI 1080i sequence | Component step | Component 1080i sequence |
+|---:|---|---:|---|
+| 1 | HDMI selector `51 45`, route `02 0A`, common front-end setup | 1 | Component selector `51 ED`, route `02 0E`, shared path |
+| 2 | Timing candidate near `0xB081`; per-mode programming and lock criteria: **not established** | 2 | Component-specific 1080i programming and lock criteria: **not established** |
+| 3 | Stream-start sequence: **not established** | 3 | Pipeline configuration and stream start: **not established** |
+
+#### Differences: HDMI 1080i vs component 1080i
+
+| Order | HDMI step(s) | HDMI sequence difference | Component step(s) | Component sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1 | HDMI uses selector `51 45` and route `02 0A`, then configures the HDMI front end. | 1 | Component uses selector `51 ED` and route `02 0E`, with a component-specific shared path. |
+| 2 | 2–3 | HDMI timing candidate is near `0xB081`; full mode setup and stream start are not established. | 2–3 | Component-specific timing, lock criteria, and stream start are not established. |
 
 ### 1080p
 
-| Order | HDMI 1080p |
-|---:|---|
-| 1 | HDMI selector and common front-end setup |
-| 2 | Timing candidate near `0xB6D7`; per-mode programming and lock criteria: **not established** |
-| 3 | Stream-start sequence: **not established** |
+| HDMI step | HDMI 1080p sequence | Component step | Component 1080p sequence |
+|---:|---|---:|---|
+| 1 | HDMI selector `51 45`, route `02 0A`, common front-end setup | 1 | Component selector `51 ED`, route `02 0E`, shared path |
+| 2 | Timing candidate near `0xB6D7`; per-mode programming and lock criteria: **not established** | 2 | Component-specific 1080p programming and lock criteria: **not established** |
+| 3 | Stream-start sequence: **not established** | 3 | Pipeline configuration and stream start: **not established** |
+
+#### Differences: HDMI 1080p vs component 1080p
+
+| Order | HDMI step(s) | HDMI sequence difference | Component step(s) | Component sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1 | HDMI uses selector `51 45` and route `02 0A`, then configures the HDMI front end. | 1 | Component uses selector `51 ED` and route `02 0E`, with a component-specific shared path. |
+| 2 | 2–3 | HDMI timing candidate is near `0xB6D7`; full mode setup and stream start are not established. | 2–3 | Component-specific timing, lock criteria, and stream start are not established. |
