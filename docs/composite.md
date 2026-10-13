@@ -41,18 +41,14 @@
 
 ## No-signal idle / keep-alive
 
+After the composite selector and front-end programming complete with no source present, the device repeats this two-command loop (approximately 50 ms per cycle). Each mailbox command uses the normal HD-New mailbox handshake.
 
+| Order | Mailbox payload | Notes |
+|---:|---|---|
+| 1 | `89 89 FA 00` | Status / source-detect poll |
+| 2 | `99 89 F5 00` | Sequence-read / poll helper |
 
-After the composite selector and front-end programming complete with no source present, the device enters a two-command keep-alive shared with S-video:
-
-```
-89 89 FA 00
-99 89 F5 00
-```
-
-(~50 ms cycle). This is distinct from the HDMI four-command loop and from the component six-command loop. Full comparison of all input idles is in [hardware.md](hardware.md).
-
-The repeated `89 89 FA` read is the best current candidate for analog source detection: when a source appears the helper returns `89 89 CA` and this idle is exited (see the no-input difference table below).
+The repeated `89 89 FA` read is the current source-detection candidate: when a source appears, the reply can change to `CA` and the idle loop is exited. See [hardware.md](hardware.md) for the comparison across all inputs.
 
 ### Selector `51 EC` vs `51 44` (no-source multi-switch evidence)
 
