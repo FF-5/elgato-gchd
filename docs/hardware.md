@@ -71,54 +71,54 @@ This table spells out the transfers and register accesses performed when userspa
 **Trace:** `filtered_init_switch_to_component.pcapng` (HD-New, no-signal).  
 Capture starts at USB connect, device boots into HDMI path (no signal), enters the idle/keep-alive loop, then the host switches to component. Trace ends at the component selector `51 ED`.
 
-**Userspace column** follows `GCHD::configureDevice()` (and the helpers it calls) in `src/gchd/configure.cpp` / `commands.cpp` up through the point the selected input is configured. Order is the call order in the implementation; unknown command meanings are left unresolved.
+**Userspace column** follows the call order in `src/gchd/configure.cpp` / `commands.cpp` up through the point the selected input is configured. Unknown command meanings are left unresolved.
 
 | Trace step | Hardware trace (this capture) | Userspace step | Userspace implementation |
 |---:|---|---:|---|
-| 1 | Read version: `0800:0094` → `"V130"`, `0800:0098` (repeated) | 1 | `readVersion()` – HD-New probes `0800:0094` / `0800:0098`; fallback to Original-HD `0800:0010/14/18` if both zero |
-| 2 | Write `0900:0000 = 00 00` (BANKSEL) | 2 | Write `0900:0000 = 00 00` |
-| 3 | Read enable-state shadow `0900:0014` | 3 | Read `MAIL_SEND_ENABLE_REGISTER_STATE` (`0900:0014`) into `savedEnableStateRegister_` |
-| 4 | Read `0800:2008` (SCMD state) → `0x00` | 4 | Read `SCMD_STATE_READBACK_REGISTER` (`0800:2008`) & `0x1F`. On HD-New, if state `0x00` also handle interrupt + clear sticky bit on `0900:0074` |
-| 5 | Bulk OUT EP `0x02` idle firmware – 10 × 32 768 + 4 016 = **331 696 B** | 5A | **Only if state was `0x00`:** `dlfirm(firmwareIdle_)` (chunk size 32 768 on HD-New) |
-| 6 | Write `0900:0070 = 00 04` | 6A | Write `0900:0070 = 00 04` (after idle firmware) |
-| 7 | Re-read enable shadow + `0900:0018`; series of 2-byte reads from `0000:0010`…`001E` | 7A | Re-read `0900:0014` / `0900:0018`; read `0000:0010`…`001E` (source comments note the two banks appear identical) |
-| 8 | SCMD IDLE: `01 00 00 00` (request `0xB8`) + interrupt / receipt / ready path | 8 | `stateConfirmedScmd(SCMD_IDLE, 0x00, 0x0000)` – expected state `0x11` |
-| 9 | Mailbox port `0x33`: `AB A9 0F A4 55` + 3-byte read (phase probe) | 9 | Port `0x33` write `AB A9 0F A4 55`, read 3 bytes (expects `33 44 55`) |
-| 10 | Repeat phase probe while reply is `33 44 55`; enable-state restore + analog-input bit + `EB_FIRMWARE_PROCESSOR` | 10 | Loop on phase `33 44 55`: `sendEnableState()`, `enableAnalogInput()`, `doEnable(EB_FIRMWARE_PROCESSOR)` until phase becomes `27 F9 7B` |
-| 11 | On first `27 F9 7B`: transcoder defaults + extensive register programming (wValue=`0x0001` series) | 11 | `transcoderDefaultsInitialize()` (implementation-ordered transcoder table writes) |
-| 12 | SCMD INIT: `04 00 00 00` + interrupt / receipt path | 12 | `scmd(SCMD_INIT, 0x00, 0x0000)` – **userspace issues INIT before encode-firmware download** |
-| 13 | Bulk OUT EP `0x02` encode firmware – 45 × 32 768 + 26 224 = **1 500 784 B** | 13 | `dlfirm(firmwareEnc_)` |
-| 14 | Post-encode reads of `0000:0010`…`0016`; phase may briefly return to `33 44 55` | 14 | Read `0000:0010/12/14/16`; allow temporary return to `33 44 55` |
-| 15 | Up to ~5× phase probe `AB A9 0F A4 5B` + enable refresh; stop when `(reply & 0xF8F0F0) == 0x78E040` | 15 | Same loop (mask `0xF8F0F0 == 0x78E040`); also observed `0x7BEC47` on some hardware |
-| 16 | Enable `EB_ENCODER_ENABLE`; wait for phase `27 F9 7B` again | 16 | `doEnable(EB_ENCODER_ENABLE)`; poll until phase `27 F9 7B` |
-| 17 | Port `0x33`: `28 28`; `29 89 5B` → read 1; `DD CE 3F B2` → read 2 (expects `91`, `DA 67`) | 17 | Identical mailbox sequence; expects `91` / `DA 67` |
-| 18 | Assert `EB_ENCODER_TRIGGER`; poll `43 23 84` until `F7`; clear trigger | 18 | Identical; trigger only held for the poll |
-| 19 | Port `0x33`: `89 89 FB` → read 1 (expects `6E`) | 19 | Identical; expects `6E` |
-| 20 | Long ordered mailbox block on ports `0x44`, `0x33`, `0x4E`, `0x4C` (generation-specific) | 20 | `configureCommonBlockA/B/C` family – order-sensitive; several meanings still UNKNOWN |
-| 21 | Port-`0x33` block-read series (`AB 92 3E B4 …` + 56-byte reads) | 21 | Same block-read series (source explicitly says purpose unknown; do not omit) |
-| 22 | HDMI selector `51 45` + HDMI front-end / page / parameter-table programming | 22 | Branch to `configureHDMI()` (or forced input); selector `0x9C:51 = 45`, route `0900:0018 = 02 0A` |
-| 23 | Enter repeating idle/keep-alive loop (no signal): `AB 4C` / `9D CD 6A 00` / `99 89 F5 00` / `9D CD 94 00` | — | (Userspace does not implement this loop; it proceeds to capture-start when a signal is expected) |
-| 24 | Digital/component prefix: `06 86`, `89 89 F8`, `03 2F`, `B3 CC`, page CE/`27=CC`/CC | — | (Component path lives in `configureComponent()`; not exercised on the HDMI-forced boot path) |
-| 25 | Routing `0900:0018`: transient `02 0A` then `02 0E` **before** selector | — | Component route word is written inside the component configuration path |
-| 26 | Shared path: `AB 4C`, `1B 33`, `B7 CE`, `B8 DC`, `B8 CC`, `07 38`, `07 C8` | — | Same shared writes appear in the component configuration path |
-| 27 | Component selector `0x9C:51 = ED` (trace ends) | — | `0x9C:51 = ED` is the final selector in the component path |
+| 1 | Vendor control IN: read `0800:0094` (4 bytes) → `56 31 33 30` (`"V130"`); read `0800:0098` (repeated) | 1 | Read version: HD-New probes `0800:0094` / `0800:0098`; fallback to Original-HD `0800:0010/14/18` if both zero |
+| 2 | Vendor control OUT: write `0900:0000 = 00 00` | 2 | Write `0900:0000 = 00 00` |
+| 3 | Vendor control IN: read `0900:0014` (enable-state shadow) | 3 | Read `0900:0014` (enable-state shadow) |
+| 4 | Vendor control IN: read `0800:2008` → state `0x00` | 4 | Read `0800:2008` & `0x1F`. On HD-New, if state `0x00` also wait interrupt endpoint `0x83` and clear sticky bit on `0900:0074` |
+| 5 | Bulk OUT endpoint `0x02`: idle firmware image – 10 × 32 768 + 4 016 = **331 696 B** | 5A | **Only if state was `0x00`:** bulk OUT endpoint `0x02`, load idle firmware (chunk size 32 768 on HD-New) |
+| 6 | Vendor control OUT: write `0900:0070 = 00 04` | 6A | Write `0900:0070 = 00 04` |
+| 7 | Vendor control IN: re-read `0900:0014` and `0900:0018`; series of 2-byte reads from `0000:0010` … `001E` | 7A | Re-read `0900:0014` / `0900:0018`; read `0000:0010` … `001E` (two banks appear identical) |
+| 8 | SCMD via request `0xB8`: payload `01 00 00 00`; interrupt IN `0x83`; receipt/ready path on `0800:0014` / `0900:0074` / `0800:2008` | 8 | SCMD `01 00 00 00` (IDLE); state-confirmed, expected readback `0x11` |
+| 9 | Mailbox port `0x33`: write `AB A9 0F A4 55`, read 3 bytes (reply `33 44 55`) | 9 | Port `0x33` write `AB A9 0F A4 55`, read 3 bytes (expects `33 44 55`) |
+| 10 | Repeat mailbox `AB A9 0F A4 55` + 3-byte read while reply is `33 44 55`; restore enable-state shadow; write analog-input enable bit; write enable word that turns on the firmware processor | 10 | Loop on phase `33 44 55`: restore enable-state shadow, configure analog-input bit, enable firmware processor until phase becomes `27 F9 7B` |
+| 11 | On first reply `27 F9 7B`: long series of transcoder / register writes (vendor OUT request `0xBC`, `wValue = 0x0001`, many addresses) | 11 | Transcoder defaults / ordered register table writes |
+| 12 | SCMD via request `0xB8`: payload `04 00 00 00`; interrupt / receipt path | 12 | SCMD `04 00 00 00` (INIT) – issued **before** encode-firmware download |
+| 13 | Bulk OUT endpoint `0x02`: encode firmware image – 45 × 32 768 + 26 224 = **1 500 784 B** | 13 | Bulk OUT endpoint `0x02`, load encode firmware |
+| 14 | Vendor control IN: read `0000:0010` … `0016`; phase may briefly return to `33 44 55` | 14 | Read `0000:0010/12/14/16`; allow temporary return to `33 44 55` |
+| 15 | Up to ~5× mailbox port `0x33`: write `AB A9 0F A4 5B`, read 3 bytes, refresh analog-input enable; stop when `(reply & 0xF8F0F0) == 0x78E040` | 15 | Same loop (mask `0xF8F0F0 == 0x78E040`); also observed `0x7BEC47` on some hardware |
+| 16 | Write enable word that turns on the encoder; poll mailbox `AB A9 0F A4 55` until reply is again `27 F9 7B` | 16 | Enable encoder; poll until phase `27 F9 7B` |
+| 17 | Mailbox port `0x33`: write `28 28`; write `29 89 5B` → read 1 byte (`91`); write `DD CE 3F B2` → read 2 bytes (`DA 67`) | 17 | Identical mailbox sequence; expects `91` / `DA 67` |
+| 18 | Write enable word that asserts the encoder trigger; poll mailbox `43 23 84` until reply `F7`; clear the trigger bit | 18 | Identical; trigger only held for the poll |
+| 19 | Mailbox port `0x33`: write `89 89 FB` → read 1 byte (`6E`) | 19 | Identical; expects `6E` |
+| 20 | Long ordered mailbox block on ports `0x44`, `0x33`, `0x4E`, `0x4C` (generation-specific payloads) | 20 | Ordered common mailbox blocks on ports `0x44` / `0x33` / `0x4E` / `0x4C`; several meanings still UNKNOWN |
+| 21 | Mailbox port `0x33` block-read series: write `AB 92 3E B4 …`, then 56-byte reads | 21 | Same block-read series (purpose unknown; do not omit) |
+| 22 | Mailbox port `0x9C`: write `51 45` (HDMI selector); HDMI front-end / page-select / parameter-table programming; route word `0900:0018 = 02 0A` | 22 | Select HDMI (`0x9C:51 = 45`); route `0900:0018 = 02 0A`; HDMI front-end setup |
+| 23 | Repeating idle/keep-alive loop (no signal): `AB 4C` / `9D CD 6A 00` / `99 89 F5 00` / `9D CD 94 00` (each with full HD-New mailbox handshake) | — | (Userspace does not implement this loop; it proceeds to capture-start when a signal is expected) |
+| 24 | Digital/component prefix (mailbox): `06 86`, `89 89 F8`, `03 2F`, `B3 CC`, page CE → `27 = CC` → page CC | — | (Component path; not exercised on the HDMI-forced boot path) |
+| 25 | Vendor control OUT: write `0900:0018` – transient `02 0A`, then `02 0E` (**before** the selector) | — | Component route word is written inside the component configuration path |
+| 26 | Shared path (mailbox port `0x9C`): `AB 4C`, `1B 33`, `B7 CE`, `B8 DC`, `B8 CC`, `07 38`, `07 C8` (with page selects and `9D CD` helpers) | — | Same shared writes appear in the component configuration path |
+| 27 | Mailbox port `0x9C`: write `51 ED` (component selector) – **trace ends** | — | `0x9C:51 = ED` is the final selector in the component path |
 
 **Firmware sizes observed in this capture**
 - Idle: 331 696 B = 10 × 32 768 + 4 016
 - Encode: 1 500 784 B = 45 × 32 768 + 26 224
 
-**SCMDs observed**
-- `01 00 00 00` – IDLE (after idle firmware)
-- `04 00 00 00` – INIT (before encode firmware)
-- `04 A0 00 00` – INIT mode A0 (later, during/after transcoder / table activity; also used by userspace before START)
+**SCMDs observed (request `0xB8`)**
+- `01 00 00 00` – after idle firmware
+- `04 00 00 00` – before encode firmware
+- `04 A0 00 00` – later, during/after transcoder / table activity (also used by userspace before START)
 
 **Notes on alignment**
-- Steps 1–21 are the common boot path. The hardware trace and userspace are essentially the same order for the firmware loads, IDLE/INIT, phase probes, encoder enable/trigger, and the early mailbox blocks.
+- Steps 1–21 are the common boot path. The hardware trace and userspace follow essentially the same order for the firmware loads, SCMD `01` / `04`, phase probes, encoder enable/trigger, and the early mailbox blocks.
 - The hardware trace continues into a full HDMI configuration + long no-signal idle/keep-alive loop, then performs an explicit HDMI→component switch (steps 24–27). Userspace, when forced to HDMI, stops at the HDMI selector and later uses the capture-start path (`04 A0` + `05 00 00 02`) once a signal is present.
 - The `0900:0018` write of the component value `02 0E` occurs **before** the final mailbox selector `51 ED` (confirmed in this trace and in the component no-input switching captures).
 - Enable-state shadow restored after mailbox operations in the late portion of the trace is `D3 9E`.
 
-See [component.md](component.md) for the complete ordered component-switch sequence that follows step 27, and the “Idle / keep-alive loop” section below for the four-command HDMI no-signal loop.
+See [component.md](component.md) for the complete ordered component-switch sequence that follows step 27, and the “Idle / keep-alive loops” section below for the per-input no-signal loops.
 
 
 ### Common initialization sequence
