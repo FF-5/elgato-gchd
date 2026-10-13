@@ -45,22 +45,29 @@
 
 #### NTSC-family 240p vs PAL-family 288p-equivalent
 
-The columns are aligned by operation, not by row count. A dash means that no corresponding step is documented in that trace; step numbers within each sequence retain their original order.
+Rows are aligned by logical operation so the two columns can be compared directly. A dash means the corresponding step was not observed (or not required) in that family’s capture. Step numbers are sequential within each column and reflect the order seen in the respective traces.
 
-Observed NTSC order is taken from the HDMI→composite 240p NTSC signal-present capture (`filtered_240p_composite.pcapng`). Decoder/front-end setup precedes the composite selector and routing-state change. The previously listed `0x88:02=C9` does not appear in that switch window and is omitted from the ordered NTSC steps (it remains in the common-commands table).
+Observed NTSC order is taken from the HDMI→composite 240p NTSC signal-present capture (`filtered_240p_composite.pcapng`). The previously listed `0x88:02=C9` does not appear in that switch window and is omitted from the ordered NTSC steps (it remains in the common-commands table).
 
-| NTSC step | NTSC-family 240p — working full bring-up | PAL step | PAL-family 288p-equivalent — working, frames received |
+| NTSC step | NTSC-family 240p | PAL step | PAL-family 288p-equivalent |
 |---:|---|---:|---|
-| 1 | Read `89 89 FD`; decoder `0x88:06=08`, read `89 89 F8`, `0x88:03=28`; front end `0x9C:B3=33`, page `CE`, `0x9C:27=33`, page `CC`, with mailbox reads between writes | 1–2 | Read `89 89 FD`; decoder `0x88:06=08`, read `89 89 F8`, `0x88:03=28`; front end `0x9C:B3=33`, page `CE`, `0x9C:27=33`, page `CC`, with mailbox reads between writes |
-| 2 | Switch to composite `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` | 3–4 | Select composite `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` |
-| 3 | Tuning pass 1: `6F D4 D0 08 08 88` to `0x88:10–15` | 6 | Tuning pass 1: `6F D4 D0 08 08 88` |
-| 4 | Tuning pass 2: `6F EA D0 08 08 88` | 7 | Tuning pass 2: `6F EA D0 08 08 88` |
-| 5 | Tuning pass 3: `6F EA D0 1B 1B 88` | 8 | Tuning pass 3: `6F EA D0 1B 1B 88` |
-| 6 | Auxiliary device `0x94`: `41 37`, `4A B7`, `4B B7`; backend `04=95`, `70=D0`, `0F=88` | 9 | Device `0x94`: `41 37`, `4A B7`, `4B B7`; commit `09 00 66 03` and handshake after each |
-| 7 | Program coefficient table `0x98:90–A3`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | 12 | Backend `04=95`, `70=D0`, `0F=88`; coefficient table `90–A3`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` |
-| 8 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; later `15 → 14` | 13 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; poll status and allow settle |
-| 9 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 5, 10–11 | Decoder wake/status prime; status loop and confirmations `CA=66`, `E7=69`, `F1=7E`, `CB=6E` |
-| — | — | 14 | Configure SoC pipeline; queue bulk IN on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`. Capture starts and frames were received. |
+| 1 | Read `89 89 FD` | 1 | Read `89 89 FD` |
+| 2 | Decoder `0x88:06=08` | 2 | Decoder `0x88:06=08` |
+| 3 | Read `89 89 F8` | 3 | Read `89 89 F8` |
+| 4 | Decoder `0x88:03=28` | 4 | Decoder `0x88:03=28` |
+| 5 | Front-end `0x9C:B3=33` | 5 | Front-end `0x9C:B3=33` |
+| 6 | Page `CE`; `0x9C:27=33`; page `CC` (mailbox reads between writes) | 6 | Page `CE`; `0x9C:27=33`; page `CC` (mailbox reads between writes) |
+| 7 | Selector `0x9C:51=44` | 7 | Selector `0x9C:51=44` |
+| 8 | Routing `02 0E → 03 0E → 03 0E` | 8 | Routing `02 0E → 03 0E → 03 0E` |
+| — | — | 9 | Decoder wake / status prime; status loop (`CA=66`, `E7=69`, `F1=7E`, `CB=6E`) |
+| 9 | Tuning pass 1: `6F D4 D0 08 08 88` to `0x88:10–15` | 10 | Tuning pass 1: `6F D4 D0 08 08 88` |
+| 10 | Tuning pass 2: `6F EA D0 08 08 88` | 11 | Tuning pass 2: `6F EA D0 08 08 88` |
+| 11 | Tuning pass 3: `6F EA D0 1B 1B 88` | 12 | Tuning pass 3: `6F EA D0 1B 1B 88` |
+| 12 | Device `0x94`: `41 37`, `4A B7`, `4B B7` | 13 | Device `0x94`: `41 37`, `4A B7`, `4B B7` (commit `09 00 66 03` + handshake after each) |
+| 13 | Backend `04=95`, `70=D0`, `0F=88` | 14 | Backend `04=95`, `70=D0`, `0F=88` |
+| 14 | Coefficient table `0x98:90–A3`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | 15 | Coefficient table `0x98:90–A3`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` |
+| 15 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; later `15 → 14` | 16 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; poll status and allow settle |
+| 16 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 17 | Configure SoC pipeline; queue bulk IN on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`. Capture starts and frames were received. |
 
 #### Other formats
 
