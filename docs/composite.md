@@ -47,10 +47,12 @@
 
 The columns are aligned by operation, not by row count. A dash means that no corresponding step is documented in that trace; step numbers within each sequence retain their original order.
 
+Observed NTSC order is taken from the HDMI→composite 240p NTSC signal-present capture (`filtered_240p_composite.pcapng`). Decoder/front-end setup precedes the composite selector and routing-state change. The previously listed `0x88:02=C9` does not appear in that switch window and is omitted from the ordered NTSC steps (it remains in the common-commands table).
+
 | NTSC step | NTSC-family 240p — working full bring-up | PAL step | PAL-family 288p-equivalent — working, frames received |
 |---:|---|---:|---|
-| 1 | Switch to composite `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` | 3–4 | Select composite `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` |
-| 2 | Decoder `0x88:02=C9`, `0x88:06=08`, `0x88:03=28`; front end `0x9C:B3=33`, page `CE`, `0x9C:27=33`, page `CC` | 1–2 | Read `89 89 FD`; decoder `0x88:06=08`, read `89 89 F8`, `0x88:03=28`; front end `0x9C:B3=33`, page `CE`, `0x9C:27=33`, page `CC`, with mailbox reads between writes |
+| 1 | Read `89 89 FD`; decoder `0x88:06=08`, read `89 89 F8`, `0x88:03=28`; front end `0x9C:B3=33`, page `CE`, `0x9C:27=33`, page `CC`, with mailbox reads between writes | 1–2 | Read `89 89 FD`; decoder `0x88:06=08`, read `89 89 F8`, `0x88:03=28`; front end `0x9C:B3=33`, page `CE`, `0x9C:27=33`, page `CC`, with mailbox reads between writes |
+| 2 | Switch to composite `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` | 3–4 | Select composite `0x9C:51=44`; routing `02 0E → 03 0E → 03 0E` |
 | 3 | Tuning pass 1: `6F D4 D0 08 08 88` to `0x88:10–15` | 6 | Tuning pass 1: `6F D4 D0 08 08 88` |
 | 4 | Tuning pass 2: `6F EA D0 08 08 88` | 7 | Tuning pass 2: `6F EA D0 08 08 88` |
 | 5 | Tuning pass 3: `6F EA D0 1B 1B 88` | 8 | Tuning pass 3: `6F EA D0 1B 1B 88` |
