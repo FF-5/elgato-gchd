@@ -33,7 +33,7 @@
 
 Rows are aligned by logical operation so the two columns can be compared directly. A dash means the corresponding step was not observed (or not required) in that family’s capture. Step numbers are sequential within each column and reflect the order seen in the respective traces. HDMI selector/keep-alive traffic is deliberately excluded.
 
-Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present capture (`filtered_240p_svideo.pcapng`). Backend coefficient table, retriggers, and SCMD are present after the apply block; the coefficient values match the composite NTSC set (`90=01 … A3=49`), not the different PAL set.
+Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present capture. Backend coefficient table, retriggers, and SCMD are present after the apply block; the coefficient values match the composite NTSC set (`90=01 … A3=49`), not the different PAL set.
 
 | NTSC step | NTSC-family 240p | PAL step | PAL-family 288p-equivalent |
 |---:|---|---:|---|
@@ -57,20 +57,21 @@ Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present ca
 | 17 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; later `15 → 14` | 17 | Second retrigger `0x98:0D=C8`, `0x98:0E=15 → 14`; poll status |
 | 18 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 18 | Configure pipeline; queue bulk IN on `0x81`, `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`; initial stream packets appear on `0x81` |
 
-#### No-input / no-signal NTSC path (after switch)
+#### No-input then source-found: NTSC and PAL
 
-Source: `filtered_240p_noinput_svideo.pcapng`. Capture starts on HDMI, switches to S-video with **no source connected**, and never sees a source appear. Pre-switch HDMI keep-alive is out of scope; only post-switch behaviour is recorded.
+The order column numbers rows only. Read the NTSC and PAL step references independently from top to bottom; blank entries mean that sequence has no corresponding step at that position.
 
-Step numbers below refer to the **NTSC column of the signal-present table above**. Identical ranges are collapsed; only differences are expanded.
+Both NTSC and PAL no-input paths share the same early order (decoder-first) and the same source-found trigger.
 
-| Signal-present steps | No-input (this trace) | Difference |
-|---:|---|---|
-| 1 | Write `0x88:02=DC`, `0x88:14=D2`; ~200 ms | Identical. |
-| 2 | Extra status polls `FA`, `CA`, `E7`, `F1`, `CB`, `CA`; then `0x88:28=8A` | **Differs** — signal-present does `FA` then early `28=88`; no-input has more polls and early `28=8A`. |
-| 3–13 | Decoder / front-end / selector `51=44` / routing / tuning passes 1–3 | Identical content and order. |
-| — | **No-input idle loop** `89 89 FA` / `99 89 F5` (~50 ms) | **Inserted** — not present on signal-present path; same loop as composite no-input (not the HDMI `AB 4C` keep-alive). |
-| 14–18 | Retrigger / apply block / coeffs `90=01…A3=49` / SCMD `04 A0` → `05 00 00 02` (later `05 00 00 04`) | Same values; run on a timeout / proceed-without-lock path. |
-| — | Source-found trigger | **NOT CAPTURED** — no transition that breaks the FA/F5 idle because a source was found. |
+| Order | NTSC step(s) | NTSC sequence difference | PAL step(s) | PAL sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1 | Write `0x88:02=DC`, `0x88:14=D2`; ~200 ms. | 1 | Write `0x88:02=DC`, `0x88:14=D2`. |
+| 2 | 2–3 | Extra status polls `FA`, `CA`, `E7`, `F1`, `CB`, `CA`; then early `0x88:28=8A` (signal-present uses one `FA` then `28=88`). | 2–3 | Extra status polls `FA`, `CA`, `E7`, `F1`, `CB`, `CA`; then early `0x88:28=8A`. |
+| 3 | 4–13 | Decoder `06=08` / `03=28`, front-end `B3=33` + page, selector `51=44`, routing `02 0E → 03 0E`, tuning passes 1–3 (decoder-first order). | 4–14 | Decoder `06=08` / `03=28`, front-end `B3=33` + page, selector `51=44`, routing `02 0E → 03 0E`, tuning passes 1–3 (decoder-first order; same as NTSC no-input). |
+| 4 | — | No-input idle loop: `89 89 FA` / `99 89 F5` (about 50 ms). | — | No-input idle loop: `89 89 FA` / `99 89 F5` (about 50 ms). |
+| 5 | — | Source recognition: status changes to `89 89 CA`, followed by `E7` / `F1` / further status reads; exits the idle loop. | — | Source recognition: status changes to `89 89 CA`, followed by `E7` / `CB` / `F1` / further status reads; exits the idle loop. |
+| 6 | — | Apply block: `07=8A`, `08=9B`, `09=7A`, `28=88` / `8A`, `06=08`. | — | Apply block: `07=8A`, `08=9B`, `09=7A`, `28=88` / `8A`, `06=08`. |
+| 7 | 14–18 | Backend coefficients `90=01…A3=49` (NTSC table) and tail writes; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`), after source recognition. | 16–18 | Backend coefficients `90=01…A3=49` (NTSC table, not the signal-present PAL set) and tail writes; SCMD `04 A0 00 00` → `05 00 00 02`, after source recognition. Capture ends as first stream packets arrive. |
 
 #### Other formats
 
