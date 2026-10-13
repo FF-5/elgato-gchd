@@ -69,38 +69,17 @@ Observed NTSC order is taken from the HDMI→composite 240p NTSC signal-present 
 | 15 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; later `15 → 14` | 16 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; poll status and allow settle |
 | 16 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 17 | Configure SoC pipeline; queue bulk IN on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`. Capture starts and frames were received. |
 
-#### No-input / no-signal NTSC path (HDMI → composite, source appears later)
+#### No-input then source-found: NTSC and PAL
 
-Source: `filtered_240p_noinput_composite.pcapng`. Capture starts on HDMI, switches to composite with **no source attached**, idles, then the source is recognized and the host proceeds to apply / coefficients / SCMD.
-
-Step numbers below refer to the **NTSC column of the signal-present table above**. Identical ranges are collapsed; only differences are expanded.
-
-| Signal-present steps | No-input then source-found | Difference |
-|---:|---|---|
-| 9–11 (tuning) | Run **first**, before decoder/front-end/selector | **Order difference** — signal-present does steps 1–8 then 9–11; this path does 9–11 then 1–8. |
-| 1–8 | Decoder `06=08` / `03=28`, front-end, selector `51=44`, routing `02 0E → 03 0E` | Same content; now after tuning. |
-| 12 | Device `0x94`: `41 37`, `4A B7`, `4B B7` | Identical. |
-| — | **No-input idle loop** `89 89 FA` / `99 89 F5` (~50 ms) | **Inserted** — not present on signal-present path; same loop as S-video no-input (not the HDMI `AB 4C` keep-alive). |
-| — | Status becomes `89 89 CA` (then `E7` / `F1` / …) | **Source-found trigger** that exits the FA/F5 idle. |
-| — | Apply block `07=8A`, `08=9B`, `09=7A`, `28=88`/`8A`, `06=08` (appears twice) | **Inserted** — same values as S-video apply block; absent from signal-present ordered table. |
-| 13–16 | Backend coeffs `90=01…A3=49` + tail; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`) | Same NTSC table and SCMD; run after source recognition. |
-
-#### No-input / no-signal PAL path (HDMI → composite 288p, source appears later)
-
-Source: `filtered_288p_pal_noinput_composite.pcapng`. Capture starts on HDMI (selector `51 45`), switches to composite with **no source attached**, idles in the FA/F5 loop, then the PAL source is recognized; the host proceeds to apply / coefficients / SCMD. Trace ends when the first bulk stream packets arrive on `0x81`.
-
-Step numbers below refer to the **PAL column of the signal-present table above**. Identical ranges are collapsed; only differences are expanded.
-
-| Signal-present steps | No-input then source-found | Difference |
-|---:|---|---|
-| 1–8 | Decoder `06=08` / `03=28`, front-end, selector `51=44`, routing `02 0E → 03 0E` | Same content and order (decoder/front-end first). |
-| 9 (status prime) | Present after selector in signal-present; not required to re-run here | — |
-| 10–12 (tuning) | **Not run early**; tuning occurs later or is omitted from the visible switch window | **Order difference vs NTSC no-input** — PAL no-input keeps decoder-first order (no early tuning), matching the signal-present PAL path. |
-| 13 | Device `0x94`: `41 37`, `4A B7`, `4B B7` | Identical. |
-| — | **No-input idle loop** `89 89 FA` / `99 89 F5` (~50 ms) | **Inserted** — same loop as NTSC / S-video no-input. |
-| — | Status becomes `89 89 CA` | **Source-found trigger** that exits the FA/F5 idle (identical to NTSC composite no-input). |
-| — | Apply block `07=8A`, `08=9B`, `09=7A`, `28=88`/`8A`, `06=08` | **Inserted** — same values as NTSC / S-video apply block. |
-| 14–17 | Backend coeffs `90=01…A3=49` + tail; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`) | Same coefficient table and SCMD; run after source recognition. Capture starts. |
+| NTSC step | NTSC no-input then source-found | PAL step | PAL no-input then source-found |
+|---:|---|---:|---|
+| 9–11 | Tuning passes run before decoder/front-end/selector; signal-present order runs steps 1–8 first. | 10–12 | Tuning is not run early; PAL retains decoder-first order, matching its signal-present path. |
+| 1–8 | Decoder `0x88:06=08`, decoder `0x88:03=28`, front-end `0x9C:B3=33`, selector `0x9C:51=44`, routing `02 0E → 03 0E`; occurs after tuning. | 1–8 | Decoder `0x88:06=08`, decoder `0x88:03=28`, front-end `0x9C:B3=33`, selector `0x9C:51=44`, routing `02 0E → 03 0E`; same order as signal-present. |
+| 12 | Device `0x94`: `41 37`, `4A B7`, `4B B7`. | 13 | Device `0x94`: `41 37`, `4A B7`, `4B B7`. |
+| — | No-input idle loop: `89 89 FA` / `99 89 F5` (about 50 ms). | — | No-input idle loop: `89 89 FA` / `99 89 F5` (about 50 ms). |
+| — | Source recognition: status changes to `89 89 CA`, then `E7` / `F1` / further status reads; exits the idle loop. | — | Source recognition: status changes to `89 89 CA`; exits the idle loop. |
+| — | Apply block: `07=8A`, `08=9B`, `09=7A`, `28=88` / `8A`, `06=08` (the `06=08` write appears twice). | — | Apply block: `07=8A`, `08=9B`, `09=7A`, `28=88` / `8A`, `06=08`. |
+| 13–16 | Backend coefficients `0x98:90–A3` and tail writes; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`), after source recognition. | 14–17 | Backend coefficients `0x98:90–A3` and tail writes; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`), after source recognition. |
 
 #### Other formats
 
