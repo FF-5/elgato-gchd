@@ -6,7 +6,7 @@
 |---|---|---|
 | `0x88:02` | Write `DC` | S-video Y/C decoder path. Composite uses `C9`. |
 | `0x88:14` | Write `D2` | S-video path parameter. |
-| `0x88:28` | Write `88`; some 240p paths later write `8A` | Mode-correlated value; format semantics are not fully decoded. |
+| `0x88:28` | Write `88` (signal-present) or `8A` (no-input / no-lock) | Mode- and lock-correlated; early write after status polls uses `8A` when no signal is present. Later apply-block writes can use either value. |
 | `0x88:06`, `0x88:03` | Write `08`, `28` | Analog decoder setup. |
 | `0x9C:B3`, `0x9C:00`, `0x9C:27` | Write `33`, `CE`, `33`, `CC` in order | Analog front-end bank/page setup. |
 | `0x9C:51` | Write `44` | S-video selector in the S-video configuration sequence. HDMI switching traffic is outside this input-specific reference. |
@@ -56,6 +56,21 @@ Observed NTSC order is taken from the HDMI→S-video 240p NTSC signal-present ca
 | 16 | Backend `04=95`, `70=D0`, `0F=88`; coefficient table `90=01 … A3=49`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | 16 | Backend writes: `04=95`, `70=D0`, `0F=88`, `90=D8`, `91=BF`, `95=9D`, `96=1B`, `97=88`, `A0=8A`, `A1=D8`, `A2=B2`, `A3=59`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` |
 | 17 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; later `15 → 14` | 17 | Second retrigger `0x98:0D=C8`, `0x98:0E=15 → 14`; poll status |
 | 18 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 18 | Configure pipeline; queue bulk IN on `0x81`, `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`; initial stream packets appear on `0x81` |
+
+#### No-input / no-signal NTSC path (differences)
+
+Source: `filtered_240p_noinput_svideo.pcapng` (HDMI `51 45` → idle loop → S-video, no signal).
+
+| Item | No-input observation | Signal-present | Notes |
+|------|----------------------|----------------|-------|
+| Idle / keep-alive before switch | `AB 4C` / `9D CD 6A 00` / `99 89 F5 00` / `9D CD 94 00` | (same loop, documented under HDMI/hardware) | Identical shared loop; not S-video-specific. Confirmed in this capture. |
+| Early `0x88:28` | `8A` | `88` | After status polls following `02=DC` / `14=D2`. |
+| Early status after decoder path | `FA`, `CA`, `E7`, `F1`, `CB`, `CA` | `FA` then immediate `28=88` | Extra no-lock polls. |
+| Coefficient table | Full NTSC set `90=01 … A3=49` | Full NTSC set | Programmed even with no signal. |
+| Final SCMD | `04 A0 00 00` → `05 00 00 02` → `05 00 00 04` | `04 A0 00 00` → `05 00 00 02` | NULL-stream SCMD appears on no-input. |
+| Selector / routing / tuning | Same as signal-present | Same | No difference. |
+
+Decoder path still begins with `0x88:02=DC`, `0x88:14=D2` (~200 ms), shared front-end, selector `51=44`, and routing `02 0E → 03 0E`. The full backend (coefficients, dual retrigger, apply block) is executed.
 
 #### Other formats
 

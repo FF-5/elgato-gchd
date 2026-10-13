@@ -60,8 +60,8 @@ This table spells out the transfers and register accesses performed when userspa
 | 4 | USB control IN from `0900:0074` | Read 2 bytes repeatedly until `value & 0x0004 != 0` | Polls the state-change-complete flag. Original HD uses this in `completeStateChange()`; HD-New uses the interrupt/readback path where applicable. |
 | 5 | USB control IN from `0800:2008` | Read 2 bytes; compute `value & 0x001F` | Reads the current SCMD state. During completion, userspace reads this register twice and uses the second value masked with `0x1F`. |
 | 6 | USB control IN, request `0xBC`, `wValue=0x0900`, `wIndex=0x01B0` | Read 2 bytes; discard the value | An additional read performed inside the Original-HD completion loop. Its purpose is unknown. |
-| 7 | USB control OUT, request `0xBC`, `wValue=0x0900`, `wIndex=0x0074` | Write `00 04` | Clears/acknowledges the sticky completion flag; the exact hardware semantics are not fully established. |
-| 8 | USB control OUT, request `0xBC`, `wValue=0x0900`, `wIndex=0x01B0` | Write `00 00` | Cleanup write after completion. Its purpose remains unknown. |
+| 7 | USB control OUT, request `0xBC`, `wValue=0x0900`, `wIndex=0x01B0` | Write `00 00` | Cleanup write after completion. Its purpose remains unknown. |
+| 8 | USB control OUT, request `0xBC`, `wValue=0x0900`, `wIndex=0x0074` | Write `00 04` | Clears/acknowledges the sticky completion flag; the exact hardware semantics are not fully established. |
 
 **Expected state after confirmation:** IDLE → `0x11`; RESET with mode `00` → `0x10`; START (`05 00 00 02`) → `0x02`. INIT is issued through `scmd()` and followed by the firmware/version steps; it is not confirmed through the same `stateConfirmedScmd()` helper as IDLE, RESET and START.
 
@@ -95,7 +95,7 @@ The supplied filtered capture starts at HDMI selection, so earlier hardware comm
 | 6A | Write `0900:0070 = 00 04` | Purpose unknown; executed after idle-firmware download. |
 | 7A | Read `0900:0014`, then `0900:0018`; read `0000:0010`, `0012`, `0014`, `0016`, `0018`, `001A`, `001C`, `001E` (2 bytes each) | Reads after idle-firmware download. The source comments say the returned values appear to repeat across two banks; their purpose is unknown. |
 | 8 | SCMD IDLE, mode `00`, data `0000` — Original HD `00 00 01 00 00 00`; HD-New `01 00 00 00` | State-confirmed; expected readback `0x11`. |
-| 9 | Mailbox port `0x33`: write `AB A9 0F A4 55`, then read 3 bytes | Initial phase probe; source comment expects `33 44 55`. |
+| 9 | Mailbox port `0x33`: write `AB A9 0F A4 55`; then read 3 bytes | Initial phase probe; source comment expects `33 44 55`. |
 | 10 | Repeat port-`0x33` probe `AB A9 0F A4 55` + 3-byte read until phase value changes | While reply is `33 44 55`, source sends the saved enable-state shadow, configures the analog-input bit from selected input, and enables `EB_FIRMWARE_PROCESSOR`. The loop waits for `27 F9 7B`. |
 | 11 | Configure analog-input enable bit; call `transcoderDefaultsInitialize()` | Runs once on the first `27 F9 7B` phase. The detailed transcoder writes are implementation-ordered; see the transcoder initialization code and the relevant transcoder tables. |
 | 12 | SCMD INIT, mode `00`, data `0000` — Original HD `00 00 04 00 00 00`; HD-New `04 00 00 00` | **The userspace implementation sends INIT before downloading encode firmware.** On HD-New, the normal SCMD receipt/interrupt path is used. |
@@ -135,7 +135,13 @@ The supplied filtered capture starts at HDMI selection, so earlier hardware comm
 
 ### Idle / keep-alive loop (post-input-setup, no signal)
 
-**Observed context:** HD-New after HDMI input setup with no signal, continuing until the host begins the component-switch prefix. It is not yet confirmed whether the same loop runs on component, composite or S-video, or while a signal is locked.
+**Observed context:** HD-New after HDMI input setup with no signal. The same loop is the steady state while the device remains on HDMI before any analog input switch (component, composite, or S-video). Confirmed on:
+
+- HDMI no-signal init / stay-on-HDMI path
+- HDMI → component no-signal switch prefix
+- HDMI → S-video no-signal path (`filtered_240p_noinput_svideo.pcapng`)
+
+There is no distinct S-video (or composite) idle loop; the keep-alive runs while the selector is still HDMI.
 
 **Repeated loop body:** each iteration uses the HD-New mailbox transport and its standard commit / interrupt / restore-shadow / poll-ready handshake.
 
@@ -146,13 +152,12 @@ The supplied filtered capture starts at HDMI selection, so earlier hardware comm
 | 3 | Mailbox sequence-read/poll helper | `99 89 F5 00` | Performs a sequence-read/poll operation; result is discarded. |
 | 4 | Mailbox read helper, index `0x94` | `9D CD 94 00` | Reads helper/index `0x94`; result is discarded. |
 
-The four-command cycle repeats many times (dozens of iterations in the observed trace). The enable-state shadow remained `D3 9E` throughout that loop.
+The four-command cycle repeats many times (dozens of iterations in the observed traces). The enable-state shadow remained `D3 9E` throughout the loops examined so far.
 
-**Open questions**
-- Does the identical loop run when the current input is component, composite or S-video?
-- Does the loop stop, change, or continue once a signal is detected or locked?
+**Still open**
+- Does the loop stop, change, or continue once a signal is detected or locked on the active input?
 - Are the read helpers strictly required, or can they be omitted?
 
-**State-word timing note:** when switching from HDMI to component in the no-signal trace, the write `0900:0018 = 02 0E` was observed before the final mailbox selector `51 ED`. A transient re-write of the previous HDMI value `02 0A` immediately preceded the component value.
+**State-word timing note:** when switching from HDMI to component in the no-signal trace, the write `0900:0018 = 02 0E` was observed before the final mailbox selector `51 ED`. A transient re-write of the previous HDMI value `02 0A` immediately preceded the component value. On the HDMI → S-video no-signal path the same routing change (`02 0E → 03 0E`) occurs after the S-video selector `51 44`.
 
 See [commands.md](commands.md) for generic mailbox commands, unknown registers, transcoder/pipeline operations, and unresolved status values.
