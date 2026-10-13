@@ -108,30 +108,104 @@ AB 4C
 
 Full description and comparison with HDMI / composite / S-video idles are in [hardware.md](hardware.md).
 
-## Sequences
+## Allowable input formats
 
-The tables cover the standard SD formats listed for component input. “Not established” means the format-specific sequence is not documented; it does not imply that the format is unsupported.
+The component input format families documented here are **240p, 288p, 480i, 576i, 480p, 576p, 720p, 1080i, and 1080p**. The tables distinguish the format families from the portions of their register sequences that are established. A listed format does not imply that every format-specific register value or lock criterion is known.
+
+## Sequences
 
 ### 240p / 288p
 
-| Order | NTSC-family / 60 Hz (240p) | PAL-family / 50 Hz (288p) |
-|---:|---|---|
-| 1 | Digital/component prefix, routing `02 0E`, shared path, selector `51 ED` | Digital/component prefix, routing `02 0E`, shared path, selector `51 ED` |
-| 2 | Per-format decoder/transcoder programming: **not established** | Per-format decoder/transcoder programming: **not established** |
-| 3 | Pipeline setup and stream start: **not established** | Pipeline setup and stream start: **not established** |
+#### NTSC-family 240p vs PAL-family 288p
+
+| NTSC step | NTSC-family 240p sequence | PAL step | PAL-family 288p sequence |
+|---:|---|---:|---|
+| 1 | Component prefix: `06 86`; read helper `89 89 F8`; `03 2F`; `B3 CC` | 1 | Component prefix: `06 86`; read helper `89 89 F8`; `03 2F`; `B3 CC` |
+| 2 | Page setup: page `CE`, `0x9C:27=CC`, return to page `CC` | 2 | Page setup: page `CE`, `0x9C:27=CC`, return to page `CC` |
+| 3 | Route `0900:0018=02 0E`; shared path; selector `0x9C:51=ED` | 3 | Route `0900:0018=02 0E`; shared path; selector `0x9C:51=ED` |
+| 4 | Per-format decoder/transcoder programming and lock confirmation: **not established** | 4 | Per-format decoder/transcoder programming and lock confirmation: **not established** |
+| 5 | Pipeline configuration and stream start: **not established** | 5 | Pipeline configuration and stream start: **not established** |
+
+#### Differences: 240p vs 288p
+
+| Order | NTSC step(s) | NTSC sequence difference | PAL step(s) | PAL sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1–3 | Common component-selection path is documented; mode-specific setup is not established. | 1–3 | Same documented common path; mode-specific setup is not established. |
+| 2 | 4–5 | Format-specific programming, lock criteria, and stream-start commands are not established. | 4–5 | Format-specific programming, lock criteria, and stream-start commands are not established. |
 
 ### 480i / 576i
 
-| Order | NTSC-family / 60 Hz (480i) | PAL-family / 50 Hz (576i) |
-|---:|---|---|
-| 1 | Common component selection path described above | Common component selection path described above |
-| 2 | Per-format programming and lock criteria: **not established** | Per-format programming and lock criteria: **not established** |
-| 3 | Pipeline setup and stream start: **not established** | Pipeline setup and stream start: **not established** |
+| NTSC step | NTSC-family 480i sequence | PAL step | PAL-family 576i sequence |
+|---:|---|---:|---|
+| 1 | Component prefix and page setup as described above | 1 | Component prefix and page setup as described above |
+| 2 | Route `0900:0018=02 0E`; shared path; selector `0x9C:51=ED` | 2 | Route `0900:0018=02 0E`; shared path; selector `0x9C:51=ED` |
+| 3 | 480i-specific decoder/transcoder programming and lock confirmation: **not established** | 3 | 576i-specific decoder/transcoder programming and lock confirmation: **not established** |
+| 4 | Pipeline configuration and stream start: **not established** | 4 | Pipeline configuration and stream start: **not established** |
+
+#### Differences: 480i vs 576i
+
+| Order | NTSC step(s) | NTSC sequence difference | PAL step(s) | PAL sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1–2 | Common input-selection path only; no mode-specific sequence is established. | 1–2 | Common input-selection path only; no mode-specific sequence is established. |
+| 2 | 3–4 | 480i-specific programming, lock criteria, and stream-start commands are not established. | 3–4 | 576i-specific programming, lock criteria, and stream-start commands are not established. |
 
 ### 480p / 576p
 
-| Order | NTSC-family / 60 Hz (480p) | PAL-family / 50 Hz (576p) |
-|---:|---|---|
-| 1 | Common component selection path described above | Common component selection path described above |
-| 2 | Per-format programming and lock criteria: **not established** | Per-format programming and lock criteria: **not established** |
-| 3 | Pipeline setup and stream start: **not established** | Pipeline setup and stream start: **not established** |
+| NTSC step | NTSC-family 480p sequence | PAL step | PAL-family 576p sequence |
+|---:|---|---:|---|
+| 1 | Component prefix and page setup as described above | 1 | Component prefix and page setup as described above |
+| 2 | Route `0900:0018=02 0E`; shared path; selector `0x9C:51=ED` | 2 | Route `0900:0018=02 0E`; shared path; selector `0x9C:51=ED` |
+| 3 | 480p-specific decoder/transcoder programming and lock confirmation: **not established** | 3 | 576p-specific decoder/transcoder programming and lock confirmation: **not established** |
+| 4 | Pipeline configuration and stream start: **not established** | 4 | Pipeline configuration and stream start: **not established** |
+
+#### Differences: 480p vs 576p
+
+| Order | NTSC step(s) | NTSC sequence difference | PAL step(s) | PAL sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1–2 | Common input-selection path only; no mode-specific sequence is established. | 1–2 | Common input-selection path only; no mode-specific sequence is established. |
+| 2 | 3–4 | 480p-specific programming, lock criteria, and stream-start commands are not established. | 3–4 | 576p-specific programming, lock criteria, and stream-start commands are not established. |
+
+### 720p
+
+| Component step | Component 720p sequence | HDMI step | HDMI 720p sequence |
+|---:|---|---:|---|
+| 1 | Component prefix, route `02 0E`, shared path, selector `51 ED` | 1 | HDMI selector `51 45`, route `0900:0018=02 0A`, common front-end setup |
+| 2 | 720p-specific programming and lock confirmation: **not established** | 2 | Timing candidate near `0xB05C`; complete per-mode programming and lock criteria: **not established** |
+| 3 | Pipeline configuration and stream start: **not established** | 3 | Stream-start sequence: **not established** |
+
+#### Differences: component 720p vs HDMI 720p
+
+| Order | Component step(s) | Component sequence difference | HDMI step(s) | HDMI sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1 | Component selects with `51 ED` and route `02 0E`. | 1 | HDMI selects with `51 45` and route `02 0A`; HDMI front-end setup follows. |
+| 2 | 2–3 | Component-specific 720p programming and stream start are not established. | 2–3 | HDMI has a timing candidate near `0xB05C`; full programming and stream start are not established. |
+
+### 1080i
+
+| Component step | Component 1080i sequence | HDMI step | HDMI 1080i sequence |
+|---:|---|---:|---|
+| 1 | Component prefix, route `02 0E`, shared path, selector `51 ED` | 1 | HDMI selector `51 45`, route `0900:0018=02 0A`, common front-end setup |
+| 2 | 1080i-specific programming and lock confirmation: **not established** | 2 | Timing candidate near `0xB081`; complete per-mode programming and lock criteria: **not established** |
+| 3 | Pipeline configuration and stream start: **not established** | 3 | Stream-start sequence: **not established** |
+
+#### Differences: component 1080i vs HDMI 1080i
+
+| Order | Component step(s) | Component sequence difference | HDMI step(s) | HDMI sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1 | Component selects with `51 ED` and route `02 0E`. | 1 | HDMI selects with `51 45` and route `02 0A`; HDMI front-end setup follows. |
+| 2 | 2–3 | Component-specific 1080i programming and stream start are not established. | 2–3 | HDMI has a timing candidate near `0xB081`; full programming and stream start are not established. |
+
+### 1080p
+
+| Component step | Component 1080p sequence | HDMI step | HDMI 1080p sequence |
+|---:|---|---:|---|
+| 1 | Component prefix, route `02 0E`, shared path, selector `51 ED` | 1 | HDMI selector `51 45`, route `0900:0018=02 0A`, common front-end setup |
+| 2 | 1080p-specific programming and lock confirmation: **not established** | 2 | Timing candidate near `0xB6D7`; complete per-mode programming and lock criteria: **not established** |
+| 3 | Pipeline configuration and stream start: **not established** | 3 | Stream-start sequence: **not established** |
+
+#### Differences: component 1080p vs HDMI 1080p
+
+| Order | Component step(s) | Component sequence difference | HDMI step(s) | HDMI sequence difference |
+|---:|---:|---|---:|---|
+| 1 | 1 | Component selects with `51 ED` and route `02 0E`. | 1 | HDMI selects with `51 45` and route `02 0A`; HDMI front-end setup follows. |
+| 2 | 2–3 | Component-specific 1080p programming and stream start are not established. | 2–3 | HDMI has a timing candidate near `0xB6D7`; full programming and stream start are not established. |
