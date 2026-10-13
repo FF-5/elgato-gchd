@@ -905,7 +905,12 @@ static void gchd_stop(struct vb2_queue *q)
   */
  if (!d->disconnected && !READ_ONCE(d->signal_present)) {
   WRITE_ONCE(d->detect_requested, true);
+  gchd_set_lifecycle(d, GCHD_LIFECYCLE_DETECTING);
   schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
+ } else if (READ_ONCE(d->hw_initialized)) {
+  gchd_set_lifecycle(d, GCHD_LIFECYCLE_INPUT_READY);
+ } else {
+  gchd_set_lifecycle(d, GCHD_LIFECYCLE_OFFLINE);
  }
  mutex_unlock(&d->lifecycle_lock);
 }
