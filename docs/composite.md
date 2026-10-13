@@ -41,7 +41,7 @@
 
 ## No-signal idle / keep-alive
 
-**Evidence:** `gchd_input_switch_no_input.pcapng` and earlier HDMI→composite no-input traces.
+
 
 After the composite selector and front-end programming complete with no source present, the device enters a two-command keep-alive shared with S-video:
 
@@ -56,7 +56,7 @@ The repeated `89 89 FA` read is the best current candidate for analog source det
 
 ### Selector `51 EC` vs `51 44` (no-source multi-switch evidence)
 
-**Evidence:** `gchd_input_switch_no_input.pcapng` (HDMI → component → composite → S-video → composite → component → HDMI, all no source).
+
 
 | Transition | Selector written | Notes |
 |---|---|---|
@@ -67,10 +67,10 @@ The repeated `89 89 FA` read is the best current candidate for analog source det
 | composite → component | `51 ED` | Back to component. |
 | component → HDMI | `51 45` | HDMI selector. |
 
-In earlier HDMI→composite and HDMI→S-video no-input captures the selector was consistently `51 44`. In the multi-switch trace every composite/S-video selection that follows a component (or another analog) selection uses `51 EC` instead. The choice is therefore path-dependent:
+In earlier HDMI→composite and HDMI→S-video no-input observations the selector was consistently `51 44`. In the multi-switch trace every composite/S-video selection that follows a component (or another analog) selection uses `51 EC` instead. The choice is therefore path-dependent:
 
 - **`51 44`** — observed on the direct HDMI → composite / HDMI → S-video path (both signal-present and no-input).
-- **`51 EC`** — observed when the previous input was component or another analog input, under no-source conditions.
+- **`51 EC`** — observed when the previous input was component or another analog input, when no source is present.
 
 After `51 EC` the device still enters the shared composite/S-video no-input idle (`89 89 FA` / `99 89 F5`) and can later take the source-found path (`89 89 CA`) documented in the no-input difference tables. The EC vs 44 distinction does not by itself suppress source detection.
 
@@ -80,9 +80,9 @@ After `51 EC` the device still enters the shared composite/S-video no-input idle
 
 #### NTSC-family 240p vs PAL-family 288p-equivalent
 
-Rows are aligned by logical operation so the two columns can be compared directly. A dash means the corresponding step was not observed (or not required) in that family’s capture. Step numbers are sequential within each column and reflect the order seen in the respective traces.
+Rows are aligned by logical operation so the two columns can be compared directly. A dash means the corresponding step was not observed (or not required) in that family’s sequence. Step numbers are sequential within each column and reflect the order seen in the respective sequences.
 
-Observed NTSC order is taken from the HDMI→composite 240p NTSC signal-present capture (`filtered_240p_composite.pcapng`). The previously listed `0x88:02=C9` does not appear in that switch window and is omitted from the ordered NTSC steps (it remains in the common-commands table).
+Observed NTSC order is taken from the HDMI→composite 240p NTSC signal-present sequence (`240p composite sequence`). The previously listed `0x88:02=C9` does not appear in that switch window and is omitted from the ordered NTSC steps (it remains in the common-commands table).
 
 | NTSC step | NTSC-family 240p | PAL step | PAL-family 288p-equivalent |
 |---:|---|---:|---|
@@ -119,15 +119,13 @@ The order column numbers rows only. Read the NTSC and PAL step references indepe
 | 7 | 13–16 | Backend coefficients `0x98:90–A3` and tail writes; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`), after source recognition. | — | Apply block: `07=8A`, `08=9B`, `09=7A`, `28=88` / `8A`, `06=08`. |
 | 8 | — | — | 14–17 | Backend coefficients `0x98:90–A3` and tail writes; SCMD `04 A0 00 00` → `05 00 00 02` (later `05 00 00 04`), after source recognition. |
 
-#### Other formats
-
-##### 480i / 576i
+### 480i / 576i
 
 | NTSC step | NTSC-family / 60 Hz | PAL step | PAL-family / 50 Hz |
 |---:|---|---:|---|
 | 1 | `0x88:28=88` seen in setup observations; full 480i sequence **NOT CAPTURED**. | 1 | PAL-family 576i sequence **NOT CAPTURED**. |
 
-##### 480p / 576p
+### 480p / 576p
 
 | NTSC step | NTSC-family / 60 Hz | PAL step | PAL-family / 50 Hz |
 |---:|---|---:|---|
