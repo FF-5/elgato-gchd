@@ -29,22 +29,16 @@
 
 ### Idle / keep-alive after HDMI front-end setup (no signal)
 
-**Observed:** no-signal HDMI configuration.
+After the HDMI selector (`51 45`) and front-end / parameter-table sequence, the device repeats this loop while no source is present. Each mailbox command is followed by the normal HD-New mailbox handshake.
 
-After the HDMI selector (`51 45`) and the front-end / parameter-table sequence, the device enters a long-running repeating loop:
+| Order | Mailbox payload | Notes |
+|---:|---|---|
+| 1 | `AB 4C` | `0x9C:AB = 4C` |
+| 2 | `9D CD 6A 00` | Read helper index `0x6A` |
+| 3 | `99 89 F5 00` | Sequence-read / poll helper |
+| 4 | `9D CD 94 00` | Read helper index `0x94` |
 
-```
-AB 4C
-9D CD 6A 00
-99 89 F5 00
-9D CD 94 00
-```
-
-(each followed by the normal HD-New mailbox handshake). The loop continues while the device stays configured for HDMI with no signal present.
-
-This is the same pattern previously noted as “Idle/keep-alive behavior in analog initialization sequence”. The present sequence shows it is not merely a short prefix; it is the steady-state behaviour once HDMI setup has finished and no further input change or signal lock has occurred.
-
-**Authoritative description of all input-specific no-signal keep-alives (HDMI, component, composite/S-video), the source-detect candidate, and multi-switch evidence from `no-input input-switch sequence`** are kept in [hardware.md](hardware.md).
+This is the steady-state no-signal loop after HDMI setup. See [hardware.md](hardware.md) for comparison with component, composite, and S-video.
 
 ### HDMI detection and format setup
 
