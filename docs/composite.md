@@ -39,6 +39,21 @@
 | `0x98:99` | `8A` | `0x98:A3` | `49` |
 
 
+## No-signal idle / keep-alive
+
+**Evidence:** `gchd_input_switch_no_input.pcapng` and earlier HDMI→composite no-input traces.
+
+After the composite selector and front-end programming complete with no source present, the device enters a two-command keep-alive shared with S-video:
+
+```
+89 89 FA 00
+99 89 F5 00
+```
+
+(~50 ms cycle). This is distinct from the HDMI four-command loop and from the component six-command loop. Full comparison of all input idles is in [hardware.md](hardware.md).
+
+The repeated `89 89 FA` read is the best current candidate for analog source detection: when a source appears the helper returns `89 89 CA` and this idle is exited (see the no-input difference table below).
+
 ### Selector `51 EC` vs `51 44` (no-source multi-switch evidence)
 
 **Evidence:** `gchd_input_switch_no_input.pcapng` (HDMI → component → composite → S-video → composite → component → HDMI, all no source).
@@ -67,27 +82,27 @@ After `51 EC` the device still enters the shared composite/S-video no-input idle
 
 Rows are aligned by logical operation so the two columns can be compared directly. A dash means the corresponding step was not observed (or not required) in that family’s capture. Step numbers are sequential within each column and reflect the order seen in the respective traces.
 
-Observed NTSC order is taken from the HDMI→composite 240p NTSC signal-present capture (`filtered_240p_composite.pcapng`). The previously listed `0x88:02=C9` does not appear in that switch sequence and is omitted from the ordered steps.
+Observed NTSC order is taken from the HDMI→composite 240p NTSC signal-present capture (`filtered_240p_composite.pcapng`). The previously listed `0x88:02=C9` does not appear in that switch window and is omitted from the ordered NTSC steps (it remains in the common-commands table).
 
-| NTSC step | NTSC-family / 60 Hz | PAL step | PAL-family / 50 Hz |
+| NTSC step | NTSC-family 240p | PAL step | PAL-family 288p-equivalent |
 |---:|---|---:|---|
-| 1 | Status prime / settle | 1 | Status prime / settle |
-| 2 | Tuning pass 1: `10–15 = 6F D4 D0 08 08 88` | 2 | Decoder `06=08` |
-| 3 | Tuning pass 2: `10–15 = 6F EA D0 08 08 88` | 3 | Decoder `03=28` |
-| 4 | Tuning pass 3: `10–15 = 6F EA D0 1B 1B 88` | 4 | Front-end `B3=33` + page CE/33/CC |
-| 5 | Decoder `06=08` | 5 | Selector `51=44` |
-| 6 | Decoder `03=28` | 6 | Routing `02 0E → 03 0E` |
-| 7 | Front-end `B3=33` + page CE/33/CC | 7 | Status-prime / family detect |
-| 8 | Selector `51=44` | 8 | (continue) |
-| 9 | Routing `02 0E → 03 0E` | 9 | Tuning pass 1 |
-| 10 | Status / family | 10 | Tuning pass 2 |
-| 11 | Device `94` block | 11 | Tuning pass 3 |
-| 12 | Device `94`: `41 37`, `4A B7`, `4B B7` | 12 | Device `94` block |
-| 13 | Backend coefficients `90–A3` | 13 | Device `94`: `41 37` … |
-| 14 | Apply / retrigger pulses | 14 | Backend coefficients |
-| 15 | Dual retrigger | 15 | Apply / retrigger |
-| 16 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 16 | Dual retrigger |
-| | | 17 | Configure SoC pipeline; queue bulk IN; SCMD `04 A0` / `05 00 00 02` |
+| 1 | Read `89 89 FD` | 1 | Read `89 89 FD` |
+| 2 | Decoder `0x88:06=08` | 2 | Decoder `0x88:06=08` |
+| 3 | Read `89 89 F8` | 3 | Read `89 89 F8` |
+| 4 | Decoder `0x88:03=28` | 4 | Decoder `0x88:03=28` |
+| 5 | Front-end `0x9C:B3=33` | 5 | Front-end `0x9C:B3=33` |
+| 6 | Page `CE`; `0x9C:27=33`; page `CC` (mailbox reads between writes) | 6 | Page `CE`; `0x9C:27=33`; page `CC` (mailbox reads between writes) |
+| 7 | Selector `0x9C:51=44` | 7 | Selector `0x9C:51=44` |
+| 8 | Routing `02 0E → 03 0E → 03 0E` | 8 | Routing `02 0E → 03 0E → 03 0E` |
+| — | — | 9 | Decoder wake / status prime; status loop (`CA=66`, `E7=69`, `F1=7E`, `CB=6E`) |
+| 9 | Tuning pass 1: `6F D4 D0 08 08 88` to `0x88:10–15` | 10 | Tuning pass 1: `6F D4 D0 08 08 88` |
+| 10 | Tuning pass 2: `6F EA D0 08 08 88` | 11 | Tuning pass 2: `6F EA D0 08 08 88` |
+| 11 | Tuning pass 3: `6F EA D0 1B 1B 88` | 12 | Tuning pass 3: `6F EA D0 1B 1B 88` |
+| 12 | Device `0x94`: `41 37`, `4A B7`, `4B B7` | 13 | Device `0x94`: `41 37`, `4A B7`, `4B B7` (commit `09 00 66 03` + handshake after each) |
+| 13 | Backend `04=95`, `70=D0`, `0F=88` | 14 | Backend `04=95`, `70=D0`, `0F=88` |
+| 14 | Coefficient table `0x98:90–A3`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | 15 | Coefficient table `0x98:90–A3`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` |
+| 15 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; later `15 → 14` | 16 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; poll status and allow settle |
+| 16 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 17 | Configure SoC pipeline; queue bulk IN on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`. Capture starts and frames were received. |
 
 #### No-input then source-found: NTSC and PAL
 
