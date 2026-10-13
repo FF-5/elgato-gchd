@@ -56,18 +56,18 @@
 #define SCMD_INIT                 0x04
 #define SCMD_STATE_CHANGE         0x05
 
-#define GCHD_STATE_BOOT           0x00
-#define GCHD_STATE_STOP           0x01
-#define GCHD_STATE_START          0x02
-#define GCHD_STATE_NULL           0x04
-#define GCHD_STATE_RESET          0x10
-#define GCHD_STATE_IDLE           0x11
-#define GCHD_STATE_SHUTDOWN       0x12
+#define HW_BOOT           0x00
+#define HW_STOP           0x01
+#define HW_START          0x02
+#define HW_NULL           0x04
+#define HW_RESET          0x10
+#define HW_IDLE           0x11
+#define HW_SHUTDOWN       0x12
 
-#define GCHD_STATE_READ_REQUEST   0x0800
-#define GCHD_STATE_STATUS_REQUEST 0x0900
-#define GCHD_STATE_COMPLETE_ACK   0x0004
-#define GCHD_STATE_COMPLETE_CLEAR_INDEX 0x01b0
+#define HW_READ_REQUEST   0x0800
+#define HW_STATUS_REQUEST 0x0900
+#define HW_COMPLETE_ACK   0x0004
+#define HW_COMPLETE_CLEAR_INDEX 0x01b0
  
 /* Mailbox ports used by the device command protocol. */
 #define GCHD_MAIL_PORT_SYSTEM          0x33
@@ -560,18 +560,18 @@ struct gchd_buffer {
  struct vb2_v4l2_buffer vb;
  struct list_head list;
 };
-/* Driver lifecycle is distinct from the device's GCHD_STATE_* protocol state. */
-enum gchd_lifecycle_state {
- GCHD_LIFECYCLE_OFFLINE,
- GCHD_LIFECYCLE_INITIALIZING,
- GCHD_LIFECYCLE_INPUT_SELECTED,
- GCHD_LIFECYCLE_DETECTING,
- GCHD_LIFECYCLE_INPUT_READY,
- GCHD_LIFECYCLE_STARTING,
- GCHD_LIFECYCLE_STREAMING,
- GCHD_LIFECYCLE_STOPPING,
- GCHD_LIFECYCLE_ERROR,
- GCHD_LIFECYCLE_POWERING_OFF,
+/* GCHD_* tracks driver lifecycle; HW_* names device protocol states/commands. */
+enum gchd_state {
+ GCHD_OFFLINE,
+ GCHD_INITIALIZING,
+ GCHD_INPUT_SELECTED,
+ GCHD_DETECTING,
+ GCHD_INPUT_READY,
+ GCHD_STARTING,
+ GCHD_STREAMING,
+ GCHD_STOPPING,
+ GCHD_ERROR,
+ GCHD_POWERING_OFF,
 };
 
 enum gchd_family { GCHD_FAMILY_OLD, GCHD_FAMILY_HDNEW };
@@ -588,7 +588,7 @@ struct gchd {
  struct mutex lock;
  /* Serializes hardware lifecycle changes against asynchronous detection. */
  struct mutex lifecycle_lock;
- enum gchd_lifecycle_state lifecycle_state;
+ enum gchd_state lifecycle_state;
  /* Serializes V4L2 open/close reference counting and cleanup. */
  struct mutex users_lock;
  unsigned int open_count;
