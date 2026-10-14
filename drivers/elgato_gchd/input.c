@@ -325,9 +325,6 @@ static int gchd_encoder_start(struct gchd *d)
  r = gchd_transcoder_output_enable(d, true);
  if (r) return r;
 
- r = gchd_input_finalize(d);
- if (r) return r;
-
  return 0;
 }
 
@@ -1643,6 +1640,18 @@ static int gchd_input_configure_mode(struct gchd *d)
   }
   d->encoder_started = true;
   dev_info(&d->intf->dev, "capture setup: encoder start completed\n");
+ }
+
+ /*
+  * Connector routing is input-selection state, not encoder-firmware
+  * initialization. Reapply it on every connector change; otherwise later
+  * Composite/S-video selections skip selector 0x51 and retain the old route.
+  */
+ r = gchd_input_finalize(d);
+ if (r) {
+  dev_err(&d->intf->dev,
+          "capture setup: connector routing failed: %d\n", r);
+  return r;
  }
 
  if (d->input == 0)
