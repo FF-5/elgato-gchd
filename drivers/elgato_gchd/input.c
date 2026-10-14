@@ -1133,21 +1133,42 @@ int gchd_probe_video_source(struct gchd *d)
   u8 v;
 
   /*
-   * Composite and S-video share the documented no-signal keep-alive loop.
-   * Poll FA and F5 before the format/status probes; FA is the source-detect
-   * candidate, while F5 is the companion sequence-read used by the device
-   * during idle. Keep the two commands in this order.
+   * The first probe follows general input setup and its two idle cycles.
+   * Once that probe has failed, later detection passes only poll FA/F5 rather
+   * than replaying decoder-family setup on every 50 ms retry. FA=CA is the
+   * observed source-found candidate that allows the full probe to resume.
    */
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
-                      (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,0xfa}, 3);
-  if (r) return r;
-  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
-  if (r) return r;
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
-                      (u8[]){GCHD_CMD_QUERY,GCHD_CMD_QUERY_EXT,0xf5}, 3);
-  if (r) return r;
-  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
-  if (r) return r;
+  if (d->input_source_probe_started) {
+   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                       (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,
+                              GCHD_QUERY_ENCODER_STATUS}, 3);
+   if (r) return r;
+   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
+   if (r) return r;
+   {
+    u8 sequence_status;
+    r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                        (u8[]){GCHD_CMD_QUERY,GCHD_CMD_QUERY_EXT,0xf5}, 3);
+    if (r) return r;
+    r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &sequence_status, 1);
+    if (r) return r;
+   }
+   if (v != 0xca)
+    return -ENOLINK;
+  } else {
+   d->input_source_probe_started = true;
+   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                       (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,
+                              GCHD_QUERY_ENCODER_STATUS}, 3);
+   if (r) return r;
+   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
+   if (r) return r;
+   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                       (u8[]){GCHD_CMD_QUERY,GCHD_CMD_QUERY_EXT,0xf5}, 3);
+   if (r) return r;
+   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
+   if (r) return r;
+  }
 
   /*
    * Prime the analog decoder before reading its NTSC/PAL family status.
