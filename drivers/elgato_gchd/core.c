@@ -843,46 +843,20 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
  }
 
  /*
-  * A file open is not proof that an application intends to capture:
-  * udev's v4l_id and desktop media services open nodes to inspect them.
-  * Defer all device boot/init and state-machine activity until STREAMON,
-  * when a client has actually requested capture buffers to be streamed.
+  * Hardware initialization and source detection are started by the first
+  * V4L2 open. STREAMON only enables delivery into the client's VB2 queue;
+  * it must not own or repeat the device lifecycle transition.
   */
  if (!READ_ONCE(d->hw_initialized)) {
-  gchd_set_lifecycle(d, GCHD_INITIALIZATION);
-  WRITE_ONCE(d->capture_active, false);
-  d->input_configured = false;
-  d->input_routed = false;
-  d->input_detect_prepared = false;
-  d->input_prepared = false;
-  d->encoder_started = false;
-  d->signal_present = false;
-  d->input_width = 0;
-  d->input_height = 0;
-  d->input_fps_num = 0;
-  d->input_fps_den = 0;
-
-  dev_info(&d->intf->dev,
-           "GCHD lifecycle: starting hardware boot/init from V4L2 STREAMON\n");
-  r = gchd_hw_init(d);
-  if (r) {
-   d->hw_initialized = false;
-   d->hw_init_failed = true;
-   gchd_set_lifecycle(d, GCHD_ERROR);
-   goto err;
-  }
-
-  d->hw_initialized = true;
-  d->hw_init_failed = false;
+  dev_err(&d->intf->dev,
+          "STREAMON rejected: hardware was not initialized at V4L2 open\n");
+  r = -EIO;
+  goto err;
  }
 
- /* First actual capture request begins input selection and source detection. */
+ WRITE_ONCE(d->streaming, true);
  if (!READ_ONCE(d->capture_active) &&
      !READ_ONCE(d->detect_requested)) {
-  gchd_input_selection_enter(d);
- }
- WRITE_ONCE(d->streaming, true);
- if (!READ_ONCE(d->capture_active)) {
   WRITE_ONCE(d->detect_requested, true);
   gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
   schedule_delayed_work(&d->detect_work, 0);
@@ -1365,6 +1339,7 @@ static const struct v4l2_ctrl_ops gchd_ctrl_ops = { .s_ctrl = gchd_ctrl };
 static int gchd_fop_open(struct file *file)
 {
  struct gchd *d = video_drvdata(file);
+ bool first_open = false;
  int r = 0;
 
  /* Protect the embedded video_device/driver state against unplug races. */
@@ -1381,24 +1356,69 @@ static int gchd_fop_open(struct file *file)
           "GCHD lifecycle: V4L2 open requested by pid=%d comm=%s\n",
           task_pid_nr(current), current->comm);
 
+ /*
+  * Serialize first-open initialization with last-close shutdown. Do not
+  * initialize on every descriptor open: applications commonly open the
+  * node more than once, and only the first open owns the lifecycle transition.
+  */
  mutex_lock(&d->users_lock);
  if (d->disconnected) {
   r = -ENODEV;
- } else {
-  /*
-   * Opening the node only grants access to its V4L2 metadata and controls.
-   * It must not boot hardware or start input detection: udev/v4l_id and
-   * desktop media services routinely open nodes just to identify them.
-   * The first STREAMON performs the ONLINE/POWER_OFF -> INITIALIZATION transition.
-   */
-  d->open_count++;
+  goto out_users;
  }
+
+ if (!d->open_count) {
+  first_open = true;
+  mutex_lock(&d->lifecycle_lock);
+
+  if (!READ_ONCE(d->hw_initialized)) {
+   gchd_set_lifecycle(d, GCHD_INITIALIZATION);
+   WRITE_ONCE(d->capture_active, false);
+   WRITE_ONCE(d->streaming, false);
+   WRITE_ONCE(d->start_pending, false);
+   d->input_configured = false;
+   d->input_routed = false;
+   d->input_detect_prepared = false;
+   d->input_prepared = false;
+   d->encoder_started = false;
+   WRITE_ONCE(d->signal_present, false);
+   d->input_width = 0;
+   d->input_height = 0;
+   d->input_fps_num = 0;
+   d->input_fps_den = 0;
+
+   dev_info(&d->intf->dev,
+            "GCHD lifecycle: starting hardware boot/init from first V4L2 open\n");
+   r = gchd_hw_init(d);
+   if (r) {
+    d->hw_initialized = false;
+    d->hw_init_failed = true;
+    gchd_set_lifecycle(d, GCHD_ERROR);
+    mutex_unlock(&d->lifecycle_lock);
+    goto out_users;
+   }
+
+   d->hw_initialized = true;
+   d->hw_init_failed = false;
+  }
+
+  /* Source detection follows initialization and is independent of STREAMON. */
+  gchd_input_selection_enter(d);
+  mutex_unlock(&d->lifecycle_lock);
+ }
+
+ d->open_count++;
+
+out_users:
  mutex_unlock(&d->users_lock);
 
  if (r && vb2_fops.release)
   vb2_fops.release(file);
  if (r)
   kref_put(&d->refcount, gchd_release_ref);
+ else if (first_open)
+  dev_info(&d->intf->dev,
+           "GCHD lifecycle: first V4L2 open initialized hardware and scheduled source detection\n");
  return r;
 }
 
