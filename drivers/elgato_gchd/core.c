@@ -874,7 +874,7 @@ static void gchd_stop(struct vb2_queue *q)
 {
  struct gchd *d = vb2_get_drv_priv(q);
 
- /* STREAMOFF stops buffer delivery, not hardware capture or source monitoring. */
+ /* STREAMOFF stops buffer delivery; open/close own the hardware lifecycle. */
  WRITE_ONCE(d->streaming, false);
  gchd_return_queued(d, VB2_BUF_STATE_ERROR);
 }
@@ -1583,7 +1583,7 @@ static int gchd_probe(struct usb_interface *i,
  /*
   * A successful USB probe finds the device and registers its V4L2 node.
   * Mark it ONLINE only after registration succeeds. Hardware initialization
-  * remains deferred until STREAMON; POWER_OFF is reserved for clean shutdown.
+  * starts on the first V4L2 open; POWER_OFF is reserved for clean shutdown.
   */
  usb_set_intfdata(i, d);
  r = gchd_v4l2_register(d);
