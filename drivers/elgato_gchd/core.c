@@ -980,7 +980,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   */
  if (!READ_ONCE(d->hw_initialized)) {
   dev_info(&d->intf->dev,
-           "input selected: input=%u; detection deferred until STREAMON\n", i);
+           "input selected: input=%u; detection deferred until device open\n", i);
   mutex_unlock(&d->lifecycle_lock);
   return 0;
  }
