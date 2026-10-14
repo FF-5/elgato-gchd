@@ -504,17 +504,25 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
 
 static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 next)
 {
- u16 state, completion;
+ u16 state, completion, clear_index = 0;
+ u16 last_state = 0xffff, last_completion = 0xffff, last_clear_index = 0xffff;
  int r, tries;
  bool first = true;
+ bool trace_start = current_state != next && next == HW_START;
 
  for (;;) {
   for (tries = 0; tries < 2000; ++tries) {
-   r = gchd_req_read16(d, HW_READ_REQUEST, GCHD_REG_STATE, &state);
+   u16 raw_state;
+
+   r = gchd_req_read16(d, HW_READ_REQUEST, GCHD_REG_STATE, &raw_state);
    if (r)
     return r;
-   state &= 0x1f;
+   state = raw_state & 0x1f;
    if (state != current_state && state != next) {
+    if (trace_start)
+     dev_err(&d->intf->dev,
+             "START poll=%d unexpected state raw=0x%04x masked=0x%04x current=0x%02x expected=0x%02x\\n",
+             tries, raw_state, state, current_state, next);
     if (first)
      return state == next ? 0 : -EIO;
     return -EIO;
@@ -524,16 +532,31 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
    r = gchd_req_read16(d, HW_STATUS_REQUEST, GCHD_REG_STATE_COMPLETE, &completion);
    if (r)
     return r;
-   /* This read is part of the original completion handshake; its value is discarded. */
-   {
-    u16 dummy;
-    r = gchd_req_read16(d, HW_STATUS_REQUEST, HW_COMPLETE_CLEAR_INDEX, &dummy);
-    if (r)
-     return r;
+   r = gchd_req_read16(d, HW_STATUS_REQUEST, HW_COMPLETE_CLEAR_INDEX, &clear_index);
+   if (r)
+    return r;
+
+   /*
+    * Keep START diagnostics useful without flooding dmesg for the full
+    * 2000-poll timeout: log initial polls, periodic samples, and changes
+    * in the three values used by the userspace completion handshake.
+    */
+   if (trace_start &&
+       (tries < 16 || (tries % 100) == 0 ||
+        state != last_state || completion != last_completion ||
+        clear_index != last_clear_index)) {
+    dev_info(&d->intf->dev,
+             "START poll=%d state=0x%04x completion(0900:0074)=0x%04x clear_index(0900:01b0)=0x%04x ack=%u\\n",
+             tries, state, completion, clear_index,
+             !!(completion & HW_COMPLETE_ACK));
    }
+   last_state = state;
+   last_completion = completion;
+   last_clear_index = clear_index;
+
    if (completion & HW_COMPLETE_ACK)
     break;
-   }
+  }
   if (tries == 2000) {
    dev_err(&d->intf->dev,
            "state-change timeout: current=0x%02x expected=0x%02x state=0x%04x completion=0x%04x\n",
