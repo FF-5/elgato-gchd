@@ -655,6 +655,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   d->ts_partial_len = 0;
   d->input_configured = false;
   d->input_interlaced = true;
+  gchd_set_lifecycle(d, GCHD_INPUT_CONFIGURATION);
   r = gchd_input_configure_idle(d);
   if (r)
    goto restart_failed;
@@ -1345,6 +1346,7 @@ static int gchd_fop_release(struct file *file)
    sr = gchd_hw_shutdown(d);
    if (sr) {
     dev_warn(&d->intf->dev, "hardware shutdown on last close failed: %d\n", sr);
+    gchd_set_lifecycle(d, GCHD_ERROR);
     if (!r)
      r = sr;
     /* Keep the flag set so the next open retries shutdown before HW init. */
