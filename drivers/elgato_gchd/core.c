@@ -507,7 +507,7 @@ static void gchd_detect_workfn(struct work_struct *work)
    * handshake against a no-signal input: on HDNew this repeatedly fails
    * with -EINVAL and leaves retries in a bad lifecycle state.
    */
-  r = gchd_input_detect_signal(d);
+  r = gchd_detect_video_source(d);
   if (r == -ENOLINK) {
    dev_info_ratelimited(&d->intf->dev, "no signal on input=%u; retrying detection\n",
             READ_ONCE(d->input));
