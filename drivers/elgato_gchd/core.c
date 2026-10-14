@@ -1493,9 +1493,8 @@ static int gchd_probe(struct usb_interface *i,
  d->width = 1280;
  d->height = 720;
  d->sizeimage = GCHD_MAX_FRAME;
- mutex_lock(&gchd_last_input_lock);
- d->input = gchd_last_input <= 3 ? gchd_last_input : 0;
- mutex_unlock(&gchd_last_input_lock);
+ /* INPUT_SELECTION resolves the remembered connector after hardware init. */
+ d->input = 0;
  d->bitrate_forced = false;
  d->h264_level_forced = false;
  d->input_width = 0;
