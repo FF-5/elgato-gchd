@@ -1522,6 +1522,7 @@ static void gchd_shutdown(struct device *dev)
  cancel_delayed_work_sync(&d->mode_work);
  mutex_lock(&d->lifecycle_lock);
  WRITE_ONCE(d->streaming, false);
+ WRITE_ONCE(d->capture_active, false);
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
@@ -1537,6 +1538,7 @@ static void gchd_shutdown(struct device *dev)
   dev_warn(dev, "best-effort hardware shutdown during system shutdown failed: %d\n",
            r);
  } else {
+  gchd_set_lifecycle(d, GCHD_POWER_OFF);
   d->hw_initialized = false;
  }
  mutex_unlock(&d->lifecycle_lock);
