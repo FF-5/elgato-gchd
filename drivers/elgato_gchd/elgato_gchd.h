@@ -566,7 +566,7 @@ enum gchd_state {
  GCHD_INITIALIZATION,
  GCHD_INPUT_SELECTION,
  GCHD_INPUT_DETECTION,
- GCHD_INPUT_READINESS,
+ GCHD_INPUT_CONFIGURATION,
  GCHD_CAPTURE_START,
  GCHD_STREAMING,
  GCHD_CAPTURE_STOP,
@@ -601,7 +601,8 @@ struct gchd {
  u8 *usb_buf;
  u8 ts_partial[188];
  u16 ts_partial_len;
- bool streaming;
+ bool streaming; /* V4L2 queue delivery only. */
+ bool capture_active; /* Hardware capture is active while a source is present. */
  bool start_pending;
  bool detect_requested;
  bool disconnected;
