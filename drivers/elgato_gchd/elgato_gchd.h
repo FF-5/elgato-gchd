@@ -624,6 +624,7 @@ struct gchd {
  u16 special_detect_mask;
  u32 width, height, sizeimage;
  u32 input;
+ u32 previous_input; /* Connector selected before the current input. */
  u32 input_width, input_height;
  u32 input_fps_num, input_fps_den;
  bool input_interlaced;
