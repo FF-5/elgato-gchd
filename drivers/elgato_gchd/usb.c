@@ -521,7 +521,7 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
    if (state != current_state && state != next) {
     if (trace_start)
      dev_err(&d->intf->dev,
-             "START poll=%d unexpected state raw=0x%04x masked=0x%04x current=0x%02x expected=0x%02x\\n",
+             "START poll=%d unexpected state raw=0x%04x masked=0x%04x current=0x%02x expected=0x%02x\n",
              tries, raw_state, state, current_state, next);
     if (first)
      return state == next ? 0 : -EIO;
@@ -546,7 +546,7 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
         state != last_state || completion != last_completion ||
         clear_index != last_clear_index)) {
     dev_info(&d->intf->dev,
-             "START poll=%d state=0x%04x completion(0900:0074)=0x%04x clear_index(0900:01b0)=0x%04x ack=%u\\n",
+             "START poll=%d state=0x%04x completion(0900:0074)=0x%04x clear_index(0900:01b0)=0x%04x ack=%u\n",
              tries, state, completion, clear_index,
              !!(completion & HW_COMPLETE_ACK));
    }
