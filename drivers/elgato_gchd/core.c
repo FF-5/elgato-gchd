@@ -1533,7 +1533,7 @@ static int gchd_probe(struct usb_interface *i,
   goto err;
  mutex_init(&d->lock);
  mutex_init(&d->lifecycle_lock);
- d->lifecycle_state = GCHD_POWER_OFF;
+ d->lifecycle_state = GCHD_OFFLINE;
  mutex_init(&d->users_lock);
  INIT_DELAYED_WORK(&d->detect_work, gchd_detection_worker);
  INIT_DELAYED_WORK(&d->mode_work, gchd_mode_workfn);
@@ -1561,9 +1561,9 @@ static int gchd_probe(struct usb_interface *i,
  }
 
  /*
-  * The USB interface starts in POWER_OFF. Registering the V4L2 node makes
-  * the connected device ONLINE, but does not initialize hardware: discovery
-  * tools routinely open the node without requesting capture.
+  * A successful USB probe finds the device and registers its V4L2 node.
+  * Mark it ONLINE only after registration succeeds. Hardware initialization
+  * remains deferred until STREAMON; POWER_OFF is reserved for clean shutdown.
   */
  usb_set_intfdata(i, d);
  r = gchd_v4l2_register(d);
