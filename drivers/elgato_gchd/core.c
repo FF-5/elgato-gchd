@@ -482,23 +482,6 @@ static void gchd_detection_worker(struct work_struct *work)
      !READ_ONCE(d->detect_requested))
   goto out;
 
- /*
-  * Selection is resolved before the worker runs. Prepare the chosen
-  * connector once, then keep SOURCE_DETECTION responsible for retries and
-  * source arrival. The preparation helper is idempotent for each selection.
-  */
- if (!d->input_detect_prepared) {
-  gchd_set_lifecycle(d, GCHD_GENERAL_INPUT_SETUP);
-  r = gchd_prepare_input_detection(d);
-  if (r) {
-   dev_warn(&d->intf->dev,
-            "general input setup failed: input=%u error=%d\n",
-            READ_ONCE(d->input), r);
-   goto retry;
-  }
-  d->input_prepared = true;
- }
-
  gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
  dev_dbg(&d->intf->dev, "source detection started: input=%u streaming=%u\n",
           READ_ONCE(d->input), READ_ONCE(d->streaming));
@@ -559,6 +542,22 @@ static void gchd_detection_worker(struct work_struct *work)
   d->input_prepared = false;
  }
  if (!d->input_configured) {
+  /*
+   * Run connector preparation only after any previous capture has been
+   * stopped and the device is back in IDLE. The setup helper is idempotent
+   * for the current input and stays complete across no-source retries.
+   */
+  if (!d->input_detect_prepared) {
+   gchd_set_lifecycle(d, GCHD_GENERAL_INPUT_SETUP);
+   r = gchd_prepare_input_detection(d);
+   if (r) {
+    dev_warn(&d->intf->dev,
+             "general input setup failed: input=%u error=%d\n",
+             READ_ONCE(d->input), r);
+    goto retry;
+   }
+  }
+  gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
   /*
    * Detection must precede configuration. Do not run the encoder-start
    * handshake against a no-signal input: on HDNew this repeatedly fails
