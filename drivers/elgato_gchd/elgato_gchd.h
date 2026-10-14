@@ -611,6 +611,7 @@ struct gchd {
  bool hw_init_failed;
  bool input_configured;
  bool input_routed;
+ bool input_detect_prepared;
  bool encoder_started;
  bool input_prepared;
  bool mode_forced;
