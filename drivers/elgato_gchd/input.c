@@ -1153,7 +1153,7 @@ int gchd_probe_video_source(struct gchd *d)
     r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &sequence_status, 1);
     if (r) return r;
    }
-   if (v != 0xca)
+   if ((v & 0x0f) != 6 && (v & 0x0f) != 7)
     return -ENOLINK;
   } else {
    d->input_source_probe_started = true;
