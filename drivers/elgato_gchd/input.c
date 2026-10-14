@@ -808,15 +808,21 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  }
 
  /* Exact source-routing enable order from configureDevice(). */
- r = gchd_do_enable(d, BIT(8), d->input >= 2 ? BIT(8) : 0);
- if (r)
-  return r;
- r = gchd_do_enable(d, BIT(2), d->input != 0 ? BIT(2) : 0);
- if (r)
-  return r;
- r = gchd_do_enable(d, BIT(9), d->input != 0 ? BIT(9) : 0);
- if (r)
-  return r;
+ /*
+  * Analog routing is already enabled by general input setup, before source
+  * detection. HDMI and Component retain this configure-stage routing.
+  */
+ if (d->input < 2) {
+  r = gchd_do_enable(d, BIT(8), 0);
+  if (r)
+   return r;
+  r = gchd_do_enable(d, BIT(2), d->input != 0 ? BIT(2) : 0);
+  if (r)
+   return r;
+  r = gchd_do_enable(d, BIT(9), d->input != 0 ? BIT(9) : 0);
+  if (r)
+   return r;
+ }
 
  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_VARIANT}, 3);
  if (r)
@@ -825,10 +831,12 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  if (r)
   return r;
 
- r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
-   d->input >= 2 ? (u8[]){0x03,0x28} : (u8[]){0x03,0x2f}, 2);
- if (r)
-  return r;
+ if (d->input < 2) {
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
+                      (u8[]){0x03,0x2f}, 2);
+  if (r)
+   return r;
+ }
 
  r = gchd_read_9dcd(d, 0x3f, reply);
  if (r)
@@ -837,10 +845,12 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT, (u8[]){0x00,0xcc}, 2);
  if (r)
   return r;
- r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
-   d->input >= 2 ? (u8[]){0xb3,0x33} : (u8[]){0xb3,0xcc}, 2);
- if (r)
-  return r;
+ if (d->input < 2) {
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
+                      (u8[]){0xb3,0xcc}, 2);
+  if (r)
+   return r;
+ }
  r = gchd_read_9dcd(d, 0x3f, reply);
  if (r)
   return r;
@@ -848,10 +858,12 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT, (u8[]){0x00,0xce}, 2);
  if (r)
   return r;
- r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
-   d->input >= 2 ? (u8[]){0x27,0x33} : (u8[]){0x27,0xcc}, 2);
- if (r)
-  return r;
+ if (d->input < 2) {
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
+                      (u8[]){0x27,0xcc}, 2);
+  if (r)
+   return r;
+ }
 
  if (d->input >= 2) {
   r = gchd_read_9dcd(d, 0x3f, reply);
@@ -861,24 +873,6 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
   if (r)
    return r;
   r = gchd_read_9dcd(d, 0x6e, reply);
-  if (r)
-   return r;
-  /*
-   * The analog selector depends on the transition path, not on whether the
-   * connector is Composite or S-video: direct HDMI -> analog uses 0x44;
-   * switching from Component/another analog connector uses 0xEC.
-   */
-  if (d->previous_input == 0) {
-   static const struct gchd_mail_cmd select_analog[] = {
-    GCHD_INPUT_SELECT_ANALOG,
-   };
-   r = gchd_seq(d, select_analog, ARRAY_SIZE(select_analog));
-  } else {
-   static const struct gchd_mail_cmd select_analog_alt[] = {
-    GCHD_INPUT_SELECT_ANALOG_ALT,
-   };
-   r = gchd_seq(d, select_analog_alt, ARRAY_SIZE(select_analog_alt));
-  }
   if (r)
    return r;
  }
