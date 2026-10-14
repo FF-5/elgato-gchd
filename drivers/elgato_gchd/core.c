@@ -67,6 +67,15 @@ static void gchd_input_selection_enter(struct gchd *d)
  d->input = gchd_last_input <= 3 ? gchd_last_input : 0;
  mutex_unlock(&gchd_last_input_lock);
 
+ /* Keep the userspace-visible menu in sync with the restored selection. */
+ {
+  struct v4l2_ctrl *ctrl = v4l2_ctrl_find(&d->ctrls,
+                                          V4L2_CID_GCHD_INPUT_SOURCE);
+
+  if (ctrl && ctrl->val != d->input)
+   v4l2_ctrl_s_ctrl(ctrl, d->input);
+ }
+
  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
  WRITE_ONCE(d->detect_requested, true);
  gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
