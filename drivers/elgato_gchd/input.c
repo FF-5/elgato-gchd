@@ -917,7 +917,7 @@ static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
  * One measurement batch for retries after connector preparation. This path
  * never repeats the long encoder-start sequence or timing-dependent setup.
  */
-int gchd_detect_video_source(struct gchd *d)
+int gchd_probe_video_source(struct gchd *d)
 {
  u32 sum6665 = 0, sum6463 = 0, count6665 = 0, count6463 = 0;
  u32 value6665, value6463;
@@ -1249,7 +1249,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
  d->signal_present = (v == 6 || v == 7);
  if (v == 6) {
   d->input_width=720; d->input_height=480;
-  /* Preserve the 240p/480i decision made by gchd_detect_video_source(). */
+  /* Preserve the 240p/480i decision made by gchd_probe_video_source(). */
   d->input_fps_num=60; d->input_fps_den=1;
  }
  else if (v == 7) { d->input_width=720; d->input_height=576; d->input_interlaced=true; d->input_fps_num=50; d->input_fps_den=1; }
