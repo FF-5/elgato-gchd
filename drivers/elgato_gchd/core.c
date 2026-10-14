@@ -78,6 +78,9 @@ static void gchd_input_selection_enter(struct gchd *d)
  d->input = gchd_last_input <= 3 ? gchd_last_input : 0;
  mutex_unlock(&gchd_last_input_lock);
 
+ /* A new open starts from the common HDMI/default route. */
+ d->previous_input = 0;
+
  /*
   * The control value is already kept in sync by gchd_set_input(). Do not
   * call v4l2_ctrl_s_ctrl() here: open holds lifecycle_lock, and the control
@@ -971,6 +974,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  WRITE_ONCE(d->signal_present, false);
  gchd_ring_free(&d->ring);
  d->ts_partial_len = 0;
+ d->previous_input = d->input;
  d->input = i;
  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
  mutex_lock(&gchd_last_input_lock);
