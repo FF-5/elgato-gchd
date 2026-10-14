@@ -1430,12 +1430,24 @@ static int gchd_fop_release(struct file *file)
   }
 
   /*
-   * Closing the last V4L2 handle ends the capture session, not the hardware
-   * lifecycle. Keep firmware/common initialization alive until USB removal;
-   * the next open re-enters input selection without replaying boot/init.
+   * Closing the last V4L2 handle ends the capture session. Stop the hardware
+   * cleanly while USB is still present, then leave the registered device
+   * powered off until a real capture request arrives.
    */
-  if (d->hw_initialized)
-   gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
+  if (d->hw_initialized) {
+   int shutdown_r = gchd_hw_shutdown(d);
+
+   if (shutdown_r) {
+    dev_warn(&d->intf->dev,
+             "hardware shutdown on last close failed: %d; keeping initialized state\n",
+             shutdown_r);
+    gchd_set_lifecycle(d, GCHD_ERROR);
+   } else {
+    d->hw_initialized = false;
+    d->hw_init_failed = false;
+    gchd_set_lifecycle(d, GCHD_POWER_OFF);
+   }
+  }
 
   WRITE_ONCE(d->capture_active, false);
   WRITE_ONCE(d->start_pending, false);
@@ -1521,7 +1533,7 @@ static int gchd_probe(struct usb_interface *i,
   goto err;
  mutex_init(&d->lock);
  mutex_init(&d->lifecycle_lock);
- d->lifecycle_state = GCHD_OFFLINE;
+ d->lifecycle_state = GCHD_POWER_OFF;
  mutex_init(&d->users_lock);
  INIT_DELAYED_WORK(&d->detect_work, gchd_detection_worker);
  INIT_DELAYED_WORK(&d->mode_work, gchd_mode_workfn);
@@ -1549,9 +1561,9 @@ static int gchd_probe(struct usb_interface *i,
  }
 
  /*
-  * Hardware boot/init is deferred until the first V4L2 open, then persists
-  * across ordinary closes. Only the explicit device power-off path shuts it
-  * down; opening again resumes at INPUT_SELECTION.
+  * The USB interface starts in POWER_OFF. Registering the V4L2 node makes
+  * the connected device ONLINE, but does not initialize hardware: discovery
+  * tools routinely open the node without requesting capture.
   */
  usb_set_intfdata(i, d);
  r = gchd_v4l2_register(d);
@@ -1559,6 +1571,9 @@ static int gchd_probe(struct usb_interface *i,
   usb_set_intfdata(i, NULL);
   goto err;
  }
+ gchd_set_lifecycle(d, GCHD_ONLINE);
+ dev_info(&i->dev,
+          "GCHD lifecycle: USB present; V4L2 registered; hardware stays powered off until STREAMON\n");
  return 0;
 
 err:
@@ -1574,7 +1589,7 @@ static void gchd_disconnect(struct usb_interface *i)
   return;
  usb_set_intfdata(i, NULL);
  WRITE_ONCE(d->disconnected, true);
- WRITE_ONCE(d->lifecycle_state, GCHD_OFFLINE);
+ gchd_set_lifecycle(d, GCHD_OFFLINE);
  cancel_delayed_work_sync(&d->detect_work);
  cancel_delayed_work_sync(&d->mode_work);
  mutex_lock(&d->lifecycle_lock);
