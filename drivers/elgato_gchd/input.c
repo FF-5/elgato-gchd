@@ -1707,9 +1707,9 @@ int gchd_input_start(struct gchd *d)
 
  /*
   * The timing-detection pass in input configuration is authoritative for
-  * now.  Do not put the device into START when it only has fallback mode
-  * dimensions and no recognized signal.  A later change can replace this
-  * with asynchronous re-detection while keeping STREAMON pending.
+  * now. Do not put the device into START when it only has fallback mode
+  * dimensions and no recognized signal. The open-driven detector retries
+  * until a valid source is found, then starts capture automatically.
   */
  if (!d->signal_present) {
   dev_info(&d->intf->dev,
