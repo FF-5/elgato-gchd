@@ -498,16 +498,18 @@ static void gchd_detect_workfn(struct work_struct *work)
  if (d->input_configured && !READ_ONCE(d->signal_present)) {
   /*
    * Signal-loss notification can race with detector work. Invalidate the old
-   * timing and return to IDLE without resetting/reloading the device.
+   * timing and return to IDLE without resetting/reloading the device. Keep
+   * the configured marker until IDLE succeeds so a failed transition is
+   * retried before any new source probe.
    */
-  d->input_configured = false;
-  d->input_prepared = false;
   r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
   if (r) {
    dev_warn(&d->intf->dev,
             "redetection: transition to IDLE after signal loss failed: %d\n", r);
    goto retry;
   }
+  d->input_configured = false;
+  d->input_prepared = false;
  }
  if (!d->input_configured) {
   /*
