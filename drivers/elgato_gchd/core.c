@@ -41,6 +41,17 @@ struct gchd_mode {
  bool interlaced;
 };
 
+/* Modes supported by the capture encoder and exposed through V4L2. */
+static const struct gchd_mode gchd_modes[] = {
+ {1920, 1080, 60, 1, false},
+ {1920, 1080, 60, 1, true},
+ {1280, 720, 60, 1, false},
+ {720, 576, 50, 1, false},
+ {720, 576, 50, 1, true},
+ {720, 480, 60, 1, false},
+ {720, 480, 60, 1, true},
+};
+
 /* Input-selection state owns the HDMI default and remembered selection. */
 static DEFINE_MUTEX(gchd_last_input_lock);
 static unsigned int gchd_last_input;
