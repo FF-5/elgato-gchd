@@ -943,7 +943,6 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  mutex_lock(&gchd_last_input_lock);
  gchd_last_input = i;
  mutex_unlock(&gchd_last_input_lock);
- d->input_forced = true;
  d->mode_forced = false;
  /* encoder_started is deliberately preserved across connector changes. */
  d->last_video_jiffies = jiffies;
@@ -1494,7 +1493,6 @@ static int gchd_probe(struct usb_interface *i,
  mutex_lock(&gchd_last_input_lock);
  d->input = gchd_last_input <= 3 ? gchd_last_input : 0;
  mutex_unlock(&gchd_last_input_lock);
- d->input_forced = false;
  d->bitrate_forced = false;
  d->h264_level_forced = false;
  d->input_width = 0;
