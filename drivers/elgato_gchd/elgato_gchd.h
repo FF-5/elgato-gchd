@@ -566,8 +566,9 @@ enum gchd_state {
  GCHD_OFFLINE,
  GCHD_INITIALIZATION,
  GCHD_INPUT_SELECTION,
- GCHD_INPUT_DETECTION,
- GCHD_INPUT_CONFIGURATION,
+ GCHD_GENERAL_INPUT_SETUP,
+ GCHD_SOURCE_DETECTION,
+ GCHD_SOURCE_FORMAT_CONFIGURATION,
  GCHD_CAPTURE_START,
  GCHD_STREAMING,
  GCHD_CAPTURE_STOP,
@@ -656,6 +657,7 @@ int gchd_load_encoder_firmware(struct gchd *);
 int gchd_input_configure(struct gchd *);
 int gchd_input_start(struct gchd *);
 int gchd_input_configure_idle(struct gchd *);
+int gchd_prepare_input_detection(struct gchd *);
 int gchd_probe_video_source(struct gchd *);
 int gchd_input_read_analog_mode(struct gchd *, bool *);
 int gchd_input_switch_480i_to_240p(struct gchd *);
