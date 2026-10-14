@@ -46,22 +46,6 @@ static DEFINE_MUTEX(gchd_last_input_lock);
 static unsigned int gchd_last_input;
 
 /* GCHD_* tracks driver lifecycle; HW_* names device protocol states/commands. */
-/*
- * Enter INPUT_SELECTION only after boot/init has completed. This is the
- * single place that resolves the remembered input (HDMI on first use), then
- * hands control to the independent source-detection state.
- */
-static void gchd_input_selection_enter(struct gchd *d)
-{
- /* The remembered/default input is resolved by INPUT_SELECTION after init. */
- d->input = 0;
-
- gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
- WRITE_ONCE(d->detect_requested, true);
- gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
- schedule_delayed_work(&d->detect_work, 0);
-}
-
 static void gchd_set_lifecycle(struct gchd *d, enum gchd_state state)
 {
  enum gchd_state old = READ_ONCE(d->lifecycle_state);
@@ -72,15 +56,22 @@ static void gchd_set_lifecycle(struct gchd *d, enum gchd_state state)
  dev_dbg(&d->intf->dev, "lifecycle: %u -> %u\n", old, state);
 }
 
-static const struct gchd_mode gchd_modes[] = {
- {1920, 1080, 60, 1, false},
- {1920, 1080, 60, 1, true},
- {1280,  720, 60, 1, false},
- { 720,  576, 50, 1, false},
- { 720, 576, 50, 1, true},
- { 720,  480, 60, 1, false},
- { 720, 480, 60, 1, true},
-};
+/*
+ * Enter INPUT_SELECTION only after boot/init has completed. This is the
+ * single place that resolves the remembered input (HDMI on first use), then
+ * hands control to the independent source-detection state.
+ */
+static void gchd_input_selection_enter(struct gchd *d)
+{
+ mutex_lock(&gchd_last_input_lock);
+ d->input = gchd_last_input <= 3 ? gchd_last_input : 0;
+ mutex_unlock(&gchd_last_input_lock);
+
+ gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
+ WRITE_ONCE(d->detect_requested, true);
+ gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
+ schedule_delayed_work(&d->detect_work, 0);
+}
 
 static const struct gchd_mode *gchd_find_mode(u32 width, u32 height,
                                                 bool interlaced)
