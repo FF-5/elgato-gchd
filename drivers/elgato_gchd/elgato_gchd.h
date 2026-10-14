@@ -563,7 +563,9 @@ struct gchd_buffer {
 };
 /* GCHD_* tracks driver lifecycle; HW_* names device protocol states/commands. */
 enum gchd_state {
- GCHD_OFFLINE,
+ GCHD_OFFLINE,       /* USB device absent; V4L2 node is deregistered. */
+ GCHD_POWER_OFF,     /* USB present, hardware cleanly shut down. */
+ GCHD_ONLINE,        /* USB present and V4L2 device registered. */
  GCHD_INITIALIZATION,
  GCHD_INPUT_SELECTION,
  GCHD_GENERAL_INPUT_SETUP,
@@ -573,7 +575,6 @@ enum gchd_state {
  GCHD_STREAMING,
  GCHD_CAPTURE_STOP,
  GCHD_ERROR,
- GCHD_POWER_OFF,
 };
 
 enum gchd_family { GCHD_FAMILY_OLD, GCHD_FAMILY_HDNEW };
