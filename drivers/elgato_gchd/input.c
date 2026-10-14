@@ -867,15 +867,15 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
   if (r)
    return r;
   /*
-   * Traces with a valid analog signal select Composite with 0x4E:0x51=0x44.
-   * The observed 0x51=0xEC path is retained for the alternate/no-signal
-   * analog case; it is not assumed to be a universal S-Video selector.
+   * The analog selector depends on the transition path, not on whether the
+   * connector is Composite or S-video: direct HDMI -> analog uses 0x44;
+   * switching from Component/another analog connector uses 0xEC.
    */
-  if (d->input == 2) {
-   static const struct gchd_mail_cmd select_composite[] = {
+  if (d->previous_input == 0) {
+   static const struct gchd_mail_cmd select_analog[] = {
     GCHD_INPUT_SELECT_ANALOG,
    };
-   r = gchd_seq(d, select_composite, ARRAY_SIZE(select_composite));
+   r = gchd_seq(d, select_analog, ARRAY_SIZE(select_analog));
   } else {
    static const struct gchd_mail_cmd select_analog_alt[] = {
     GCHD_INPUT_SELECT_ANALOG_ALT,
