@@ -304,7 +304,7 @@ static void gchd_signal_check(struct gchd *d)
   v4l2_event_queue(&d->vdev, &ev);
   WRITE_ONCE(d->signal_present, false);
   /* RX must not issue control transfers or attempt to stop itself here. */
-  if (READ_ONCE(d->streaming) && READ_ONCE(d->detect_requested))
+  if (READ_ONCE(d->capture_active) && READ_ONCE(d->detect_requested))
    schedule_delayed_work(&d->detect_work, 0);
   pr_info("elgato_gchd: input %u signal lost; scheduling redetection\n",
           d->input);
@@ -525,6 +525,7 @@ static void gchd_detect_workfn(struct work_struct *work)
            d->input, d->input_width, d->input_height, d->input_fps_num,
            d->input_fps_den, d->input_interlaced);
 
+  gchd_set_lifecycle(d, GCHD_INPUT_CONFIGURATION);
   r = gchd_input_configure_idle(d);
   if (r) {
    if (r != -ENOLINK) {
@@ -552,10 +553,10 @@ static void gchd_detect_workfn(struct work_struct *work)
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
 
-  if (READ_ONCE(d->streaming)) {
+  if (!READ_ONCE(d->capture_active)) {
    /*
-    * Match the userspace architecture: keep an independent bulk-IN reader
-    * running while the device processes the START state transition.
+    * Capture starts automatically once a source is configured. V4L2
+    * STREAMON only controls delivery into queued buffers.
     */
    gchd_set_lifecycle(d, GCHD_CAPTURE_START);
    d->last_video_jiffies = jiffies;
@@ -580,14 +581,10 @@ static void gchd_detect_workfn(struct work_struct *work)
     schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
     goto out;
    }
+   WRITE_ONCE(d->capture_active, true);
    gchd_set_lifecycle(d, GCHD_STREAMING);
    if (d->input >= 2 && d->input_height == 480)
     schedule_delayed_work(&d->mode_work, msecs_to_jiffies(250));
-
-  } else {
-   /* Configured and ready; later STREAMON uses this known-good setup. */
-   WRITE_ONCE(d->detect_requested, false);
-   gchd_set_lifecycle(d, GCHD_INPUT_READINESS);
   }
  }
 
@@ -609,7 +606,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
- if (d->disconnected || !READ_ONCE(d->streaming) ||
+ if (d->disconnected || !READ_ONCE(d->capture_active) ||
      d->input < 2 || d->input_height != 480 ||
      !d->input_configured || !READ_ONCE(d->signal_present))
   goto out;
@@ -691,6 +688,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  goto reschedule;
 
 restart_failed:
+ WRITE_ONCE(d->capture_active, false);
  gchd_set_lifecycle(d, GCHD_ERROR);
  dev_warn(&d->intf->dev,
           "240p-to-480i reconfiguration failed: %d\n", r);
@@ -700,7 +698,7 @@ restart_failed:
  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
 
 reschedule:
- if (!d->disconnected && READ_ONCE(d->streaming))
+ if (!d->disconnected && READ_ONCE(d->capture_active))
   schedule_delayed_work(&d->mode_work, msecs_to_jiffies(250));
 out:
  mutex_unlock(&d->lifecycle_lock);
@@ -748,7 +746,7 @@ static void gchd_return_queued(struct gchd *d, enum vb2_buffer_state state)
 static int gchd_start(struct vb2_queue *q, unsigned int count)
 {
  struct gchd *d = vb2_get_drv_priv(q);
- int r, sr;
+ int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
  if (d->disconnected) {
@@ -756,108 +754,16 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   goto err;
  }
 
- /*
-  * STREAMON is the first point where the client actually needs capture.
-  * This prevents firmware loading during short-lived discovery opens.
-  */
- if (d->hw_init_failed) {
-  /* Failed initialization plus failed cleanup: recover before another try. */
-  sr = gchd_hw_shutdown(d);
-  if (sr) {
-   r = sr;
-   dev_err(&d->intf->dev,
-           "retrying cleanup after failed initialization failed: %d\n", sr);
-   goto err;
-  }
-  d->hw_initialized = false;
-  d->hw_init_failed = false;
- }
-
- if (!d->hw_initialized) {
-  gchd_set_lifecycle(d, GCHD_INITIALIZATION);
-  d->input_forced = true; /* preserve default HDMI or the last chosen input */
-  d->input_configured = false;
-  d->input_prepared = false;
-  d->encoder_started = false;
-  d->signal_present = false;
-  d->input_width = 0;
-  d->input_height = 0;
-  d->input_fps_num = 0;
-  d->input_fps_den = 0;
-
-  r = gchd_hw_init(d);
-  if (r) {
-   dev_err(&d->intf->dev, "hardware initialization on STREAMON failed: %d\n", r);
-   sr = gchd_hw_shutdown(d);
-   d->hw_initialized = (sr != 0);
-   d->hw_init_failed = (sr != 0);
-   if (sr)
-    dev_warn(&d->intf->dev,
-             "cleanup after failed STREAMON init failed: %d\n", sr);
-   goto err;
-  }
-  d->hw_initialized = true;
-  d->hw_init_failed = false;
-  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
-  dev_info(&d->intf->dev,
-           "capture requested: hardware initialized, detecting input %u\n",
-           d->input);
- }
-
- /*
-  * Keep STREAMON non-blocking when setup is invalidated by S_FMT or when
-  * timing is absent. The worker performs detection/configuration while the
-  * stream request remains pending.
-  */
+ /* Open owns hardware initialization; STREAMON enables V4L2 buffer delivery. */
  WRITE_ONCE(d->streaming, true);
- WRITE_ONCE(d->detect_requested, true);
- if (!d->input_configured || !READ_ONCE(d->signal_present)) {
+ if (!READ_ONCE(d->capture_active)) {
+  WRITE_ONCE(d->detect_requested, true);
   gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
   schedule_delayed_work(&d->detect_work, 0);
-  mutex_unlock(&d->lifecycle_lock);
-  return 0;
  }
-
- /*
-  * Start bulk-IN before issuing START. The receiver must be alive during
-  * the device's state-change handshake, not only after it has completed.
-  */
- gchd_set_lifecycle(d, GCHD_CAPTURE_START);
- d->last_video_jiffies = jiffies;
- WRITE_ONCE(d->start_pending, true);
- d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
- if (IS_ERR(d->rx_thread)) {
-  r = PTR_ERR(d->rx_thread);
-  d->rx_thread = NULL;
-  WRITE_ONCE(d->start_pending, false);
-  goto err_streaming;
- }
-
- r = gchd_input_start(d);
- WRITE_ONCE(d->start_pending, false);
- if (r == -ENOLINK) {
-  kthread_stop(d->rx_thread);
-  d->rx_thread = NULL;
-  schedule_delayed_work(&d->detect_work, 0);
-  mutex_unlock(&d->lifecycle_lock);
-  return 0;
- }
- if (r) {
-  kthread_stop(d->rx_thread);
-  d->rx_thread = NULL;
-  /* Don't repeat a failed START from the detector's short retry loop. */
-  WRITE_ONCE(d->detect_requested, false);
-  goto err_streaming;
- }
- gchd_set_lifecycle(d, GCHD_STREAMING);
- if (d->input >= 2 && d->input_height == 480)
-  schedule_delayed_work(&d->mode_work, msecs_to_jiffies(250));
-
  mutex_unlock(&d->lifecycle_lock);
  return 0;
 
-err_streaming:
- WRITE_ONCE(d->streaming, false);
 err:
  mutex_unlock(&d->lifecycle_lock);
  gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
@@ -867,56 +773,10 @@ err:
 static void gchd_stop(struct vb2_queue *q)
 {
  struct gchd *d = vb2_get_drv_priv(q);
- struct gchd_buffer *b, *tmp;
- unsigned long flags;
- int r;
 
- WRITE_ONCE(d->detect_requested, false);
+ /* STREAMOFF stops buffer delivery, not hardware capture or source monitoring. */
  WRITE_ONCE(d->streaming, false);
- cancel_delayed_work_sync(&d->detect_work);
- cancel_delayed_work_sync(&d->mode_work);
- mutex_lock(&d->lifecycle_lock);
- gchd_set_lifecycle(d, GCHD_CAPTURE_STOP);
- if (d->rx_thread) {
-  kthread_stop(d->rx_thread);
-  d->rx_thread = NULL;
- }
- if (d->disconnected) {
-  r = -ENODEV;
- } else {
-  r = gchd_stream_stop(d);
- }
- if (r && !d->disconnected) {
-  dev_err(&d->intf->dev,
-          "userspace-compatible stream stop failed: %d; disabling encoder as fallback\n",
-          r);
-  gchd_input_stop(d);
- }
- gchd_ring_free(&d->ring);
- d->ts_partial_len = 0;
-
- spin_lock_irqsave(&d->qlock, flags);
- list_for_each_entry_safe(b, tmp, &d->queued, list) {
-  list_del(&b->list);
-  vb2_buffer_done(&b->vb.vb2_buf, VB2_BUF_STATE_ERROR);
- }
- spin_unlock_irqrestore(&d->qlock, flags);
-
- /*
-  * STREAMOFF stops capture, not source monitoring. If no source has been
-  * found, keep the asynchronous detector alive so a later connection works
-  * without requiring another open/input switch.
-  */
- if (!d->disconnected && !READ_ONCE(d->signal_present)) {
-  WRITE_ONCE(d->detect_requested, true);
-  gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
-  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
- } else if (READ_ONCE(d->hw_initialized)) {
-  gchd_set_lifecycle(d, GCHD_INPUT_READINESS);
- } else {
-  gchd_set_lifecycle(d, GCHD_OFFLINE);
- }
- mutex_unlock(&d->lifecycle_lock);
+ gchd_return_queued(d, VB2_BUF_STATE_ERROR);
 }
 
 static const struct vb2_ops gchd_vb2_ops={
@@ -1002,6 +862,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
  }
+ WRITE_ONCE(d->capture_active, false);
  if (READ_ONCE(d->hw_initialized)) {
   r = gchd_stream_stop(d);
   if (r) {
@@ -1387,28 +1248,54 @@ static int gchd_fop_open(struct file *file)
  }
 
  /*
-  * V4L2 clients often open/close briefly to enumerate inputs and controls.
-  * Opening the node must not load firmware. Defer HW init until STREAMON.
+  * The first V4L2 open owns the hardware lifecycle. Initialize, select the
+  * remembered input, and let detection start capture when a source appears.
+  * Additional opens share the active hardware.
   */
  if (d->open_count == 0) {
-  /* A previous last-close teardown may have failed; recover before reuse. */
   if (d->hw_initialized) {
    r = gchd_hw_shutdown(d);
    if (r) {
     dev_err(&d->intf->dev,
-            "retrying previous hardware shutdown before open failed: %d\n", r);
+            "retrying previous hardware shutdown before open failed: %d\\n", r);
     goto out;
    }
    d->hw_initialized = false;
    d->hw_init_failed = false;
   }
+
+  gchd_set_lifecycle(d, GCHD_INITIALIZATION);
+  d->input_forced = true;
+  WRITE_ONCE(d->capture_active, false);
+  WRITE_ONCE(d->capture_active, false);
   d->input_configured = false;
   d->input_prepared = false;
+  d->encoder_started = false;
   d->signal_present = false;
   d->input_width = 0;
   d->input_height = 0;
   d->input_fps_num = 0;
   d->input_fps_den = 0;
+
+  r = gchd_hw_init(d);
+  if (r) {
+   int sr = gchd_hw_shutdown(d);
+
+   d->hw_initialized = (sr != 0);
+   d->hw_init_failed = (sr != 0);
+   gchd_set_lifecycle(d, GCHD_ERROR);
+   if (sr)
+    dev_warn(&d->intf->dev,
+             "cleanup after failed open initialization failed: %d\\n", sr);
+   goto out;
+  }
+
+  d->hw_initialized = true;
+  d->hw_init_failed = false;
+  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
+  WRITE_ONCE(d->detect_requested, true);
+  gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
+  schedule_delayed_work(&d->detect_work, 0);
  }
  d->open_count++;
 
@@ -1450,6 +1337,7 @@ static int gchd_fop_release(struct file *file)
   }
 
   if (d->hw_initialized) {
+   gchd_set_lifecycle(d, GCHD_CAPTURE_STOP);
    /*
     * Do not call gchd_input_stop() here: userspace uninitDevice() owns
     * encoder/transcoder teardown and must observe the original HW state.
@@ -1462,6 +1350,7 @@ static int gchd_fop_release(struct file *file)
     /* Keep the flag set so the next open retries shutdown before HW init. */
    } else {
     dev_info(&d->intf->dev, "V4L2 closed: hardware safely shut down\n");
+    gchd_set_lifecycle(d, GCHD_POWER_OFF);
     d->hw_initialized = false;
     d->hw_init_failed = false;
    }
@@ -1600,11 +1489,12 @@ static void gchd_disconnect(struct usb_interface *i)
   return;
  usb_set_intfdata(i, NULL);
  WRITE_ONCE(d->disconnected, true);
- WRITE_ONCE(d->lifecycle_state, GCHD_POWER_OFF);
+ WRITE_ONCE(d->lifecycle_state, GCHD_OFFLINE);
  cancel_delayed_work_sync(&d->detect_work);
  cancel_delayed_work_sync(&d->mode_work);
  mutex_lock(&d->lifecycle_lock);
  WRITE_ONCE(d->streaming, false);
+ WRITE_ONCE(d->capture_active, false);
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
