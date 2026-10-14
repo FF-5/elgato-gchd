@@ -486,6 +486,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   d->ts_partial_len = 0;
   r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
   if (r) {
+   WRITE_ONCE(d->signal_present, false);
    dev_warn(&d->intf->dev,
             "redetection: transition to IDLE failed: %d\\n", r);
    goto retry;
