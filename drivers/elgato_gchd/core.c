@@ -1354,54 +1354,55 @@ static int gchd_fop_open(struct file *file)
   */
  if (d->open_count == 0) {
   /*
-   * Boot/init belongs to the OFFLINE -> INITIALIZATION transition only.
-   * A previous userspace close leaves the device initialized in IDLE, so
-   * reopening must resume at INPUT_SELECTION without downloading firmware
-   * or replaying the common initialization sequence.
+   * Every first open starts a fresh hardware lifecycle. The last close
+   * performs full shutdown, so firmware and common initialization run here
+   * rather than during USB probe or only on the first-ever open.
    */
-  if (!d->hw_initialized) {
-   gchd_set_lifecycle(d, GCHD_INITIALIZATION);
-   WRITE_ONCE(d->capture_active, false);
-   d->input_configured = false;
-   d->input_routed = false;
-   d->input_detect_prepared = false;
-   d->input_prepared = false;
-   d->encoder_started = false;
-   d->signal_present = false;
-   d->input_width = 0;
-   d->input_height = 0;
-   d->input_fps_num = 0;
-   d->input_fps_den = 0;
-
-   r = gchd_hw_init(d);
+  if (d->hw_initialized) {
+   /*
+    * A prior shutdown failure leaves the hardware state uncertain. Retry
+    * shutdown before starting initialization instead of running init on top
+    * of a partially active processor.
+    */
+   r = gchd_hw_shutdown(d);
    if (r) {
-    int sr = gchd_hw_shutdown(d);
-
-    d->hw_initialized = (sr != 0);
-    d->hw_init_failed = (sr != 0);
+    d->hw_init_failed = true;
     gchd_set_lifecycle(d, GCHD_ERROR);
-    if (sr)
-     dev_warn(&d->intf->dev,
-              "cleanup after failed open initialization failed: %d\n", sr);
+    dev_err(&d->intf->dev,
+            "shutdown recovery before open initialization failed: %d\n", r);
     goto out;
    }
-
-   d->hw_initialized = true;
-   d->hw_init_failed = false;
-  } else {
-   /* Runtime capture state is per-open; initialized firmware is persistent. */
-   WRITE_ONCE(d->capture_active, false);
-   d->input_configured = false;
-   d->input_routed = false;
-   d->input_detect_prepared = false;
-   d->input_prepared = false;
-   d->signal_present = false;
-   d->input_width = 0;
-   d->input_height = 0;
-   d->input_fps_num = 0;
-   d->input_fps_den = 0;
+   d->hw_initialized = false;
   }
 
+  gchd_set_lifecycle(d, GCHD_INITIALIZATION);
+  WRITE_ONCE(d->capture_active, false);
+  d->input_configured = false;
+  d->input_routed = false;
+  d->input_detect_prepared = false;
+  d->input_prepared = false;
+  d->encoder_started = false;
+  d->signal_present = false;
+  d->input_width = 0;
+  d->input_height = 0;
+  d->input_fps_num = 0;
+  d->input_fps_den = 0;
+
+  r = gchd_hw_init(d);
+  if (r) {
+   int sr = gchd_hw_shutdown(d);
+
+   d->hw_initialized = (sr != 0);
+   d->hw_init_failed = (sr != 0);
+   gchd_set_lifecycle(d, GCHD_ERROR);
+   if (sr)
+    dev_warn(&d->intf->dev,
+             "cleanup after failed open initialization failed: %d\n", sr);
+   goto out;
+  }
+
+  d->hw_initialized = true;
+  d->hw_init_failed = false;
   gchd_input_selection_enter(d);
   restore_input_control = true;
  }
@@ -1464,35 +1465,36 @@ static int gchd_fop_release(struct file *file)
   }
 
   /*
-   * Closing the V4L2 node is not a device power-off transition. Stop the
-   * active transport and return to IDLE, but retain the initialized
-   * processor/encoder firmware so the next open resumes at INPUT_SELECTION.
+   * Last close is the OFFLINE transition: stop transport if necessary, then
+   * run full hardware shutdown so the next open replays firmware and common
+   * initialization from a known power-off state.
    */
-  if (d->hw_initialized && READ_ONCE(d->capture_active)) {
+  if (d->hw_initialized) {
    gchd_set_lifecycle(d, GCHD_CAPTURE_STOP);
-   sr = gchd_stream_stop(d);
-   if (!sr)
-    sr = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
+   sr = gchd_hw_shutdown(d);
    if (sr) {
     dev_warn(&d->intf->dev,
-             "capture stop on last close failed: %d; keeping hardware initialized\n",
-             sr);
+             "full hardware shutdown on last close failed: %d\n", sr);
     gchd_set_lifecycle(d, GCHD_ERROR);
     if (!r)
      r = sr;
+   } else {
+    d->hw_initialized = false;
+    d->hw_init_failed = false;
+    gchd_set_lifecycle(d, GCHD_OFFLINE);
    }
   }
 
   WRITE_ONCE(d->capture_active, false);
+  WRITE_ONCE(d->start_pending, false);
   d->input_configured = false;
   d->input_routed = false;
   d->input_detect_prepared = false;
   d->input_prepared = false;
+  d->encoder_started = false;
   d->signal_present = false;
   gchd_ring_free(&d->ring);
   d->ts_partial_len = 0;
-  if (d->hw_initialized && !sr)
-   gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
   mutex_unlock(&d->lifecycle_lock);
  }
  mutex_unlock(&d->users_lock);
