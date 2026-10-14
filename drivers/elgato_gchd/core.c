@@ -62,6 +62,15 @@ err:
  gchd_return_queued(d, VB2_BUF_STATE_QUEUED);
  return r;
 }
+
+static void gchd_stop(struct vb2_queue *q)
+{
+ struct gchd *d = vb2_get_drv_priv(q);
+
+ /* STREAMOFF stops buffer delivery, not hardware capture or source monitoring. */
+ WRITE_ONCE(d->streaming, false);
+ gchd_return_queued(d, VB2_BUF_STATE_ERROR);
+}
 static int gchd_fop_open(struct file *file)
 {
  struct gchd *d = video_drvdata(file);
