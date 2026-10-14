@@ -614,7 +614,6 @@ struct gchd {
  bool input_configured;
  bool input_routed;
  bool input_detect_prepared;
- bool input_source_probe_started;
  bool encoder_started;
  bool input_prepared;
  bool mode_forced;
