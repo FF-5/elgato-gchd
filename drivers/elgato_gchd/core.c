@@ -484,14 +484,14 @@ static void gchd_detect_workfn(struct work_struct *work)
    */
   gchd_ring_free(&d->ring);
   d->ts_partial_len = 0;
-  d->input_configured = false;
-  d->input_prepared = false;
   r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
   if (r) {
    dev_warn(&d->intf->dev,
             "redetection: transition to IDLE failed: %d\\n", r);
    goto retry;
   }
+  d->input_configured = false;
+  d->input_prepared = false;
  }
 
  if (d->input_configured && !READ_ONCE(d->signal_present)) {
