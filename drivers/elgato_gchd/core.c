@@ -71,6 +71,7 @@ static void gchd_stop(struct vb2_queue *q)
  WRITE_ONCE(d->streaming, false);
  gchd_return_queued(d, VB2_BUF_STATE_ERROR);
 }
+
 static int gchd_fop_open(struct file *file)
 {
  struct gchd *d = video_drvdata(file);
