@@ -914,6 +914,58 @@ static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
  * One measurement batch for retries after connector preparation. This path
  * never repeats the long encoder-start sequence or timing-dependent setup.
  */
+/*
+ * Put the selected analog decoder on its documented route before polling it.
+ * Detection runs before encoder configuration by design, so it cannot rely
+ * on gchd_input_finalize() having run yet.
+ */
+static int gchd_prepare_analog_detection(struct gchd *d)
+{
+ int r;
+ u8 decoder_mode = d->input == 3 ? 0xdc : 0xc9;
+
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
+                     (u8[]){0x02, decoder_mode}, 2);
+ if (r) return r;
+ if (d->input == 3) {
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
+                      (u8[]){0x14, 0xd2}, 2);
+  if (r) return r;
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
+                      (u8[]){0x28, 0x88}, 2);
+  if (r) return r;
+ }
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
+                     (u8[]){0x06, 0x08}, 2);
+ if (r) return r;
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
+                     (u8[]){0x03, 0x28}, 2);
+ if (r) return r;
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
+                     (u8[]){0xb3, 0x33}, 2);
+ if (r) return r;
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
+                     (u8[]){0x00, 0xce}, 2);
+ if (r) return r;
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
+                     (u8[]){0x27, 0x33}, 2);
+ if (r) return r;
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
+                     (u8[]){0x00, 0xcc}, 2);
+ if (r) return r;
+
+ if (d->previous_input == 0)
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
+                      (u8[]){0x51, 0x44}, 2);
+ else
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
+                      (u8[]){0x51, 0xec}, 2);
+ if (r) return r;
+
+ d->input_detect_prepared = true;
+ return 0;
+}
+
 int gchd_probe_video_source(struct gchd *d)
 {
  u32 sum6665 = 0, sum6463 = 0, count6665 = 0, count6463 = 0;
@@ -985,6 +1037,11 @@ int gchd_probe_video_source(struct gchd *d)
   d->input_fps_den=1;
  } else {
   u8 v;
+
+  if (!d->input_detect_prepared) {
+   r = gchd_prepare_analog_detection(d);
+   if (r) return r;
+  }
 
   /*
    * Composite and S-video share the documented no-signal keep-alive loop.
