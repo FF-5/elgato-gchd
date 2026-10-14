@@ -489,7 +489,7 @@ static void gchd_detect_workfn(struct work_struct *work)
 
  if (d->input_configured && !READ_ONCE(d->signal_present)) {
   /*
-   * STREAMOFF can race with signal-loss notification. Invalidate the old
+   * Signal-loss notification can race with detector work. Invalidate the old
    * timing and return to IDLE without resetting/reloading the device.
    */
   d->input_configured = false;
@@ -910,8 +910,8 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->input_interlaced = false;
 
  /*
-  * Before first STREAMON, only remember the selection; hardware remains
-  * untouched until capture is requested.
+  * Before first open, only remember the selection; hardware remains
+  * untouched until the V4L2 client opens the device.
   */
  if (!READ_ONCE(d->hw_initialized)) {
   dev_info(&d->intf->dev,
