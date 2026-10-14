@@ -842,7 +842,45 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   goto err;
  }
 
- /* Open owns hardware initialization; STREAMON enables V4L2 buffer delivery. */
+ /*
+  * A file open is not proof that an application intends to capture:
+  * udev's v4l_id and desktop media services open nodes to inspect them.
+  * Defer all device boot/init and state-machine activity until STREAMON,
+  * when a client has actually requested capture buffers to be streamed.
+  */
+ if (!READ_ONCE(d->hw_initialized)) {
+  gchd_set_lifecycle(d, GCHD_INITIALIZATION);
+  WRITE_ONCE(d->capture_active, false);
+  d->input_configured = false;
+  d->input_routed = false;
+  d->input_detect_prepared = false;
+  d->input_prepared = false;
+  d->encoder_started = false;
+  d->signal_present = false;
+  d->input_width = 0;
+  d->input_height = 0;
+  d->input_fps_num = 0;
+  d->input_fps_den = 0;
+
+  dev_info(&d->intf->dev,
+           "GCHD lifecycle: starting hardware boot/init from V4L2 STREAMON\n");
+  r = gchd_hw_init(d);
+  if (r) {
+   d->hw_initialized = false;
+   d->hw_init_failed = true;
+   gchd_set_lifecycle(d, GCHD_ERROR);
+   goto err;
+  }
+
+  d->hw_initialized = true;
+  d->hw_init_failed = false;
+ }
+
+ /* First actual capture request begins input selection and source detection. */
+ if (!READ_ONCE(d->capture_active) &&
+     !READ_ONCE(d->detect_requested)) {
+  gchd_input_selection_enter(d);
+ }
  WRITE_ONCE(d->streaming, true);
  if (!READ_ONCE(d->capture_active)) {
   WRITE_ONCE(d->detect_requested, true);
@@ -1327,7 +1365,6 @@ static const struct v4l2_ctrl_ops gchd_ctrl_ops = { .s_ctrl = gchd_ctrl };
 static int gchd_fop_open(struct file *file)
 {
  struct gchd *d = video_drvdata(file);
- bool restore_input_control = false;
  int r = 0;
 
  /* Protect the embedded video_device/driver state against unplug races. */
@@ -1341,97 +1378,22 @@ static int gchd_fop_open(struct file *file)
  }
 
  dev_info(&d->intf->dev,
-          "GCHD lifecycle: V4L2 open requested by pid=%d comm=%s\\n",
+          "GCHD lifecycle: V4L2 open requested by pid=%d comm=%s\n",
           task_pid_nr(current), current->comm);
+
  mutex_lock(&d->users_lock);
- mutex_lock(&d->lifecycle_lock);
  if (d->disconnected) {
   r = -ENODEV;
-  goto out;
- }
-
- /*
-  * The first V4L2 open owns the hardware lifecycle. Initialize, select the
-  * remembered input, and let detection start capture when a source appears.
-  * Additional opens share the active hardware.
-  */
- if (d->open_count == 0) {
+ } else {
   /*
-   * Boot/init belongs to the OFFLINE -> INITIALIZATION transition and runs
-   * once per USB connection. Closing the V4L2 node does not power the device
-   * down, so a later open must not reload firmware or replay common init.
+   * Opening the node only grants access to its V4L2 metadata and controls.
+   * It must not boot hardware or start input detection: udev/v4l_id and
+   * desktop media services routinely open nodes just to identify them.
+   * The first STREAMON performs the OFFLINE -> INITIALIZATION transition.
    */
-  if (!d->hw_initialized) {
-   gchd_set_lifecycle(d, GCHD_INITIALIZATION);
-   WRITE_ONCE(d->capture_active, false);
-   d->input_configured = false;
-   d->input_routed = false;
-   d->input_detect_prepared = false;
-   d->input_prepared = false;
-   d->encoder_started = false;
-   d->signal_present = false;
-   d->input_width = 0;
-   d->input_height = 0;
-   d->input_fps_num = 0;
-   d->input_fps_den = 0;
-
-   dev_info(&d->intf->dev,
-            "GCHD lifecycle: starting hardware boot/init from V4L2 open\\n");
-   r = gchd_hw_init(d);
-   if (r) {
-    /* Do not issue shutdown/recovery commands from the boot/init path. */
-    d->hw_initialized = false;
-    d->hw_init_failed = true;
-    gchd_set_lifecycle(d, GCHD_ERROR);
-    goto out;
-   }
-
-   d->hw_initialized = true;
-   d->hw_init_failed = false;
-  } else {
-   /*
-    * The hardware remains initialized across V4L2 close/open cycles.
-    * Reset per-session capture state only; do not restart boot/init.
-    */
-   WRITE_ONCE(d->capture_active, false);
-   d->input_configured = false;
-   d->input_routed = false;
-   d->input_detect_prepared = false;
-   d->input_prepared = false;
-   d->encoder_started = false;
-   d->signal_present = false;
-   d->input_width = 0;
-   d->input_height = 0;
-   d->input_fps_num = 0;
-   d->input_fps_den = 0;
-  }
-
-  gchd_input_selection_enter(d);
-  restore_input_control = true;
+  d->open_count++;
  }
- d->open_count++;
-
-out:
- mutex_unlock(&d->lifecycle_lock);
  mutex_unlock(&d->users_lock);
-
- /*
-  * Synchronize the menu after dropping lifecycle_lock. The control callback
-  * routes through gchd_set_input(), so invoking it while holding that mutex
-  * would recursively acquire lifecycle_lock and deadlock.
-  */
- if (!r && restore_input_control) {
-  struct v4l2_ctrl *ctrl = v4l2_ctrl_find(&d->ctrls,
-                                          V4L2_CID_GCHD_INPUT_SOURCE);
-
-  if (ctrl && ctrl->val != READ_ONCE(d->input)) {
-   int cr = v4l2_ctrl_s_ctrl(ctrl, READ_ONCE(d->input));
-
-   if (cr)
-    dev_warn(&d->intf->dev,
-             "could not synchronize input-source control: %d\n", cr);
-  }
- }
 
  if (r && vb2_fops.release)
   vb2_fops.release(file);
