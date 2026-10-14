@@ -470,7 +470,7 @@ static void gchd_detect_workfn(struct work_struct *work)
     * device may still be in START.
     */
    dev_warn(&d->intf->dev,
-            "redetection: stream stop failed: %d; retrying later\\n", r);
+            "redetection: stream stop failed: %d; retrying later\n", r);
    goto retry;
   }
   WRITE_ONCE(d->capture_active, false);
@@ -488,7 +488,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   if (r) {
    WRITE_ONCE(d->signal_present, false);
    dev_warn(&d->intf->dev,
-            "redetection: transition to IDLE failed: %d\\n", r);
+            "redetection: transition to IDLE failed: %d\n", r);
    goto retry;
   }
   d->input_configured = false;
@@ -598,7 +598,7 @@ static void gchd_detect_workfn(struct work_struct *work)
     if (idle_error) {
      gchd_set_lifecycle(d, GCHD_ERROR);
      dev_err(&d->intf->dev,
-             "capture start failed: %d; recovery to IDLE failed: %d\\n",
+             "capture start failed: %d; recovery to IDLE failed: %d\n",
              start_error, idle_error);
      goto out;
     }
@@ -608,7 +608,7 @@ static void gchd_detect_workfn(struct work_struct *work)
     WRITE_ONCE(d->signal_present, false);
     gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
     dev_warn(&d->intf->dev,
-             "capture start failed: %d; recovered to IDLE, retrying detection\\n",
+             "capture start failed: %d; recovered to IDLE, retrying detection\n",
              start_error);
     /* Avoid hammering START if the state transition timed out. */
     schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
@@ -899,7 +899,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  if (READ_ONCE(d->hw_initialized)) {
   r = gchd_stream_stop(d);
   if (r) {
-   dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\\n", r);
+   dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\n", r);
    WRITE_ONCE(d->streaming, false);
    WRITE_ONCE(d->detect_requested, true);
    gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
@@ -917,7 +917,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
   if (r) {
    dev_err(&d->intf->dev,
-           "input switch: transition to IDLE failed: %d\\n", r);
+           "input switch: transition to IDLE failed: %d\n", r);
    WRITE_ONCE(d->signal_present, false);
    WRITE_ONCE(d->streaming, false);
    WRITE_ONCE(d->detect_requested, true);
