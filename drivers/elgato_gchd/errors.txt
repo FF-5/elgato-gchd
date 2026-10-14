@@ -1,168 +1,201 @@
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ dmesg
-[ 8374.030538] usb 2-1: new high-speed USB device number 8 using ehci-pci
-[ 8374.459685] usb 2-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
-[ 8374.459691] usb 2-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
-[ 8374.459692] usb 2-1: Product: GameCapture HD
-[ 8374.459693] usb 2-1: Manufacturer: Elgato
-[ 8374.459694] usb 2-1: SerialNumber: 04107F1267
-[ 8393.492762] elgato_gchd 2-1:1.0: GCHD lifecycle: USB probe; registering V4L2 only\n
-[ 8393.522680] elgato_gchd 2-1:1.0: GCHD lifecycle: USB present; V4L2 registered; hardware stays powered off until STREAMON
-[ 8393.522771] usbcore: registered new interface driver elgato_gchd
-[ 8393.540691] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=7881 comm=v4l_id
-[ 8393.542555] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1369 comm=wireplumber
-[ 8393.542796] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1369 comm=wireplumber
-[ 8393.543495] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
-[ 8393.543505] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
-[ 8393.543805] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
-[ 8393.543830] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
-[ 8393.543835] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
-[ 8393.543840] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
-[ 8393.544657] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
-[ 8393.544683] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
-[ 8408.025558] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=7889 comm=guvcview
-[ 8408.026055] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=7889 comm=guvcview
-[ 8408.307831] elgato_gchd 2-1:1.0: GCHD lifecycle: starting hardware boot/init from V4L2 STREAMON
-[ 8408.358573] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8408.361381] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8408.365427] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8408.368848] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8408.372428] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8408.376465] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8408.380415] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8408.383960] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8408.388340] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8408.394650] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8408.398921] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=4016 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8408.473493] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
-[ 8408.474807] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x01
-[ 8409.213673] elgato_gchd 2-1:1.0: transcoder defaults loaded
-[ 8409.216132] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 00 00 00
-[ 8409.217899] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x04
-[ 8409.223590] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.226496] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.230935] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.235191] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.239178] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.242523] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.246164] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.249734] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.253565] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.257396] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.261084] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.264648] elgato_gchd 2-1:1.0: firmware chunk offset=360448 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.268563] elgato_gchd 2-1:1.0: firmware chunk offset=393216 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.272205] elgato_gchd 2-1:1.0: firmware chunk offset=425984 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.275726] elgato_gchd 2-1:1.0: firmware chunk offset=458752 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.279754] elgato_gchd 2-1:1.0: firmware chunk offset=491520 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.283639] elgato_gchd 2-1:1.0: firmware chunk offset=524288 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.287299] elgato_gchd 2-1:1.0: firmware chunk offset=557056 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.291137] elgato_gchd 2-1:1.0: firmware chunk offset=589824 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.294856] elgato_gchd 2-1:1.0: firmware chunk offset=622592 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.298383] elgato_gchd 2-1:1.0: firmware chunk offset=655360 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.302088] elgato_gchd 2-1:1.0: firmware chunk offset=688128 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.305484] elgato_gchd 2-1:1.0: firmware chunk offset=720896 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.309353] elgato_gchd 2-1:1.0: firmware chunk offset=753664 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.313025] elgato_gchd 2-1:1.0: firmware chunk offset=786432 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.316893] elgato_gchd 2-1:1.0: firmware chunk offset=819200 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.320742] elgato_gchd 2-1:1.0: firmware chunk offset=851968 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.324733] elgato_gchd 2-1:1.0: firmware chunk offset=884736 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.328962] elgato_gchd 2-1:1.0: firmware chunk offset=917504 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.334284] elgato_gchd 2-1:1.0: firmware chunk offset=950272 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.337022] elgato_gchd 2-1:1.0: firmware chunk offset=983040 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.341653] elgato_gchd 2-1:1.0: firmware chunk offset=1015808 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.345527] elgato_gchd 2-1:1.0: firmware chunk offset=1048576 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.349912] elgato_gchd 2-1:1.0: firmware chunk offset=1081344 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.353493] elgato_gchd 2-1:1.0: firmware chunk offset=1114112 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.357747] elgato_gchd 2-1:1.0: firmware chunk offset=1146880 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.361518] elgato_gchd 2-1:1.0: firmware chunk offset=1179648 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.366524] elgato_gchd 2-1:1.0: firmware chunk offset=1212416 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.371142] elgato_gchd 2-1:1.0: firmware chunk offset=1245184 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.374903] elgato_gchd 2-1:1.0: firmware chunk offset=1277952 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.379424] elgato_gchd 2-1:1.0: firmware chunk offset=1310720 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.383364] elgato_gchd 2-1:1.0: firmware chunk offset=1343488 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.387472] elgato_gchd 2-1:1.0: firmware chunk offset=1376256 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.391401] elgato_gchd 2-1:1.0: firmware chunk offset=1409024 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.395186] elgato_gchd 2-1:1.0: firmware chunk offset=1441792 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.399171] elgato_gchd 2-1:1.0: firmware chunk offset=1474560 size=26224 OUT ep 0x02 maxpacket=512 speed=3 alt=0
-[ 8409.446499] elgato_gchd 2-1:1.0: device idle, processor state 0x27f97b
-[ 8409.633823] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
-[ 8409.633838] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
-[ 8410.081363] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
-[ 8410.081385] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
-[ 8410.539209] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
-[ 8410.539234] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
-[ 8410.983585] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
-[ 8410.983607] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
-[ 8411.478401] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
-[ 8411.478423] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
-[ 8411.916098] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
-[ 8411.916108] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
-[ 8412.350965] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
-[ 8412.350980] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
-[ 8412.428797] elgato_gchd 2-1:1.0: input switch requested: old=0 new=2 hw_initialized=1 streaming=1
-[ 8412.432365] elgato_gchd 2-1:1.0: input selected: input=2; detection scheduled
-[ 8413.028895] elgato_gchd 2-1:1.0: gchd-diag detect composite: raw_status=0x16 masked_mode=0x6
-[ 8413.054448] elgato_gchd 2-1:1.0: analog format initial status=0x66; starting in 480i
-[ 8413.054454] elgato_gchd 2-1:1.0: gchd-diag detected input=2 mode=720x480 fps=60/1 interlaced=1 signal_present=1
-[ 8413.054456] elgato_gchd 2-1:1.0: signal detected: input=2 mode=720x480 fps=60/1 interlaced=1
-[ 8413.054458] elgato_gchd 2-1:1.0: capture setup: input=2 mode=720x480 fps=60/1 interlaced=1
-[ 8419.376506] elgato_gchd 2-1:1.0: capture setup: encoder start completed
-[ 8419.379069] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
-[ 8434.783715] elgato_gchd 2-1:1.0: capture setup: input configuration completed
-[ 8434.837622] elgato_gchd 2-1:1.0: capture setup: transcoder final configuration completed
-[ 8435.098326] elgato_gchd 2-1:1.0: capture setup: transcoder setup completed
-[ 8435.100869] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
-[ 8435.103382] elgato_gchd 2-1:1.0: capture setup: state after final SCMD_INIT=0x0001
-[ 8435.103917] elgato_gchd 2-1:1.0: gchd-diag issuing START: input=2 mode=720x480 fps=60/1 interlaced=1
-[ 8435.106544] elgato_gchd 2-1:1.0: bulk-IN reader starting: ep=0x81 endpoint=present maxpacket=512 speed=3 alt=0 start_pending=1
-[ 8435.113768] elgato_gchd 2-1:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x030e (r=0) completion=0x011e (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x030e
-[ 8435.116491] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 02
-[ 8435.118021] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
-[ 8435.129490] elgato_gchd 2-1:1.0: START poll=0 state=0x0001 completion(0900:0074)=0x011e clear_index(0900:01b0)=0x0000 ack=1
-[ 8435.148617] elgato_gchd 2-1:1.0: START poll=0 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.156974] elgato_gchd 2-1:1.0: START poll=1 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.165558] elgato_gchd 2-1:1.0: START poll=2 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.173857] elgato_gchd 2-1:1.0: START poll=3 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.182158] elgato_gchd 2-1:1.0: START poll=4 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.190039] elgato_gchd 2-1:1.0: START poll=5 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.198028] elgato_gchd 2-1:1.0: START poll=6 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.205753] elgato_gchd 2-1:1.0: START poll=7 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.212748] elgato_gchd 2-1:1.0: bulk-IN during START/stream: result=-110 actual=0 reads=0 bytes=0
-[ 8435.213809] elgato_gchd 2-1:1.0: START poll=8 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.222096] elgato_gchd 2-1:1.0: START poll=9 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.230012] elgato_gchd 2-1:1.0: START poll=10 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.238288] elgato_gchd 2-1:1.0: START poll=11 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.246265] elgato_gchd 2-1:1.0: START poll=12 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.253679] elgato_gchd 2-1:1.0: START poll=13 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.260575] elgato_gchd 2-1:1.0: START poll=14 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.267712] elgato_gchd 2-1:1.0: START poll=15 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8435.317766] elgato_gchd 2-1:1.0: bulk-IN during START/stream: result=-110 actual=0 reads=0 bytes=0
-[ 8435.429156] elgato_gchd 2-1:1.0: bulk-IN during START/stream: result=-110 actual=0 reads=0 bytes=0
-[ 8435.541219] elgato_gchd 2-1:1.0: bulk-IN during START/stream: result=-110 actual=0 reads=0 bytes=0
-[ 8435.652964] elgato_gchd 2-1:1.0: bulk-IN during START/stream: result=-110 actual=0 reads=0 bytes=0
-[ 8435.935194] elgato_gchd 2-1:1.0: START poll=100 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8436.712490] elgato_gchd 2-1:1.0: START poll=200 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8437.543735] elgato_gchd 2-1:1.0: START poll=300 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8438.352763] elgato_gchd 2-1:1.0: START poll=400 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8439.101823] elgato_gchd 2-1:1.0: START poll=500 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8439.881761] elgato_gchd 2-1:1.0: START poll=600 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8440.205528] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=47 start_pending=1
-[ 8440.635402] elgato_gchd 2-1:1.0: START poll=700 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
-[ 8445.319955] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=89 start_pending=1
-[ 8450.384135] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=134 start_pending=1
-[ 8455.455908] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=179 start_pending=1
-[ 8460.470210] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=220 start_pending=1
-[ 8465.567273] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=265 start_pending=1
-[ 8470.644503] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=308 start_pending=1
-[ 8475.693324] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=352 start_pending=1
-[ 8480.757949] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=394 start_pending=1
-[ 8485.759830] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=432 start_pending=1
-[ 8490.805412] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=475 start_pending=1
-[ 8495.812973] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=521 start_pending=1
-[ 8500.885505] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=569 start_pending=1
-[ 8504.423922] elgato_gchd 2-1:1.0: START failed: ret=-110 state=0x0001 (r=0) enable_state=0xd39e (r=0) enable=0x030e (r=0) completion=0x011a (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x030e
-[ 8504.423942] elgato_gchd 2-1:1.0: capture start transition failed: -110
-[ 8504.428421] elgato_gchd: input 2 signal lost; scheduling redetection
-[ 8504.433314] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
-[ 8504.434689] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x01
+[12178.773656] usbcore: registered new interface driver elgato_gchd
+[12184.151287] usb 2-1: new high-speed USB device number 10 using ehci-pci
+[12184.557966] usb 2-1: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
+[12184.557977] usb 2-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[12184.557980] usb 2-1: Product: GameCapture HD
+[12184.557982] usb 2-1: Manufacturer: Elgato
+[12184.557984] usb 2-1: SerialNumber: 04107F1267
+[12184.560483] elgato_gchd 2-1:1.0: GCHD lifecycle: USB probe; registering V4L2 only\n
+[12184.563130] elgato_gchd 2-1:1.0: GCHD lifecycle: USB present; V4L2 registered; hardware stays powered off until STREAMON
+[12184.584981] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=9689 comm=v4l_id
+[12184.586540] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1369 comm=wireplumber
+[12184.586864] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1369 comm=wireplumber
+[12184.587749] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
+[12184.587766] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
+[12184.589025] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
+[12184.589175] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
+[12184.589190] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
+[12184.589200] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
+[12184.590953] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
+[12184.591007] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=1365 comm=pipewire
+[12193.918964] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=9692 comm=guvcview
+[12193.919639] elgato_gchd 2-1:1.0: GCHD lifecycle: V4L2 open requested by pid=9692 comm=guvcview
+[12194.212390] elgato_gchd 2-1:1.0: GCHD lifecycle: starting hardware boot/init from V4L2 STREAMON
+[12194.268200] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12194.271308] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12194.275191] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12194.278817] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12194.282533] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12194.286451] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12194.290254] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12194.294161] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12194.296004] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12194.299961] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12194.303691] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=4016 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12194.378879] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=01 00 00 00
+[12194.380216] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x01
+[12195.035043] elgato_gchd 2-1:1.0: transcoder defaults loaded
+[12195.037635] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 00 00 00
+[12195.038743] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x04
+[12195.042985] elgato_gchd 2-1:1.0: firmware chunk offset=0 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.044821] elgato_gchd 2-1:1.0: firmware chunk offset=32768 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.048397] elgato_gchd 2-1:1.0: firmware chunk offset=65536 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.052268] elgato_gchd 2-1:1.0: firmware chunk offset=98304 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.056178] elgato_gchd 2-1:1.0: firmware chunk offset=131072 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.060105] elgato_gchd 2-1:1.0: firmware chunk offset=163840 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.063790] elgato_gchd 2-1:1.0: firmware chunk offset=196608 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.067251] elgato_gchd 2-1:1.0: firmware chunk offset=229376 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.071326] elgato_gchd 2-1:1.0: firmware chunk offset=262144 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.075256] elgato_gchd 2-1:1.0: firmware chunk offset=294912 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.079245] elgato_gchd 2-1:1.0: firmware chunk offset=327680 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.083137] elgato_gchd 2-1:1.0: firmware chunk offset=360448 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.087094] elgato_gchd 2-1:1.0: firmware chunk offset=393216 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.091093] elgato_gchd 2-1:1.0: firmware chunk offset=425984 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.094935] elgato_gchd 2-1:1.0: firmware chunk offset=458752 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.096669] elgato_gchd 2-1:1.0: firmware chunk offset=491520 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.100237] elgato_gchd 2-1:1.0: firmware chunk offset=524288 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.104171] elgato_gchd 2-1:1.0: firmware chunk offset=557056 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.107749] elgato_gchd 2-1:1.0: firmware chunk offset=589824 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.111352] elgato_gchd 2-1:1.0: firmware chunk offset=622592 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.114972] elgato_gchd 2-1:1.0: firmware chunk offset=655360 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.118586] elgato_gchd 2-1:1.0: firmware chunk offset=688128 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.122084] elgato_gchd 2-1:1.0: firmware chunk offset=720896 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.123593] elgato_gchd 2-1:1.0: firmware chunk offset=753664 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.126998] elgato_gchd 2-1:1.0: firmware chunk offset=786432 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.130569] elgato_gchd 2-1:1.0: firmware chunk offset=819200 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.134145] elgato_gchd 2-1:1.0: firmware chunk offset=851968 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.137622] elgato_gchd 2-1:1.0: firmware chunk offset=884736 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.141168] elgato_gchd 2-1:1.0: firmware chunk offset=917504 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.144548] elgato_gchd 2-1:1.0: firmware chunk offset=950272 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.148056] elgato_gchd 2-1:1.0: firmware chunk offset=983040 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.151636] elgato_gchd 2-1:1.0: firmware chunk offset=1015808 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.155161] elgato_gchd 2-1:1.0: firmware chunk offset=1048576 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.159011] elgato_gchd 2-1:1.0: firmware chunk offset=1081344 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.162390] elgato_gchd 2-1:1.0: firmware chunk offset=1114112 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.165914] elgato_gchd 2-1:1.0: firmware chunk offset=1146880 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.169512] elgato_gchd 2-1:1.0: firmware chunk offset=1179648 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.172978] elgato_gchd 2-1:1.0: firmware chunk offset=1212416 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.176700] elgato_gchd 2-1:1.0: firmware chunk offset=1245184 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.180085] elgato_gchd 2-1:1.0: firmware chunk offset=1277952 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.183892] elgato_gchd 2-1:1.0: firmware chunk offset=1310720 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.187591] elgato_gchd 2-1:1.0: firmware chunk offset=1343488 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.191345] elgato_gchd 2-1:1.0: firmware chunk offset=1376256 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.195137] elgato_gchd 2-1:1.0: firmware chunk offset=1409024 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.198617] elgato_gchd 2-1:1.0: firmware chunk offset=1441792 size=32768 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.202205] elgato_gchd 2-1:1.0: firmware chunk offset=1474560 size=26224 OUT ep 0x02 maxpacket=512 speed=3 alt=0
+[12195.244419] elgato_gchd 2-1:1.0: device idle, processor state 0x27f97b
+[12195.431036] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12195.431043] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12195.870619] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12195.870627] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12196.308458] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12196.308474] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12196.755852] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12196.755866] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12197.217895] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12197.217902] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12197.683319] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12197.683343] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12198.130432] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12198.130439] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12198.633339] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12198.633356] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12199.101304] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12199.101327] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12199.556564] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12199.556591] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12200.015500] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12200.492294] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12200.492304] gchd_detection_worker: 1 callbacks suppressed
+[12200.492306] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12200.995927] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12200.995949] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12201.459168] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12201.459181] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12201.913065] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12201.913087] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12202.377393] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12202.377423] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12202.835928] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12202.835940] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12203.280059] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12203.280072] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12203.754436] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12203.754459] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12204.232665] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12204.232674] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12204.686204] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12204.686210] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12205.125993] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12205.592016] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12205.592030] gchd_detection_worker: 1 callbacks suppressed
+[12205.592033] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12206.043483] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12206.043500] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12206.499769] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12206.499782] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12206.965356] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12206.965366] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12207.421152] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12207.421173] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12207.876005] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12207.876016] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12208.323978] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12208.323990] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12208.788551] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12208.788573] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12209.242722] elgato_gchd 2-1:1.0: gchd-diag detect HDMI: samples6665=1 avg6665=0xad4d samples6463=1 avg6463=0xb2b2 rgb=0
+[12209.242744] elgato_gchd 2-1:1.0: no signal on input=0; retrying detection
+[12209.261271] elgato_gchd 2-1:1.0: input switch requested: old=0 new=2 hw_initialized=1 streaming=1
+[12209.265672] elgato_gchd 2-1:1.0: input selected: input=2; detection scheduled
+[12209.954019] elgato_gchd 2-1:1.0: gchd-diag detect composite: raw_status=0x16 masked_mode=0x6
+[12209.987183] elgato_gchd 2-1:1.0: analog format initial status=0x66; starting in 480i
+[12209.987198] elgato_gchd 2-1:1.0: gchd-diag detected input=2 mode=720x480 fps=60/1 interlaced=1 signal_present=1
+[12209.987205] elgato_gchd 2-1:1.0: signal detected: input=2 mode=720x480 fps=60/1 interlaced=1
+[12209.987210] elgato_gchd 2-1:1.0: capture setup: input=2 mode=720x480 fps=60/1 interlaced=1
+[12216.451847] elgato_gchd 2-1:1.0: capture setup: encoder start completed
+[12216.454223] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[12232.200955] elgato_gchd 2-1:1.0: capture setup: input configuration completed
+[12232.259933] elgato_gchd 2-1:1.0: capture setup: transcoder final configuration completed
+[12232.535877] elgato_gchd 2-1:1.0: capture setup: transcoder setup completed
+[12232.538450] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=04 a0 00 00
+[12232.541101] elgato_gchd 2-1:1.0: capture setup: state after final SCMD_INIT=0x0001
+[12232.541629] elgato_gchd 2-1:1.0: gchd-diag issuing START: input=2 mode=720x480 fps=60/1 interlaced=1
+[12232.543682] elgato_gchd 2-1:1.0: bulk-IN reader starting: ep=0x81 endpoint=present maxpacket=512 speed=3 alt=0 start_pending=1
+[12232.551370] elgato_gchd 2-1:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x030e (r=0) completion=0x011e (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x030e
+[12232.553929] elgato_gchd 2-1:1.0: SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=05 00 00 02
+[12232.555273] elgato_gchd 2-1:1.0: SCMD interrupt completed: command=0x05
+[12232.565952] elgato_gchd 2-1:1.0: START poll=0 state=0x0001 completion(0900:0074)=0x011e clear_index(0900:01b0)=0x0000 ack=1
+[12232.584129] elgato_gchd 2-1:1.0: START poll=0 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.592309] elgato_gchd 2-1:1.0: START poll=1 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.600473] elgato_gchd 2-1:1.0: START poll=2 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.608468] elgato_gchd 2-1:1.0: START poll=3 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.616734] elgato_gchd 2-1:1.0: START poll=4 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.624999] elgato_gchd 2-1:1.0: START poll=5 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.633143] elgato_gchd 2-1:1.0: START poll=6 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.640930] elgato_gchd 2-1:1.0: START poll=7 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.648415] elgato_gchd 2-1:1.0: START poll=8 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.653015] elgato_gchd 2-1:1.0: bulk-IN during START/stream: result=-110 actual=0 reads=0 bytes=0
+[12232.656435] elgato_gchd 2-1:1.0: START poll=9 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.664363] elgato_gchd 2-1:1.0: START poll=10 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.672044] elgato_gchd 2-1:1.0: START poll=11 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.680263] elgato_gchd 2-1:1.0: START poll=12 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.688533] elgato_gchd 2-1:1.0: START poll=13 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.697180] elgato_gchd 2-1:1.0: START poll=14 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.704490] elgato_gchd 2-1:1.0: START poll=15 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12232.756513] elgato_gchd 2-1:1.0: bulk-IN during START/stream: result=-110 actual=0 reads=0 bytes=0
+[12232.863253] elgato_gchd 2-1:1.0: bulk-IN during START/stream: result=-110 actual=0 reads=0 bytes=0
+[12232.973452] elgato_gchd 2-1:1.0: bulk-IN during START/stream: result=-110 actual=0 reads=0 bytes=0
+[12233.086726] elgato_gchd 2-1:1.0: bulk-IN during START/stream: result=-110 actual=0 reads=0 bytes=0
+[12233.410079] elgato_gchd 2-1:1.0: START poll=100 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12234.231622] elgato_gchd 2-1:1.0: START poll=200 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12235.001555] elgato_gchd 2-1:1.0: START poll=300 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12235.794117] elgato_gchd 2-1:1.0: START poll=400 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12236.586789] elgato_gchd 2-1:1.0: START poll=500 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12237.393518] elgato_gchd 2-1:1.0: START poll=600 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12237.580497] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=46 start_pending=1
+[12238.197277] elgato_gchd 2-1:1.0: START poll=700 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12239.017688] elgato_gchd 2-1:1.0: START poll=800 state=0x0001 completion(0900:0074)=0x011a clear_index(0900:01b0)=0x0000 ack=0
+[12242.589154] elgato_gchd 2-1:1.0: bulk-IN stats: reads=0 bytes=0 empty=0 timeouts=91 start_pending=1
 ff5@ff5-VirtualBox:~/elgato-gchd/drivers/elgato_gchd$ 
