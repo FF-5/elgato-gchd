@@ -970,6 +970,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 
  /* Clear connector-specific cached state only after reaching IDLE. */
  d->input_configured = false;
+ d->input_routed = false;
  d->input_prepared = false;
  WRITE_ONCE(d->signal_present, false);
  gchd_ring_free(&d->ring);
@@ -1349,6 +1350,7 @@ static int gchd_fop_open(struct file *file)
   gchd_set_lifecycle(d, GCHD_INITIALIZATION);
   WRITE_ONCE(d->capture_active, false);
   d->input_configured = false;
+  d->input_routed = false;
   d->input_prepared = false;
   d->encoder_started = false;
   d->signal_present = false;
