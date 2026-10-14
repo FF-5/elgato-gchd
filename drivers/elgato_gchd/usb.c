@@ -601,28 +601,6 @@ int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
            d->saved_enable_state, d->hw_enable_state, d->hw_enable_register);
  }
 
- /*
-  * The previous transition can leave its completion ACK latched (the HDNew
-  * trace showed 0x011e before START). Clear that old ACK before issuing a new
-  * START so complete_state_change() cannot mistake it for START completion.
-  */
- if (command == SCMD_STATE_CHANGE && expected == HW_START) {
-  u16 completion;
-
-  r = gchd_req_read16(d, HW_STATUS_REQUEST, GCHD_REG_STATE_COMPLETE,
-                      &completion);
-  if (r)
-   return r;
-  if (completion & HW_COMPLETE_ACK) {
-   r = gchd_reg_write16(d, GCHD_REG_STATE_COMPLETE, HW_COMPLETE_ACK);
-   if (r)
-    return r;
-   r = gchd_reg_write16(d, HW_COMPLETE_CLEAR_INDEX, 0x0000);
-   if (r)
-    return r;
-  }
- }
-
  r = gchd_scmd(d, command, mode, data);
  if (r)
   return r;

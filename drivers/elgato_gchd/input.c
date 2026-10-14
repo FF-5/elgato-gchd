@@ -1811,6 +1811,20 @@ static int gchd_input_configure_mode(struct gchd *d)
   return r;
  }
 
+ /* Match userspace: read encoder state after the mode=0xa0 INIT. */
+ {
+  u16 state;
+
+  r = gchd_raw_read16(d, HW_READ_REQUEST, GCHD_REG_STATE, &state);
+  if (r) {
+   dev_err(&d->intf->dev,
+           "capture setup: state readback after final SCMD_INIT failed: %d\n", r);
+   return r;
+  }
+  dev_info(&d->intf->dev,
+           "capture setup: state after final SCMD_INIT=0x%04x\n", state);
+ }
+
  /* A successfully configured input stays configured while hardware is idle. */
  d->input_prepared = false;
  d->input_configured = true;
