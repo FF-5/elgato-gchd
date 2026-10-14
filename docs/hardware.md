@@ -57,13 +57,16 @@ This table spells out the transfers and register accesses performed when userspa
 | 1d | USB control OUT, request `0xB8` | **START:** Original HD `00 00 05 00 00 02`; HD-New `05 00 00 02` | Requests state-change command `05`, mode `00`, data `00 02`; expected state is `0x02`. |
 | 2 | HD-New only, interrupt IN endpoint `0x83` | Wait for one interrupt transfer into a 3-byte buffer | Used by the HD-New SCMD receipt path for IDLE, INIT and state-change commands when mode bits do not disable the interrupt. |
 | 3 | HD-New only, USB control IN from `0800:0014` | Read 2 bytes repeatedly until the high byte equals the command byte (`01`, `04` or `05`) | Confirms that the command was received. It does not by itself confirm that the state transition completed. |
-| 4 | USB control IN from `0900:0074` | Read 2 bytes repeatedly until `value & 0x0004 != 0` | Polls the state-change-complete flag. Original HD uses this in `completeStateChange()`; HD-New uses the interrupt/readback path where applicable. |
-| 5 | USB control IN from `0800:2008` | Read 2 bytes; compute `value & 0x001F` | Reads the current SCMD state. During completion, userspace reads this register twice and uses the second value masked with `0x1F`. |
-| 6 | USB control IN, request `0xBC`, `wValue=0x0900`, `wIndex=0x01B0` | Read 2 bytes; discard the value | An additional read performed inside the Original-HD completion loop. Its purpose is unknown. |
-| 7 | USB control OUT, request `0xBC`, `wValue=0x0900`, `wIndex=0x01B0` | Write `00 00` | Cleanup write after completion. Its purpose remains unknown. |
-| 8 | USB control OUT, request `0xBC`, `wValue=0x0900`, `wIndex=0x0074` | Write `00 04` | Clears/acknowledges the sticky completion flag; the exact hardware semantics are not fully established. |
+| 4 | USB control IN from `0800:2008` | Read 2 bytes | Initial state read. Observed on HD-New at the start of each completion round, before the flag poll. |
+| 5 | USB control IN from `0900:0074` | Read 2 bytes repeatedly until `value & 0x0004 != 0` | Polls the state-change-complete flag. Original HD uses this in `completeStateChange()`; HD-New also performs this poll (`011E` observed). |
+| 6 | USB control IN, request `0xBC`, `wValue=0x0900`, `wIndex=0x01B0` | Read 2 bytes; discard the value | Performed right after the flag poll, before the final `2008` reads. Observed on HD-New (`0150`) as well as in the Original-HD completion loop. Purpose unknown. |
+| 7 | USB control IN from `0800:2008` | Read 2 bytes; compute `value & 0x001F` | Reads the current SCMD state. During completion, userspace reads this register twice and uses the second value masked with `0x1F`. |
+| 8 | USB control OUT, request `0xBC`, `wValue=0x0900`, `wIndex=0x0074` | Write `00 04` | Clears/acknowledges the sticky completion flag; exact hardware semantics not fully established. Sent **before** the `0x01B0` clear. |
+| 9 | USB control OUT, request `0xBC`, `wValue=0x0900`, `wIndex=0x01B0` | Write `00 00` | Cleanup write after completion and after the `0x0074` acknowledge. Purpose remains unknown. |
 
 **Expected state after confirmation:** IDLE → `0x11`; RESET with mode `00` → `0x10`; START (`05 00 00 02`) → `0x02`. INIT is issued through `scmd()` and followed by the firmware/version steps; it is not confirmed through the same `stateConfirmedScmd()` helper as IDLE, RESET and START.
+
+Observed START completion (analog 240p): steps 4–9 run twice. The first round reads 2008 = 00 01 and is acknowledged; the second round, about 50 ms later, reads 2008 = 00 02 and is acknowledged. The first bulk IN completion on 0x81 follows about 0.1 s after the second round.
 
 
 ### Initialization command comparison: observed transfers vs. userspace
@@ -123,20 +126,20 @@ See [hdmi.md](hdmi.md), [component.md](component.md), [composite.md](composite.m
 |---:|---|---|
 | 1 | Finish selected input setup and signal/format detection; apply transcoder setup/final configuration | Input selector, decoder tables, and output parameters depend on input and detected format. |
 | 2 | Queue bulk IN URBs on endpoints `0x81` and `0x84` where used by the capture path | Queue before START as required by the implementation; queueing alone does not prove capture is active. |
-| 3 | SCMD INIT, mode `A0`, data `0000` — Original HD `00 00 04 A0 00 00`; HD-New `04 A0 00 00` | Re-enters initialized/stopped state without reloading encode firmware. |
+| 3 | SCMD INIT, mode `A0`, data `0000` — Original HD `00 00 04 A0 00 00`; HD-New `04 A0 00 00` | Re-enters initialized/stopped state without reloading encode firmware. Observed on analog 240p: no interrupt/0800:0014 receipt follows; the next transfer is the 2008 read. |
 | 4 | Read `0800:2008` | For analog 240p, the readback has been observed as `00 01`; this is an observation, not a universal expected value. |
-| 5 | SCMD START, mode `00`, data `0002` — Original HD `00 00 05 00 00 02`; HD-New `05 00 00 02` | State-change request; source expects state `0x02`. Follow completion confirmation. |
+| 5 | SCMD START, mode `00`, data `0002` — Original HD `00 00 05 00 00 02`; HD-New `05 00 00 02` | State-change request; source expects state `0x02`. Follow completion confirmation (two rounds on analog 240p: 2008 = 01, then 02; see the SCMD state-transition sequence). |
 | 6 | Observe bulk IN completions on `0x81` / `0x84` | Observed bulk IN transfers were 65,536 bytes. Validate payload contents; USB completion alone is not proof of valid video. |
 
 ### Shared capture-start sequence observed on analog 240p
 
 | Order | Command / operation | Confirmation |
 |---:|---|---|
-| 1 | Apply the ordered SoC/transcoder register burst after input lock; queue bulk IN URBs on endpoints `0x81` and `0x84` | Queueing is preparation, not proof of active capture. |
-| 2 | SCMD `04 A0 00 00` | Follow command-receipt and ready/readback path. |
+| 1 | Apply the ordered SoC/transcoder register burst after input lock; queue bulk IN URBs on endpoints `0x81` and `0x84` | Queueing is preparation, not proof of active capture. The 36 URBs on `0x81` and 8 on `0x84` are queued in the middle of the 120-write register burst. |
+| 2 | SCMD `04 A0 00 00` | No interrupt/receipt observed; the readback in step 3 is the next transfer. |
 | 3 | Read `0800:2008` | Observed ready value `00 01` in analog 240p observations. |
-| 4 | SCMD `05 00 00 02` | Confirm state/completion and data flow. |
-| 5 | Observe bulk IN completions on `0x81` / `0x84` | Captured transfers were 65,536 bytes; verify payload is actual video. |
+| 4 | SCMD `05 00 00 02` | Receipt: interrupt `10 00 00` then `0800:0014 → 05 00`. Completion: two rounds, `2008 → 00 01` then `2008 → 00 02`, each acknowledged. |
+| 5 | Observe bulk IN completions on `0x81` / `0x84` | Captured transfers were 65,536 bytes. Payload is MPEG-TS (PAT, PMT, H.264 on PID `0x1011`, 720×480, field-coded) with sync intact on every 188-byte boundary of all four completed transfers. |
 
 ### Idle / keep-alive loops (post-input-setup, no signal)
 
@@ -173,7 +176,7 @@ Observed after component selection from both HDMI and composite. The three extra
 | 1 | `89 89 FA 00` | Status / source-detect poll (`0x9C` mailbox read helper) |
 | 2 | `99 89 F5 00` | Sequence-read / poll helper |
 
-This two-command cycle (~50 ms) is shared by composite and S-video once the analog path is selected and no source is locked. It is the same loop previously documented on the HDMI→composite and HDMI→S-video no-input captures. While the device is still on HDMI the HDMI four-command loop runs instead; the FA/F5 loop only appears after the composite or S-video selector has been written.
+This two-command cycle (~50 ms; about 70–110 ms in the two cycles seen between the selector and the tuning passes of an HDMI→composite 240p switch, low confidence) is shared by composite and S-video once the analog path is selected and no source is locked. It is the same loop previously documented on the HDMI→composite and HDMI→S-video no-input captures. While the device is still on HDMI the HDMI four-command loop runs instead; the FA/F5 loop only appears after the composite or S-video selector has been written.
 
 #### Source-detection candidate
 
