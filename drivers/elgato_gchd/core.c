@@ -457,16 +457,23 @@ static void gchd_detect_workfn(struct work_struct *work)
           READ_ONCE(d->input), READ_ONCE(d->streaming));
 
  /* Only the RX thread may own bulk-IN while START is active. */
- if (d->rx_thread) {
-  kthread_stop(d->rx_thread);
-  d->rx_thread = NULL;
+ if (d->rx_thread || READ_ONCE(d->capture_active)) {
+  if (d->rx_thread) {
+   kthread_stop(d->rx_thread);
+   d->rx_thread = NULL;
+  }
   r = gchd_stream_stop(d);
-  WRITE_ONCE(d->capture_active, false);
   if (r) {
+   /*
+    * Keep capture_active set so the next pass retries the stop even though
+    * the RX thread has already been joined. Do not probe/configure while the
+    * device may still be in START.
+    */
    dev_warn(&d->intf->dev,
-            "redetection: stream stop failed: %d; retrying later\n", r);
+            "redetection: stream stop failed: %d; retrying later\\n", r);
    goto retry;
   }
+  WRITE_ONCE(d->capture_active, false);
 
   /*
    * Stop transport and return to IDLE without re-running hardware init.
@@ -482,7 +489,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
   if (r) {
    dev_warn(&d->intf->dev,
-            "redetection: transition to IDLE failed: %d\n", r);
+            "redetection: transition to IDLE failed: %d\\n", r);
    goto retry;
   }
  }
