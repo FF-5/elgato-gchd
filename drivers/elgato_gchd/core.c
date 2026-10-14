@@ -41,11 +41,27 @@ struct gchd_mode {
  bool interlaced;
 };
 
-/* The device defaults to HDMI; remember the last selected input across rebinds. */
+/* Input-selection state owns the HDMI default and remembered selection. */
 static DEFINE_MUTEX(gchd_last_input_lock);
 static unsigned int gchd_last_input;
 
 /* GCHD_* tracks driver lifecycle; HW_* names device protocol states/commands. */
+/*
+ * Enter INPUT_SELECTION only after boot/init has completed. This is the
+ * single place that resolves the remembered input (HDMI on first use), then
+ * hands control to the independent source-detection state.
+ */
+static void gchd_input_selection_enter(struct gchd *d)
+{
+ /* The remembered/default input is resolved by INPUT_SELECTION after init. */
+ d->input = 0;
+
+ gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
+ WRITE_ONCE(d->detect_requested, true);
+ gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
+ schedule_delayed_work(&d->detect_work, 0);
+}
+
 static void gchd_set_lifecycle(struct gchd *d, enum gchd_state state)
 {
  enum gchd_state old = READ_ONCE(d->lifecycle_state);
@@ -1334,10 +1350,7 @@ static int gchd_fop_open(struct file *file)
 
   d->hw_initialized = true;
   d->hw_init_failed = false;
-  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
-  WRITE_ONCE(d->detect_requested, true);
-  gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
-  schedule_delayed_work(&d->detect_work, 0);
+  gchd_input_selection_enter(d);
  }
  d->open_count++;
 
