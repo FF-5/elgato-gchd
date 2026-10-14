@@ -573,12 +573,36 @@ static void gchd_detect_workfn(struct work_struct *work)
    r = gchd_input_start(d);
    WRITE_ONCE(d->start_pending, false);
    if (r) {
+    int start_error = r;
+    int idle_error;
+
     kthread_stop(d->rx_thread);
     d->rx_thread = NULL;
-    gchd_set_lifecycle(d, GCHD_ERROR);
+
+    /*
+     * A failed START must not leave the cached "configured + signal present"
+     * flags set: that would make the next detection pass skip configuration
+     * and never attempt capture again. Recover to IDLE before allowing the
+     * detector to probe or configure the input again.
+     */
+    idle_error = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
+    WRITE_ONCE(d->capture_active, false);
+    if (idle_error) {
+     gchd_set_lifecycle(d, GCHD_ERROR);
+     dev_err(&d->intf->dev,
+             "capture start failed: %d; recovery to IDLE failed: %d\\n",
+             start_error, idle_error);
+     goto out;
+    }
+
+    d->input_configured = false;
+    d->input_prepared = false;
+    WRITE_ONCE(d->signal_present, false);
+    gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
     dev_warn(&d->intf->dev,
-             "capture start after detection failed: %d; backing off before retry\n", r);
-    /* Do not hammer START every 250ms if the state transition timed out. */
+             "capture start failed: %d; recovered to IDLE, retrying detection\\n",
+             start_error);
+    /* Avoid hammering START if the state transition timed out. */
     schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
     goto out;
    }
@@ -1449,7 +1473,7 @@ static int gchd_probe(struct usb_interface *i,
  d->height = 720;
  d->sizeimage = GCHD_MAX_FRAME;
  mutex_lock(&gchd_last_input_lock);
- d->input = gchd_last_input <= 2 ? gchd_last_input : 0;
+ d->input = gchd_last_input <= 3 ? gchd_last_input : 0;
  mutex_unlock(&gchd_last_input_lock);
  d->input_forced = false;
  d->bitrate_forced = false;
