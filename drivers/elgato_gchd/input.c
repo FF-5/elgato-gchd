@@ -990,10 +990,26 @@ int gchd_probe_video_source(struct gchd *d)
   u8 v;
 
   /*
-   * Match the pre-detection writes in userspace configureComposite().
-   * Register 0xfa is not a reliable timing probe until this receiver path
-   * has been selected; reading it alone can leave the async detector
-   * reporting no signal forever after an input switch.
+   * Composite and S-video share the documented no-signal keep-alive loop.
+   * Poll FA and F5 before the format/status probes; FA is the source-detect
+   * candidate, while F5 is the companion sequence-read used by the device
+   * during idle. Keep the two commands in this order.
+   */
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                      (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,0xfa}, 3);
+  if (r) return r;
+  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
+  if (r) return r;
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                      (u8[]){GCHD_CMD_QUERY,GCHD_CMD_QUERY_EXT,0xf5}, 3);
+  if (r) return r;
+  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
+  if (r) return r;
+
+  /*
+   * Prime the analog decoder before reading its NTSC/PAL family status.
+   * The family nibble is not enough to distinguish 240p/288p from 480i/576i;
+   * the later live-mode monitor handles the NTSC 240p transition.
    */
   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x94,0x41,0x37}, 3);
   if (r) return r;
@@ -1006,8 +1022,8 @@ int gchd_probe_video_source(struct gchd *d)
   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
   if (r) return r;
   dev_info(&d->intf->dev,
-           "gchd-diag detect composite: raw_status=0x%02x masked_mode=0x%01x\n",
-           v, v & 0x0f);
+           "gchd-diag detect %s: raw_status=0x%02x masked_mode=0x%01x\n",
+           d->input == 2 ? "composite" : "s-video", v, v & 0x0f);
   v &= 0x0f;
   if (v == 6) {
    u8 mode;
