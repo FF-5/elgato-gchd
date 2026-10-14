@@ -1258,7 +1258,7 @@ static int gchd_fop_open(struct file *file)
    r = gchd_hw_shutdown(d);
    if (r) {
     dev_err(&d->intf->dev,
-            "retrying previous hardware shutdown before open failed: %d\\n", r);
+            "retrying previous hardware shutdown before open failed: %d\n", r);
     goto out;
    }
    d->hw_initialized = false;
@@ -1267,7 +1267,6 @@ static int gchd_fop_open(struct file *file)
 
   gchd_set_lifecycle(d, GCHD_INITIALIZATION);
   d->input_forced = true;
-  WRITE_ONCE(d->capture_active, false);
   WRITE_ONCE(d->capture_active, false);
   d->input_configured = false;
   d->input_prepared = false;
@@ -1287,7 +1286,7 @@ static int gchd_fop_open(struct file *file)
    gchd_set_lifecycle(d, GCHD_ERROR);
    if (sr)
     dev_warn(&d->intf->dev,
-             "cleanup after failed open initialization failed: %d\\n", sr);
+             "cleanup after failed open initialization failed: %d\n", sr);
    goto out;
   }
 
