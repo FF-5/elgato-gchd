@@ -72,6 +72,11 @@ static void gchd_stop(struct vb2_queue *q)
  gchd_return_queued(d, VB2_BUF_STATE_ERROR);
 }
 
+static const struct vb2_ops gchd_vb2_ops={
+ .queue_setup=gchd_queue_setup,.buf_queue=gchd_buf_queue,.start_streaming=gchd_start,
+ .stop_streaming=gchd_stop,.wait_prepare=vb2_ops_wait_prepare,.wait_finish=vb2_ops_wait_finish
+};
+
 static int gchd_fop_open(struct file *file)
 {
  struct gchd *d = video_drvdata(file);
