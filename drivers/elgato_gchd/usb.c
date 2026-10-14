@@ -842,9 +842,9 @@ int gchd_hw_init(struct gchd *d)
    int tries;
 
    /*
-    * Preserve the original libusb ordering: the state transition is
-    * synchronized by consuming the interrupt notification first, then
-    * polling the sticky completion bit and acknowledging it.
+    * HD-New triggers this initial transition when the state is read.
+    * Consume its interrupt, poll the sticky completion flag, and
+    * acknowledge it before downloading idle firmware.
     */
    r = gchd_interrupt_pend(d);
    if (r)
@@ -856,11 +856,19 @@ int gchd_hw_init(struct gchd *d)
      return r;
     if (completion & HW_COMPLETE_ACK)
      break;
-     }
+   }
    if (tries == 1000)
     return -ETIMEDOUT;
 
    r = gchd_reg_write16(d, GCHD_REG_STATE_COMPLETE, HW_COMPLETE_ACK);
+   if (r)
+    return r;
+  } else {
+   /*
+    * On Original HD, reading state 0 triggers the transition. Match
+    * completeStateChange(0, 0) before loading the idle firmware.
+    */
+   r = gchd_complete_state_change(d, 0, 0);
    if (r)
     return r;
   }
@@ -869,21 +877,13 @@ int gchd_hw_init(struct gchd *d)
   if (r)
    return r;
 
-  r = gchd_reg_write16(d, GCHD_REG_STATE_COMPLETE, HW_COMPLETE_ACK);
+  /*
+   * The post-download acknowledgement is a different register from the
+   * state-transition completion flag above: userspace writes 0900:0070.
+   */
+  r = gchd_reg_write16(d, GCHD_REG_IDLE_FIRMWARE_COMPLETE, HW_COMPLETE_ACK);
   if (r)
    return r;
-
-  if (d->family != GCHD_FAMILY_HDNEW) {
-   /*
-    * Match completeStateChange(0, 0) on the old devices. Reading the
-    * state register is itself the state-change trigger when the device is
-    * still in state 0, so the completion handshake must be consumed before
-    * the idle firmware is loaded.
-    */
-   r = gchd_complete_state_change(d, 0, 0);
-   if (r)
-    return r;
-  }
 
   /*
    * configureDevice() refreshes the saved enable-state snapshot after
@@ -962,18 +962,11 @@ int gchd_hw_init(struct gchd *d)
 
   case GCHD_REPLY_PROCESSOR_ACTIVE:
    /*
-    * The first 0x27f97b is NOT the end of initialization.  It is the
-    * userspace driver's source-selection/transcoder initialization point.
+    * The first 0x27f97b is an initialization milestone, not input
+    * selection. Keep the boot/init state machine independent of the
+    * remembered connector; input selection begins after hw_init returns.
     */
    if (first_time) {
-    /*
-     * Do not auto-select an input from cable/source-detection status.
-     * HDMI (input 0) is the default; an explicit S_INPUT selection is
-     * preserved through input_forced.
-     */
-    if (!d->input_forced)
-     d->input = 0;
-
     /*
      * Userspace always calls enableAnalogInput() here, even for HDMI.
      * Keep the same operation rather than optimizing it away.
