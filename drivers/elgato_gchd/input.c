@@ -936,7 +936,6 @@ static int gchd_prepare_analog_detection(struct gchd *d)
 {
  int r;
  u8 reply;
- u8 decoder_mode = d->input == 3 ? 0xdc : 0xc9;
 
  /*
   * Match the common NTSC/PAL analog selection order. These status reads are
@@ -949,15 +948,32 @@ static int gchd_prepare_analog_detection(struct gchd *d)
  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &reply, 1);
  if (r) return r;
 
- r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
-                     (u8[]){0x02, decoder_mode}, 2);
- if (r) return r;
+ /*
+  * Do not write the composite discriminator (0x02=C9) during the shared
+  * HDMI/component -> composite detection prefix. The observed source-detect
+  * sequence goes straight from the initial FD poll to 0x06=08 and F8.
+  * The discriminator is applied in late configuration after detection.
+  *
+  * S-video needs its distinct decoder mode before detection. When switching
+  * from S-video back to composite, the traces show C9 + D2 as a special
+  * analog-to-analog transition prefix.
+  */
  if (d->input == 3) {
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
+                      (u8[]){0x02, 0xdc}, 2);
+  if (r) return r;
   r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
                       (u8[]){0x14, 0xd2}, 2);
   if (r) return r;
   r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
                       (u8[]){0x28, 0x88}, 2);
+  if (r) return r;
+ } else if (d->input == 2 && d->previous_input == 3) {
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
+                      (u8[]){0x02, 0xc9}, 2);
+  if (r) return r;
+  r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
+                      (u8[]){0x14, 0xd2}, 2);
   if (r) return r;
  }
  r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
@@ -1008,11 +1024,10 @@ static int gchd_prepare_analog_detection(struct gchd *d)
  if (r) return r;
 
  /*
-  * The two FA/F5 idle cycles are only the fast path when a source is already
-  * recognized. If FA does not report the source-found marker (CA), stop
-  * general setup immediately: the lifecycle worker will enter SOURCE_DETECTION
-  * and continue polling there. Mark preparation complete so retries do not
-  * restart this setup block on every no-source poll.
+  * Match the captured pre-tuning idle sequence exactly: two FA/F5 cycles.
+  * FA replies (1F, then 3E in the NTSC 240p trace) are ordinary poll results,
+  * not the later CA source-found marker. Always consume both cycles here;
+  * SOURCE_DETECTION owns the subsequent CA/E7/F1 polling and retries.
   */
  {
   int cycle;
@@ -1023,15 +1038,14 @@ static int gchd_prepare_analog_detection(struct gchd *d)
    if (r) return r;
    r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &reply, 1);
    if (r) return r;
-   if (reply != 0xca) {
-    d->input_detect_prepared = true;
-    return 0;
-   }
    r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
-                       (u8[]){GCHD_CMD_QUERY, GCHD_CMD_QUERY_EXT, 0xf5}, 3);
+                       (u8[]){GCHD_CMD_QUERY, GCHD_CMD_QUERY_EXT,
+                              GCHD_QUERY_ENCODER_POLL}, 3);
    if (r) return r;
    r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &reply, 1);
    if (r) return r;
+   if (cycle == 0)
+    usleep_range(50000, 70000);
   }
  }
 
