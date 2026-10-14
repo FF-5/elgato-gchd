@@ -924,10 +924,12 @@ static int gchd_prepare_analog_detection(struct gchd *d);
  */
 int gchd_prepare_input_detection(struct gchd *d)
 {
- if (d->input < 2)
-  return 0;
  if (d->input_detect_prepared)
   return 0;
+ if (d->input < 2) {
+  d->input_detect_prepared = true;
+  return 0;
+ }
  return gchd_prepare_analog_detection(d);
 }
 
