@@ -11,13 +11,13 @@
 | `0x9C:51` | Write `44` | Composite selector on the HDMI→composite path (signal-present and no-input). |
 | `0x9C:51` | Write `EC` | Composite/S-video selector when switching from component (or between analog inputs) with no source. See “Selector 51 EC vs 51 44” below. |
 | `0x88:02` | Write `C9` | Composite discriminator; S-video uses `DC`. |
-| Mailbox read `89 89 FA` | Expect low nibble `6` (NTSC/60 Hz) or `7` (PAL/50 Hz) | Detects family, not progressive/interlaced format. |
-| Mailbox read `89 89 FD` | Working NTSC-family path: `6E` | Status poll; meaning unknown. |
-| Mailbox read `89 89 F1` | PAL branch expects `63` | PAL status poll; exact semantics unknown. |
+| Mailbox read `89 89 FA` | Expect low nibble `6` (NTSC/60 Hz) or `7` (PAL/50 Hz) | Detects family, not progressive/interlaced format. In the HDMI→composite 240p NTSC switch the two reads right after the selector (before the tuning passes) returned `1F` and `3E`; low nibble `6` only appears from the `0x94` writes onward (`16`, `06`). |
+| Mailbox read `89 89 FD` | `60` at NTSC step 1 (before the selector); `6E` is returned by the `99 89 FD` / `99 89 FC` form used later in setup | Status poll; meaning unknown. Helper prefixes differ (see [commands.md](commands.md)). |
+| Mailbox read `89 89 F1` | NTSC 240p: `7E`. PAL branch: `63` (earlier note) | PAL status poll; exact semantics unknown. The earlier `63` note **conflicts** with `F1=7E` in the PAL status loop and is unresolved. |
 | `0x88:10–15` | `6F D4 D0 08 08 88` | Decoder tuning pass 1. |
 | `0x88:10–15` | `6F EA D0 08 08 88` | Decoder tuning pass 2. |
 | `0x88:10–15` | `6F EA D0 1B 1B 88` | Decoder tuning pass 3. |
-| `0x98:0D`, `0x98:0E` | `C8`, `15`, `14` | Backend retrigger pulse; preserve order. |
+| `0x98:0D`, `0x98:0E` | `C8`, `15`, `14` | Backend retrigger pulse; preserve order. Seen twice in the NTSC 240p switch: once before backend programming (right after the `0x94` writes) and once after the `05 → 04` apply pulse. |
 | `0x98:0D`, `0x98:0E` | `C8`, `05`, `04` | Apply pulse after backend programming. |
 | `0x98` backend | See ordered sequence and coefficient table | Register meanings are not fully decoded. |
 
@@ -41,7 +41,7 @@
 
 ## No-signal idle / keep-alive
 
-After the composite selector and front-end programming complete with no source present, the device repeats this two-command loop (approximately 50 ms per cycle). Each mailbox command uses the normal HD-New mailbox handshake.
+After the composite selector and front-end programming complete with no source present, the device repeats this two-command loop (approximately 50 ms per cycle). In the two idle cycles observed between the selector and the tuning passes of the HDMI→composite 240p switch the spacing was about 70–110 ms (low confidence, only two cycles). Each mailbox command uses the normal HD-New mailbox handshake.
 
 | Order | Mailbox payload | Notes |
 |---:|---|---|
@@ -90,15 +90,19 @@ Observed NTSC order is taken from the HDMI→composite 240p NTSC signal-present 
 | 6 | Page `CE`; `0x9C:27=33`; page `CC` (mailbox reads between writes) | 6 | Page `CE`; `0x9C:27=33`; page `CC` (mailbox reads between writes) |
 | 7 | Selector `0x9C:51=44` | 7 | Selector `0x9C:51=44` |
 | 8 | Routing `02 0E → 03 0E → 03 0E` | 8 | Routing `02 0E → 03 0E → 03 0E` |
-| — | — | 9 | Decoder wake / status prime; status loop (`CA=66`, `E7=69`, `F1=7E`, `CB=6E`) |
+| 8a | Two idle cycles `89 89 FA` / `99 89 F5` before tuning (`FA` reads `1F`, then `3E`; `F5` reads `62`) | — | — |
+| — | Not run here; NTSC runs the same status values later (steps `12a`–`12c`) | 9 | Decoder wake / status prime; status loop (`CA=66`, `E7=69`, `F1=7E`, `CB=6E`) |
 | 9 | Tuning pass 1: `6F D4 D0 08 08 88` to `0x88:10–15` | 10 | Tuning pass 1: `6F D4 D0 08 08 88` |
 | 10 | Tuning pass 2: `6F EA D0 08 08 88` | 11 | Tuning pass 2: `6F EA D0 08 08 88` |
 | 11 | Tuning pass 3: `6F EA D0 1B 1B 88` | 12 | Tuning pass 3: `6F EA D0 1B 1B 88` |
 | 12 | Device `0x94`: `41 37`, `4A B7`, `4B B7` | 13 | Device `0x94`: `41 37`, `4A B7`, `4B B7` (commit `09 00 66 03` + handshake after each) |
+| 12a | Mailbox status reads `89 89 FA`, `CA`, `E7`, then `99 89 F5`, `FD`, `FC`, `F3`, `F5` (replies `16`, `E6`, `E9`, `F2`, `6E`, `6E`, `7E`, `F2`) | — | — |
+| 12b | First retrigger pulse, before any backend write: `0x98:0D=C8`, `0x98:0E=15 → 14` | — | — |
+| 12c | Status loop repeats (`FA`, `CA`, `E7`, `F5`) while `CA` settles `E6 → 66` and `F5` moves to `72`; `0800:2008` read → `00 01`; final block `FA=06`, `CA=66`, `E7=69`, `F1=7E`, `CB=6E`, `CA=66` | — | — |
 | 13 | Backend `04=95`, `70=D0`, `0F=88` | 14 | Backend `04=95`, `70=D0`, `0F=88` |
 | 14 | Coefficient table `0x98:90–A3`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | 15 | Coefficient table `0x98:90–A3`; then `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` |
-| 15 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; later `15 → 14` | 16 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; poll status and allow settle |
-| 16 | Pipeline setup; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02` | 17 | Configure SoC pipeline; queue bulk IN on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`. Capture starts and frames were received. |
+| 15 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; later `15 → 14` (the pre-backend pulse is step `12b`). Then poll `99 89 F5` (64 reads: about 14 of `62`, about 46 of `72`, a few `F2`/`E2` around the pulses) plus a status block (`FA=06`, `CA=66`, `E7=69`, `F1=7E`) to let the decoder settle | 16 | Retrigger `0x98:0D=C8`, `0x98:0E=05 → 04`; poll status and allow settle |
+| 16 | Pipeline setup: 120 masked 8-byte transcoder writes (`0x152C`/`0x162C` carry `0x02D0` and `0x01E0`); queue 36 bulk IN URBs on `0x81` and 8 on `0x84` during the burst; SCMD `04 A0 00 00` (no interrupt or `0x14` receipt); read `0800:2008 → 00 01`; SCMD `05 00 00 02`; receipt via interrupt `10 00 00` + `0800:0014 → 05 00`; two completion rounds (`2008 → 00 01`, then `00 02`, each acknowledged); first MPEG-TS bulk completion about 0.5 s after START | 17 | Configure SoC pipeline; queue bulk IN on `0x81` and `0x84`; SCMD `04 A0 00 00`; read `0800:2008 → 00 01`; SCMD `05 00 00 02`. Capture starts and frames were received. |
 
 #### No-input then source-found: NTSC and PAL
 
