@@ -482,8 +482,25 @@ static void gchd_detection_worker(struct work_struct *work)
      !READ_ONCE(d->detect_requested))
   goto out;
 
- gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
- dev_dbg(&d->intf->dev, "input detection started: input=%u streaming=%u\n",
+ /*
+  * Selection is resolved before the worker runs. Prepare the chosen
+  * connector once, then keep SOURCE_DETECTION responsible for retries and
+  * source arrival. The preparation helper is idempotent for each selection.
+  */
+ if (!d->input_detect_prepared) {
+  gchd_set_lifecycle(d, GCHD_GENERAL_INPUT_SETUP);
+  r = gchd_prepare_input_detection(d);
+  if (r) {
+   dev_warn(&d->intf->dev,
+            "general input setup failed: input=%u error=%d\n",
+            READ_ONCE(d->input), r);
+   goto retry;
+  }
+  d->input_prepared = true;
+ }
+
+ gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
+ dev_dbg(&d->intf->dev, "source detection started: input=%u streaming=%u\n",
           READ_ONCE(d->input), READ_ONCE(d->streaming));
 
  /* Only the RX thread may own bulk-IN while START is active. */
@@ -566,7 +583,7 @@ static void gchd_detection_worker(struct work_struct *work)
            d->input, d->input_width, d->input_height, d->input_fps_num,
            d->input_fps_den, d->input_interlaced);
 
-  gchd_set_lifecycle(d, GCHD_INPUT_CONFIGURATION);
+  gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
   r = gchd_input_configure_idle(d);
   if (r) {
    if (r != -ENOLINK) {
@@ -638,7 +655,7 @@ static void gchd_detection_worker(struct work_struct *work)
     d->input_configured = false;
     d->input_prepared = false;
     WRITE_ONCE(d->signal_present, false);
-    gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
+    gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
     dev_warn(&d->intf->dev,
              "capture start failed: %d; recovered to IDLE, retrying detection\n",
              start_error);
@@ -725,7 +742,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   d->ts_partial_len = 0;
   d->input_configured = false;
   d->input_interlaced = true;
-  gchd_set_lifecycle(d, GCHD_INPUT_CONFIGURATION);
+  gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
   r = gchd_input_configure_idle(d);
   if (r)
    goto restart_failed;
@@ -766,7 +783,7 @@ restart_failed:
           "240p-to-480i reconfiguration failed: %d\n", r);
  WRITE_ONCE(d->signal_present, false);
  WRITE_ONCE(d->detect_requested, true);
- gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
+ gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
 
 reschedule:
@@ -830,7 +847,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
  WRITE_ONCE(d->streaming, true);
  if (!READ_ONCE(d->capture_active)) {
   WRITE_ONCE(d->detect_requested, true);
-  gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
+  gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
   schedule_delayed_work(&d->detect_work, 0);
  }
  mutex_unlock(&d->lifecycle_lock);
@@ -940,7 +957,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
    dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\n", r);
    WRITE_ONCE(d->streaming, false);
    WRITE_ONCE(d->detect_requested, true);
-   gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
+   gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
    schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
    mutex_unlock(&d->lifecycle_lock);
    return r;
@@ -959,7 +976,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
    WRITE_ONCE(d->signal_present, false);
    WRITE_ONCE(d->streaming, false);
    WRITE_ONCE(d->detect_requested, true);
-   gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
+   gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
    schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
    mutex_unlock(&d->lifecycle_lock);
    return r;
@@ -1004,7 +1021,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 
  /* Detect/configure asynchronously so VIDIOC_S_INPUT stays non-blocking. */
  WRITE_ONCE(d->detect_requested, true);
- gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
+ gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
  schedule_delayed_work(&d->detect_work, 0);
  dev_info(&d->intf->dev,
           "input selected: input=%u; detection scheduled\n", i);
