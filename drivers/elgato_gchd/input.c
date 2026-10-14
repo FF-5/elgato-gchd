@@ -941,7 +941,19 @@ int gchd_prepare_input_detection(struct gchd *d)
 static int gchd_prepare_analog_detection(struct gchd *d)
 {
  int r;
+ u8 reply;
  u8 decoder_mode = d->input == 3 ? 0xdc : 0xc9;
+
+ /*
+  * Match the common NTSC/PAL analog selection order. These status reads are
+  * present in the captured NTSC setup and do not choose the video family.
+  */
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                     (u8[]){GCHD_CMD_QUERY_EXT, GCHD_CMD_QUERY_EXT,
+                            GCHD_QUERY_ENCODER_POLL_FD}, 3);
+ if (r) return r;
+ r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &reply, 1);
+ if (r) return r;
 
  r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
                      (u8[]){0x02, decoder_mode}, 2);
@@ -957,6 +969,14 @@ static int gchd_prepare_analog_detection(struct gchd *d)
  r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
                      (u8[]){0x06, 0x08}, 2);
  if (r) return r;
+
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                     (u8[]){GCHD_CMD_QUERY_EXT, GCHD_CMD_QUERY_EXT,
+                            GCHD_QUERY_ENCODER_VARIANT}, 3);
+ if (r) return r;
+ r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &reply, 1);
+ if (r) return r;
+
  r = gchd_mail_write(d, GCHD_MAIL_PORT_ENCODER,
                      (u8[]){0x03, 0x28}, 2);
  if (r) return r;
@@ -982,9 +1002,40 @@ static int gchd_prepare_analog_detection(struct gchd *d)
  if (r) return r;
 
  /*
-  * Decoder tuning belongs to general input setup, before SOURCE_DETECTION.
-  * Keep the same three-pass order for NTSC- and PAL-family analog sources;
-  * detection retries then only poll for signal and never re-route the input.
+  * Apply connector routing before looking for a source. The three masked
+  * writes preserve unrelated enable bits and match the observed
+  * 02 0E -> 03 0E -> 03 0E routing progression for analog inputs.
+  */
+ r = gchd_do_enable(d, BIT(8), BIT(8));
+ if (r) return r;
+ r = gchd_do_enable(d, BIT(2), BIT(2));
+ if (r) return r;
+ r = gchd_do_enable(d, BIT(9), BIT(9));
+ if (r) return r;
+
+ /*
+  * Give the analog decoder the same two idle/keep-alive cycles observed in
+  * the NTSC trace before tuning. Use this shared order for NTSC and PAL.
+  */
+ {
+  int cycle;
+  for (cycle = 0; cycle < 2; ++cycle) {
+   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                       (u8[]){GCHD_CMD_QUERY_EXT, GCHD_CMD_QUERY_EXT,
+                              GCHD_QUERY_ENCODER_STATUS}, 3);
+   if (r) return r;
+   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &reply, 1);
+   if (r) return r;
+   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                       (u8[]){GCHD_CMD_QUERY, GCHD_CMD_QUERY_EXT, 0xf5}, 3);
+   if (r) return r;
+   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &reply, 1);
+   if (r) return r;
+  }
+ }
+
+ /*
+  * Decoder tuning is common to NTSC and PAL and follows the two idle cycles.
   */
  {
   static const struct gchd_mail_cmd tune[] = {
