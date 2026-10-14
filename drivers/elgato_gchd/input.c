@@ -914,6 +914,23 @@ static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
  * One measurement batch for retries after connector preparation. This path
  * never repeats the long encoder-start sequence or timing-dependent setup.
  */
+static int gchd_prepare_analog_detection(struct gchd *d);
+
+/*
+ * General input setup runs after INPUT_SELECTION and before SOURCE_DETECTION.
+ * Analog connectors need their decoder/front-end route established before the
+ * FA/F5 idle polling loop. HDMI and Component keep their existing preparation
+ * inside their connector-specific detection/configuration paths.
+ */
+int gchd_prepare_input_detection(struct gchd *d)
+{
+ if (d->input < 2)
+  return 0;
+ if (d->input_detect_prepared)
+  return 0;
+ return gchd_prepare_analog_detection(d);
+}
+
 /*
  * Put the selected analog decoder on its documented route before polling it.
  * Detection runs before encoder configuration by design, so it cannot rely
@@ -1037,11 +1054,6 @@ int gchd_probe_video_source(struct gchd *d)
   d->input_fps_den=1;
  } else {
   u8 v;
-
-  if (!d->input_detect_prepared) {
-   r = gchd_prepare_analog_detection(d);
-   if (r) return r;
-  }
 
   /*
    * Composite and S-video share the documented no-signal keep-alive loop.
