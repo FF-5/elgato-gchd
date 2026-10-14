@@ -463,7 +463,7 @@ static int gchd_rx(void *arg)
  return 0;
 }
 
-static void gchd_detect_video_source(struct work_struct *work)
+static void gchd_detection_worker(struct work_struct *work)
 {
  struct gchd *d = container_of(to_delayed_work(work), struct gchd,
                                detect_work);
@@ -1521,7 +1521,7 @@ static int gchd_probe(struct usb_interface *i,
  mutex_init(&d->lifecycle_lock);
  d->lifecycle_state = GCHD_OFFLINE;
  mutex_init(&d->users_lock);
- INIT_DELAYED_WORK(&d->detect_work, gchd_detect_video_source);
+ INIT_DELAYED_WORK(&d->detect_work, gchd_detection_worker);
  INIT_DELAYED_WORK(&d->mode_work, gchd_mode_workfn);
  spin_lock_init(&d->qlock);
  INIT_LIST_HEAD(&d->queued);
