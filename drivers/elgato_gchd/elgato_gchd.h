@@ -612,7 +612,6 @@ struct gchd {
  bool input_configured;
  bool encoder_started;
  bool input_prepared;
- bool input_forced;
  bool mode_forced;
  bool bitrate_forced;
  bool h264_level_forced;
