@@ -854,6 +854,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   d->input_configured = false;
   d->input_routed = false;
   d->input_detect_prepared = false;
+  d->input_source_probe_started = false;
   d->input_prepared = false;
   d->encoder_started = false;
   d->signal_present = false;
@@ -1026,6 +1027,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->input_configured = false;
  d->input_routed = false;
  d->input_detect_prepared = false;
+  d->input_source_probe_started = false;
  d->input_prepared = false;
  WRITE_ONCE(d->signal_present, false);
  gchd_ring_free(&d->ring);
@@ -1454,6 +1456,7 @@ static int gchd_fop_release(struct file *file)
   d->input_configured = false;
   d->input_routed = false;
   d->input_detect_prepared = false;
+  d->input_source_probe_started = false;
   d->input_prepared = false;
   d->encoder_started = false;
   d->signal_present = false;
