@@ -653,7 +653,7 @@ int gchd_load_encoder_firmware(struct gchd *);
 int gchd_input_configure(struct gchd *);
 int gchd_input_start(struct gchd *);
 int gchd_input_configure_idle(struct gchd *);
-int gchd_detect_video_source(struct gchd *);
+int gchd_probe_video_source(struct gchd *);
 int gchd_input_read_analog_mode(struct gchd *, bool *);
 int gchd_input_switch_480i_to_240p(struct gchd *);
 int gchd_common_block_a(struct gchd *);
