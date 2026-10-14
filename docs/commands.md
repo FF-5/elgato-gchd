@@ -41,12 +41,12 @@ SCMD uses vendor OUT request `0xB8`. Original HD uses six bytes `00 00 CMD MODE 
 | SCMD IDLE | `01 MODE ...` | Expected state `0x11`. |
 | SCMD RESET | `02 00 ...` or `02 01 ...` | Mode-dependent readback; deeper meaning partly unconfirmed. |
 | SCMD INIT with encode firmware | `04 00 00 00` | Firmware-load/init path; verify firmware/version words. |
-| SCMD INIT without reload | `04 A0 00 00` | Used before capture start after input/transcoder setup. |
+| SCMD INIT without reload | `04 A0 00 00` | Used before capture start after input/transcoder setup. Observed on analog 240p: no interrupt or `0800:0014` receipt follows it; the next transfer is the `0800:2008` read (`00 01`). |
 | SCMD state change | `05 00 00 01` | Seen during transition; exact meaning UNKNOWN. |
-| SCMD START | `05 00 00 02`; expect state `02` | Starts stream; confirm state and actual video payload. |
+| SCMD START | `05 00 00 02`; expect state `02` | Starts stream; confirm state and actual video payload. Observed on analog 240p: completion takes two rounds; `2008` reads `01` in the first round and `02` in the second. |
 | SCMD NULL/empty stream | `05 00 00 04`; expect state `04` | Interpretation during transitions needs validation. |
-| SCMD receipt | Read `0800:0014` high byte after interrupt | On HD-New, matching CMD confirms receipt, not state transition. |
-| SCMD completion | Poll `0900:0074` bit 2; read `0800:2008` twice | Compare low 5 bits with expected state; acknowledge by writing `00 04` to `0900:0074`. Then write `00 00` to `0900:01B0` (purpose UNKNOWN). |
+| SCMD receipt | Read `0800:0014` high byte after interrupt | On HD-New, matching CMD confirms receipt, not state transition. Observed on analog 240p for START (`05 00`, about 0.2 s after the command, interrupt payload `10 00 00`) but not for `04 A0 00 00`. |
+| SCMD completion | Poll `0900:0074` bit 2; read `0800:2008` twice | Compare low 5 bits with expected state; acknowledge by writing `00 04` to `0900:0074`. Then write `00 00` to `0900:01B0` (purpose UNKNOWN). Observed HD-New order per round: read `2008`, read `0074` (`011E`), read `01B0` (`0150`), read `2008`, read `2008`, write `0074 = 00 04`, write `01B0 = 00 00`. That is three `2008` reads (the first before the flag poll), and the `0074` acknowledge comes before the `01B0` clear. |
 
 State values used by the source: `00` uninitialized, `10` idle firmware loaded, `11` idle, `01` initialized/stopped, `02` started, `04` null/empty stream, `12` special shutdown/reset state (interpretation partly theoretical).
 
@@ -62,12 +62,12 @@ State values used by the source: `00` uninitialized, `10` idle firmware loaded, 
 | `0800:0016` | Often `09 00` during HD-New handshake | Interrupt/status role uncertain. |
 | `0900:0070` | Write `00 04` during firmware setup | Purpose UNKNOWN. |
 | `0900:01B0` | Usually write `00 00` after SCMD completion | Purpose UNKNOWN; readback varies. |
-| Analog decoder status / source-found candidate (`89 89 CA`) | Replies include `FE`, `7E`, `66`, transient `EE` | `66` correlates with 240p lock and `7E` with 480i in an observed sequence; these are not universal constants. |
-| Analog family/status poll (`89 89 FA`) | Replies include `3F`, `06`, `16` | Used during analog setup and source detection; low nibble `6`/`7` identifies NTSC/PAL family in the family-detection path. Other reply semantics remain unconfirmed. |
-| Analog decoder status poll (`89 89 E7`) | Replies `69`, `09`, `89` | Polled during decoder setup and lock settling; exact bit meanings are unconfirmed. |
+| Analog decoder status / source-found candidate (`89 89 CA`) | Replies include `FE`, `7E`, `66`, `E6`, transient `EE` | `66` correlates with 240p lock and `7E` with 480i in an observed sequence; these are not universal constants. During an HDMI→composite 240p switch `CA` read `E6` twice and then settled to `66`. |
+| Analog family/status poll (`89 89 FA`) | Replies include `3F`, `06`, `16`, `1F`, `3E` | Used during analog setup and source detection; low nibble `6`/`7` identifies NTSC/PAL family in the family-detection path. During the HDMI→composite 240p switch the reads right after the selector were `1F` and `3E`; later reads were `16` and `06`. Other reply semantics remain unconfirmed. |
+| Analog decoder status poll (`89 89 E7`) | Replies `69`, `09`, `89`, `E9` | Polled during decoder setup and lock settling; exact bit meanings are unconfirmed. |
 | Analog decoder status poll (`89 89 F1`) | Replies `7E`, `69` | Polled during decoder setup and lock settling; exact bit meanings are unconfirmed. |
 | Analog decoder status poll (`89 89 CB`) | Replies `6E`, `44` | Polled during decoder setup; exact bit meanings are unconfirmed. |
-| `0xFD`, `0xFC`, `0xF3` | Common replies `6E`, `6E`, `7E` | Meaning UNKNOWN; helper prefixes differ. |
+| `0xFD`, `0xFC`, `0xF3` | Common replies `6E`, `6E`, `7E` | Meaning UNKNOWN; helper prefixes differ. The `6E`/`6E`/`7E` replies come from the `99 89` helper form; `89 89 FD` returned `60` at the start of the HDMI→composite 240p switch. |
 | `0xF8` via `89 89 F8` | Reply `C9` | Meaning UNKNOWN. |
 | `0x8B` via `99 89 8B` | Replies `2E`, `36` | Meaning UNKNOWN. |
 | `0x89` via `99 89 89` | Reply `6E` | Meaning UNKNOWN. |
@@ -89,7 +89,7 @@ Enable-bit masks for `0900:0018`: bit 1 `0x0002` (`EB_FIRMWARE_PROCESSOR`); bit 
 | Backend coefficient table | `0x98:90–A3`: `01 BD 9A 3A E9 AB 17 88 84 8A 9C 8C 98 93 83 A9 8B E8 81 49` | Ordered values; individual coefficient meanings UNKNOWN. |
 | PAL S-video 288p-equivalent backend writes | `0x98:04=95`, `70=D0`, `0F=88`, `90=D8`, `91=BF`, `95=9D`, `96=1B`, `97=88`, `A0=8A`, `A1=D8`, `A2=B2`, `A3=59`; later `72=88`, `C0=88`, `61=98`, `63=89`, `64=96`, `65=88`, `04=8D`, `62=91` | Sparse, ordered writes from the working PAL S-video path; not a complete `90–A3` table. Keep separate from the composite coefficient sequence. |
 | Decoder format value | `0x88:28=88/8A` | Correlates with 480i/240p in observed transitions; exact bits UNKNOWN. |
-| Backend retrigger | `0x98:0D=C8`; `0x98:0E=05,04` or `15,14` | Preserve exact order; latch/command semantics not confirmed. |
+| Backend retrigger | `0x98:0D=C8`; `0x98:0E=05,04` or `15,14` | Preserve exact order; latch/command semantics not confirmed. The HDMI→composite 240p NTSC switch contains three pulses: `15,14` before the backend writes, `05,04` after the coefficient table, then `15,14` again. |
 
 ## Idle / keep-alive loops
 
