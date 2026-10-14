@@ -78,18 +78,13 @@ static void gchd_input_selection_enter(struct gchd *d)
  d->input = gchd_last_input <= 3 ? gchd_last_input : 0;
  mutex_unlock(&gchd_last_input_lock);
 
- /* Keep the userspace-visible menu in sync with the restored selection. */
- {
-  struct v4l2_ctrl *ctrl = v4l2_ctrl_find(&d->ctrls,
-                                          V4L2_CID_GCHD_INPUT_SOURCE);
-
-  if (ctrl && ctrl->val != d->input)
-   v4l2_ctrl_s_ctrl(ctrl, d->input);
- }
-
+ /*
+  * The control value is already kept in sync by gchd_set_input(). Do not
+  * call v4l2_ctrl_s_ctrl() here: open holds lifecycle_lock, and the control
+  * callback re-enters gchd_set_input(), which takes the same mutex.
+  */
  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
  WRITE_ONCE(d->detect_requested, true);
- gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
  schedule_delayed_work(&d->detect_work, 0);
 }
 
@@ -468,7 +463,7 @@ static int gchd_rx(void *arg)
  return 0;
 }
 
-static void gchd_detect_workfn(struct work_struct *work)
+static void gchd_detect_video_source(struct work_struct *work)
 {
  struct gchd *d = container_of(to_delayed_work(work), struct gchd,
                                detect_work);
@@ -544,7 +539,7 @@ static void gchd_detect_workfn(struct work_struct *work)
    * handshake against a no-signal input: on HDNew this repeatedly fails
    * with -EINVAL and leaves retries in a bad lifecycle state.
    */
-  r = gchd_detect_video_source(d);
+  r = gchd_probe_video_source(d);
   if (r == -ENOLINK) {
    dev_info_ratelimited(&d->intf->dev, "no signal on input=%u; retrying detection\n",
             READ_ONCE(d->input));
@@ -1505,7 +1500,7 @@ static int gchd_probe(struct usb_interface *i,
  mutex_init(&d->lifecycle_lock);
  d->lifecycle_state = GCHD_OFFLINE;
  mutex_init(&d->users_lock);
- INIT_DELAYED_WORK(&d->detect_work, gchd_detect_workfn);
+ INIT_DELAYED_WORK(&d->detect_work, gchd_detect_video_source);
  INIT_DELAYED_WORK(&d->mode_work, gchd_mode_workfn);
  spin_lock_init(&d->qlock);
  INIT_LIST_HEAD(&d->queued);
