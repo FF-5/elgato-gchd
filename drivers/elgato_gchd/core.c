@@ -896,15 +896,18 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
  }
- WRITE_ONCE(d->capture_active, false);
  if (READ_ONCE(d->hw_initialized)) {
   r = gchd_stream_stop(d);
   if (r) {
-   dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\n", r);
+   dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\\n", r);
    WRITE_ONCE(d->streaming, false);
+   WRITE_ONCE(d->detect_requested, true);
+   gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
+   schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
    mutex_unlock(&d->lifecycle_lock);
    return r;
   }
+  WRITE_ONCE(d->capture_active, false);
 
   /*
    * Keep encoder firmware initialized; do not run full hardware shutdown or
@@ -914,11 +917,17 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
   if (r) {
    dev_err(&d->intf->dev,
-           "input switch: transition to IDLE failed: %d\n", r);
+           "input switch: transition to IDLE failed: %d\\n", r);
+   WRITE_ONCE(d->signal_present, false);
    WRITE_ONCE(d->streaming, false);
+   WRITE_ONCE(d->detect_requested, true);
+   gchd_set_lifecycle(d, GCHD_INPUT_DETECTION);
+   schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
    mutex_unlock(&d->lifecycle_lock);
    return r;
   }
+ } else {
+  WRITE_ONCE(d->capture_active, false);
  }
 
  /* Clear connector-specific cached state only after reaching IDLE. */
