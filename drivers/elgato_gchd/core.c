@@ -1309,7 +1309,6 @@ static int gchd_fop_open(struct file *file)
   }
 
   gchd_set_lifecycle(d, GCHD_INITIALIZATION);
-  d->input_forced = true;
   WRITE_ONCE(d->capture_active, false);
   d->input_configured = false;
   d->input_prepared = false;
