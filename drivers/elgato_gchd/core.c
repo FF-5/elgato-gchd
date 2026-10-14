@@ -461,6 +461,7 @@ static void gchd_detect_workfn(struct work_struct *work)
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
   r = gchd_stream_stop(d);
+  WRITE_ONCE(d->capture_active, false);
   if (r) {
    dev_warn(&d->intf->dev,
             "redetection: stream stop failed: %d; retrying later\n", r);
@@ -1356,6 +1357,7 @@ static int gchd_fop_release(struct file *file)
    }
   }
 
+  WRITE_ONCE(d->capture_active, false);
   d->input_configured = false;
   d->input_prepared = false;
   d->encoder_started = false;
