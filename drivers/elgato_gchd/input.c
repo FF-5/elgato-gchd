@@ -1008,8 +1008,11 @@ static int gchd_prepare_analog_detection(struct gchd *d)
  if (r) return r;
 
  /*
-  * Give the analog decoder the same two idle/keep-alive cycles observed in
-  * the NTSC trace before tuning. Use this shared order for NTSC and PAL.
+  * The two FA/F5 idle cycles are only the fast path when a source is already
+  * recognized. If FA does not report the source-found marker (CA), stop
+  * general setup immediately: the lifecycle worker will enter SOURCE_DETECTION
+  * and continue polling there. Mark preparation complete so retries do not
+  * restart this setup block on every no-source poll.
   */
  {
   int cycle;
@@ -1020,6 +1023,10 @@ static int gchd_prepare_analog_detection(struct gchd *d)
    if (r) return r;
    r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &reply, 1);
    if (r) return r;
+   if (reply != 0xca) {
+    d->input_detect_prepared = true;
+    return 0;
+   }
    r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
                        (u8[]){GCHD_CMD_QUERY, GCHD_CMD_QUERY_EXT, 0xf5}, 3);
    if (r) return r;
@@ -1029,7 +1036,8 @@ static int gchd_prepare_analog_detection(struct gchd *d)
  }
 
  /*
-  * Decoder tuning is common to NTSC and PAL and follows the two idle cycles.
+  * Decoder tuning is common to NTSC and PAL and follows both successful
+  * source-present idle cycles. The no-source path has already returned above.
   */
  {
   static const struct gchd_mail_cmd tune[] = {
