@@ -1294,6 +1294,7 @@ static const struct v4l2_ctrl_ops gchd_ctrl_ops = { .s_ctrl = gchd_ctrl };
 static int gchd_fop_open(struct file *file)
 {
  struct gchd *d = video_drvdata(file);
+ bool restore_input_control = false;
  int r = 0;
 
  /* Protect the embedded video_device/driver state against unplug races. */
@@ -1357,12 +1358,32 @@ static int gchd_fop_open(struct file *file)
   d->hw_initialized = true;
   d->hw_init_failed = false;
   gchd_input_selection_enter(d);
+  restore_input_control = true;
  }
  d->open_count++;
 
 out:
  mutex_unlock(&d->lifecycle_lock);
  mutex_unlock(&d->users_lock);
+
+ /*
+  * Synchronize the menu after dropping lifecycle_lock. The control callback
+  * routes through gchd_set_input(), so invoking it while holding that mutex
+  * would recursively acquire lifecycle_lock and deadlock.
+  */
+ if (!r && restore_input_control) {
+  struct v4l2_ctrl *ctrl = v4l2_ctrl_find(&d->ctrls,
+                                          V4L2_CID_GCHD_INPUT_SOURCE);
+
+  if (ctrl && ctrl->val != READ_ONCE(d->input)) {
+   int cr = v4l2_ctrl_s_ctrl(ctrl, READ_ONCE(d->input));
+
+   if (cr)
+    dev_warn(&d->intf->dev,
+             "could not synchronize input-source control: %d\n", cr);
+  }
+ }
+
  if (r && vb2_fops.release)
   vb2_fops.release(file);
  if (r)
