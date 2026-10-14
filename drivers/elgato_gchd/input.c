@@ -1049,6 +1049,45 @@ static int gchd_prepare_analog_detection(struct gchd *d)
   }
  }
 
+ /*
+  * 240p/288p detection is order-dependent: the family nibble only becomes
+  * recognizable after the decoder tuning passes and 0x94 prime. Run these
+  * before SOURCE_DETECTION instead of waiting for a reply that cannot arrive.
+  */
+ {
+  static const struct gchd_mail_cmd tune[] = {
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x10, 0x6f),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x11, 0xd4),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x12, 0xd0),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x13, 0x08),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x14, 0x08),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x15, 0x88),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x10, 0x6f),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x11, 0xea),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x12, 0xd0),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x13, 0x08),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x14, 0x08),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x15, 0x88),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x10, 0x6f),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x11, 0xea),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x12, 0xd0),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x13, 0x1b),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x14, 0x1b),
+   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, 0x15, 0x88),
+  };
+  r = gchd_seq(d, tune, ARRAY_SIZE(tune));
+  if (r) return r;
+ }
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                     (u8[]){0x94,0x41,0x37}, 3);
+ if (r) return r;
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                     (u8[]){0x94,0x4a,0xb7}, 3);
+ if (r) return r;
+ r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
+                     (u8[]){0x94,0x4b,0xb7}, 3);
+ if (r) return r;
+
  d->input_detect_prepared = true;
  return 0;
 }
@@ -1126,9 +1165,9 @@ int gchd_probe_video_source(struct gchd *d)
   u8 v;
 
   /*
-   * General input setup already performed the two FA/F5 idle cycles. The
-   * detection state repeats that loop until FA reports the source-found
-   * candidate (reply CA). Do not treat the FA family nibble as source lock.
+   * After pre-detection tuning and the 0x94 prime, FA reports the analog
+   * family in its low nibble (6=NTSC, 7=PAL). Waiting for literal CA here
+   * deadlocks the 240p path; CA/E7 polling follows family detection.
    */
   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
                       (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,
@@ -1136,19 +1175,15 @@ int gchd_probe_video_source(struct gchd *d)
   if (r) return r;
   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
   if (r) return r;
-  if (v != 0xca) {
-   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
-                       (u8[]){GCHD_CMD_QUERY,GCHD_CMD_QUERY_EXT,
-                              GCHD_QUERY_ENCODER_POLL}, 3);
-   if (r) return r;
-   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
-   if (r) return r;
+  dev_info(&d->intf->dev,
+           "gchd-diag detect %s: pre-config raw_status=0x%02x mode=0x%x\\n",
+           d->input == 2 ? "composite" : "s-video", v, v & 0x0f);
+  v &= 0x0f;
+  if (v != 6 && v != 7)
    return -ENOLINK;
-  }
 
   /*
-   * Source-found path: query decoder lock/status, then ready and height
-   * status before the existing family/format detection continues.
+   * Family recognized: query decoder status/ready/height in sequence.
    */
   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM,
                       (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,
@@ -1169,17 +1204,7 @@ int gchd_probe_video_source(struct gchd *d)
   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
   if (r) return r;
 
-  /*
-   * Prime the analog decoder before reading its NTSC/PAL family status.
-   * The family nibble is not enough to distinguish 240p/288p from 480i/576i;
-   * the later live-mode monitor handles the NTSC 240p transition.
-   */
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x94,0x41,0x37}, 3);
-  if (r) return r;
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x94,0x4a,0xb7}, 3);
-  if (r) return r;
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0x94,0x4b,0xb7}, 3);
-  if (r) return r;
+  /* The 0x94 prime already ran before SOURCE_DETECTION. */
   r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){GCHD_CMD_QUERY_EXT,GCHD_CMD_QUERY_EXT,GCHD_QUERY_ENCODER_STATUS}, 3);
   if (r) return r;
   r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, &v, 1);
@@ -1417,34 +1442,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
 #define MRP(p) do { r=gchd_mail_read(d,p,&v,1); if(r)return r; } while(0)
 #define R9(a) do { M3(GCHD_CMD_REGISTER_READ,GCHD_CMD_REGISTER_READ_EXT,a); MRP(0x33); } while(0)
 
- /*
-  * Decoder tuning begins late configuration, after source detection has
-  * succeeded. Keep this common sequence for NTSC and PAL.
-  */
- {
-  static const struct gchd_mail_cmd tune[] = {
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_10, GCHD_DECODER_TUNE_6F),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_11, GCHD_DECODER_TUNE_D4),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_12, GCHD_DECODER_TUNE_D0),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_13, GCHD_DECODER_TUNE_08),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_14, GCHD_DECODER_TUNE_08),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_15, GCHD_DECODER_TUNE_88),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_10, GCHD_DECODER_TUNE_6F),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_11, GCHD_DECODER_TUNE_EA),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_12, GCHD_DECODER_TUNE_D0),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_13, GCHD_DECODER_TUNE_08),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_14, GCHD_DECODER_TUNE_08),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_15, GCHD_DECODER_TUNE_88),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_10, GCHD_DECODER_TUNE_6F),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_11, GCHD_DECODER_TUNE_EA),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_12, GCHD_DECODER_TUNE_D0),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_13, GCHD_DECODER_TUNE_1B),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_14, GCHD_DECODER_TUNE_1B),
-   GCHD_MAIL_REG_WRITE(GCHD_MAIL_PORT_ENCODER, GCHD_DECODER_REG_TUNE_15, GCHD_DECODER_TUNE_88),
-  };
-  r = gchd_seq(d, tune, ARRAY_SIZE(tune));
-  if (r) return r;
- }
+ /* Tuning is performed before source detection so 240p/288p can lock. */
 
  /* Composite and S-Video share the assumed 0x4E:0x51=0xEC route.
   * Select the decoder's distinct luma/chroma input mode separately. */
