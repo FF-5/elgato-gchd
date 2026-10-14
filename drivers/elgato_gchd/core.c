@@ -115,7 +115,12 @@ static bool gchd_mode_allowed(const struct gchd *d,
   return true;
  case 2:
  case 3:
-  return m->interlaced && m->width == 720 &&
+  /*
+   * Composite and S-video also carry 240p/288p. These are represented as
+   * progressive 720x480/576 modes by the capture encoder, so do not reject
+   * them merely because the analog input is selected.
+   */
+  return m->width == 720 &&
          (m->height == 480 || m->height == 576);
  default:
   return false;
@@ -648,7 +653,13 @@ static void gchd_detection_worker(struct work_struct *work)
 retry:
  if ((r || !READ_ONCE(d->signal_present)) &&
      !d->disconnected && READ_ONCE(d->detect_requested))
-  schedule_delayed_work(&d->detect_work, msecs_to_jiffies(250));
+  /*
+   * The documented composite/S-video FA/F5 idle cycle is approximately
+   * 50 ms. Keep analog source detection responsive without changing the
+   * HDMI/component retry cadence.
+   */
+  schedule_delayed_work(&d->detect_work,
+                        msecs_to_jiffies(d->input >= 2 ? 50 : 250));
 
 out:
  mutex_unlock(&d->lifecycle_lock);
