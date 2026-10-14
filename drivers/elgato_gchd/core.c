@@ -712,57 +712,46 @@ static void gchd_mode_workfn(struct work_struct *work)
           d->input_interlaced ? "480i" : "240p",
           target_interlaced ? "480i" : "240p");
 
- if (!target_interlaced) {
-  r = gchd_input_switch_480i_to_240p(d);
-  if (r) {
-   dev_warn(&d->intf->dev,
-            "480i-to-240p register transition failed: %d\n", r);
-   goto reschedule;
-  }
-  d->input_interlaced = false;
- } else {
-  /*
-   * The reverse transition in the trace reconfigures the transport and
-   * encoder pipeline. Stop RX before taking ownership of the USB control
-   * endpoint, return to IDLE, and configure the same analog input as 480i.
-   */
-  if (d->rx_thread) {
-   kthread_stop(d->rx_thread);
-   d->rx_thread = NULL;
-  }
-  r = gchd_stream_stop(d);
-  if (r)
-   goto restart_failed;
-  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
-  if (r)
-   goto restart_failed;
+ /*
+  * Reconfigure the analog pipeline through the common setup path for either
+  * direction. The former 480i-to-240p register-only helper no longer exists.
+  */
+ if (d->rx_thread) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+ }
+ r = gchd_stream_stop(d);
+ if (r)
+  goto restart_failed;
+ r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
+ if (r)
+  goto restart_failed;
 
-  gchd_ring_free(&d->ring);
-  d->ts_partial_len = 0;
-  d->input_configured = false;
-  d->input_interlaced = true;
-  gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
-  r = gchd_input_configure_idle(d);
-  if (r)
-   goto restart_failed;
+ gchd_ring_free(&d->ring);
+ d->ts_partial_len = 0;
+ d->input_configured = false;
+ d->input_interlaced = target_interlaced;
+ gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
+ r = gchd_input_configure_idle(d);
+ if (r)
+  goto restart_failed;
 
-  gchd_set_lifecycle(d, GCHD_CAPTURE_START);
-  d->last_video_jiffies = jiffies;
-  WRITE_ONCE(d->start_pending, true);
-  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
-  if (IS_ERR(d->rx_thread)) {
-   r = PTR_ERR(d->rx_thread);
-   d->rx_thread = NULL;
-   WRITE_ONCE(d->start_pending, false);
-   goto restart_failed;
-  }
-  r = gchd_input_start(d);
+ gchd_set_lifecycle(d, GCHD_CAPTURE_START);
+ d->last_video_jiffies = jiffies;
+ WRITE_ONCE(d->start_pending, true);
+ d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
+ if (IS_ERR(d->rx_thread)) {
+  r = PTR_ERR(d->rx_thread);
+  d->rx_thread = NULL;
   WRITE_ONCE(d->start_pending, false);
-  if (r) {
-   kthread_stop(d->rx_thread);
-   d->rx_thread = NULL;
-   goto restart_failed;
-  }
+  goto restart_failed;
+ }
+ r = gchd_input_start(d);
+ WRITE_ONCE(d->start_pending, false);
+ if (r) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+  goto restart_failed;
  }
 
  gchd_set_lifecycle(d, GCHD_STREAMING);
