@@ -1340,6 +1340,9 @@ static int gchd_fop_open(struct file *file)
   }
  }
 
+ dev_info(&d->intf->dev,
+          "GCHD lifecycle: V4L2 open requested by pid=%d comm=%s\\n",
+          task_pid_nr(current), current->comm);
  mutex_lock(&d->users_lock);
  mutex_lock(&d->lifecycle_lock);
  if (d->disconnected) {
@@ -1372,6 +1375,8 @@ static int gchd_fop_open(struct file *file)
    d->input_fps_num = 0;
    d->input_fps_den = 0;
 
+   dev_info(&d->intf->dev,
+            "GCHD lifecycle: starting hardware boot/init from V4L2 open\\n");
    r = gchd_hw_init(d);
    if (r) {
     /* Do not issue shutdown/recovery commands from the boot/init path. */
@@ -1548,6 +1553,7 @@ static int gchd_probe(struct usb_interface *i,
  d->intf = i;
  d->family = (enum gchd_family)id->driver_info;
 
+ dev_info(&i->dev, "GCHD lifecycle: USB probe; registering V4L2 only\\n");
  r = usb_reset_configuration(d->udev);
  if (r)
   goto err;
