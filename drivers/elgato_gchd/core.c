@@ -1389,7 +1389,7 @@ static int gchd_fop_open(struct file *file)
    * Opening the node only grants access to its V4L2 metadata and controls.
    * It must not boot hardware or start input detection: udev/v4l_id and
    * desktop media services routinely open nodes just to identify them.
-   * The first STREAMON performs the OFFLINE -> INITIALIZATION transition.
+   * The first STREAMON performs the ONLINE/POWER_OFF -> INITIALIZATION transition.
    */
   d->open_count++;
  }
