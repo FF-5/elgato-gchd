@@ -441,10 +441,17 @@ static int gchd_rx(void *arg)
  int r = 0;
 
  rx = kcalloc(GCHD_RX_URB_COUNT, sizeof(*rx), GFP_KERNEL);
- if (!rx)
+ if (!rx) {
+  WRITE_ONCE(d->rx_setup_status, -ENOMEM);
+  complete(&d->rx_ready);
   return -ENOMEM;
+ }
+ for (i = 0; i < GCHD_RX_URB_COUNT; ++i)
+  INIT_LIST_HEAD(&rx[i].done);
  pes = kvmalloc(GCHD_MAX_FRAME, GFP_KERNEL);
  if (!pes) {
+  WRITE_ONCE(d->rx_setup_status, -ENOMEM);
+  complete(&d->rx_ready);
   kfree(rx);
   return -ENOMEM;
  }
@@ -473,7 +480,6 @@ static int gchd_rx(void *arg)
   rx[i].dev = d;
   rx[i].endpoint = i < GCHD_RX_URBS_EP_IN ?
                    GCHD_EP_IN : GCHD_EP_AUX_IN;
-  INIT_LIST_HEAD(&rx[i].done);
   rx[i].buf = kmalloc(GCHD_USB_BUFSIZE, GFP_KERNEL);
   rx[i].urb = usb_alloc_urb(0, GFP_KERNEL);
   if (!rx[i].buf || !rx[i].urb) {
@@ -503,6 +509,10 @@ static int gchd_rx(void *arg)
    goto out_kill;
   }
  }
+
+ /* Do not issue START until all 40 receive URBs are queued. */
+ WRITE_ONCE(d->rx_setup_status, 0);
+ complete(&d->rx_ready);
 
  while (!kthread_should_stop() && !d->disconnected &&
         READ_ONCE(d->rx_active)) {
@@ -625,6 +635,10 @@ out_kill:
  if (pes_active && n)
   gchd_ring_push(&d->ring, pes, n);
 out_free:
+ if (READ_ONCE(d->rx_setup_status) == -EINPROGRESS) {
+  WRITE_ONCE(d->rx_setup_status, r ? r : -EIO);
+  complete(&d->rx_ready);
+ }
  for (i = 0; i < GCHD_RX_URB_COUNT; ++i) {
   usb_free_urb(rx[i].urb);
   kfree(rx[i].buf);
@@ -781,11 +795,29 @@ static void gchd_detection_worker(struct work_struct *work)
    gchd_set_lifecycle(d, GCHD_CAPTURE_START);
    d->last_video_jiffies = jiffies;
    WRITE_ONCE(d->start_pending, true);
+   reinit_completion(&d->rx_ready);
+   WRITE_ONCE(d->rx_setup_status, -EINPROGRESS);
    d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
    if (IS_ERR(d->rx_thread)) {
     r = PTR_ERR(d->rx_thread);
     d->rx_thread = NULL;
     WRITE_ONCE(d->start_pending, false);
+    goto retry;
+   }
+   if (!wait_for_completion_timeout(&d->rx_ready, msecs_to_jiffies(2000))) {
+    r = -ETIMEDOUT;
+    kthread_stop(d->rx_thread);
+    d->rx_thread = NULL;
+    WRITE_ONCE(d->start_pending, false);
+    dev_err(&d->intf->dev, "timed out waiting for bulk-IN queue setup\n");
+    goto retry;
+   }
+   r = READ_ONCE(d->rx_setup_status);
+   if (r) {
+    kthread_stop(d->rx_thread);
+    d->rx_thread = NULL;
+    WRITE_ONCE(d->start_pending, false);
+    dev_err(&d->intf->dev, "bulk-IN queue setup failed: %d\n", r);
     goto retry;
    }
 
@@ -902,11 +934,29 @@ static void gchd_mode_workfn(struct work_struct *work)
  gchd_set_lifecycle(d, GCHD_CAPTURE_START);
  d->last_video_jiffies = jiffies;
  WRITE_ONCE(d->start_pending, true);
+ reinit_completion(&d->rx_ready);
+ WRITE_ONCE(d->rx_setup_status, -EINPROGRESS);
  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
  if (IS_ERR(d->rx_thread)) {
   r = PTR_ERR(d->rx_thread);
   d->rx_thread = NULL;
   WRITE_ONCE(d->start_pending, false);
+  goto restart_failed;
+ }
+ if (!wait_for_completion_timeout(&d->rx_ready, msecs_to_jiffies(2000))) {
+  r = -ETIMEDOUT;
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+  WRITE_ONCE(d->start_pending, false);
+  dev_err(&d->intf->dev, "timed out waiting for bulk-IN queue setup\n");
+  goto restart_failed;
+ }
+ r = READ_ONCE(d->rx_setup_status);
+ if (r) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+  WRITE_ONCE(d->start_pending, false);
+  dev_err(&d->intf->dev, "bulk-IN queue setup failed: %d\n", r);
   goto restart_failed;
  }
  r = gchd_input_start(d);
@@ -1694,6 +1744,8 @@ static int gchd_probe(struct usb_interface *i,
  spin_lock_init(&d->rx_lock);
  INIT_LIST_HEAD(&d->rx_done);
  init_waitqueue_head(&d->rx_wait);
+ init_completion(&d->rx_ready);
+ d->rx_setup_status = -EINPROGRESS;
  spin_lock_init(&d->ring.lock);
  d->width = 1280;
  d->height = 720;
