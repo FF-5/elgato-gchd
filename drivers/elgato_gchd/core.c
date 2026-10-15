@@ -437,7 +437,7 @@ static int gchd_rx(void *arg)
  u8 last_cc = 0;
  u64 rx_reads = 0, rx_bytes = 0, rx_empty = 0, rx_errors = 0;
  unsigned long report_jiffies = jiffies;
- unsigned int i, submitted = 0;
+ unsigned int i;
  int r = 0;
 
  rx = kcalloc(GCHD_RX_URB_COUNT, sizeof(*rx), GFP_KERNEL);
@@ -502,7 +502,6 @@ static int gchd_rx(void *arg)
            i, rx[i].endpoint, r);
    goto out_kill;
   }
-  submitted++;
  }
 
  while (!kthread_should_stop() && !d->disconnected &&
@@ -548,27 +547,31 @@ static int gchd_rx(void *arg)
   else
    rx_empty++;
 
-  for (int pos = 0; pos < done->urb->actual_length;) {
-   size_t take;
+  {
+   int pos;
 
-   /* USB transfers are arbitrary byte chunks; recover MPEG-TS alignment. */
-   if (!d->ts_partial_len) {
-    while (pos < done->urb->actual_length && done->buf[pos] != 0x47)
-     pos++;
-    if (pos == done->urb->actual_length)
-     break;
-   }
+   for (pos = 0; pos < done->urb->actual_length;) {
+    size_t take;
 
-   take = min_t(size_t, 188 - d->ts_partial_len,
-                done->urb->actual_length - pos);
-   memcpy(d->ts_partial + d->ts_partial_len, done->buf + pos, take);
-   d->ts_partial_len += take;
-   pos += take;
+    /* USB transfers are arbitrary byte chunks; recover MPEG-TS alignment. */
+    if (!d->ts_partial_len) {
+     while (pos < done->urb->actual_length && done->buf[pos] != 0x47)
+      pos++;
+     if (pos == done->urb->actual_length)
+      break;
+    }
 
-   if (d->ts_partial_len == 188) {
-    gchd_ts(d, d->ts_partial, pes, &n, &pes_active,
-            &cc_valid, &last_cc);
-    d->ts_partial_len = 0;
+    take = min_t(size_t, 188 - d->ts_partial_len,
+                 done->urb->actual_length - pos);
+    memcpy(d->ts_partial + d->ts_partial_len, done->buf + pos, take);
+    d->ts_partial_len += take;
+    pos += take;
+
+    if (d->ts_partial_len == 188) {
+     gchd_ts(d, d->ts_partial, pes, &n, &pes_active,
+             &cc_valid, &last_cc);
+     d->ts_partial_len = 0;
+    }
    }
   }
 
