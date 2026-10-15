@@ -7,6 +7,8 @@
 #include <linux/workqueue.h>
 #include <linux/spinlock.h>
 #include <linux/usb.h>
+#include <linux/wait.h>
+#include <linux/completion.h>
 #include <linux/videodev2.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-event.h>
@@ -21,6 +23,9 @@
 #define GCHD_PID_3 0x005d
 #define GCHD_PID GCHD_PID_3
 #define GCHD_EP_IN 0x81
+#define GCHD_EP_AUX_IN 0x84
+#define GCHD_RX_URBS_EP_IN 32
+#define GCHD_RX_URBS_AUX_IN 8
 #define GCHD_EP_OUT 0x02
 #define GCHD_EP_INT 0x83
 #define GCHD_USB_BUFSIZE 0x10000
@@ -549,6 +554,7 @@
 
 
 
+struct gchd_rx_urb;
 struct gchd_frame { u8 *data; size_t len; u64 sequence; };
 struct gchd_ring {
  struct gchd_frame frames[GCHD_RING_FRAMES];
@@ -600,6 +606,13 @@ struct gchd {
  spinlock_t qlock;
  struct list_head queued;
  struct task_struct *rx_thread;
+ /* Asynchronous bulk-IN receive queue (URBs are owned by the RX thread). */
+ spinlock_t rx_lock;
+ struct list_head rx_done;
+ wait_queue_head_t rx_wait;
+ struct completion rx_ready;
+ int rx_setup_status;
+ bool rx_active;
  struct gchd_ring ring;
  u8 *usb_buf;
  u8 ts_partial[188];

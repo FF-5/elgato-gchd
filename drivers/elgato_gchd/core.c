@@ -370,105 +370,282 @@ static void gchd_deliver(struct gchd *d)
  kvfree(f->data);kfree(f);
 }
 
+#define GCHD_RX_URB_COUNT (GCHD_RX_URBS_EP_IN + GCHD_RX_URBS_AUX_IN)
+
+struct gchd_rx_urb {
+ struct urb *urb;
+ struct gchd *dev;
+ struct list_head done;
+ u8 *buf;
+ u8 endpoint;
+};
+
+static bool gchd_rx_urb_stopped(int status)
+{
+ return status == -ENOENT || status == -ECONNRESET ||
+        status == -ESHUTDOWN;
+}
+
+/*
+ * Endpoint 0x81 carries the MPEG-TS stream. Endpoint 0x84 is also submitted
+ * as observed in the USB trace, but its payload role is not established, so
+ * it is kept queued without being fed into the TS parser.
+ */
+static void gchd_rx_complete(struct urb *urb)
+{
+ struct gchd_rx_urb *rx = urb->context;
+ struct gchd *d = rx->dev;
+ unsigned long flags;
+ int r;
+
+ if (!READ_ONCE(d->rx_active) || gchd_rx_urb_stopped(urb->status))
+  return;
+
+ if (urb->status) {
+  r = usb_submit_urb(urb, GFP_ATOMIC);
+  if (r && READ_ONCE(d->rx_active))
+   dev_err_ratelimited(&d->intf->dev,
+                       "bulk-IN resubmit failed: ep=0x%02x error=%d\n",
+                       rx->endpoint, r);
+  return;
+ }
+
+ if (rx->endpoint == GCHD_EP_AUX_IN) {
+  /* Preserve the observed 0x84 receive queue; do not interpret its payload. */
+  r = usb_submit_urb(urb, GFP_ATOMIC);
+  if (r && READ_ONCE(d->rx_active))
+   dev_err_ratelimited(&d->intf->dev,
+                       "auxiliary bulk-IN resubmit failed: error=%d\n", r);
+  return;
+ }
+
+ spin_lock_irqsave(&d->rx_lock, flags);
+ if (READ_ONCE(d->rx_active))
+  list_add_tail(&rx->done, &d->rx_done);
+ spin_unlock_irqrestore(&d->rx_lock, flags);
+ wake_up_interruptible(&d->rx_wait);
+}
+
 static int gchd_rx(void *arg)
 {
- struct gchd *d=arg; u8 *pes; size_t n=0; int ret,actual,pos;
- bool pes_active=false, cc_valid=false; u8 last_cc=0;
- u64 rx_reads=0, rx_bytes=0, rx_empty=0, rx_timeouts=0;
+ struct gchd *d = arg;
+ struct gchd_rx_urb *rx;
+ struct usb_host_endpoint *ep81, *ep84;
+ u8 *pes;
+ size_t n = 0;
+ bool pes_active = false, cc_valid = false;
+ u8 last_cc = 0;
+ u64 rx_reads = 0, rx_bytes = 0, rx_empty = 0, rx_errors = 0;
  unsigned long report_jiffies = jiffies;
- struct usb_host_endpoint *ep;
- pes=kvmalloc(GCHD_MAX_FRAME,GFP_KERNEL);if(!pes)return-ENOMEM;
- ep = usb_pipe_endpoint(d->udev, usb_rcvbulkpipe(d->udev, GCHD_EP_IN));
+ unsigned int i;
+ int r = 0;
+
+ rx = kcalloc(GCHD_RX_URB_COUNT, sizeof(*rx), GFP_KERNEL);
+ if (!rx) {
+  WRITE_ONCE(d->rx_setup_status, -ENOMEM);
+  complete(&d->rx_ready);
+  return -ENOMEM;
+ }
+ for (i = 0; i < GCHD_RX_URB_COUNT; ++i)
+  INIT_LIST_HEAD(&rx[i].done);
+ pes = kvmalloc(GCHD_MAX_FRAME, GFP_KERNEL);
+ if (!pes) {
+  WRITE_ONCE(d->rx_setup_status, -ENOMEM);
+  complete(&d->rx_ready);
+  kfree(rx);
+  return -ENOMEM;
+ }
+
+ ep81 = usb_pipe_endpoint(d->udev,
+                          usb_rcvbulkpipe(d->udev, GCHD_EP_IN));
+ ep84 = usb_pipe_endpoint(d->udev,
+                          usb_rcvbulkpipe(d->udev, GCHD_EP_AUX_IN));
+ if (!ep81 || !usb_endpoint_is_bulk_in(&ep81->desc)) {
+  dev_err(&d->intf->dev, "required bulk-IN endpoint 0x81 is missing\n");
+  r = -ENODEV;
+  goto out_free;
+ }
+ if (!ep84 || !usb_endpoint_is_bulk_in(&ep84->desc)) {
+  dev_err(&d->intf->dev,
+          "observed auxiliary bulk-IN endpoint 0x84 is missing; cannot reproduce receive queue\n");
+  r = -ENODEV;
+  goto out_free;
+ }
+
+ /*
+  * Allocate all buffers first, then submit in the exact order seen in the
+  * capture: 32 receive URBs on 0x81 followed by 8 on 0x84.
+  */
+ for (i = 0; i < GCHD_RX_URB_COUNT; ++i) {
+  rx[i].dev = d;
+  rx[i].endpoint = i < GCHD_RX_URBS_EP_IN ?
+                   GCHD_EP_IN : GCHD_EP_AUX_IN;
+  rx[i].buf = kmalloc(GCHD_USB_BUFSIZE, GFP_KERNEL);
+  rx[i].urb = usb_alloc_urb(0, GFP_KERNEL);
+  if (!rx[i].buf || !rx[i].urb) {
+   r = -ENOMEM;
+   goto out_kill;
+  }
+  usb_fill_bulk_urb(rx[i].urb, d->udev,
+                    usb_rcvbulkpipe(d->udev, rx[i].endpoint),
+                    rx[i].buf, GCHD_USB_BUFSIZE,
+                    gchd_rx_complete, &rx[i]);
+ }
+
+ WRITE_ONCE(d->rx_active, true);
  dev_info(&d->intf->dev,
-          "bulk-IN reader starting: ep=0x%02x endpoint=%s maxpacket=%u speed=%u alt=%u start_pending=%u\n",
-          GCHD_EP_IN, ep ? "present" : "missing",
-          ep ? usb_endpoint_maxp(&ep->desc) : 0, d->udev->speed,
-          d->intf->cur_altsetting->desc.bAlternateSetting,
-          READ_ONCE(d->start_pending));
- while(!kthread_should_stop()&&!d->disconnected){
-  /* Keep the RX timeout shorter than the signal-loss debounce so the
-   * watchdog can notice a video-PID gap during an input-mode switch.
-   * Check after successful reads too: non-video TS packets may continue
-   * while the video encoder is re-locking.
-   */
-  ret=usb_bulk_msg(d->udev,usb_rcvbulkpipe(d->udev,GCHD_EP_IN),d->usb_buf,
-                   GCHD_USB_BUFSIZE,&actual,100);
-  if (ret == -ETIMEDOUT || ret == -EAGAIN) {
-   rx_timeouts++;
-   if (rx_timeouts <= 5)
-    dev_info(&d->intf->dev,
-             "bulk-IN during START/stream: result=%d actual=%d reads=%llu bytes=%llu\n",
-             ret, actual, (unsigned long long)rx_reads,
-             (unsigned long long)rx_bytes);
+          "async bulk-IN starting: ep=0x81 URBs=%u maxpacket=%u; ep=0x84 URBs=%u maxpacket=%u speed=%u alt=%u\n",
+          GCHD_RX_URBS_EP_IN, usb_endpoint_maxp(&ep81->desc),
+          GCHD_RX_URBS_AUX_IN, usb_endpoint_maxp(&ep84->desc),
+          d->udev->speed,
+          d->intf->cur_altsetting->desc.bAlternateSetting);
+
+ for (i = 0; i < GCHD_RX_URB_COUNT; ++i) {
+  r = usb_submit_urb(rx[i].urb, GFP_KERNEL);
+  if (r) {
+   dev_err(&d->intf->dev,
+           "initial bulk-IN submit failed: index=%u ep=0x%02x error=%d\n",
+           i, rx[i].endpoint, r);
+   goto out_kill;
+  }
+ }
+
+ /* Do not issue START until all 40 receive URBs are queued. */
+ WRITE_ONCE(d->rx_setup_status, 0);
+ complete(&d->rx_ready);
+
+ while (!kthread_should_stop() && !d->disconnected &&
+        READ_ONCE(d->rx_active)) {
+  struct gchd_rx_urb *done = NULL;
+  unsigned long flags;
+  int wait_r;
+
+  wait_r = wait_event_interruptible_timeout(
+      d->rx_wait,
+      !list_empty_careful(&d->rx_done) ||
+      kthread_should_stop() || !READ_ONCE(d->rx_active),
+      msecs_to_jiffies(100));
+  (void)wait_r;
+
+  spin_lock_irqsave(&d->rx_lock, flags);
+  if (!list_empty(&d->rx_done)) {
+   done = list_first_entry(&d->rx_done, struct gchd_rx_urb, done);
+   list_del_init(&done->done);
+  }
+  spin_unlock_irqrestore(&d->rx_lock, flags);
+
+  if (!done) {
    gchd_signal_check(d);
    gchd_deliver(d);
    if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
     dev_info(&d->intf->dev,
-             "bulk-IN stats: reads=%llu bytes=%llu empty=%llu timeouts=%llu start_pending=%u\n",
-             (unsigned long long)rx_reads, (unsigned long long)rx_bytes,
-             (unsigned long long)rx_empty, (unsigned long long)rx_timeouts,
+             "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu queued=%u start_pending=%u\n",
+             (unsigned long long)rx_reads,
+             (unsigned long long)rx_bytes,
+             (unsigned long long)rx_empty,
+             (unsigned long long)rx_errors,
+             !list_empty_careful(&d->rx_done),
              READ_ONCE(d->start_pending));
     report_jiffies = jiffies;
    }
    continue;
   }
-  if (ret) {
-   dev_err(&d->intf->dev,
-           "bulk-IN reader failed: ret=%d actual=%d reads=%llu bytes=%llu\n",
-           ret, actual, (unsigned long long)rx_reads,
-           (unsigned long long)rx_bytes);
-   break;
-  }
+
   rx_reads++;
-  if (actual > 0)
-   rx_bytes += actual;
+  if (done->urb->actual_length > 0)
+   rx_bytes += done->urb->actual_length;
   else
    rx_empty++;
+
+  {
+   int pos;
+
+   for (pos = 0; pos < done->urb->actual_length;) {
+    size_t take;
+
+    /* USB transfers are arbitrary byte chunks; recover MPEG-TS alignment. */
+    if (!d->ts_partial_len) {
+     while (pos < done->urb->actual_length && done->buf[pos] != 0x47)
+      pos++;
+     if (pos == done->urb->actual_length)
+      break;
+    }
+
+    take = min_t(size_t, 188 - d->ts_partial_len,
+                 done->urb->actual_length - pos);
+    memcpy(d->ts_partial + d->ts_partial_len, done->buf + pos, take);
+    d->ts_partial_len += take;
+    pos += take;
+
+    if (d->ts_partial_len == 188) {
+     gchd_ts(d, d->ts_partial, pes, &n, &pes_active,
+             &cc_valid, &last_cc);
+     d->ts_partial_len = 0;
+    }
+   }
+  }
+
   if (rx_reads <= 5)
    dev_info(&d->intf->dev,
-            "bulk-IN data: read=%llu ret=0 actual=%d total_bytes=%llu\n",
-            (unsigned long long)rx_reads, actual,
+            "async bulk-IN data: read=%llu ep=0x81 actual=%d total_bytes=%llu\n",
+            (unsigned long long)rx_reads, done->urb->actual_length,
             (unsigned long long)rx_bytes);
+
+  gchd_signal_check(d);
+  gchd_deliver(d);
+
+  if (READ_ONCE(d->rx_active) && !kthread_should_stop()) {
+   r = usb_submit_urb(done->urb, GFP_KERNEL);
+   if (r) {
+    rx_errors++;
+    dev_err_ratelimited(&d->intf->dev,
+                        "bulk-IN resubmit failed: ep=0x81 error=%d\n", r);
+   }
+  }
+
   if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
    dev_info(&d->intf->dev,
-            "bulk-IN stats: reads=%llu bytes=%llu empty=%llu timeouts=%llu start_pending=%u\n",
-            (unsigned long long)rx_reads, (unsigned long long)rx_bytes,
-            (unsigned long long)rx_empty, (unsigned long long)rx_timeouts,
+            "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu queued=%u start_pending=%u\n",
+            (unsigned long long)rx_reads,
+            (unsigned long long)rx_bytes,
+            (unsigned long long)rx_empty,
+            (unsigned long long)rx_errors,
+            !list_empty_careful(&d->rx_done),
             READ_ONCE(d->start_pending));
    report_jiffies = jiffies;
   }
-  for (pos = 0; pos < actual;) {
-   size_t take;
+ }
 
-   /*
-    * USB bulk reads are arbitrary byte chunks. Recover TS alignment after
-    * startup or a dropped/corrupt byte instead of permanently parsing every
-    * subsequent packet at the wrong offset.
-    */
-   if (!d->ts_partial_len) {
-    while (pos < actual && d->usb_buf[pos] != 0x47)
-     pos++;
-    if (pos == actual)
-     break;
-   }
+out_kill:
+ WRITE_ONCE(d->rx_active, false);
+ wake_up_interruptible(&d->rx_wait);
+ for (i = 0; i < GCHD_RX_URB_COUNT; ++i)
+  if (rx[i].urb)
+   usb_kill_urb(rx[i].urb);
 
-   take = min_t(size_t, 188 - d->ts_partial_len, actual - pos);
-   memcpy(d->ts_partial + d->ts_partial_len, d->usb_buf + pos, take);
-   d->ts_partial_len += take;
-   pos += take;
-
-   if (d->ts_partial_len == 188) {
-    gchd_ts(d, d->ts_partial, pes, &n, &pes_active, &cc_valid, &last_cc);
-    d->ts_partial_len = 0;
-   }
-  }
-  gchd_signal_check(d);
-  gchd_deliver(d);
+ /* No callback can touch the queue after all URBs have been killed. */
+ {
+  unsigned long flags;
+  spin_lock_irqsave(&d->rx_lock, flags);
+  for (i = 0; i < GCHD_RX_URB_COUNT; ++i)
+   if (!list_empty(&rx[i].done))
+    list_del_init(&rx[i].done);
+  spin_unlock_irqrestore(&d->rx_lock, flags);
  }
  if (pes_active && n)
   gchd_ring_push(&d->ring, pes, n);
+out_free:
+ if (READ_ONCE(d->rx_setup_status) == -EINPROGRESS) {
+  WRITE_ONCE(d->rx_setup_status, r ? r : -EIO);
+  complete(&d->rx_ready);
+ }
+ for (i = 0; i < GCHD_RX_URB_COUNT; ++i) {
+  usb_free_urb(rx[i].urb);
+  kfree(rx[i].buf);
+ }
  kvfree(pes);
- return 0;
+ kfree(rx);
+ return r;
 }
 
 static void gchd_detection_worker(struct work_struct *work)
@@ -618,11 +795,29 @@ static void gchd_detection_worker(struct work_struct *work)
    gchd_set_lifecycle(d, GCHD_CAPTURE_START);
    d->last_video_jiffies = jiffies;
    WRITE_ONCE(d->start_pending, true);
+   reinit_completion(&d->rx_ready);
+   WRITE_ONCE(d->rx_setup_status, -EINPROGRESS);
    d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
    if (IS_ERR(d->rx_thread)) {
     r = PTR_ERR(d->rx_thread);
     d->rx_thread = NULL;
     WRITE_ONCE(d->start_pending, false);
+    goto retry;
+   }
+   if (!wait_for_completion_timeout(&d->rx_ready, msecs_to_jiffies(2000))) {
+    r = -ETIMEDOUT;
+    kthread_stop(d->rx_thread);
+    d->rx_thread = NULL;
+    WRITE_ONCE(d->start_pending, false);
+    dev_err(&d->intf->dev, "timed out waiting for bulk-IN queue setup\n");
+    goto retry;
+   }
+   r = READ_ONCE(d->rx_setup_status);
+   if (r) {
+    kthread_stop(d->rx_thread);
+    d->rx_thread = NULL;
+    WRITE_ONCE(d->start_pending, false);
+    dev_err(&d->intf->dev, "bulk-IN queue setup failed: %d\n", r);
     goto retry;
    }
 
@@ -739,11 +934,29 @@ static void gchd_mode_workfn(struct work_struct *work)
  gchd_set_lifecycle(d, GCHD_CAPTURE_START);
  d->last_video_jiffies = jiffies;
  WRITE_ONCE(d->start_pending, true);
+ reinit_completion(&d->rx_ready);
+ WRITE_ONCE(d->rx_setup_status, -EINPROGRESS);
  d->rx_thread = kthread_run(gchd_rx, d, "gchd-rx");
  if (IS_ERR(d->rx_thread)) {
   r = PTR_ERR(d->rx_thread);
   d->rx_thread = NULL;
   WRITE_ONCE(d->start_pending, false);
+  goto restart_failed;
+ }
+ if (!wait_for_completion_timeout(&d->rx_ready, msecs_to_jiffies(2000))) {
+  r = -ETIMEDOUT;
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+  WRITE_ONCE(d->start_pending, false);
+  dev_err(&d->intf->dev, "timed out waiting for bulk-IN queue setup\n");
+  goto restart_failed;
+ }
+ r = READ_ONCE(d->rx_setup_status);
+ if (r) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+  WRITE_ONCE(d->start_pending, false);
+  dev_err(&d->intf->dev, "bulk-IN queue setup failed: %d\n", r);
   goto restart_failed;
  }
  r = gchd_input_start(d);
@@ -1528,6 +1741,11 @@ static int gchd_probe(struct usb_interface *i,
  INIT_DELAYED_WORK(&d->mode_work, gchd_mode_workfn);
  spin_lock_init(&d->qlock);
  INIT_LIST_HEAD(&d->queued);
+ spin_lock_init(&d->rx_lock);
+ INIT_LIST_HEAD(&d->rx_done);
+ init_waitqueue_head(&d->rx_wait);
+ init_completion(&d->rx_ready);
+ d->rx_setup_status = -EINPROGRESS;
  spin_lock_init(&d->ring.lock);
  d->width = 1280;
  d->height = 720;
