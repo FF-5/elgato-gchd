@@ -8,6 +8,7 @@
 #include <linux/spinlock.h>
 #include <linux/usb.h>
 #include <linux/wait.h>
+#include <linux/completion.h>
 #include <linux/videodev2.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-event.h>
@@ -609,6 +610,8 @@ struct gchd {
  spinlock_t rx_lock;
  struct list_head rx_done;
  wait_queue_head_t rx_wait;
+ struct completion rx_ready;
+ int rx_setup_status;
  bool rx_active;
  struct gchd_ring ring;
  u8 *usb_buf;
