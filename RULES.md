@@ -94,9 +94,14 @@ and re-check them before every commit.
    trace may stay as data arrays if they cite their source. Constant names
    follow `docs/commands.md`.
 10. Prefer `static inline` functions over function-like macros when type
-    checking is useful. Use macros only where they shorten repetitive
-    call sites without hiding control flow, and never hide a `return` or
-    `goto` inside a macro unless its name says so (for example `GCHD_TRY()`).
+    checking is useful. Macros may return from the caller only if they belong
+    to the documented access family in `dkms/gchd_mailbox.h` (`GCHD_*_W`,
+    `GCHD_*_R`, `GCHD_*_RX`, `GCHD_BRIDGE_*`, `GCHD_TC_SET`, `GCHD_TRY`). Do not
+    define new local helper macros in `.c` files; extend that header instead.
+11. Refactors are verified with `tools/compare-objs.sh` (machine code) or,
+    when an idiom change makes machine code differ,
+    `tools/compare-mailbox-ops.py` (USB operations per function). Record the
+    tool and result in the commit message.
 
 ## E. Definition of done for a task
 
