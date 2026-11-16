@@ -181,4 +181,21 @@
 #define GCHD_BE_RETRIGGER_VALUE		0xc8
 #define GCHD_BE_REG_PULSE		0x0e	/* (status & 0x10) | 0x65, then | 0x64 */
 
+/* ---------------------------------------------------------------------- */
+/* MPEG transport stream produced by the encoder (docs/video-output.md)   */
+/* ---------------------------------------------------------------------- */
+
+#define GCHD_TS_PACKET			188
+#define GCHD_TS_SYNC			0x47
+/* PIDs and stream ids programmed into the encoder by transcoder.c
+ * (same choices as the C++ starting point). */
+#define GCHD_TS_PID_VIDEO		0x1011
+#define GCHD_TS_PID_AUDIO		0x010f
+#define GCHD_TS_PID_PMT			0x0110
+#define GCHD_TS_PID_SIT			0x001f
+#define GCHD_TS_PID_PCR			0x0100
+#define GCHD_TS_PID_THUMBNAIL		0x1111
+#define GCHD_TS_SID_VIDEO		0x00e0
+#define GCHD_TS_SID_AUDIO		0x00c0
+
 #endif /* GCHD_PROTOCOL_H */

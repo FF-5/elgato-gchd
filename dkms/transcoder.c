@@ -10,14 +10,6 @@
  * the kernel driver does not need any userspace configuration program.
  */
 
-#define GCHD_TS_PID_VIDEO 0x1011
-#define GCHD_TS_PID_AUDIO 0x010f
-#define GCHD_TS_PID_PMT 0x0110
-#define GCHD_TS_PID_SIT 0x001f
-#define GCHD_TS_PID_PCR 0x0100
-#define GCHD_TS_PID_THUMBNAIL 0x1111
-#define GCHD_TS_SID_VIDEO 0x00e0
-#define GCHD_TS_SID_AUDIO 0x00c0
 
 
 static int gchd_transcoder_table_write(struct gchd *d, u16 address,

@@ -182,11 +182,11 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
  bool start, discontinuity = false, has_payload;
  u8 cc;
 
- if (p[0] != 0x47)
+ if (p[0] != GCHD_TS_SYNC)
   return;
 
  pid = ((p[1] & 0x1f) << 8) | p[2];
- if (pid != 0x1011)
+ if (pid != GCHD_TS_PID_VIDEO)
   return;
 
  /* A transport error or scrambled video payload invalidates this PES. */
@@ -204,14 +204,14 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
  if (afc == 2 || afc == 3) {
   unsigned int adaptation_len = p[4];
 
-  if (adaptation_len > 183 || 5 + adaptation_len > 188)
+  if (adaptation_len > 183 || 5 + adaptation_len > GCHD_TS_PACKET)
    goto reset_pes;
   if (adaptation_len)
    discontinuity = !!(p[5] & 0x80);
   off = 5 + adaptation_len;
  }
 
- has_payload = (afc == 1 || afc == 3) && off < 188;
+ has_payload = (afc == 1 || afc == 3) && off < GCHD_TS_PACKET;
  start = !!(p[1] & 0x40);
  cc = p[3] & 0x0f;
 
@@ -272,7 +272,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   *pes_active = false;
 
   /* A new PES must begin with a complete MPEG-2 PES header here. */
-  if (188 - off < 9 ||
+  if (GCHD_TS_PACKET - off < 9 ||
       p[off] != 0 || p[off + 1] != 0 || p[off + 2] != 1 ||
       (p[off + 6] & 0xc0) != 0x80)
    return;
@@ -280,7 +280,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   {
    unsigned int header_len = 9 + p[off + 8];
 
-   if (header_len > 188 - off)
+   if (header_len > GCHD_TS_PACKET - off)
     return;
    off += header_len;
   }
@@ -290,9 +290,9 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   return;
  }
 
- if (off < 188) {
+ if (off < GCHD_TS_PACKET) {
   size_t remaining = GCHD_MAX_FRAME - *n;
-  size_t payload = 188 - off;
+  size_t payload = GCHD_TS_PACKET - off;
 
   if (payload > remaining) {
    dev_warn_ratelimited(&d->intf->dev,
@@ -565,19 +565,19 @@ static int gchd_rx(void *arg)
 
     /* USB transfers are arbitrary byte chunks; recover MPEG-TS alignment. */
     if (!d->ts_partial_len) {
-     while (pos < done->urb->actual_length && done->buf[pos] != 0x47)
+     while (pos < done->urb->actual_length && done->buf[pos] != GCHD_TS_SYNC)
       pos++;
      if (pos == done->urb->actual_length)
       break;
     }
 
-    take = min_t(size_t, 188 - d->ts_partial_len,
+    take = min_t(size_t, GCHD_TS_PACKET - d->ts_partial_len,
                  done->urb->actual_length - pos);
     memcpy(d->ts_partial + d->ts_partial_len, done->buf + pos, take);
     d->ts_partial_len += take;
     pos += take;
 
-    if (d->ts_partial_len == 188) {
+    if (d->ts_partial_len == GCHD_TS_PACKET) {
      gchd_ts(d, d->ts_partial, pes, &n, &pes_active,
              &cc_valid, &last_cc);
      d->ts_partial_len = 0;

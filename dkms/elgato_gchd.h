@@ -25,7 +25,6 @@
 #define GCHD_RING_FRAMES 32
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
-#define GCHD_TS_PACKET 188
 
 struct gchd_rx_urb;
 struct gchd_frame { u8 *data; size_t len; u64 sequence; };
@@ -88,7 +87,7 @@ struct gchd {
  bool rx_active;
  struct gchd_ring ring;
  u8 *usb_buf;
- u8 ts_partial[188];
+ u8 ts_partial[GCHD_TS_PACKET];
  u16 ts_partial_len;
  bool streaming; /* V4L2 queue delivery only. */
  bool capture_active; /* Hardware capture is active while a source is present. */
