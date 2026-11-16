@@ -73,6 +73,13 @@ static inline int gchd_mail_read_discard(struct gchd *d, u8 port, u8 len)
 #define GCHD_DEC_RX(d, reg)	GCHD_BRIDGE_RX1(d, GCHD_RD_DEC_0, GCHD_RD_DEC_1, reg)
 #define GCHD_BE_RX(d, reg)	GCHD_BRIDGE_RX1(d, GCHD_RD_BE_0, GCHD_RD_BE_1, reg)
 
+/*
+ * Transcoder field write: GCHD_TC_SET(d, GCHD_TC_<FIELD>, value), where
+ * GCHD_TC_<FIELD> (gchd_transcoder_fields.h) expands to "address, lsb, bits".
+ * Returns from the calling function on error, like the macros above.
+ */
+#define GCHD_TC_SET(d, ...)	GCHD_TRY(gchd_sparam((d), __VA_ARGS__))
+
 /* Table entries for gchd_mail_seq() */
 struct gchd_mail_cmd {
 	u8 port;
