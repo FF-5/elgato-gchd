@@ -38,7 +38,7 @@ static int gchd_be_read_ec(struct gchd *d, unsigned int count)
 
 int gchd_common_block_a(struct gchd *d)
 {
-	GCHD_BE_RX(d, 0xfd); //EXPECTED {GCHD_REPLY_COMMAND_ACK}
+	GCHD_BE_RX(d, 0xfd); //EXPECTED {0x6e}
 	GCHD_BE_W(d, 0x10, 0x89);
 	GCHD_BE_W(d, 0x15, 0x81);
 	GCHD_BE_W(d, 0x0f, 0x88);
@@ -87,7 +87,7 @@ int gchd_common_block_a(struct gchd *d)
 	GCHD_TRY(gchd_be_poll_ed(d));
 	GCHD_TRY(gchd_be_read_ec(d, 32)); //EXPECTED {0x52, 0x70, 0x3f, 0x7f, 0x6e, 0x64, 0x4e, 0x4e, 0x4e, 0x4e, 0x4e, 0x4e, 0x6e, 0x6e, 0x6e, 0x92, 0x6e, 0x3d, 0x17, 0x00, 0x0d, 0x23, 0x0f, 0x1d, 0x1a, 0x0b, 0x1c, 0x64, 0x4e, 0x4e, 0x6f, 0xfa}
 
-	GCHD_BE_RX(d, 0xfd); //EXPECTED {GCHD_REPLY_COMMAND_ACK}
+	GCHD_BE_RX(d, 0xfd); //EXPECTED {0x6e}
 	GCHD_BE_W(d, 0x10, 0x89);
 	GCHD_BE_W(d, 0x15, 0x81);
 	GCHD_BE_W(d, 0x0f, 0x88);
@@ -142,15 +142,15 @@ int gchd_common_block_a(struct gchd *d)
 	GCHD_BE_W(d, 0x12, 0xc8);
 	GCHD_BE_W(d, 0x13, 0x8b);
 	GCHD_BE_W(d, 0x15, 0x88);
-	GCHD_BE_RX(d, 0xed); //EXPECTED {GCHD_REPLY_COMMAND_EC}
+	GCHD_BE_RX(d, 0xed); //EXPECTED {0xec}
 	GCHD_BRIDGE_W(d, 0x99, 0x8a, 0xbf);
-	GCHD_BRIDGE_SKIP(d, 2); //EXPECTED {GCHD_REPLY_COMMAND_ACK, GCHD_REPLY_COMMAND_E1}
+	GCHD_BRIDGE_SKIP(d, 2); //EXPECTED {0x6e, 0xe1}
 	GCHD_BRIDGE_W(d, 0x99, 0x89, 0xb8);
 	u8 readValue[1]; GCHD_BRIDGE_R(d, readValue, 1);
 
-	GCHD_BE_RX(d, 0xf5); //EXPECTED {GCHD_REPLY_COMMAND_PENDING}
+	GCHD_BE_RX(d, 0xf5); //EXPECTED {0x02}
 
-	GCHD_BE_RX(d, 0xf5); //EXPECTED {GCHD_REPLY_COMMAND_PENDING}
+	GCHD_BE_RX(d, 0xf5); //EXPECTED {0x02}
 	GCHD_BRIDGE_W(d, 0x10, 0x00, 0x33);
 
 	//I have a theory that this is set to ceil( .95 * Theory read point above
@@ -177,7 +177,7 @@ int gchd_common_block_a(struct gchd *d)
 
 int gchd_common_block_b1(struct gchd *d, bool mysteryParameter)
 {
-	GCHD_BE_RX(d, 0x89); //EXPECTED {GCHD_REPLY_COMMAND_ACK}
+	GCHD_BE_RX(d, 0x89); //EXPECTED {0x6e}
 	GCHD_BE_W(d, 0x72, 0x88);
 	GCHD_BE_W(d, 0xc0, 0x89);
 	GCHD_BE_W(d, 0x61, 0x98);
@@ -191,7 +191,7 @@ int gchd_common_block_b1(struct gchd *d, bool mysteryParameter)
 	}
 
 	GCHD_BE_W(d, 0x65, 0x88);
-	GCHD_BE_RX(d, 0xff); //EXPECTED {GCHD_REPLY_COMMAND_73}
+	GCHD_BE_RX(d, 0xff); //EXPECTED {0x73}
 	GCHD_BE_W(d, 0x04, 0x8d);
 
 	//Mystery setting difference.
@@ -301,7 +301,7 @@ int gchd_common_block_b2(struct gchd *d)
 	GCHD_BE_W(d, 0x5d, value);
 	GCHD_BE_W(d, 0x0f, 0x88);
 	GCHD_BE_W(d, 0xcd, 0x8b);
-	GCHD_BE_RX(d, 0xff); //EXPECTED {GCHD_REPLY_COMMAND_6B}
+	GCHD_BE_RX(d, 0xff); //EXPECTED {0x6b}
 	GCHD_BE_W(d, 0x04, 0x8d);
 
 	u8 status, mask;
@@ -313,8 +313,8 @@ int gchd_common_block_b2(struct gchd *d)
 			GCHD_BE_R(d, 0xf5, testValue); testValue &= 0x90;
 		} while (testValue == 0);
 
-		GCHD_BE_RX(d, 0xfd); //EXPECTED {GCHD_REPLY_COMMAND_ACK}
-		GCHD_BE_RX(d, 0xfc); //EXPECTED {GCHD_REPLY_COMMAND_ACK}
+		GCHD_BE_RX(d, 0xfd); //EXPECTED {0x6e}
+		GCHD_BE_RX(d, 0xfc); //EXPECTED {0x6e}
 		GCHD_BE_RX(d, 0xf3); //EXPECTED {0x7e}
 		GCHD_BE_R(d, 0xf5, status);
 		mask=status & 0x10;
@@ -370,10 +370,10 @@ int gchd_common_block_b2(struct gchd *d)
 	GCHD_BE_W(d, 0x35, 0x88);
 	GCHD_BE_W(d, 0x0f, 0x88);
 	GCHD_BE_W(d, 0xc5, 0x88);
-	GCHD_BE_RX(d, 0xa3); //EXPECTED {GCHD_REPLY_COMMAND_7F}
+	GCHD_BE_RX(d, 0xa3); //EXPECTED {0x7f}
 	GCHD_BE_W(d, 0x58, 0x9d);
 	GCHD_BE_W(d, 0x0f, 0x88);
-	GCHD_BE_RX(d, 0xff); //EXPECTED {GCHD_REPLY_COMMAND_6B}
+	GCHD_BE_RX(d, 0xff); //EXPECTED {0x6b}
 	GCHD_BE_W(d, 0x04, 0x8d);
 	GCHD_BE_W(d, 0xe2, 0x6c);
 	GCHD_BE_W(d, 0xe3, 0x88);
@@ -391,7 +391,7 @@ int gchd_common_block_b2(struct gchd *d)
 	GCHD_BE_W(d, 0x98, 0x8a);
 	GCHD_BE_W(d, 0x99, 0x53);
 	GCHD_BE_W(d, 0x0f, 0x88);
-	GCHD_BE_RX(d, 0xff); //EXPECTED {GCHD_REPLY_COMMAND_6B}
+	GCHD_BE_RX(d, 0xff); //EXPECTED {0x6b}
 	GCHD_BE_W(d, 0x04, 0x8c);
 	GCHD_BE_W(d, 0x0f, 0x89);
 	GCHD_BE_W(d, 0x68, 0x89);
@@ -400,7 +400,7 @@ int gchd_common_block_b2(struct gchd *d)
 	GCHD_BE_W(d, 0x6d, 0xf8);
 	GCHD_BE_W(d, 0x0f, 0x88);
 	GCHD_BE_W(d, 0xce, 0x8b);
-	GCHD_BE_RX(d, 0xff); //EXPECTED {GCHD_REPLY_COMMAND_6A}
+	GCHD_BE_RX(d, 0xff); //EXPECTED {0x6a}
 	GCHD_BE_W(d, 0x04, 0x88);
 	GCHD_BE_W(d, 0x0f, 0x88);
 	GCHD_BE_W(d, 0xc1, 0x88);
@@ -412,13 +412,13 @@ int gchd_common_block_b3(struct gchd *d)
 {
 	if (gchd_resolution(d) != GCHD_RES_PAL) {
 		GCHD_BE_W(d, 0x0f, 0x89);
-		GCHD_BE_RX(d, 0x5b); //EXPECTED {GCHD_REPLY_COMMAND_7C}
-		GCHD_BE_RX(d, 0x5a); //EXPECTED {GCHD_REPLY_COMMAND_2A}
-		GCHD_BE_RX(d, 0x59); //EXPECTED {GCHD_REPLY_COMMAND_6C}
+		GCHD_BE_RX(d, 0x5b); //EXPECTED {0x7c}
+		GCHD_BE_RX(d, 0x5a); //EXPECTED {0x2a}
+		GCHD_BE_RX(d, 0x59); //EXPECTED {0x6c}
 
-		GCHD_BE_RX(d, 0xc8); //EXPECTED {GCHD_REPLY_COMMAND_ACK}
-		GCHD_BE_RX(d, 0xcf); //EXPECTED {GCHD_REPLY_COMMAND_76}
-		GCHD_BE_RX(d, 0xce); //EXPECTED {GCHD_REPLY_COMMAND_ACK};
+		GCHD_BE_RX(d, 0xc8); //EXPECTED {0x6e}
+		GCHD_BE_RX(d, 0xcf); //EXPECTED {0x76}
+		GCHD_BE_RX(d, 0xce); //EXPECTED {0x6e};
 		GCHD_BE_W(d, 0x0f, 0x88);
 	}
  return 0;

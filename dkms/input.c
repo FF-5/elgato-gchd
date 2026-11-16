@@ -223,7 +223,7 @@ static int gchd_encoder_start(struct gchd *d)
   r = gchd_enable_analog(d);
   if (r) return r;
   state = ((u32)reply[0] << 16) | ((u32)reply[1] << 8) | reply[2];
-  if ((state & GCHD_REPLY_ENCODER_MASK) == GCHD_REPLY_ENCODER_ACTIVE)
+  if ((state & GCHD_ENC_READY_MASK) == GCHD_ENC_READY)
    break;
  }
 
@@ -238,7 +238,7 @@ static int gchd_encoder_start(struct gchd *d)
   GCHD_BRIDGE_W(d, 0xab, 0xa9, 0x0f, 0xa4, 0x55);
   GCHD_BRIDGE_R(d, reply, 3);
   state = ((u32)reply[0] << 16) | ((u32)reply[1] << 8) | reply[2];
-  if (state == GCHD_REPLY_PROCESSOR_ACTIVE)
+  if (state == GCHD_PROC_RUNNING)
    break;
  }
  if (i == 1000)
@@ -257,7 +257,7 @@ static int gchd_encoder_start(struct gchd *d)
  for (i = 0; i < 1000; ++i) {
   GCHD_BRIDGE_W(d, 0x43, 0x23, 0x84);
   GCHD_BRIDGE_R(d, reply, 1);
-  if (reply[0] == GCHD_REPLY_ENCODER_READY)
+  if (reply[0] == GCHD_TRIGGER_DONE)
    break;
  }
  if (i == 1000)
@@ -287,11 +287,11 @@ static int gchd_encoder_start(struct gchd *d)
 
 static int gchd_read_9dcd(struct gchd *d, u8 index, u8 *value)
 {
- u8 cmd[3] = {GCHD_CMD_REGISTER_READ, GCHD_CMD_REGISTER_READ_EXT, index};
- int r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, cmd, sizeof(cmd));
+ u8 cmd[3] = {GCHD_RD_FE_0, GCHD_RD_FE_1, index};
+ int r = gchd_mail_write(d, GCHD_PORT_BRIDGE, cmd, sizeof(cmd));
  if (r)
   return r;
- return gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, value, 1);
+ return gchd_mail_read(d, GCHD_PORT_BRIDGE, value, 1);
 }
 
 static int gchd_post_encoder_prefix(struct gchd *d)
@@ -563,9 +563,9 @@ static int __maybe_unused gchd_post_encoder_calibration(struct gchd *d)
 static int __maybe_unused gchd_post_encoder_setup(struct gchd *d)
 {
  static const struct gchd_mail_cmd tail[] = {
-  {GCHD_MAIL_PORT_SYSTEM,1,{0x28}},
+  {GCHD_PORT_BRIDGE,1,{0x28}},
   GCHD_SEQ_BRIDGE3(0x29, 0x89, 0x5b),
-  {GCHD_MAIL_PORT_SYSTEM,4,{0xdd,0xce,0x3f,0xb2}},
+  {GCHD_PORT_BRIDGE,4,{0xdd,0xce,0x3f,0xb2}},
  };
  static const struct gchd_mail_cmd finish[] = {
   GCHD_SEQ_BRIDGE3(0x89, 0x89, 0xfb),
@@ -594,12 +594,12 @@ static int __maybe_unused gchd_post_encoder_setup(struct gchd *d)
  if (r)
   return r;
  for (i = 0; i < 100; ++i) {
-  u8 cmd[] = {GCHD_CMD_ENCODER_STATUS,GCHD_CMD_ENCODER_STATUS_EXT,GCHD_CMD_ENCODER_STATUS_ARG};
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, cmd, sizeof(cmd));
+  u8 cmd[] = {GCHD_BRIDGE_TRIGGER_0,GCHD_BRIDGE_TRIGGER_1,GCHD_BRIDGE_TRIGGER_2};
+  r = gchd_mail_write(d, GCHD_PORT_BRIDGE, cmd, sizeof(cmd));
   if (r)
    return r;
   GCHD_BRIDGE_R(d, reply, 1);
-  if (reply[0] == GCHD_REPLY_ENCODER_READY)
+  if (reply[0] == GCHD_TRIGGER_DONE)
    break;
   usleep_range(1000, 2000);
  }
@@ -666,10 +666,10 @@ static int __maybe_unused gchd_post_encoder_sweep(struct gchd *d)
  for (i = 0; i < ARRAY_SIZE(addr); ++i) {
   cmd[4] = addr[i][0];
   cmd[5] = addr[i][1];
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, cmd, sizeof(cmd));
+  r = gchd_mail_write(d, GCHD_PORT_BRIDGE, cmd, sizeof(cmd));
   if (r)
    return r;
-  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, reply, sizeof(reply));
+  r = gchd_mail_read(d, GCHD_PORT_BRIDGE, reply, sizeof(reply));
   if (r)
    return r;
  }
@@ -680,33 +680,34 @@ static int __maybe_unused gchd_post_encoder_sweep(struct gchd *d)
  cmd[3] = 0xb4;
  cmd[4] = 0xfb;
  cmd[5] = 0x79;
- r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, cmd, sizeof(cmd));
+ r = gchd_mail_write(d, GCHD_PORT_BRIDGE, cmd, sizeof(cmd));
  if (r)
   return r;
 
  GCHD_BRIDGE_R(d, reply, 8);
 
- return gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, (u8[]){0xaa,0x8d,0x35}, 3);
+ return gchd_mail_write(d, GCHD_PORT_BRIDGE, (u8[]){0xaa,0x8d,0x35}, 3);
 }
 
 static int gchd_post_encoder_state(struct gchd *d)
 {
  u8 reply[3];
- u8 magic[5] = {GCHD_CMD_ENCODER_POLL,GCHD_CMD_ENCODER_POLL_EXT,GCHD_CMD_ENCODER_POLL_MODE,GCHD_CMD_ENCODER_POLL_ARG,GCHD_CMD_ENCODER_POLL_INITIAL};
+ u8 magic[5] = {GCHD_BRIDGE_PROBE_0,GCHD_BRIDGE_PROBE_1,GCHD_BRIDGE_PROBE_2,GCHD_BRIDGE_PROBE_3,GCHD_BRIDGE_PROBE_ENCODER};
  int r, i;
  for (i = 0; i < 5; ++i) {
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_SYSTEM, magic, sizeof(magic));
+  r = gchd_mail_write(d, GCHD_PORT_BRIDGE, magic, sizeof(magic));
   if (r)
    return r;
-  r = gchd_mail_read(d, GCHD_MAIL_PORT_SYSTEM, reply, sizeof(reply));
+  r = gchd_mail_read(d, GCHD_PORT_BRIDGE, reply, sizeof(reply));
   if (r)
    return r;
   r = gchd_do_enable(d, BIT(2), BIT(2));
   if (r)
    return r;
-  if ((reply[0] & GCHD_REPLY_ENCODER_HIGH_MASK) == GCHD_REPLY_ENCODER_HIGH_VALUE &&
-      (reply[1] & GCHD_REPLY_ENCODER_MID_MASK) == GCHD_REPLY_ENCODER_MID_VALUE &&
-      (reply[2] & GCHD_REPLY_ENCODER_LOW_MASK) == GCHD_REPLY_ENCODER_LOW_VALUE)
+  /* byte-wise form of (reply & GCHD_ENC_READY_MASK) == GCHD_ENC_READY */
+  if ((reply[0] & 0xf8) == 0x78 &&
+      (reply[1] & 0xf0) == 0xe0 &&
+      (reply[2] & 0xf0) == 0x40)
    break;
  }
  if (i == 5)
@@ -724,7 +725,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
   * connector-specific setup above establishes the input path; these writes
   * put the device into its streaming state without a userspace daemon.
   */
- r = gchd_scmd(d, SCMD_INIT, GCHD_SCMD_MODE_HDNEW, 0);
+ r = gchd_scmd(d, GCHD_SCMD_INIT, GCHD_SCMD_INIT_NO_RELOAD, 0);
  if (r)
   return r;
 
@@ -873,7 +874,7 @@ static int gchd_prepare_analog_detection(struct gchd *d)
  GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
 
  if (d->previous_input == 0)
-  r = gchd_mail_write(d, GCHD_MAIL_PORT_COMPONENT,
+  r = gchd_mail_write(d, GCHD_PORT_FRONTEND,
                       (u8[]){0x51, 0x44}, 2);
  else
   GCHD_FE_W(d, GCHD_FE_REG_INPUT_SEL, GCHD_FE_SEL_ANALOG_ALT);
@@ -1050,7 +1051,7 @@ int gchd_probe_video_source(struct gchd *d)
     * the live monitor sees 0x66; this avoids skipping the transition recipe
     * when 0x66 is already present during initial detection.
     */
-   if (mode != GCHD_REPLY_STATUS_SVIDEO && mode != GCHD_REPLY_STATUS_COMPOSITE)
+   if (mode != GCHD_DEC_LOCK_480I && mode != GCHD_DEC_LOCK_240P)
     dev_dbg(&d->intf->dev,
             "analog format status not locked yet: 0x%02x; starting in 480i\n",
             mode);
@@ -1273,26 +1274,26 @@ static int gchd_configure_composite_exact(struct gchd *d)
  else if (v == 7) { d->input_width=720; d->input_height=576; d->input_interlaced=true; d->input_fps_num=50; d->input_fps_den=1; }
  else if (!d->input_height) {
   u8 x;
-  gchd_mail_write(d,GCHD_MAIL_PORT_SYSTEM,(u8[]){GCHD_CMD_REGISTER_READ,GCHD_CMD_REGISTER_READ_EXT,0x3f},3);
-  gchd_mail_read(d,GCHD_MAIL_PORT_SYSTEM,&x,1);
-  gchd_mail_write(d,GCHD_MAIL_PORT_COMPONENT,(u8[]){0x00,0xcc},2);
-  gchd_mail_write(d,GCHD_MAIL_PORT_SYSTEM,(u8[]){GCHD_CMD_REGISTER_READ,GCHD_CMD_REGISTER_READ_EXT,0x94},3);
-  gchd_mail_read(d,GCHD_MAIL_PORT_SYSTEM,&x,1);
-  gchd_mail_write(d,GCHD_MAIL_PORT_COMPONENT,(u8[]){0xab,0x4c},2);
-  gchd_mail_write(d,GCHD_MAIL_PORT_SYSTEM,(u8[]){GCHD_CMD_REGISTER_READ,GCHD_CMD_REGISTER_READ_EXT,0x3f},3);
-  gchd_mail_read(d,GCHD_MAIL_PORT_SYSTEM,&x,1);
-  gchd_mail_write(d,GCHD_MAIL_PORT_COMPONENT,(u8[]){0x00,0xce},2);
-  gchd_mail_write(d,GCHD_MAIL_PORT_COMPONENT,(u8[]){0x1b,0x33},2);
-  gchd_mail_write(d,GCHD_MAIL_PORT_SYSTEM,(u8[]){GCHD_CMD_REGISTER_READ,GCHD_CMD_REGISTER_READ_EXT,0x3f},3);
-  gchd_mail_read(d,GCHD_MAIL_PORT_SYSTEM,&x,1);
-  gchd_mail_write(d,GCHD_MAIL_PORT_COMPONENT,(u8[]){0x00,0xcc},2);
-  gchd_mail_write(d,GCHD_MAIL_PORT_SYSTEM,(u8[]){GCHD_CMD_REGISTER_READ,GCHD_CMD_REGISTER_READ_EXT,0x88},3);
-  gchd_mail_read(d,GCHD_MAIL_PORT_SYSTEM,&x,1);
-  gchd_mail_write(d,GCHD_MAIL_PORT_COMPONENT,(u8[]){0xb7,0xce},2);
-  gchd_mail_write(d,GCHD_MAIL_PORT_COMPONENT,(u8[]){0xb8,0xdc},2);
-  gchd_mail_write(d,GCHD_MAIL_PORT_COMPONENT,(u8[]){0xb8,0xcc},2);
-  gchd_mail_write(d,GCHD_MAIL_PORT_SYSTEM,(u8[]){GCHD_CMD_REGISTER_READ,GCHD_CMD_REGISTER_READ_EXT,0x3f},3);
-  gchd_mail_read(d,GCHD_MAIL_PORT_SYSTEM,&x,1);
+  gchd_mail_write(d,GCHD_PORT_BRIDGE,(u8[]){GCHD_RD_FE_0,GCHD_RD_FE_1,0x3f},3);
+  gchd_mail_read(d,GCHD_PORT_BRIDGE,&x,1);
+  gchd_mail_write(d,GCHD_PORT_FRONTEND,(u8[]){0x00,0xcc},2);
+  gchd_mail_write(d,GCHD_PORT_BRIDGE,(u8[]){GCHD_RD_FE_0,GCHD_RD_FE_1,0x94},3);
+  gchd_mail_read(d,GCHD_PORT_BRIDGE,&x,1);
+  gchd_mail_write(d,GCHD_PORT_FRONTEND,(u8[]){0xab,0x4c},2);
+  gchd_mail_write(d,GCHD_PORT_BRIDGE,(u8[]){GCHD_RD_FE_0,GCHD_RD_FE_1,0x3f},3);
+  gchd_mail_read(d,GCHD_PORT_BRIDGE,&x,1);
+  gchd_mail_write(d,GCHD_PORT_FRONTEND,(u8[]){0x00,0xce},2);
+  gchd_mail_write(d,GCHD_PORT_FRONTEND,(u8[]){0x1b,0x33},2);
+  gchd_mail_write(d,GCHD_PORT_BRIDGE,(u8[]){GCHD_RD_FE_0,GCHD_RD_FE_1,0x3f},3);
+  gchd_mail_read(d,GCHD_PORT_BRIDGE,&x,1);
+  gchd_mail_write(d,GCHD_PORT_FRONTEND,(u8[]){0x00,0xcc},2);
+  gchd_mail_write(d,GCHD_PORT_BRIDGE,(u8[]){GCHD_RD_FE_0,GCHD_RD_FE_1,0x88},3);
+  gchd_mail_read(d,GCHD_PORT_BRIDGE,&x,1);
+  gchd_mail_write(d,GCHD_PORT_FRONTEND,(u8[]){0xb7,0xce},2);
+  gchd_mail_write(d,GCHD_PORT_FRONTEND,(u8[]){0xb8,0xdc},2);
+  gchd_mail_write(d,GCHD_PORT_FRONTEND,(u8[]){0xb8,0xcc},2);
+  gchd_mail_write(d,GCHD_PORT_BRIDGE,(u8[]){GCHD_RD_FE_0,GCHD_RD_FE_1,0x3f},3);
+  gchd_mail_read(d,GCHD_PORT_BRIDGE,&x,1);
   /*
    * Keep the receiver configured while no composite source is present.
    * The caller tracks signal_present separately and the detection worker
@@ -1358,9 +1359,9 @@ int gchd_input_read_analog_mode(struct gchd *d, bool *interlaced)
  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, status);
 
  /* FE is unlocked and EE is transitional: neither is a mode change. */
- if (status == GCHD_REPLY_STATUS_COMPOSITE)
+ if (status == GCHD_DEC_LOCK_240P)
   *interlaced = false;
- else if (status == GCHD_REPLY_STATUS_SVIDEO)
+ else if (status == GCHD_DEC_LOCK_480I)
   *interlaced = true;
  else
   return -EAGAIN;
@@ -1607,7 +1608,7 @@ static int gchd_input_configure_mode(struct gchd *d)
    * Return to IDLE, but do not tear down the encoder: input changes reuse the
    * initialized encoder and retry only the connector-specific configuration.
    */
-  gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
+  gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   d->input_prepared = false;
   dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\n", r);
   return r;
@@ -1631,13 +1632,13 @@ static int gchd_input_configure_mode(struct gchd *d)
 
  /*
   * The userspace connector-specific configure routines all finish with:
-  * transcoderFinalConfigure(), transcoderSetup(), SCMD_INIT(mode=0xa0),
-  * state readback, then SCMD_STATE_CHANGE(START). Keep the second INIT here
+  * transcoderFinalConfigure(), transcoderSetup(), GCHD_SCMD_INIT(mode=0xa0),
+  * state readback, then GCHD_SCMD_STATE_CHANGE(START). Keep the second INIT here
   * (after the final transcoder programming); the earlier INIT in
   * gchd_input_finalize() is a separate stage before connector configuration.
   * Mode 0xa0 suppresses the INIT interrupt/readback handshake.
   */
- r = gchd_scmd(d, SCMD_INIT, GCHD_SCMD_MODE_HDNEW, 0);
+ r = gchd_scmd(d, GCHD_SCMD_INIT, GCHD_SCMD_INIT_NO_RELOAD, 0);
  if (r) {
   dev_err(&d->intf->dev, "capture setup: final SCMD_INIT failed: %d\n", r);
   return r;
@@ -1647,7 +1648,7 @@ static int gchd_input_configure_mode(struct gchd *d)
  {
   u16 state;
 
-  r = gchd_raw_read16(d, HW_READ_REQUEST, GCHD_REG_STATE, &state);
+  r = gchd_raw_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
   if (r) {
    dev_err(&d->intf->dev,
            "capture setup: state readback after final SCMD_INIT failed: %d\n", r);
@@ -1697,7 +1698,7 @@ int gchd_input_start(struct gchd *d)
           "gchd-diag issuing START: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
           d->input, d->input_width, d->input_height, d->input_fps_num,
           d->input_fps_den, d->input_interlaced);
- r = gchd_state_cmd(d, SCMD_STATE_CHANGE, 0, HW_START, HW_START);
+ r = gchd_state_cmd(d, GCHD_SCMD_STATE_CHANGE, 0, GCHD_STATE_START, GCHD_STATE_START);
  if (r) {
   dev_err(&d->intf->dev, "capture start transition failed: %d\n", r);
   return r;
