@@ -9,7 +9,7 @@ develop on them; cherry-pick from them deliberately.
 
 | Branch | Content |
 |---|---|
-| `master` | Squashed upstream C++ userspace driver (tolga9009 / Scott Dossey), last commit 2016-12-23. Reference implementation. Does not build on current GCC without adding `<cstdint>` includes. |
+| `master` | Squashed upstream C++ userspace driver (tolga9009 / Scott Dossey), last commit 2016-12-23. Starting point for the DKMS port (read-only; never modified here). Does not build on current GCC without adding `<cstdint>` includes. |
 | `cherry3` | Ancestor of `master` (2016-11-03). Nothing unique. |
 | `dev` (before 2026-11-16) | Pre-squash upstream history of the same C++ code plus three FIFO pause/close commits that never reached `master`. It is now merged with `master` (tree = `master`) and carries `dkms/`, `docs/`, `TODO.md`, `TASK.md`, `RULES.md`. |
 

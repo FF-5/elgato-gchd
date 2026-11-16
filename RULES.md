@@ -34,27 +34,36 @@ and re-check them before every commit.
 
 ## C. Protocol fidelity (the most common source of past failures)
 
-1. **The C++ implementation and the Windows traces are the protocol
-   references. The DKMS code is not.** When the kernel driver disagrees with
-   both, the kernel is wrong until hardware evidence says otherwise.
-2. **Do not invent register writes, values, delays, or orderings.** Every
-   protocol operation added to the kernel must cite its source in a code
-   comment: `/* C++ configure.cpp:configureComposite */` or
-   `/* WIN trace_analysis.txt t=25.892 */`.
-3. **Do not "simplify" sequences.** Repeated writes, reads whose values are
+1. **Never modify the C++ code (`src/`) or its build files (`CMakeLists.txt`).**
+   This project writes the DKMS driver in C. The C++ is read-only material.
+2. **Our own Windows USB traces are the reference.** The C++ is a starting
+   point: much of it worked, but it detects input and mode once at start-up
+   and handles neither input changes nor resolution changes. The DKMS code is
+   not a reference for anything.
+3. When a Windows trace covers the scenario, follow the trace, even where the
+   C++ differs. When no trace covers it, the C++ may be used as a stopgap, and
+   the gap is recorded as a "trace wanted" item in `TODO.md`.
+4. **Do not invent register writes, values, delays, or orderings.** Every
+   protocol operation in the kernel cites its source in a comment:
+   `/* WIN trace_analysis.txt t=25.892 */` or, as a stopgap,
+   `/* C++ configure_composite.cpp:configureComposite */`.
+5. **Do not "simplify" sequences.** Repeated writes, reads whose values are
    discarded, odd orderings and asymmetric transitions (for example 480i → 240p
    vs 240p → 480i) are kept exactly as recorded.
-4. When C++ and Windows disagree, keep the C++ behaviour unless the task is
-   specifically about that discrepancy. Change one discrepancy per
-   experiment, never several at once.
-5. Session-specific values (`0900:0014` shadow, `0900:001C` ready word,
+6. Change one protocol detail per experiment, never several at once, and keep
+   a before/after capture.
+7. Session-specific values (`0900:0014` shadow, `0900:001C` ready word,
    `0900:01B0`) are read and restored, never hard-coded.
-6. Follow the C++ state-machine logic literally (`completeStateChange`). The
-   loop exit condition is the target state, not a single completion bit.
-7. Bring up modes in this order: **480i composite → 576i → HDMI/component SD
-   → HD modes → 240p → S-video**. Never debug a mode until the previous
-   simpler mode works end to end. 240p must not be attempted while 480i is
-   broken.
+8. Bring up modes in this order: **480i composite → 240p composite → 576i →
+   HDMI/component SD → HD modes → S-video**. Do not debug a mode until the
+   previous simpler mode works end to end. 240p is not attempted while 480i is
+   broken. Resolution changes (480i ↔ 240p, HDMI mode changes) are tested as
+   soon as the mode on each side works.
+9. **Refactors do not change behaviour.** A cleanup task (renaming, macros,
+   moving code) must produce the same USB traffic. Verify this mechanically:
+   identical disassembly of the module before and after, or a documented list
+   of every intended difference (procedure in `TASK.md` of the cleanup task
+   and in `tools/compare-objs.sh`).
 
 ## D. Kernel-code rules
 
@@ -77,6 +86,17 @@ and re-check them before every commit.
    logging stays quiet.
 8. Keep `dkms/dkms.conf` `PACKAGE_VERSION` in sync with any user-visible
    behaviour change.
+9. **No magic numbers in protocol code.** Registers, banks, request codes,
+   mailbox ports/devices, device registers, SCMD commands/states and bit masks
+   are named constants in `elgato_gchd.h` (or a dedicated header). Repeated USB
+   operations go through named helpers or macros (for example
+   `GCHD_DEC_WRITE(d, GCHD_DEC_REG_LOCK, 0x8A)`). Raw byte tables copied from a
+   trace may stay as data arrays if they cite their source. Constant names
+   follow `docs/commands.md`.
+10. Prefer `static inline` functions over function-like macros when type
+    checking is useful. Use macros only where they shorten repetitive
+    call sites without hiding control flow, and never hide a `return` or
+    `goto` inside a macro unless its name says so (for example `GCHD_TRY()`).
 
 ## E. Definition of done for a task
 

@@ -50,13 +50,14 @@ This is the steady-state no-signal loop after HDMI setup. See [hardware.md](hard
 | Read `0x34` after selecting page `CE` | Bit 2 is used by source as an RGB indicator. | Source-derived interpretation; verify on hardware. |
 | Timing candidates | `0x6463≈0xB6D7` 1080p; `≈0xB081` 1080i; `≈0xB05C` 720p; `≈0xB0C1` midpoint for 480p/576p | Approximate source heuristics, not a complete format table. |
 
-Complete HDMI programming is **not in any Windows trace**, but it is implemented in the C++ reference (next section). The shared firmware lifecycle and SCMD/start confirmation are in [hardware.md](hardware.md); generic unknowns are in [commands.md](commands.md).
+Complete HDMI programming is **not in any Windows trace**, The C++ code implements it (next section) and is the starting point until a Windows trace with an HDMI signal is recorded. The shared firmware lifecycle and SCMD/start confirmation are in [hardware.md](hardware.md); generic unknowns are in [commands.md](commands.md).
 
-## C++ reference path (`configure_hdmi.cpp`) — known-good baseline
+## C++ starting point (`configure_hdmi.cpp`)
 
 The Windows traces cover HDMI selection, front-end setup and the no-signal
-loop. Everything after that comes from the C++, which captured HDMI 1080p,
-1080i, 720p and 480p/576p.
+loop. Everything after that currently comes from the C++, which captured HDMI
+1080p, 1080i, 720p and 480p/576p in 2016. It must be confirmed with our own
+Windows trace before it is treated as reference.
 
 1. `94 41 37`, `94 4A AF`, `94 4B AF`; front-end sequence identical to the
    table above (steps 1–9), including selector `0x9C:51 = 45`; a

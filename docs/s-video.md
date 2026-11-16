@@ -4,7 +4,7 @@ Notation and confidence markers: [README.md](README.md).
 
 ## Status
 
-- **The C++ reference has no S-video support.** Its common init always writes
+- **The C++ code has no S-video support.** Its common init always writes
   the composite discriminator `0x88:02 = C9`, and its cable autodetect
   (`0900:001C` bits 8–9) does not distinguish S-video from composite.
 - Everything on this page comes from Windows traces, in particular
