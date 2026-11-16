@@ -1,5 +1,7 @@
 #include <linux/module.h>
 #include "elgato_gchd.h"
+#include "gchd_transcoder_fields.h"
+#include "gchd_mailbox.h"
 
 /*
  * The original driver programs the Fujitsu transcoder through two USB
@@ -8,16 +10,7 @@
  * the kernel driver does not need any userspace configuration program.
  */
 
-#define VPID 0x1011
-#define APID 0x010f
-#define PMTPID 0x0110
-#define SITPID 0x001f
-#define PCRPID 0x0100
-#define THUMBPID 0x1111
-#define VSID 0x00e0
-#define ASID 0x00c0
 
-#define BF(addr, lsb, bits, val) gchd_sparam(d, (addr), (lsb), (bits), (val))
 
 static int gchd_transcoder_table_write(struct gchd *d, u16 address,
                                        const u8 *data, size_t len)
@@ -61,134 +54,136 @@ static int gchd_transcoder_defaults(struct gchd *d)
  r = gchd_slsi(d, 0x0000, 0x0000);
  if (r) return r;
 
- if ((r = BF(0x1002, 1, 1, 0))) return r; /* v_vinpelclk */
- if ((r = BF(0x1002, 4, 1, 1))) return r; /* tbc_mode */
- if ((r = BF(0x1004, 0, 1, 0))) return r; /* stout_mode */
- if ((r = BF(0x1004, 13, 2, 0))) return r;
- if ((r = BF(0x1004, 11, 2, 0))) return r;
- if ((r = BF(0x1004, 10, 1, 0))) return r;
- if ((r = BF(0x1004, 8, 2, 1))) return r;
- if ((r = BF(0x1004, 7, 1, 0))) return r;
- if ((r = BF(0x1004, 0, 7, 4))) return r;
+ GCHD_TC_SET(d, GCHD_TC_V_VINPELCLK, 0); /* v_vinpelclk */
+ GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1); /* tbc_mode */
+ /* FIXME (T-001 finding): C++ stout_mode is 0x1004 bit 15; this writes bit 0
+  * (part of stoutclk). Kept as ported; verify against a Windows trace. */
+ GCHD_TC_SET(d, 0x1004, 0, 1, 0); /* stout_mode */
+ GCHD_TC_SET(d, GCHD_TC_EXTRA_INFO_BIT, 0);
+ GCHD_TC_SET(d, GCHD_TC_TSOUT_PACKET_SIZE, 0);
+ GCHD_TC_SET(d, GCHD_TC_STOUTCLK_HL, 0);
+ GCHD_TC_SET(d, GCHD_TC_DMA_SEL_OUT, 1);
+ GCHD_TC_SET(d, GCHD_TC_STOUTCLK_IO, 0);
+ GCHD_TC_SET(d, GCHD_TC_STOUTCLK, 4);
 
- if ((r = BF(0x1006, 15, 1, 0))) return r;
- if ((r = BF(0x1006, 10, 1, 0))) return r;
- if ((r = BF(0x1006, 7, 1, 0))) return r;
+ GCHD_TC_SET(d, GCHD_TC_STOUT2_MODE, 0);
+ GCHD_TC_SET(d, GCHD_TC_STOUT2CLK_HL, 0);
+ GCHD_TC_SET(d, GCHD_TC_STOUT2CLK_IO, 0);
 
- if ((r = BF(0x1102, 2, 1, 0))) return r;
- if ((r = BF(0x1242, 2, 1, 0))) return r;
- if ((r = BF(0x1102, 0, 2, 2))) return r;
- if ((r = BF(0x1242, 0, 2, 2))) return r;
+ GCHD_TC_SET(d, GCHD_TC_PCR_FIRST, 0);
+ GCHD_TC_SET(d, GCHD_TC_PCR_FIRST_TS_OUT2, 0);
+ GCHD_TC_SET(d, GCHD_TC_AUTO_NULL, 2);
+ GCHD_TC_SET(d, GCHD_TC_AUTO_NULL_TS_OUT2, 2);
 
- if ((r = BF(0x1104, 0, 16, 25000))) return r;
- if ((r = BF(0x1244, 0, 16, 8000))) return r;
- if ((r = BF(0x1106, 0, 16, 0))) return r;
- if ((r = BF(0x1246, 0, 16, 0))) return r;
+ GCHD_TC_SET(d, GCHD_TC_SYSTEM_RATE, 25000);
+ GCHD_TC_SET(d, GCHD_TC_SYSTEM_RATE_TS_OUT2, 8000);
+ GCHD_TC_SET(d, GCHD_TC_SYSTEM_MIN_RATE, 0);
+ GCHD_TC_SET(d, GCHD_TC_SYSTEM_MIN_RATE_TS_OUT2, 0);
 
  /* Fixed transport/PES identifiers used by the original encoder. */
- if ((r = BF(0x1126, 0, 13, VPID))) return r;
- if ((r = BF(0x1266, 0, 13, VPID))) return r;
- if ((r = BF(0x1128, 0, 13, APID))) return r;
- if ((r = BF(0x1268, 0, 13, APID))) return r;
- if ((r = BF(0x112c, 0, 13, PMTPID))) return r;
- if ((r = BF(0x126c, 0, 13, PMTPID))) return r;
- if ((r = BF(0x112e, 0, 13, PCRPID))) return r;
- if ((r = BF(0x126e, 0, 13, PCRPID))) return r;
- if ((r = BF(0x1134, 0, 13, SITPID))) return r;
- if ((r = BF(0x1138, 8, 8, sizeof(gchd_pat)))) return r;
- if ((r = BF(0x1138, 0, 8, sizeof(gchd_pmt)))) return r;
- if ((r = BF(0x113e, 8, 8, sizeof(gchd_sit)))) return r;
- if ((r = BF(0x100c, 4, 4, 2))) return r;
- if ((r = BF(0x100c, 12, 4, 3))) return r;
+ GCHD_TC_SET(d, GCHD_TC_V_PID_OUT, GCHD_TS_PID_VIDEO);
+ GCHD_TC_SET(d, GCHD_TC_V_PID_OUT_TS_OUT2, GCHD_TS_PID_VIDEO);
+ GCHD_TC_SET(d, GCHD_TC_A_PID_OUT, GCHD_TS_PID_AUDIO);
+ GCHD_TC_SET(d, GCHD_TC_A_PID_OUT_TS_OUT2, GCHD_TS_PID_AUDIO);
+ GCHD_TC_SET(d, GCHD_TC_PMT_PID_OUT, GCHD_TS_PID_PMT);
+ GCHD_TC_SET(d, GCHD_TC_PMT_PID_OUT_TS_OUT2, GCHD_TS_PID_PMT);
+ GCHD_TC_SET(d, GCHD_TC_PCR_PID_OUT, GCHD_TS_PID_PCR);
+ GCHD_TC_SET(d, GCHD_TC_PCR_PID_OUT_TS_OUT2, GCHD_TS_PID_PCR);
+ GCHD_TC_SET(d, GCHD_TC_SIT_PID_OUT, GCHD_TS_PID_SIT);
+ GCHD_TC_SET(d, GCHD_TC_PAT_LENGTH, sizeof(gchd_pat));
+ GCHD_TC_SET(d, GCHD_TC_PMT_LENGTH, sizeof(gchd_pmt));
+ GCHD_TC_SET(d, GCHD_TC_SIT_LENGTH, sizeof(gchd_sit));
+ GCHD_TC_SET(d, GCHD_TC_A_TS_OUT_MODE, 2);
+ GCHD_TC_SET(d, GCHD_TC_A_MODE, 3);
  r = gchd_transcoder_table_write(d, 0x1144, gchd_pat, sizeof(gchd_pat)); if (r) return r;
  r = gchd_transcoder_table_write(d, 0x1174, gchd_pmt, sizeof(gchd_pmt)); if (r) return r;
  r = gchd_transcoder_table_write(d, 0x1010, gchd_sit, sizeof(gchd_sit)); if (r) return r;
- if ((r = BF(0x1278, 8, 8, sizeof(gchd_pat)))) return r;
- if ((r = BF(0x1278, 0, 8, sizeof(gchd_pmt)))) return r;
- if ((r = BF(0x127e, 8, 8, sizeof(gchd_sit)))) return r;
+ GCHD_TC_SET(d, GCHD_TC_PAT_LENGTH_TS_OUT2, sizeof(gchd_pat));
+ GCHD_TC_SET(d, GCHD_TC_PMT_LENGTH_TS_OUT2, sizeof(gchd_pmt));
+ GCHD_TC_SET(d, GCHD_TC_SIT_LENGTH_TS_OUT2, sizeof(gchd_sit));
  r = gchd_transcoder_table_write(d, 0x1284, gchd_pat, sizeof(gchd_pat)); if (r) return r;
  r = gchd_transcoder_table_write(d, 0x12b4, gchd_pmt, sizeof(gchd_pmt)); if (r) return r;
  r = gchd_transcoder_table_write(d, 0x1370, gchd_sit, sizeof(gchd_sit)); if (r) return r;
- if ((r = BF(0x1274, 0, 13, SITPID))) return r;
- if ((r = BF(0x126a, 0, 13, THUMBPID))) return r;
- if ((r = BF(0x1130, 0, 8, VSID))) return r;
- if ((r = BF(0x1270, 0, 8, VSID))) return r;
- if ((r = BF(0x1132, 0, 8, ASID))) return r;
- if ((r = BF(0x1272, 0, 8, ASID))) return r;
+ GCHD_TC_SET(d, GCHD_TC_SIT_PID_OUT_TS_OUT2, GCHD_TS_PID_SIT);
+ GCHD_TC_SET(d, GCHD_TC_THUMBNAIL_PID_OUT_TS_OUT2, GCHD_TS_PID_THUMBNAIL);
+ GCHD_TC_SET(d, GCHD_TC_V_SID_OUT, GCHD_TS_SID_VIDEO);
+ GCHD_TC_SET(d, GCHD_TC_V_SID_OUT_TS_OUT2, GCHD_TS_SID_VIDEO);
+ GCHD_TC_SET(d, GCHD_TC_A_SID_OUT, GCHD_TS_SID_AUDIO);
+ GCHD_TC_SET(d, GCHD_TC_A_SID_OUT_TS_OUT2, GCHD_TS_SID_AUDIO);
 
- if ((r = BF(0x113c, 0, 8, 0))) return r;
- if ((r = BF(0x127c, 0, 8, 0))) return r;
- if ((r = BF(0x113e, 0, 8, 0))) return r;
- if ((r = BF(0x127e, 0, 8, 0))) return r;
- if ((r = BF(0x1140, 0, 8, 0))) return r;
- if ((r = BF(0x1280, 0, 8, 0))) return r;
- if ((r = BF(0x1142, 0, 10, 0))) return r;
- if ((r = BF(0x1282, 0, 10, 0))) return r;
+ GCHD_TC_SET(d, GCHD_TC_PAT_CYC, 0);
+ GCHD_TC_SET(d, GCHD_TC_PAT_CYC_TS_OUT2, 0);
+ GCHD_TC_SET(d, GCHD_TC_PMT_CYC, 0);
+ GCHD_TC_SET(d, GCHD_TC_PMT_CYC_TS_OUT2, 0);
+ GCHD_TC_SET(d, GCHD_TC_PCR_CYC, 0);
+ GCHD_TC_SET(d, GCHD_TC_PCR_CYC_TS_OUT2, 0);
+ GCHD_TC_SET(d, GCHD_TC_SIT_CYC, 0);
+ GCHD_TC_SET(d, GCHD_TC_SIT_CYC_TS_OUT2, 0);
 
  /* H.264 encoder defaults. */
- if ((r = BF(0x1710, 12, 2, 1))) return r;
- if ((r = BF(0x1502, 10, 1, 1))) return r;
- if ((r = BF(0x1502, 0, 8, 4))) return r;
- if ((r = BF(0x1504, 0, 2, 2))) return r;
- if ((r = BF(0x1510, 8, 2, 0))) return r;
- if ((r = BF(0x1510, 5, 1, 0))) return r;
- if ((r = BF(0x1510, 4, 1, 1))) return r;
- if ((r = BF(0x1510, 3, 1, 0))) return r;
- if ((r = BF(0x1510, 2, 1, 0))) return r;
- if ((r = BF(0x1510, 0, 2, 1))) return r;
- if ((r = BF(0x1518, 0, 8, 0))) return r;
- if ((r = BF(0x1518, 8, 8, 15))) return r;
- if ((r = BF(0x151a, 0, 16, 0))) return r;
- if ((r = BF(0x151c, 0, 16, 0))) return r;
- if ((r = BF(0x1526, 0, 8, 41))) return r;
- if ((r = BF(0x1526, 8, 8, 1))) return r;
- if ((r = BF(0x152c, 0, 16, 1920))) return r;
- if ((r = BF(0x152e, 0, 16, 1080))) return r;
- if ((r = BF(0x1532, 0, 16, 16000))) return r;
- if ((r = BF(0x1534, 0, 16, 14000))) return r;
- if ((r = BF(0x1536, 0, 16, 8000))) return r;
- if ((r = BF(0x1538, 0, 16, 0))) return r;
- if ((r = BF(0x1570, 0, 1, 1))) return r;
- if ((r = BF(0x1570, 11, 1, 1))) return r;
- if ((r = BF(0x1570, 14, 1, 1))) return r;
- if ((r = BF(0x1570, 15, 1, 1))) return r;
- if ((r = BF(0x157c, 11, 1, 1))) return r;
- if ((r = BF(0x157c, 14, 1, 1))) return r;
- if ((r = BF(0x157c, 15, 1, 1))) return r;
- if ((r = BF(0x157e, 0, 1, 0))) return r;
- if ((r = BF(0x157e, 4, 3, 5))) return r;
- if ((r = BF(0x157e, 12, 1, 1))) return r;
- if ((r = BF(0x1580, 0, 8, 1))) return r;
- if ((r = BF(0x1580, 12, 1, 1))) return r;
- if ((r = BF(0x1582, 0, 8, 1))) return r;
- if ((r = BF(0x1582, 8, 8, 1))) return r;
- if ((r = BF(0x1584, 0, 16, 0))) return r;
- if ((r = BF(0x1586, 0, 16, 0))) return r;
- if ((r = BF(0x1588, 0, 16, 0))) return r;
+ GCHD_TC_SET(d, GCHD_TC_V_V420, 1);
+ GCHD_TC_SET(d, GCHD_TC_VIN_SWAP, 1);
+ GCHD_TC_SET(d, GCHD_TC_V_FORMAT, 4);
+ GCHD_TC_SET(d, GCHD_TC_TFRFF, 2);
+ GCHD_TC_SET(d, GCHD_TC_V_EOS, 0);
+ GCHD_TC_SET(d, GCHD_TC_V_CL_GOP, 0);
+ GCHD_TC_SET(d, GCHD_TC_V_TEMPORAL_DIRECT_ON, 1);
+ GCHD_TC_SET(d, GCHD_TC_V_VLC_MODE, 0);
+ GCHD_TC_SET(d, GCHD_TC_V_FILLER, 0);
+ GCHD_TC_SET(d, GCHD_TC_V_RATE_MODE, 1);
+ GCHD_TC_SET(d, GCHD_TC_V_GOP_STRUCT, 0);
+ GCHD_TC_SET(d, GCHD_TC_V_GOP_SIZE, 15);
+ GCHD_TC_SET(d, GCHD_TC_V_IDR_INTERVAL_H, 0);
+ GCHD_TC_SET(d, GCHD_TC_V_IDR_INTERVAL_L, 0);
+ GCHD_TC_SET(d, GCHD_TC_V_H264_LEVEL, 41);
+ GCHD_TC_SET(d, GCHD_TC_V_H264_PROFILE, 1);
+ GCHD_TC_SET(d, GCHD_TC_V_HSIZE_OUT, 1920);
+ GCHD_TC_SET(d, GCHD_TC_V_VSIZE_OUT, 1080);
+ GCHD_TC_SET(d, GCHD_TC_V_BITRATE, 16000);
+ GCHD_TC_SET(d, GCHD_TC_V_MAX_BITRATE, 14000);
+ GCHD_TC_SET(d, GCHD_TC_V_AVE_BITRATE, 8000);
+ GCHD_TC_SET(d, GCHD_TC_V_MIN_BITRATE, 0);
+ GCHD_TC_SET(d, GCHD_TC_V_PIC_ORDER_PRESENT_FLAG, 1);
+ GCHD_TC_SET(d, GCHD_TC_INSERT_RECOVERY_POINT_SEI, 1);
+ GCHD_TC_SET(d, GCHD_TC_INSERT_PIC_STRUCT, 1);
+ GCHD_TC_SET(d, GCHD_TC_INSERT_BUF_CTRL_PARAM, 1);
+ GCHD_TC_SET(d, GCHD_TC_INSERT_RESTRICTION, 1);
+ GCHD_TC_SET(d, GCHD_TC_OVERSCAN_APPROPRIATE_FLAG, 1);
+ GCHD_TC_SET(d, GCHD_TC_OVERSCAN_INFO_PRESENT_FLAG, 1);
+ GCHD_TC_SET(d, GCHD_TC_VIDEO_FULL_RANGE_FLAG, 0);
+ GCHD_TC_SET(d, GCHD_TC_VIDEO_FORMAT, 5);
+ GCHD_TC_SET(d, GCHD_TC_VIDEO_SIGNAL_TYPE_PRESENT_FLAG, 1);
+ GCHD_TC_SET(d, GCHD_TC_COLOUR_PRIMARIES, 1);
+ GCHD_TC_SET(d, GCHD_TC_COLOUR_DESCRIPTION_PRESENT_FLAG, 1);
+ GCHD_TC_SET(d, GCHD_TC_MATRIX_COEFFICIENTS, 1);
+ GCHD_TC_SET(d, GCHD_TC_TRANSFER_CHARACTERISTICS, 1);
+ GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_H, 0);
+ GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_L, 0);
+ GCHD_TC_SET(d, GCHD_TC_NUM_UNITS_IN_TICK, 0);
 
  /* Audio defaults. */
- if ((r = BF(0x1a02, 0, 2, 0))) return r;
- if ((r = BF(0x1a04, 0, 16, 384))) return r;
- if ((r = BF(0x1a06, 0, 1, 0))) return r;
- if ((r = BF(0x1a08, 3, 1, 1))) return r;
- if ((r = BF(0x1a08, 4, 2, 2))) return r;
- if ((r = BF(0x1a08, 6, 1, 1))) return r;
- if ((r = BF(0x1a08, 7, 1, 1))) return r;
- if ((r = BF(0x1a16, 0, 1, 0))) return r;
- if ((r = BF(0x1a16, 1, 2, 0))) return r;
- if ((r = BF(0x1a16, 3, 1, 0))) return r;
- if ((r = BF(0x1a16, 4, 1, 1))) return r;
- if ((r = BF(0x1a16, 5, 2, 0))) return r;
+ GCHD_TC_SET(d, GCHD_TC_A_SAMPLE, 0);
+ GCHD_TC_SET(d, GCHD_TC_A_BITRATE, 384);
+ GCHD_TC_SET(d, GCHD_TC_ACH_SEL, 0);
+ GCHD_TC_SET(d, GCHD_TC_AMCK_MODE, 1);
+ GCHD_TC_SET(d, GCHD_TC_AIN_DLENGTH, 2);
+ GCHD_TC_SET(d, GCHD_TC_AIN_LR_HLSET, 1);
+ GCHD_TC_SET(d, GCHD_TC_AIN_I2S, 1);
+ GCHD_TC_SET(d, GCHD_TC_E_MPEG_PROTECT, 0);
+ GCHD_TC_SET(d, GCHD_TC_E_MPEG_MODE, 0);
+ GCHD_TC_SET(d, GCHD_TC_E_MPEG_COPYR, 0);
+ GCHD_TC_SET(d, GCHD_TC_E_MPEG_ORIG, 1);
+ GCHD_TC_SET(d, GCHD_TC_E_MPEG_EMP, 0);
 
  /* Disable the secondary output path. */
- if ((r = BF(0x100a, 0, 4, 0))) return r;
- if ((r = BF(0x100a, 4, 4, 1))) return r;
- if ((r = BF(0x100a, 8, 4, 0))) return r;
- if ((r = BF(0x100a, 12, 4, 0))) return r;
- if ((r = BF(0x100c, 0, 4, 0))) return r;
- if ((r = BF(0x100c, 4, 4, 2))) return r;
- if ((r = BF(0x100c, 8, 4, 0))) return r;
- if ((r = BF(0x100c, 12, 4, 3))) return r;
+ GCHD_TC_SET(d, GCHD_TC_V_TS_OUT2_MODE, 0);
+ GCHD_TC_SET(d, GCHD_TC_V_TS_OUT_MODE, 1);
+ GCHD_TC_SET(d, GCHD_TC_SOUT2_MODE, 0);
+ GCHD_TC_SET(d, GCHD_TC_SOUT_MODE, 0);
+ GCHD_TC_SET(d, GCHD_TC_A_TS_OUT2_MODE, 0);
+ GCHD_TC_SET(d, GCHD_TC_A_TS_OUT_MODE, 2);
+ GCHD_TC_SET(d, GCHD_TC_A2_MODE, 0);
+ GCHD_TC_SET(d, GCHD_TC_A_MODE, 3);
 
  return 0;
 }
@@ -205,7 +200,6 @@ static int gchd_transcoder_defaults(struct gchd *d)
  * source values are derived from the active capture mode. */
 int gchd_transcoder_setup(struct gchd *d)
 {
- int r;
  u16 width = d->input_width;
  u16 height = d->input_height;
  u16 fps = d->input_fps_num ? d->input_fps_num : 60;
@@ -272,37 +266,35 @@ int gchd_transcoder_setup(struct gchd *d)
  else return -EINVAL;
  if (fps == 50) vformat |= 1;
 
-#define P(a,l,b,v) do { r=gchd_sparam(d,(a),(l),(b),(v)); if(r) return r; } while(0)
- if (d->family == GCHD_FAMILY_HDNEW) { P(0x1574,15,1,0); P(0x1574,0,5,3); }
- P(0x1104,0,16,system_rate); P(0x1106,0,16,0);
- P(0x1510,5,1,1); P(0x1518,0,8,anchor); P(0x1518,8,8,gop);
- P(0x1510,3,1,0); P(0x1514,8,3,0); P(0x1510,0,2,0);
- P(0x1532,0,16,bitrate); P(0x1534,0,16,auto_max_bitrate); P(0x1536,0,16,auto_average_bitrate); P(0x1538,0,16,auto_min_bitrate);
- P(0x152c,0,16,width); P(0x152e,0,16,height); P(0x1002,1,1,0);
- P(0x1584,0,16,0); P(0x1586,0,16,0); P(0x1588,0,16,0);
- P(0x151a,0,16,0); P(0x151c,0,16,0);
- P(0x1526,0,8,level); P(0x1526,8,8,profile);
- P(0x1a02,0,2,0); P(0x1a16,0,1,0); P(0x1a16,1,2,0); P(0x1a16,3,1,0); P(0x1a16,4,1,1); P(0x1a16,5,2,0); P(0x1a04,0,16,audio);
- P(0x1580,12,1,1); P(0x1580,0,8,colour); P(0x1582,8,8,1); P(0x1582,0,8,colour); P(0x157e,0,1,0); P(0x157e,12,1,1); P(0x157e,4,3,5);
- if (d->family == GCHD_FAMILY_HDNEW) { P(0x1674,15,1,0); P(0x1674,0,5,3); }
- P(0x1244,0,16,system_rate); P(0x1246,0,16,0);
- P(0x1610,5,1,1); P(0x1618,0,8,anchor); P(0x1618,8,8,gop); P(0x1610,3,1,0); P(0x1614,8,3,0); P(0x1610,0,2,0);
- P(0x1632,0,16,bitrate); P(0x1634,0,16,auto_max_bitrate); P(0x1636,0,16,auto_average_bitrate); P(0x1638,0,16,auto_min_bitrate); P(0x163a,0,16,0);
- P(0x162c,0,16,width); P(0x162e,0,16,height); P(0x161c,0,16,0); P(0x1626,0,8,31); P(0x1626,8,8,profile);
- P(0x1684,0,16,0); P(0x1686,0,16,0); P(0x1688,0,16,1);
- P(0x1a36,0,1,0); P(0x1a36,1,2,0); P(0x1a36,3,1,0); P(0x1a36,4,1,1); P(0x1a36,5,2,0); P(0x1a24,0,16,audio);
- P(0x1680,12,1,1); P(0x1680,0,8,colour); P(0x1682,8,8,1); P(0x1682,0,8,colour); P(0x167e,0,1,0); P(0x167e,12,1,1); P(0x167e,4,3,5);
- P(0x100a,4,4,1); P(0x100c,12,4,3); P(0x100a,0,4,0); P(0x100c,4,4,2); P(0x100a,8,4,0); P(0x100c,0,4,0); P(0x100c,8,4,0);
- P(0x1504,8,3,(height==576)?3:0); P(0x1502,0,8,vformat); P(0x1512,8,7,d->input_interlaced ? 0 : 2); P(0x1002,4,1,1); P(0x1002,4,1,1);
- P(0x1a02,0,2,0); P(0x1a08,0,1,0); P(0x1a08,1,1,0); P(0x1a08,2,1,0); P(0x1a08,3,1,1); P(0x1a08,4,2,2); P(0x1a08,6,1,1); P(0x1a08,7,1,1); P(0x1a08,8,3,0); P(0x1a08,11,2,0); P(0x1a08,13,1,0); P(0x1a08,14,1,0); P(0x1a08,15,1,0); P(0x1a0c,0,16,0);
- P(0x158a,12,1,0); P(0x168a,12,1,0); P(0x1570,0,1,1); P(0x1670,0,1,1);
-#undef P
+ if (d->family == GCHD_FAMILY_HDNEW) { GCHD_TC_SET(d, 0x1574, 15, 1,0); GCHD_TC_SET(d, GCHD_TC_V_MAX_CPB_DELAY,3); }
+ GCHD_TC_SET(d, GCHD_TC_SYSTEM_RATE,system_rate); GCHD_TC_SET(d, GCHD_TC_SYSTEM_MIN_RATE,0);
+ GCHD_TC_SET(d, GCHD_TC_V_CL_GOP,1); GCHD_TC_SET(d, GCHD_TC_V_GOP_STRUCT,anchor); GCHD_TC_SET(d, GCHD_TC_V_GOP_SIZE,gop);
+ GCHD_TC_SET(d, GCHD_TC_V_VLC_MODE,0); GCHD_TC_SET(d, GCHD_TC_V_VBR_CONVERGE_MODE,0); GCHD_TC_SET(d, GCHD_TC_V_RATE_MODE,0);
+ GCHD_TC_SET(d, GCHD_TC_V_BITRATE,bitrate); GCHD_TC_SET(d, GCHD_TC_V_MAX_BITRATE,auto_max_bitrate); GCHD_TC_SET(d, GCHD_TC_V_AVE_BITRATE,auto_average_bitrate); GCHD_TC_SET(d, GCHD_TC_V_MIN_BITRATE,auto_min_bitrate);
+ GCHD_TC_SET(d, GCHD_TC_V_HSIZE_OUT,width); GCHD_TC_SET(d, GCHD_TC_V_VSIZE_OUT,height); GCHD_TC_SET(d, GCHD_TC_V_VINPELCLK,0);
+ GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_H,0); GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_L,0); GCHD_TC_SET(d, GCHD_TC_NUM_UNITS_IN_TICK,0);
+ GCHD_TC_SET(d, GCHD_TC_V_IDR_INTERVAL_H,0); GCHD_TC_SET(d, GCHD_TC_V_IDR_INTERVAL_L,0);
+ GCHD_TC_SET(d, GCHD_TC_V_H264_LEVEL,level); GCHD_TC_SET(d, GCHD_TC_V_H264_PROFILE,profile);
+ GCHD_TC_SET(d, GCHD_TC_A_SAMPLE,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_PROTECT,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_MODE,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_COPYR,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_ORIG,1); GCHD_TC_SET(d, GCHD_TC_E_MPEG_EMP,0); GCHD_TC_SET(d, GCHD_TC_A_BITRATE,audio);
+ GCHD_TC_SET(d, GCHD_TC_COLOUR_DESCRIPTION_PRESENT_FLAG,1); GCHD_TC_SET(d, GCHD_TC_COLOUR_PRIMARIES,colour); GCHD_TC_SET(d, GCHD_TC_TRANSFER_CHARACTERISTICS,1); GCHD_TC_SET(d, GCHD_TC_MATRIX_COEFFICIENTS,colour); GCHD_TC_SET(d, GCHD_TC_VIDEO_FULL_RANGE_FLAG,0); GCHD_TC_SET(d, GCHD_TC_VIDEO_SIGNAL_TYPE_PRESENT_FLAG,1); GCHD_TC_SET(d, GCHD_TC_VIDEO_FORMAT,5);
+ if (d->family == GCHD_FAMILY_HDNEW) { GCHD_TC_SET(d, 0x1674, 15, 1,0); GCHD_TC_SET(d, GCHD_TC_V_MAX_CPB_DELAY_BL,3); }
+ GCHD_TC_SET(d, GCHD_TC_SYSTEM_RATE_TS_OUT2,system_rate); GCHD_TC_SET(d, GCHD_TC_SYSTEM_MIN_RATE_TS_OUT2,0);
+ GCHD_TC_SET(d, GCHD_TC_V_CL_GOP_BL,1); GCHD_TC_SET(d, GCHD_TC_V_GOP_STRUCT_BL,anchor); GCHD_TC_SET(d, GCHD_TC_V_GOP_SIZE_BL,gop); GCHD_TC_SET(d, GCHD_TC_V_VLC_MODE_BL,0); GCHD_TC_SET(d, GCHD_TC_V_VBR_CONVERGE_MODE_BL,0); GCHD_TC_SET(d, GCHD_TC_V_RATE_MODE_BL,0);
+ GCHD_TC_SET(d, GCHD_TC_V_BITRATE_BL,bitrate); GCHD_TC_SET(d, GCHD_TC_V_MAX_BITRATE_BL,auto_max_bitrate); GCHD_TC_SET(d, GCHD_TC_V_AVE_BITRATE_BL,auto_average_bitrate); GCHD_TC_SET(d, GCHD_TC_V_MIN_BITRATE_BL,auto_min_bitrate); GCHD_TC_SET(d, GCHD_TC_V_FILLER_BITRATE_BL,0);
+ GCHD_TC_SET(d, GCHD_TC_V_HSIZE_OUT_BL,width); GCHD_TC_SET(d, GCHD_TC_V_VSIZE_OUT_BL,height); GCHD_TC_SET(d, GCHD_TC_V_IDR_INTERVAL_L_BL,0); GCHD_TC_SET(d, GCHD_TC_V_H264_LEVEL_BL,31); GCHD_TC_SET(d, GCHD_TC_V_H264_PROFILE_BL,profile);
+ GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_H_BL,0); GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_L_BL,0); GCHD_TC_SET(d, GCHD_TC_NUM_UNITS_IN_TICK_BL,1);
+ GCHD_TC_SET(d, GCHD_TC_E_MPEG_PROTECT_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_MODE_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_COPYR_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_ORIG_BL,1); GCHD_TC_SET(d, GCHD_TC_E_MPEG_EMP_BL,0); GCHD_TC_SET(d, GCHD_TC_A_BITRATE_BL,audio);
+ GCHD_TC_SET(d, GCHD_TC_COLOUR_DESCRIPTION_PRESENT_FLAG_BL,1); GCHD_TC_SET(d, GCHD_TC_COLOUR_PRIMARIES_BL,colour); GCHD_TC_SET(d, GCHD_TC_TRANSFER_CHARACTERISTICS_BL,1); GCHD_TC_SET(d, GCHD_TC_MATRIX_COEFFICIENTS_BL,colour); GCHD_TC_SET(d, GCHD_TC_VIDEO_FULL_RANGE_FLAG_BL,0); GCHD_TC_SET(d, GCHD_TC_VIDEO_SIGNAL_TYPE_PRESENT_FLAG_BL,1); GCHD_TC_SET(d, GCHD_TC_VIDEO_FORMAT_BL,5);
+ GCHD_TC_SET(d, GCHD_TC_V_TS_OUT_MODE,1); GCHD_TC_SET(d, GCHD_TC_A_MODE,3); GCHD_TC_SET(d, GCHD_TC_V_TS_OUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A_TS_OUT_MODE,2); GCHD_TC_SET(d, GCHD_TC_SOUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A_TS_OUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A2_MODE,0);
+ GCHD_TC_SET(d, GCHD_TC_V_IN_SOURCE_TYPE,(height==576)?3:0); GCHD_TC_SET(d, GCHD_TC_V_FORMAT,vformat); GCHD_TC_SET(d, GCHD_TC_V_IP_FORMAT,d->input_interlaced ? 0 : 2); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1);
+ GCHD_TC_SET(d, GCHD_TC_A_SAMPLE,0); GCHD_TC_SET(d, GCHD_TC_AIN_MASTER,0); GCHD_TC_SET(d, GCHD_TC_AIN_LSB_FIRST,0); GCHD_TC_SET(d, GCHD_TC_AIN_BIT_POSB,0); GCHD_TC_SET(d, GCHD_TC_AMCK_MODE,1); GCHD_TC_SET(d, GCHD_TC_AIN_DLENGTH,2); GCHD_TC_SET(d, GCHD_TC_AIN_LR_HLSET,1); GCHD_TC_SET(d, GCHD_TC_AIN_I2S,1); GCHD_TC_SET(d, GCHD_TC_AIN_LRCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_SCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_BCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_BCLK_HL,0); GCHD_TC_SET(d, GCHD_TC_AIN_OFFSET_MODE,0); GCHD_TC_SET(d, GCHD_TC_AIN_OFFSET,0);
+ GCHD_TC_SET(d, GCHD_TC_V_DISABLE_ASPECT_RATIO_INFO_PRESENT_FLAG,0); GCHD_TC_SET(d, GCHD_TC_V_DISABLE_ASPECT_RATIO_INFO_PRESENT_FLAG_BL,0); GCHD_TC_SET(d, GCHD_TC_V_PIC_ORDER_PRESENT_FLAG,1); GCHD_TC_SET(d, GCHD_TC_V_PIC_ORDER_PRESENT_FLAG_BL,1);
  return 0;
 }
 
 int gchd_transcoder_output_enable(struct gchd *d, bool value)
 {
- return gchd_sparam(d, 0x1a08, 3, 1, value ? 1 : 0);
+ return gchd_sparam(d, GCHD_TC_AMCK_MODE, value ? 1 : 0);
 }
 
 int gchd_transcoder_init(struct gchd *d)
@@ -322,7 +314,6 @@ MODULE_LICENSE("GPL");
 
 int gchd_transcoder_final_configure(struct gchd *d)
 {
- int r;
  u8 video_format;
  u8 source_type = 0;
 
@@ -367,30 +358,30 @@ int gchd_transcoder_final_configure(struct gchd *d)
  else if (d->input_fps_num != 30 && d->input_fps_num != 60)
   return -EINVAL;
 
- r = gchd_sparam(d, 0x1126, 0, 13, VPID); if (r) return r;
- r = gchd_sparam(d, 0x1266, 0, 13, VPID); if (r) return r;
- r = gchd_sparam(d, 0x1128, 0, 13, APID); if (r) return r;
- r = gchd_sparam(d, 0x1268, 0, 13, APID); if (r) return r;
- r = gchd_sparam(d, 0x1130, 0, 8, VSID); if (r) return r;
- r = gchd_sparam(d, 0x1270, 0, 8, VSID); if (r) return r;
- r = gchd_sparam(d, 0x1132, 0, 8, ASID); if (r) return r;
- r = gchd_sparam(d, 0x1272, 0, 8, ASID); if (r) return r;
- r = gchd_sparam(d, 0x1504, 8, 3, source_type); if (r) return r;
- r = gchd_sparam(d, 0x1502, 0, 8, video_format); if (r) return r;
- r = gchd_sparam(d, 0x1512, 8, 7,
-                 d->input_interlaced ? 0 : 2); if (r) return r;
- r = gchd_sparam(d, 0x1002, 1, 1, 0); if (r) return r;
- r = gchd_sparam(d, 0x1002, 4, 1, 1); if (r) return r;
- r = gchd_sparam(d, 0x1a02, 0, 2, 0); if (r) return r;
- r = gchd_sparam(d, 0x1a08, 3, 1, 1); if (r) return r;
- r = gchd_sparam(d, 0x1a08, 4, 2, 2); if (r) return r;
- r = gchd_sparam(d, 0x1a08, 6, 1, 1); if (r) return r;
- r = gchd_sparam(d, 0x1a08, 7, 1, 1); if (r) return r;
- r = gchd_sparam(d, 0x1504, 0, 2, 2); if (r) return r;
+ GCHD_TC_SET(d, GCHD_TC_V_PID_OUT, GCHD_TS_PID_VIDEO);
+ GCHD_TC_SET(d, GCHD_TC_V_PID_OUT_TS_OUT2, GCHD_TS_PID_VIDEO);
+ GCHD_TC_SET(d, GCHD_TC_A_PID_OUT, GCHD_TS_PID_AUDIO);
+ GCHD_TC_SET(d, GCHD_TC_A_PID_OUT_TS_OUT2, GCHD_TS_PID_AUDIO);
+ GCHD_TC_SET(d, GCHD_TC_V_SID_OUT, GCHD_TS_SID_VIDEO);
+ GCHD_TC_SET(d, GCHD_TC_V_SID_OUT_TS_OUT2, GCHD_TS_SID_VIDEO);
+ GCHD_TC_SET(d, GCHD_TC_A_SID_OUT, GCHD_TS_SID_AUDIO);
+ GCHD_TC_SET(d, GCHD_TC_A_SID_OUT_TS_OUT2, GCHD_TS_SID_AUDIO);
+ GCHD_TC_SET(d, GCHD_TC_V_IN_SOURCE_TYPE, source_type);
+ GCHD_TC_SET(d, GCHD_TC_V_FORMAT, video_format);
+ GCHD_TC_SET(d, GCHD_TC_V_IP_FORMAT,
+                 d->input_interlaced ? 0 : 2);
+ GCHD_TC_SET(d, GCHD_TC_V_VINPELCLK, 0);
+ GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1);
+ GCHD_TC_SET(d, GCHD_TC_A_SAMPLE, 0);
+ GCHD_TC_SET(d, GCHD_TC_AMCK_MODE, 1);
+ GCHD_TC_SET(d, GCHD_TC_AIN_DLENGTH, 2);
+ GCHD_TC_SET(d, GCHD_TC_AIN_LR_HLSET, 1);
+ GCHD_TC_SET(d, GCHD_TC_AIN_I2S, 1);
+ GCHD_TC_SET(d, GCHD_TC_TFRFF, 2);
 
  /* These are emitted twice by the reference implementation. */
- r = gchd_sparam(d, 0x1002, 4, 1, 1); if (r) return r;
- r = gchd_sparam(d, 0x1002, 4, 1, 1); if (r) return r;
+ GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1);
+ GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1);
 
  return 0;
 }

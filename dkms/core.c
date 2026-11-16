@@ -182,11 +182,11 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
  bool start, discontinuity = false, has_payload;
  u8 cc;
 
- if (p[0] != 0x47)
+ if (p[0] != GCHD_TS_SYNC)
   return;
 
  pid = ((p[1] & 0x1f) << 8) | p[2];
- if (pid != 0x1011)
+ if (pid != GCHD_TS_PID_VIDEO)
   return;
 
  /* A transport error or scrambled video payload invalidates this PES. */
@@ -204,14 +204,14 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
  if (afc == 2 || afc == 3) {
   unsigned int adaptation_len = p[4];
 
-  if (adaptation_len > 183 || 5 + adaptation_len > 188)
+  if (adaptation_len > 183 || 5 + adaptation_len > GCHD_TS_PACKET)
    goto reset_pes;
   if (adaptation_len)
    discontinuity = !!(p[5] & 0x80);
   off = 5 + adaptation_len;
  }
 
- has_payload = (afc == 1 || afc == 3) && off < 188;
+ has_payload = (afc == 1 || afc == 3) && off < GCHD_TS_PACKET;
  start = !!(p[1] & 0x40);
  cc = p[3] & 0x0f;
 
@@ -272,7 +272,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   *pes_active = false;
 
   /* A new PES must begin with a complete MPEG-2 PES header here. */
-  if (188 - off < 9 ||
+  if (GCHD_TS_PACKET - off < 9 ||
       p[off] != 0 || p[off + 1] != 0 || p[off + 2] != 1 ||
       (p[off + 6] & 0xc0) != 0x80)
    return;
@@ -280,7 +280,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   {
    unsigned int header_len = 9 + p[off + 8];
 
-   if (header_len > 188 - off)
+   if (header_len > GCHD_TS_PACKET - off)
     return;
    off += header_len;
   }
@@ -290,9 +290,9 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   return;
  }
 
- if (off < 188) {
+ if (off < GCHD_TS_PACKET) {
   size_t remaining = GCHD_MAX_FRAME - *n;
-  size_t payload = 188 - off;
+  size_t payload = GCHD_TS_PACKET - off;
 
   if (payload > remaining) {
    dev_warn_ratelimited(&d->intf->dev,
@@ -457,7 +457,7 @@ static int gchd_rx(void *arg)
  }
 
  ep81 = usb_pipe_endpoint(d->udev,
-                          usb_rcvbulkpipe(d->udev, GCHD_EP_IN));
+                          usb_rcvbulkpipe(d->udev, GCHD_EP_TS_IN));
  ep84 = usb_pipe_endpoint(d->udev,
                           usb_rcvbulkpipe(d->udev, GCHD_EP_AUX_IN));
  if (!ep81 || !usb_endpoint_is_bulk_in(&ep81->desc)) {
@@ -479,7 +479,7 @@ static int gchd_rx(void *arg)
  for (i = 0; i < GCHD_RX_URB_COUNT; ++i) {
   rx[i].dev = d;
   rx[i].endpoint = i < GCHD_RX_URBS_EP_IN ?
-                   GCHD_EP_IN : GCHD_EP_AUX_IN;
+                   GCHD_EP_TS_IN : GCHD_EP_AUX_IN;
   rx[i].buf = kmalloc(GCHD_USB_BUFSIZE, GFP_KERNEL);
   rx[i].urb = usb_alloc_urb(0, GFP_KERNEL);
   if (!rx[i].buf || !rx[i].urb) {
@@ -565,19 +565,19 @@ static int gchd_rx(void *arg)
 
     /* USB transfers are arbitrary byte chunks; recover MPEG-TS alignment. */
     if (!d->ts_partial_len) {
-     while (pos < done->urb->actual_length && done->buf[pos] != 0x47)
+     while (pos < done->urb->actual_length && done->buf[pos] != GCHD_TS_SYNC)
       pos++;
      if (pos == done->urb->actual_length)
       break;
     }
 
-    take = min_t(size_t, 188 - d->ts_partial_len,
+    take = min_t(size_t, GCHD_TS_PACKET - d->ts_partial_len,
                  done->urb->actual_length - pos);
     memcpy(d->ts_partial + d->ts_partial_len, done->buf + pos, take);
     d->ts_partial_len += take;
     pos += take;
 
-    if (d->ts_partial_len == 188) {
+    if (d->ts_partial_len == GCHD_TS_PACKET) {
      gchd_ts(d, d->ts_partial, pes, &n, &pes_active,
              &cc_valid, &last_cc);
      d->ts_partial_len = 0;
@@ -691,7 +691,7 @@ static void gchd_detection_worker(struct work_struct *work)
    */
   gchd_ring_free(&d->ring);
   d->ts_partial_len = 0;
-  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
+  r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) {
    WRITE_ONCE(d->signal_present, false);
    dev_warn(&d->intf->dev,
@@ -709,7 +709,7 @@ static void gchd_detection_worker(struct work_struct *work)
    * the configured marker until IDLE succeeds so a failed transition is
    * retried before any new source probe.
    */
-  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
+  r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) {
    dev_warn(&d->intf->dev,
             "redetection: transition to IDLE after signal loss failed: %d\n", r);
@@ -836,7 +836,7 @@ static void gchd_detection_worker(struct work_struct *work)
      * and never attempt capture again. Recover to IDLE before allowing the
      * detector to probe or configure the input again.
      */
-    idle_error = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
+    idle_error = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
     WRITE_ONCE(d->capture_active, false);
     if (idle_error) {
      gchd_set_lifecycle(d, GCHD_ERROR);
@@ -918,7 +918,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  r = gchd_stream_stop(d);
  if (r)
   goto restart_failed;
- r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
+ r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
  if (r)
   goto restart_failed;
 
@@ -1208,7 +1208,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
    * input-specific teardown. gchd_state_cmd skips an already-completed IDLE
    * transition, which matters when switching between no-signal inputs.
    */
-  r = gchd_state_cmd(d, SCMD_IDLE, 0, 0, HW_IDLE);
+  r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) {
    dev_err(&d->intf->dev,
            "input switch: transition to IDLE failed: %d\n", r);
@@ -1708,10 +1708,10 @@ err:v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);retur
 void gchd_v4l2_unregister(struct gchd*d){video_unregister_device(&d->vdev);v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);}
 
 static const struct usb_device_id gchd_ids[] = {
- { USB_DEVICE(GCHD_VID, GCHD_PID_0), .driver_info = GCHD_FAMILY_OLD },
- { USB_DEVICE(GCHD_VID, GCHD_PID_1), .driver_info = GCHD_FAMILY_OLD },
- { USB_DEVICE(GCHD_VID, GCHD_PID_2), .driver_info = GCHD_FAMILY_OLD },
- { USB_DEVICE(GCHD_VID, GCHD_PID_3), .driver_info = GCHD_FAMILY_HDNEW },
+ { USB_DEVICE(GCHD_VID, GCHD_PID_HD_0044), .driver_info = GCHD_FAMILY_OLD },
+ { USB_DEVICE(GCHD_VID, GCHD_PID_HD_004E), .driver_info = GCHD_FAMILY_OLD },
+ { USB_DEVICE(GCHD_VID, GCHD_PID_HD_0051), .driver_info = GCHD_FAMILY_OLD },
+ { USB_DEVICE(GCHD_VID, GCHD_PID_HDNEW), .driver_info = GCHD_FAMILY_HDNEW },
  { }
 };
 MODULE_DEVICE_TABLE(usb, gchd_ids);
