@@ -1,6 +1,6 @@
 # TASK T-001 — DKMS code cleanup: layout, named constants, USB-command helpers
 
-- **Status:** in progress
+- **Status:** done, merged to `dev` (awaiting maintainer review)
 - **Type:** offline, code refactor, **no behaviour change** (build-only for
   rule E2; the proof is `tools/compare-objs.sh`)
 - **Branch:** `refactor/t001-names-and-macros` from `origin/dev`
@@ -93,9 +93,53 @@ single, named call.
 
 ## Findings
 
-- Survey done on `dev` (`ca6104b`); see the table in "Why".
-- `tools/compare-objs.sh` validated: identical trees give IDENTICAL; changing
-  one selector byte (`0x45` → `0x46`) is reported.
+### Result
+
+| Metric | Before (`dev` `6a940cb`) | After |
+|---|---|---|
+| `dkms/` lines | 6 571 | 6 092 |
+| `elgato_gchd.h` lines | 694 | 166 |
+| Number-restating aliases (`GCHD_VALUE_xx`, `*_REG_xx`) | 356 | 0 |
+| Local mailbox macro families in `.c` files | 5 | 0 |
+| `sparam` writes with a field name | 0 | 154 of 157 |
+| Dead functions | 3 | 0 |
+
+New files: `gchd_protocol.h`, `gchd_mailbox.h`,
+`gchd_transcoder_fields.h` (generated); tools: `tools/compare-objs.sh`,
+`tools/compare-mailbox-ops.py`, `tools/gen-transcoder-fields.py`.
+
+### Verification chain (one check per commit)
+
+| Commit | Check | Result |
+|---|---|---|
+| inline 356 aliases | `compare-objs.sh` strict | IDENTICAL |
+| `input.c` → `gchd_mailbox.h` | `compare-mailbox-ops.py` | IDENTICAL; machine code differs only in register/stack allocation |
+| `protocol_common.c` → `gchd_mailbox.h` | `compare-mailbox-ops.py --alias …` | IDENTICAL except `gchd_be_poll_ed/read_ec`, checked by hand (same bytes `99 89 ED/EC`, same read) |
+| protocol constant renames | `compare-objs.sh` strict | IDENTICAL (log text unchanged) |
+| `usb.c` constants, enable bits | `compare-objs.sh` strict | only `gchd_hw_shutdown` differs; its ops stream is IDENTICAL |
+| transcoder field names | `compare-objs.sh` strict | IDENTICAL |
+| helper renames, dead code | `compare-objs.sh --alias …` | IDENTICAL |
+| TS constants, `__maybe_unused` | `compare-objs.sh` strict | IDENTICAL |
+
+Both tools were negative-tested: changing one selector byte (`0x45` → `0x46`)
+or one register value (`0xce` → `0xcf`) is reported with the exact byte.
+
+### Issues found (not fixed here; behaviour changes are out of scope)
+
+1. **Possible porting bug:** `transcoder.c` writes `0x1004` lsb 0, 1 bit under
+   the comment "stout_mode"; C++ `stout_mode` is `0x1004` bit 15. Marked
+   `FIXME` in the code. → TODO T-004.
+2. The analog "anti-lockup" block in `input.c` (around
+   `gchd_configure_composite_exact`) deliberately ignores mailbox errors with raw
+   `gchd_mail_write()` calls. → review in T-032.
+3. `gchd_setup_subblock()` and `gchd_setup_subblock_exact()`, and the
+   `*_exact` variants generally, are thin wrappers left over from earlier
+   ports. → T-002.
+4. Component/HDMI mode detection uses inline magic thresholds
+   (`abs(value - 0xbbf4) < 10`, …). A named table `{value, mode}` would match
+   `docs/component.md`, but it changes code. → T-002.
+5. `core.c`'s TS parser keeps some literals (adaptation-field masks); it is
+   replaced wholesale in T-020, so it was not polished further.
 
 ---
 

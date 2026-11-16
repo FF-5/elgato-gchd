@@ -146,9 +146,9 @@ static int gchd_setup_subblock(struct gchd *d)
 }
 
 static int gchd_post_encoder_prefix(struct gchd *d);
-static int __maybe_unused gchd_post_encoder_sweep(struct gchd *d);
+static int gchd_post_encoder_sweep(struct gchd *d);
 static int gchd_post_encoder_state(struct gchd *d);
-static int __maybe_unused gchd_input_finalize(struct gchd *d);
+static int gchd_input_finalize(struct gchd *d);
 
 static int gchd_encoder_start(struct gchd *d)
 {
@@ -422,7 +422,7 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  return 0;
 }
 
-static int __maybe_unused gchd_post_encoder_sweep(struct gchd *d)
+static int gchd_post_encoder_sweep(struct gchd *d)
 {
  static const u8 addr[][2] = {
   {0x03,0x76},{0x3b,0x76},{0x73,0x76},{0xab,0x76},{0xe3,0x76},
@@ -497,7 +497,7 @@ static int gchd_post_encoder_state(struct gchd *d)
  return 0;
 }
 
-static int __maybe_unused gchd_input_finalize(struct gchd *d)
+static int gchd_input_finalize(struct gchd *d)
 {
  u8 reply[3];
  int r;

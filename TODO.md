@@ -37,17 +37,18 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 
 ## Phase 1 — Code cleanup (no behaviour change)
 
-- [ ] **T-001 [OFF] (L)** Inspect the DKMS code layout; define named
-      constants and helpers/macros for every repeated USB operation and magic
-      number; remove the meaningless `GCHD_VALUE_xx` / `GCHD_*_REG_xx`
-      aliases; fix misleading names. **Generated code must stay identical**
-      (`tools/compare-objs.sh`). → current `TASK.md`
-- [ ] **T-002 [OFF] (M)** Layout changes that T-001 identifies but that cannot
-      stay code-identical (for example splitting `input.c` per input, or
-      turning duplicated sequences into shared functions). Each change is
-      listed with its expected USB-traffic effect: none.
+- [x] **T-001 [OFF] (L)** Named constants (`gchd_protocol.h`), one mailbox
+      API (`gchd_mailbox.h`), transcoder field names, dead code removed,
+      misleading names fixed. Verified per commit (see `TASK.md` findings).
+- [ ] **T-002 [OFF] (M)** File split proposed in `dkms/README.md` ("Planned
+      layout"); fold the `*_exact` wrappers; mode-detection thresholds as named
+      tables. One move per commit, each checked with `compare-mailbox-ops.py`.
+      Expected USB-traffic effect: none.
 - [ ] **T-003 [OFF] (S)** Make `vb2_fops` in `fops.c` static (currently a
       global `EXPORT_SYMBOL_GPL`).
+- [ ] **T-004 [WIN] (S)** `0x1004` "stout_mode" write: the kernel writes bit 0,
+      C++ `stout_mode` is bit 15. Check the Windows trace's `SOC 1004` writes and
+      fix (behaviour change, own branch).
 
 ## Phase 2 — Tooling and evidence
 
