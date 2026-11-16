@@ -3,6 +3,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include "elgato_gchd.h"
+#include "gchd_mailbox.h"
 
 
 MODULE_FIRMWARE("gchd/MB86H57_H58_IDLE");
@@ -16,10 +17,6 @@ MODULE_FIRMWARE("gchd/MB86M01_ASSP_NSEC_ENC_H");
 #define FW_IDLE_NEW "gchd/MB86M01_ASSP_NSEC_IDLE"
 #define FW_ENC_NEW  "gchd/MB86M01_ASSP_NSEC_ENC_H"
 
-#define EB_FIRMWARE_PROCESSOR BIT(1)
-#define EB_ANALOG_INPUT BIT(2)
-#define EB_ENCODER_ENABLE BIT(3)
-#define EB_ENCODER_TRIGGER BIT(4)
 
 /* Enable ordered raw mailbox traces for 480i/240p comparison. */
 static bool trace_mailbox;
@@ -210,7 +207,7 @@ static int gchd_load_firmware(struct gchd *d, const char *name)
 int gchd_slsi(struct gchd *d, u16 address, u16 data)
 {
  __be16 x = cpu_to_be16(data);
- return gchd_ctrl_write(d, GCHD_REQ_REG, 0x0000, address, &x, sizeof(x));
+ return gchd_ctrl_write(d, GCHD_REQ_REG, GCHD_BANK_TC, address, &x, sizeof(x));
 }
 
 int gchd_sparam(struct gchd *d, u16 address, u8 lsb, u8 bits, u16 data)
@@ -227,7 +224,7 @@ int gchd_sparam(struct gchd *d, u16 address, u8 lsb, u8 bits, u16 data)
  mask <<= shift;
  buf[0] = cpu_to_be32(value);
  buf[1] = cpu_to_be32(mask);
- return gchd_ctrl_write(d, GCHD_REQ_REG, 0x0001, address & ~3U, buf, sizeof(buf));
+ return gchd_ctrl_write(d, GCHD_REQ_REG, GCHD_BANK_TC_FIELD, address & ~3U, buf, sizeof(buf));
 }
 
 static int gchd_interrupt_pend(struct gchd *d)
@@ -260,9 +257,8 @@ static int gchd_mail_ready(struct gchd *d)
   r = gchd_req_read16(d, GCHD_BANK_CTRL, GCHD_REG_MAIL_READY, &status);
   if (r)
    return r;
-  d->special_detect_mask &= (status >> 8 & 3) |
-                            (((status >> 10) & 3) != 0 ? BIT(3) : 0);
-  if (status & BIT(0))
+  d->special_detect_mask &= GCHD_MAIL_READY_DETECT(status);
+  if (status & GCHD_MAIL_READY_BIT)
    return 0;
  }
  return -ETIMEDOUT;
@@ -286,10 +282,9 @@ int gchd_send_enable_state(struct gchd *d)
    * Match GCHD::sendEnableState(): every successful status read narrows
    * the cable/source detection mask before we wait for MAIL_REQUEST_READY.
    */
-  d->special_detect_mask &= (status >> 8 & 3) |
-                            (((status >> 10) & 3) != 0 ? BIT(3) : 0);
+  d->special_detect_mask &= GCHD_MAIL_READY_DETECT(status);
 
-  if (status & BIT(0))
+  if (status & GCHD_MAIL_READY_BIT)
    return 0;
  }
  return -ETIMEDOUT;
@@ -298,7 +293,7 @@ int gchd_send_enable_state(struct gchd *d)
 int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
 {
  u8 padded[256];
- u8 cfg[4] = { 0x09, 0x00, (u8)(port << 1), len };
+ u8 cfg[4] = { GCHD_HDNEW_MAIL_OP, GCHD_HDNEW_MAIL_WRITE, (u8)(port << 1), len };
  int r;
 
  if (len > 254)
@@ -323,7 +318,7 @@ int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
  if (r)
   return r;
 
- r = gchd_ctrl_write(d, 0xb9, 0x0000, GCHD_REG_HDNEW_MAIL_CMD,
+ r = gchd_ctrl_write(d, GCHD_REQ_HDNEW_MAIL_CMD, 0x0000, GCHD_REG_HDNEW_MAIL_CMD,
                      cfg, sizeof(cfg));
  if (r)
   return r;
@@ -356,7 +351,7 @@ int gchd_mail_write(struct gchd *d, u8 port, const u8 *data, u8 len)
 
 int gchd_mail_read(struct gchd *d, u8 port, u8 *data, u8 len)
 {
- u8 cfg[4] = { 0x09, 0x01, (u8)(port << 1), len };
+ u8 cfg[4] = { GCHD_HDNEW_MAIL_OP, GCHD_HDNEW_MAIL_READ, (u8)(port << 1), len };
  u8 tmp[2 + 256 + 1];
  int r, total;
 
@@ -371,7 +366,7 @@ int gchd_mail_read(struct gchd *d, u8 port, u8 *data, u8 len)
   return r;
  }
 
- r = gchd_ctrl_write(d, 0xb9, 0x0000, GCHD_REG_HDNEW_MAIL_CMD,
+ r = gchd_ctrl_write(d, GCHD_REQ_HDNEW_MAIL_CMD, 0x0000, GCHD_REG_HDNEW_MAIL_CMD,
                      cfg, sizeof(cfg));
  if (r)
   return r;
@@ -478,7 +473,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
   */
  if ((command == GCHD_SCMD_IDLE || command == GCHD_SCMD_INIT ||
       command == GCHD_SCMD_STATE_CHANGE) &&
-     (mode & 0xa0) != 0xa0) {
+     (mode & GCHD_SCMD_INIT_NO_RELOAD) != GCHD_SCMD_INIT_NO_RELOAD) {
   u16 rb = 0;
   int tries;
 
@@ -517,7 +512,7 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
    r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &raw_state);
    if (r)
     return r;
-   state = raw_state & 0x1f;
+   state = raw_state & GCHD_STATE_MASK;
    if (state != current_state && state != next) {
     if (trace_start)
      dev_err(&d->intf->dev,
@@ -568,7 +563,7 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
   if (r) return r;
   r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
   if (r) return r;
-  state &= 0x1f;
+  state &= GCHD_STATE_MASK;
 
   r = gchd_reg_write16(d, GCHD_REG_SCMD_COMPLETE, GCHD_SCMD_COMPLETE_BIT);
   if (r) return r;
@@ -595,7 +590,7 @@ int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
  r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &current_state);
  if (r)
   return r;
- current_state &= 0x1f;
+ current_state &= GCHD_STATE_MASK;
 
  /*
   * GCHD_SCMD_IDLE is used when entering/re-entering input detection. HDNew reports
@@ -682,7 +677,7 @@ static int gchd_complete_state_change_draining(struct gchd *d,
   for (tries = 0; tries < 2000; ++tries) {
    r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
    if (r) return r;
-   state &= 0x1f;
+   state &= GCHD_STATE_MASK;
    if (first && state != current_state && state != next_state)
     return -EIO;
    first = false;
@@ -703,7 +698,7 @@ static int gchd_complete_state_change_draining(struct gchd *d,
   if (r) return r;
   r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
   if (r) return r;
-  state &= 0x1f;
+  state &= GCHD_STATE_MASK;
   r = gchd_reg_write16(d, GCHD_REG_SCMD_COMPLETE, GCHD_SCMD_COMPLETE_BIT);
   if (r) return r;
   r = gchd_reg_write16(d, GCHD_REG_SCMD_COMPLETE_AUX, 0x0000);
@@ -722,7 +717,7 @@ int gchd_stream_stop(struct gchd *d)
 
  r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
  if (r) return r;
- state &= 0x1f;
+ state &= GCHD_STATE_MASK;
  if (state == GCHD_STATE_STOP || state == GCHD_STATE_IDLE) {
   /* STOP/IDLE leaves the selected input's setup intact. */
   return 0;
@@ -785,8 +780,8 @@ int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
 
 int gchd_enable_analog(struct gchd *d)
 {
- u16 value = d->input ? EB_ANALOG_INPUT : 0;
- return gchd_do_enable(d, EB_ANALOG_INPUT, value);
+ u16 value = d->input ? GCHD_EB_ANALOG_INPUT : 0;
+ return gchd_do_enable(d, GCHD_EB_ANALOG_INPUT, value);
 }
 
 static int gchd_processor_state(struct gchd *d, u32 *magic)
@@ -813,34 +808,34 @@ int gchd_hw_init(struct gchd *d)
  u32 version0, version1;
 
  /* The reference driver reads the hardware revision before BANKSEL. */
- r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, 0x0094, &version0, sizeof(version0));
+ r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, GCHD_REG_HDNEW_VERSION0, &version0, sizeof(version0));
  if (r)
   return r;
- r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, 0x0098, &version1, sizeof(version1));
+ r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, GCHD_REG_HDNEW_VERSION1, &version1, sizeof(version1));
  if (r)
   return r;
  if (!version0 && !version1) {
   u8 version[4];
-  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, 0x0010, version, sizeof(version));
+  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, GCHD_REG_HD_VERSION0, version, sizeof(version));
   if (r)
    return r;
-  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, 0x0014, version, sizeof(version));
+  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, GCHD_REG_HD_VERSION1, version, sizeof(version));
   if (r)
    return r;
-  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, 0x0018, version, sizeof(version));
+  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, GCHD_REG_HD_VERSION2, version, sizeof(version));
   if (r)
    return r;
  } else {
   u8 version[4];
   /* readVersion() first probes registers 0 and 1, then reads the same
    * two registers again as part of the version buffer, followed by 2. */
-  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, 0x0094, version, sizeof(version));
+  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, GCHD_REG_HDNEW_VERSION0, version, sizeof(version));
   if (r)
    return r;
-  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, 0x0098, version, sizeof(version));
+  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, GCHD_REG_HDNEW_VERSION1, version, sizeof(version));
   if (r)
    return r;
-  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, 0x009c, version, sizeof(version));
+  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, GCHD_REG_HDNEW_VERSION2, version, sizeof(version));
   if (r)
    return r;
  }
@@ -857,7 +852,7 @@ int gchd_hw_init(struct gchd *d)
  r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
  if (r)
   return r;
- state &= 0x1f;
+ state &= GCHD_STATE_MASK;
 
  if (state == 0) {
   if (d->family == GCHD_FAMILY_HDNEW) {
@@ -925,14 +920,14 @@ int gchd_hw_init(struct gchd *d)
 
   {
    u16 dummy;
-   r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x0010, &dummy, sizeof(dummy)); if (r) return r;
-   r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x0012, &dummy, sizeof(dummy)); if (r) return r;
-   r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x0014, &dummy, sizeof(dummy)); if (r) return r;
-   r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x0016, &dummy, sizeof(dummy)); if (r) return r;
-   r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x0018, &dummy, sizeof(dummy)); if (r) return r;
-   r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x001a, &dummy, sizeof(dummy)); if (r) return r;
-   r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x001c, &dummy, sizeof(dummy)); if (r) return r;
-   r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x001e, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x0010, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x0012, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x0014, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x0016, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x0018, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x001a, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x001c, &dummy, sizeof(dummy)); if (r) return r;
+   r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x001e, &dummy, sizeof(dummy)); if (r) return r;
   }
  } else {
   r = gchd_state_cmd(d, GCHD_SCMD_RESET, 0, 0, GCHD_STATE_FW_LOADED);
@@ -973,12 +968,12 @@ int gchd_hw_init(struct gchd *d)
    if (r)
     return r;
 
-   r = gchd_do_enable(d, EB_ANALOG_INPUT, EB_ANALOG_INPUT);
+   r = gchd_do_enable(d, GCHD_EB_ANALOG_INPUT, GCHD_EB_ANALOG_INPUT);
    if (r)
     return r;
 
-   r = gchd_do_enable(d, EB_FIRMWARE_PROCESSOR,
-                      EB_FIRMWARE_PROCESSOR);
+   r = gchd_do_enable(d, GCHD_EB_FIRMWARE_PROCESSOR,
+                      GCHD_EB_FIRMWARE_PROCESSOR);
    if (r)
     return r;
    break;
@@ -1017,13 +1012,13 @@ int gchd_hw_init(struct gchd *d)
      */
     {
      u16 dummy;
-     r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x0010,
+     r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x0010,
                         &dummy, sizeof(dummy)); if (r) return r;
-     r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x0012,
+     r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x0012,
                         &dummy, sizeof(dummy)); if (r) return r;
-     r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x0014,
+     r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x0014,
                         &dummy, sizeof(dummy)); if (r) return r;
-     r = gchd_ctrl_read(d, GCHD_REQ_REG, 0x0000, 0x0016,
+     r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_TC, 0x0016,
                         &dummy, sizeof(dummy)); if (r) return r;
     }
 
@@ -1068,7 +1063,7 @@ int gchd_hw_shutdown(struct gchd *d)
  r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
  if (r)
   return r;
- state &= 0x1f;
+ state &= GCHD_STATE_MASK;
 
  if (state == GCHD_STATE_START || state == GCHD_STATE_NULL) {
   r = gchd_stream_stop(d);
@@ -1077,7 +1072,7 @@ int gchd_hw_shutdown(struct gchd *d)
   r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
   if (r)
    return r;
-  state &= 0x1f;
+  state &= GCHD_STATE_MASK;
  }
 
  if (state == GCHD_STATE_SHUTDOWN || state == GCHD_STATE_BOOT || state == GCHD_STATE_FW_LOADED) {
@@ -1087,15 +1082,10 @@ int gchd_hw_shutdown(struct gchd *d)
   return 0;
  }
 
- /* The undocumented pre-shutdown mailbox sequence from userspace. */
- r = gchd_mail_write(d, GCHD_PORT_DECODER, (u8[]){0x06,0x86}, 2);
- if (r) return r;
- r = gchd_mail_write(d, GCHD_PORT_BRIDGE, (u8[]){GCHD_RD_DEC_0,GCHD_RD_DEC_1,0xf8}, 3);
- if (r) return r;
- r = gchd_mail_read(d, GCHD_PORT_BRIDGE, &v, 1);
- if (r) return r;
- r = gchd_mail_write(d, GCHD_PORT_DECODER, (u8[]){0x03,0x2f}, 2);
- if (r) return r;
+ /* Pre-shutdown decoder sequence (C++ uninitDevice; docs/hardware.md §8). */
+ GCHD_DEC_W(d, 0x06, 0x86);
+ GCHD_DEC_R(d, 0xf8, v);
+ GCHD_DEC_W(d, 0x03, 0x2f);
 
  r = gchd_reg_write16(d, GCHD_REG_BANKSEL, 0x0000);
  if (r) return r;
@@ -1117,7 +1107,7 @@ int gchd_hw_shutdown(struct gchd *d)
  d->hw_enable_state = 0;
  d->saved_enable_state = 0;
 
- r = gchd_do_enable(d, EB_FIRMWARE_PROCESSOR, 0);
+ r = gchd_do_enable(d, GCHD_EB_FIRMWARE_PROCESSOR, 0);
  if (r) return r;
 
  /*
@@ -1130,7 +1120,7 @@ int gchd_hw_shutdown(struct gchd *d)
   */
  r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
  if (r) return r;
- state &= 0x1f;
+ state &= GCHD_STATE_MASK;
  if (state != GCHD_STATE_IDLE) {
   r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) return r;

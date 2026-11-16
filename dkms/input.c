@@ -227,7 +227,7 @@ static int gchd_encoder_start(struct gchd *d)
    break;
  }
 
- r = gchd_do_enable(d, BIT(3), BIT(3));
+ r = gchd_do_enable(d, GCHD_EB_ENCODER_ENABLE, GCHD_EB_ENCODER_ENABLE);
  if (r) return r;
 
  /*
@@ -251,7 +251,7 @@ static int gchd_encoder_start(struct gchd *d)
  GCHD_BRIDGE_W(d, 0xdd, 0xce, 0x3f, 0xb2);
  GCHD_BRIDGE_R(d, reply, 2);
 
- r = gchd_do_enable(d, BIT(4), BIT(4));
+ r = gchd_do_enable(d, GCHD_EB_ENCODER_TRIGGER, GCHD_EB_ENCODER_TRIGGER);
  if (r) return r;
 
  for (i = 0; i < 1000; ++i) {
@@ -263,7 +263,7 @@ static int gchd_encoder_start(struct gchd *d)
  if (i == 1000)
   return -ETIMEDOUT;
 
- r = gchd_do_enable(d, BIT(4), 0);
+ r = gchd_do_enable(d, GCHD_EB_ENCODER_TRIGGER, 0);
  if (r) return r;
 
  GCHD_DEC_R(d, 0xfb, reply[0]);
@@ -590,7 +590,7 @@ static int __maybe_unused gchd_post_encoder_setup(struct gchd *d)
  GCHD_BRIDGE_R(d, reply, 1);
  GCHD_BRIDGE_R(d, reply, 2);
 
- r = gchd_do_enable(d, BIT(4), BIT(4));
+ r = gchd_do_enable(d, GCHD_EB_ENCODER_TRIGGER, GCHD_EB_ENCODER_TRIGGER);
  if (r)
   return r;
  for (i = 0; i < 100; ++i) {
@@ -605,7 +605,7 @@ static int __maybe_unused gchd_post_encoder_setup(struct gchd *d)
  }
  if (i == 100)
   return -ETIMEDOUT;
- r = gchd_do_enable(d, BIT(4), 0);
+ r = gchd_do_enable(d, GCHD_EB_ENCODER_TRIGGER, 0);
  if (r)
   return r;
 
@@ -701,7 +701,7 @@ static int gchd_post_encoder_state(struct gchd *d)
   r = gchd_mail_read(d, GCHD_PORT_BRIDGE, reply, sizeof(reply));
   if (r)
    return r;
-  r = gchd_do_enable(d, BIT(2), BIT(2));
+  r = gchd_do_enable(d, GCHD_EB_ANALOG_INPUT, GCHD_EB_ANALOG_INPUT);
   if (r)
    return r;
   /* byte-wise form of (reply & GCHD_ENC_READY_MASK) == GCHD_ENC_READY */
@@ -741,13 +741,13 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
   * detection. HDMI and Component retain this configure-stage routing.
   */
  if (d->input < 2) {
-  r = gchd_do_enable(d, BIT(8), 0);
+  r = gchd_do_enable(d, GCHD_EB_COMPOSITE_MUX, 0);
   if (r)
    return r;
-  r = gchd_do_enable(d, BIT(2), d->input != 0 ? BIT(2) : 0);
+  r = gchd_do_enable(d, GCHD_EB_ANALOG_INPUT, d->input != 0 ? GCHD_EB_ANALOG_INPUT : 0);
   if (r)
    return r;
-  r = gchd_do_enable(d, BIT(9), d->input != 0 ? BIT(9) : 0);
+  r = gchd_do_enable(d, GCHD_EB_ANALOG_MUX, d->input != 0 ? GCHD_EB_ANALOG_MUX : 0);
   if (r)
    return r;
  }
@@ -884,11 +884,11 @@ static int gchd_prepare_analog_detection(struct gchd *d)
   * writes preserve unrelated enable bits and match the observed
   * 02 0E -> 03 0E -> 03 0E routing progression for analog inputs.
   */
- r = gchd_do_enable(d, BIT(8), BIT(8));
+ r = gchd_do_enable(d, GCHD_EB_COMPOSITE_MUX, GCHD_EB_COMPOSITE_MUX);
  if (r) return r;
- r = gchd_do_enable(d, BIT(2), BIT(2));
+ r = gchd_do_enable(d, GCHD_EB_ANALOG_INPUT, GCHD_EB_ANALOG_INPUT);
  if (r) return r;
- r = gchd_do_enable(d, BIT(9), BIT(9));
+ r = gchd_do_enable(d, GCHD_EB_ANALOG_MUX, GCHD_EB_ANALOG_MUX);
  if (r) return r;
 
  /*
@@ -1710,7 +1710,7 @@ int gchd_input_start(struct gchd *d)
 void gchd_input_stop(struct gchd *d)
 {
  if (d->input_configured || d->encoder_started)
-  gchd_do_enable(d, BIT(4) | BIT(3), 0);
+  gchd_do_enable(d, GCHD_EB_ENCODER_TRIGGER | GCHD_EB_ENCODER_ENABLE, 0);
  d->input_configured = false;
  d->encoder_started = false;
  d->input_prepared = false;

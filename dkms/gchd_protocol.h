@@ -60,8 +60,12 @@
 #define GCHD_REG_SCMD_STATE		0x2008	/* low 5 bits = SCMD state */
 #define GCHD_REG_HDNEW_MAIL_READ	0x23be	/* mailbox read data (2-byte header) */
 
-/* wIndex of GCHD_REQ_HDNEW_MAIL_CMD */
+/* GCHD_REQ_HDNEW_MAIL_CMD: wIndex and 4-byte payload
+ * { GCHD_HDNEW_MAIL_OP, WRITE|READ, port << 1, length } */
 #define GCHD_REG_HDNEW_MAIL_CMD		0x0000
+#define GCHD_HDNEW_MAIL_OP		0x09
+#define GCHD_HDNEW_MAIL_WRITE		0x00
+#define GCHD_HDNEW_MAIL_READ		0x01
 
 /* Bank GCHD_BANK_CTRL (0x0900) */
 #define GCHD_REG_BANKSEL		0x0000	/* written 0x0000; effect unknown */
@@ -77,6 +81,11 @@
 #define GCHD_REG_TC_PROBE_LAST		0x001e
 
 #define GCHD_MAIL_READY_BIT		0x0001
+/* GCHD_REG_MAIL_READY bits 8-9: cable type (00 HDMI, 10 component,
+ * 11 composite); bits 10-11: cable presence. C++ folds them into a
+ * detection mask: cable type in bits 0-1, "anything present" in bit 3. */
+#define GCHD_MAIL_READY_DETECT(status) \
+	((((status) >> 8) & 3) | ((((status) >> 10) & 3) != 0 ? BIT(3) : 0))
 #define GCHD_SCMD_COMPLETE_BIT		0x0004	/* also the acknowledge value */
 #define GCHD_POST_IDLE_FW_VALUE		0x0004
 
