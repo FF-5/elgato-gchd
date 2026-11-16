@@ -85,7 +85,7 @@ Notation and confidence markers: [README.md](README.md).
    04 CC
    ```
 
-   (Interleaved with `9D CD` helpers / page selects.) Signal detection, per-format decoder configuration, final transcoder setup, and lock criteria with a real signal are not in any Windows trace; use the C++ reference path below.
+   (Interleaved with `9D CD` helpers / page selects.) Signal detection, per-format decoder configuration, final transcoder setup, and lock criteria with a real signal are not in any Windows trace; the C++ starting point below fills the gap until we trace it.
 
 8. Shared SCMD / sequence-start sequence (see [hardware.md](hardware.md)) only after the above is validated with a real signal.
 
@@ -108,11 +108,12 @@ Once the component selector `51 ED` and component tail have run with no source p
 
 See [hardware.md](hardware.md) for the cross-input comparison and unresolved helper semantics.
 
-## C++ reference path (`configure_component.cpp`) — known-good baseline
+## C++ starting point (`configure_component.cpp`)
 
 The Windows traces above only cover switching to component **without** a
-source. The C++ implements full component capture and is the reference for
-everything after the selector.
+source. The C++ implements full component capture and is the starting point
+for everything after the selector until a Windows trace with a component
+signal is recorded.
 
 1. `94 41 37`, `94 4A AF`, `94 4B AF`; the `0x9C` shared path; selector
    `0x9C:51 = ED` (same bytes as the Windows switch trace).

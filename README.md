@@ -13,7 +13,7 @@ Official Groupchat at Gitter: https://gitter.im/tolga9009/elgato-gchd
 
 | Path | Contents |
 |---|---|
-| `src/` | Original C++ userspace driver (libusb). Reference implementation of the protocol. |
+| `src/` | Original C++ userspace driver (libusb). Starting point for the protocol work; read-only in this fork. |
 | `dkms/` | Experimental Linux kernel (V4L2/DKMS) driver, work in progress. See `dkms/README.md`. |
 | `docs/` | Protocol documentation and raw evidence (Windows USB traces, usbmon logs). |
 | `TODO.md`, `TASK.md`, `RULES.md` | Work plan, current task, and working rules for the kernel driver. |

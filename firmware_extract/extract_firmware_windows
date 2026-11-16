@@ -9,16 +9,14 @@ fileList=( ${pattern} )
 filename=${fileList[0]}
 [[ ! -z "${filename// }" ]] || { echo >&2 "Cannot find a GameCaptureSetup*.msi file."; exit 1; }
 
-[[ ! -e Firmware.tgz ]] || { echo >&2 "Firmware.tgz file already exists. Delete to rerun."; exit 1; }
+FIRMWARE_DIR="/lib/firmware/gchd"
 
+TEMPDIR=$(mktemp -d -p .)
+trap 'rm -rf "${TEMPDIR}"' EXIT
 
-TEMPDIR=`mktemp -d -p .`
-mkdir ${TEMPDIR}/gchd
+mkdir -p "${FIRMWARE_DIR}"
 
-7z e -o${TEMPDIR} ${filename} x86_yPushFile3.dll
-7z e -o${TEMPDIR}/gchd -r ${TEMPDIR}/x86_yPushFile3.dll MB86H57_H58_IDLE MB86H57_H58_ENC_H MB86M01_ASSP_NSEC_IDLE MB86M01_ASSP_NSEC_ENC_H
+7z e -o"${TEMPDIR}" "${filename}" x86_yPushFile3.dll
+7z e -y -o"${FIRMWARE_DIR}" -r "${TEMPDIR}/x86_yPushFile3.dll" MB86H57_H58_IDLE MB86H57_H58_ENC_H MB86M01_ASSP_NSEC_IDLE MB86M01_ASSP_NSEC_ENC_H
 
-rm -f ${TEMPDIR}/x86_yPushFile3.dll
-pushd ${TEMPDIR} && tar cvzf ../Firmware.tgz gchd && popd
-
-rm -r ${TEMPDIR}
+echo "Firmware extracted to ${FIRMWARE_DIR}"

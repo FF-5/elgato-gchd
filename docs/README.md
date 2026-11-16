@@ -10,35 +10,38 @@ DKMS/V4L2 driver in [`../dkms`](../dkms).
 |---|---|
 | [hardware.md](hardware.md) | USB transport, mailbox, SCMD state machine, firmware load, common initialization, capture start/stop, shutdown. |
 | [commands.md](commands.md) | Register and mailbox catalog: addressing model, device addresses, status registers, transcoder (encoder) register map, unknowns. |
-| [composite.md](composite.md) | Composite input: C++ reference path (480i/576i), Windows 240p sequence, 480i↔240p transitions. |
-| [s-video.md](s-video.md) | S-video input (Windows traces only; not implemented in the C++ reference). |
-| [component.md](component.md) | Component input: C++ reference path and Windows switch traces. |
-| [hdmi.md](hdmi.md) | HDMI input: C++ reference path and Windows switch traces. |
+| [composite.md](composite.md) | Composite input: Windows 480i/240p sequences and transitions, C++ starting point (480i/576i), Windows 240p sequence, 480i↔240p transitions. |
+| [s-video.md](s-video.md) | S-video input (Windows traces only; not implemented in the C++ code). |
+| [component.md](component.md) | Component input: Windows switch traces, C++ starting point. |
+| [hdmi.md](hdmi.md) | HDMI input: Windows switch traces, C++ starting point. |
 | [video-output.md](video-output.md) | What the device emits (MPEG-TS) and how the Linux driver should expose it. |
 | [branch-history.md](branch-history.md) | What each historical git branch contains and why `dev` is now the base. |
 | [evidence/](evidence/) | Raw evidence: decoded Windows USB traces, usbmon logs of the C++ driver, kernel logs, reference TS analysis. |
 
 ## Sources of truth, in order
 
-1. **Windows USB traces** (`evidence/windows-traces/`): what the official driver
-   actually sends. They are authoritative for ordering and values, but each one
-   covers only the scenario that was captured.
+1. **Our own Windows USB traces** (`evidence/windows-traces/`): what the
+   official Windows driver actually sends to the device. **This is the
+   reference.** Each trace covers only the scenario that was captured, so
+   anything not yet traced is open until a new trace covers it.
 2. **The C++ userspace implementation** (`../src`, from the original
-   `tolga9009/elgato-gchd` project). It is a working, reverse-engineered
-   implementation for HDMI, component, and composite **480i/576i** (and the
-   progressive/HD modes listed in each input page). Its register names
-   (`src/gchd_hardware.hpp`) come from Fujitsu script files and are the best
-   names available.
+   `tolga9009/elgato-gchd` project). It is a **starting point, not a
+   reference**. Much of it worked in 2016 (HDMI, component, composite
+   480i/576i), and its register names (`src/gchd_hardware.hpp`, taken from
+   Fujitsu script files) are the best names available. It detects the input
+   and mode once at start-up and handles **neither input changes nor
+   resolution changes** while running. The C++ code is **read-only** for this
+   project; we never modify it.
 3. **usbmon logs of the C++ driver** (`evidence/userspace-usbmon/`): the C++
-   protocol as it appears on the wire. Use these to compare the kernel driver
-   byte for byte.
-4. **The DKMS driver** (`../dkms`). This is a port and is **not** a protocol
-   reference. If it disagrees with 1–3, the driver is wrong until proven
-   otherwise.
+   protocol as it appears on the wire. They are useful for byte-level
+   comparison, with the same caveat as 2.
+4. **The DKMS driver** (`../dkms`): the product we are writing. It is not a
+   protocol reference. Input switching is implemented there (not in C++);
+   resolution switching still needs hardware testing.
 
-When the Windows traces and the C++ code disagree, both are recorded and the
-difference is marked **DISCREPANCY**. Nothing is silently "corrected" toward
-one source.
+When a Windows trace and the C++ code disagree, the trace wins. The
+difference is still recorded as **DISCREPANCY**, because the C++ value is
+sometimes the only one known to have produced video.
 
 ## Notation used in every page
 
@@ -80,7 +83,7 @@ as established.
 
 ### Confidence markers
 
-- **C++**: implemented in the C++ reference; worked on real hardware in 2016.
+- **C++**: implemented in the C++ starting point; worked on real hardware in 2016, but not confirmed by a Windows trace.
 - **WIN**: observed in a Windows USB trace (name the trace).
 - **KERNEL**: observed only from the DKMS driver; lower confidence.
 - **UNKNOWN**: the effect is not established. Keep the operation, do not guess.

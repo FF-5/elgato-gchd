@@ -1,8 +1,10 @@
 # elgato_gchd — experimental V4L2/DKMS driver
 
 Kernel driver for the Elgato Game Capture HD (`0fd9:0044/004e/0051/005d`).
-It is a port of the C++ userspace driver in [`../src`](../src). The protocol is
-documented in [`../docs`](../docs). This README covers only building, layout
+It started as a port of the C++ userspace driver in [`../src`](../src) (a
+read-only starting point) and adds what the C++ never had: input switching
+while running, and work toward resolution changes. The protocol reference is
+our own Windows USB traces, documented in [`../docs`](../docs). This README covers only building, layout
 and the driver's current state.
 
 > **Status: not working end to end.** This code is the tip of the

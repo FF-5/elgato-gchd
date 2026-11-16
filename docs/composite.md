@@ -5,11 +5,11 @@ capture start: [hardware.md](hardware.md).
 
 ## Summary
 
-| Mode | C++ reference | Windows trace | Encoder programming |
+| Mode | C++ starting point | Windows trace (reference) | Encoder programming |
 |---|---|---|---|
 | 480i (NTSC) | **Yes**, worked in 2016 | Yes (`trace_analysis.txt`) | `v_format 4`, `v_ip_format 0` (interlaced) |
 | 576i (PAL) | **Yes** | **No PAL trace exists in the repository** | `v_format 5`, `v_ip_format 0` |
-| 240p (NTSC-family console signal) | No; it would detect as 480i and encode as 480i | Yes (`trace_analysis.txt`, `gchd_composite_240p_full_bringup.txt`) | **Same as 480i**: `v_format 4`, `v_ip_format 0` (**WIN**) |
+| 240p (NTSC-family console signal) | No; detects once at start-up, so it would see 480i and encode as 480i; no mode-change handling | Yes (`trace_analysis.txt`, `gchd_composite_240p_full_bringup.txt`) | **Same as 480i**: `v_format 4`, `v_ip_format 0` (**WIN**) |
 | 288p (PAL-family) | No | No (see §6 note) | Not captured; expected to mirror 576i |
 | 480p / 576p over composite | Not a valid composite signal | — | — |
 
@@ -21,7 +21,7 @@ is toggled (`88` ↔ `8A`). Programming 240p as 480p (`v_format 8`,
 `v_ip_format 2`) is what the DKMS `state-machine` branch does, and it is not
 what Windows does.
 
-## 1. C++ reference path (480i / 576i) — the known-good baseline
+## 1. C++ starting point (480i / 576i)
 
 `configureComposite()` runs after common init step 24 ([hardware.md §5](hardware.md#5-common-initialization-c-configuredevice-verified-against-win)):
 
@@ -86,8 +86,10 @@ step 6 = the `0x98:0D/0E` retrigger. **DISCREPANCIES** with C++:
 - Tuning `0x88:10`: C++ `88`, Windows `6F`.
 - Selector `0x9C:51`: C++ `CC`, Windows `44`.
 
-The C++ values produced working 480i video in 2016. Change toward the Windows
-values only one at a time, with a before/after capture.
+The Windows trace is the reference: the DKMS driver follows the Windows values.
+The C++ values are kept here because they produced 480i video in 2016; if a
+Windows value misbehaves, test the C++ value as a fallback, one register at a
+time, with a before/after capture.
 
 ## 4. Windows: 480i → 240p while capturing (`trace_analysis.txt`, t = 25.0–28.5 s)
 
