@@ -4,7 +4,8 @@
 # Used to prove that a cleanup/refactor (renames, macros, moved code) does not
 # change behaviour (RULES.md C9). Identical output means identical code.
 #
-# Usage: tools/compare-objs.sh [--relaxed] [OLD_REV] [NEW_REV|WORKTREE]
+# Usage: tools/compare-objs.sh [--relaxed] [--alias old=new ...] [OLD_REV] [NEW_REV|WORKTREE]
+#   --alias    rename symbol `old` to `new` in OLD_REV's dump (renamed functions)
 #   --relaxed  compare, per function, only the ordered list of call targets
 #              and immediate constants ($0x..). Register allocation and stack
 #              layout may differ. Use it when strict mode reports differences
@@ -17,7 +18,14 @@
 set -euo pipefail
 
 RELAXED=0
-if [ "${1:-}" = --relaxed ]; then RELAXED=1; shift; fi
+ALIASES=()
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--relaxed) RELAXED=1; shift ;;
+	--alias) ALIASES+=("$2"); shift 2 ;;
+	*) break ;;
+	esac
+done
 OLD=${1:-origin/dev}
 NEW=${2:-WORKTREE}
 TOP=$(git rev-parse --show-toplevel)
@@ -75,6 +83,12 @@ mkdir "$WORK/build"
 cp -r "$WORK/old/." "$WORK/build/"; dump "$WORK/build" "$WORK/old.dump"
 rm -rf "$WORK/build"; mkdir "$WORK/build"
 cp -r "$WORK/new/." "$WORK/build/"; dump "$WORK/build" "$WORK/new.dump"
+
+for a in "${ALIASES[@]+"${ALIASES[@]}"}"; do
+	o=${a%%=*}; n=${a#*=}
+	sed -i -E "s/(^|[^A-Za-z0-9_]|__pfx_)${o}([^A-Za-z0-9_]|\$)/\\1${n}\\2/g" "$WORK/old.dump.code" "$WORK/old.dump.data"
+done
+sort -s -t "$(printf '\t')" -k1,1 -o "$WORK/old.dump.code" "$WORK/old.dump.code"
 
 status=0
 if ! diff -u "$WORK/old.dump.code" "$WORK/new.dump.code" >"$WORK/code.diff"; then

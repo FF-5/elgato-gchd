@@ -38,7 +38,7 @@ static bool gchd_component_timing_valid(u32 value)
 }
 
 
-static int gchd_seq(struct gchd *d, const struct gchd_mail_cmd *s, size_t n)
+static int gchd_mail_seq(struct gchd *d, const struct gchd_mail_cmd *s, size_t n)
 {
  size_t i;
  int r;
@@ -124,81 +124,25 @@ static int gchd_setup_subblock(struct gchd *d)
   GCHD_SEQ_BE(0xa1, 0x78), GCHD_SEQ_BE(0xa2, 0x77),
   GCHD_SEQ_BE(0xa3, 0x77),
  };
- int r = gchd_seq(d, common, ARRAY_SIZE(common));
+ int r = gchd_mail_seq(d, common, ARRAY_SIZE(common));
  u8 status;
  if (r) return r;
  GCHD_BRIDGE_R(d, &status, 1);
  if (d->input == 0)
-  return gchd_seq(d, hdmi, ARRAY_SIZE(hdmi));
+  return gchd_mail_seq(d, hdmi, ARRAY_SIZE(hdmi));
  if (d->input_width == 1920 && d->input_interlaced)
-  return gchd_seq(d, hd1080i, ARRAY_SIZE(hd1080i));
+  return gchd_mail_seq(d, hd1080i, ARRAY_SIZE(hd1080i));
  if (d->input_width == 1920)
-  return gchd_seq(d, hd1080p, ARRAY_SIZE(hd1080p));
+  return gchd_mail_seq(d, hd1080p, ARRAY_SIZE(hd1080p));
  if (d->input_width == 1280)
-  return gchd_seq(d, hd720, ARRAY_SIZE(hd720));
+  return gchd_mail_seq(d, hd720, ARRAY_SIZE(hd720));
  if (d->input_height == 576 && d->input_interlaced)
-  return gchd_seq(d, pal_i, ARRAY_SIZE(pal_i));
+  return gchd_mail_seq(d, pal_i, ARRAY_SIZE(pal_i));
  if (d->input_height == 576)
-  return gchd_seq(d, pal_p, ARRAY_SIZE(pal_p));
+  return gchd_mail_seq(d, pal_p, ARRAY_SIZE(pal_p));
  if (d->input_interlaced)
-  return gchd_seq(d, ntsc_i, ARRAY_SIZE(ntsc_i));
- return gchd_seq(d, ntsc_p, ARRAY_SIZE(ntsc_p));
-}
-
-static int __maybe_unused gchd_color_yuv(struct gchd *d)
-{
- static const struct gchd_mail_cmd component_prefix[] = {
-  GCHD_SEQ_FE(0x0b, 0x4c), GCHD_SEQ_FE(0x0c, 0x4c),
-  GCHD_SEQ_FE(0x0d, 0x4c), GCHD_SEQ_FE(0x08, 0x4c),
-  GCHD_SEQ_FE(0x09, 0x4c), GCHD_SEQ_FE(0x0a, 0x4c),
-  GCHD_SEQ_FE(0x1e, 0x98), GCHD_SEQ_FE(0x1f, 0xc9),
- };
- static const struct gchd_mail_cmd seq[] = {
-  GCHD_SEQ_FE(0x92, 0xaa), GCHD_SEQ_FE(0x93, 0xdc),
-  GCHD_SEQ_FE(0x94, 0xcc), GCHD_SEQ_FE(0x95, 0xcc),
-  GCHD_SEQ_FE(0x96, 0xcc), GCHD_SEQ_FE(0x97, 0xcc),
-  GCHD_SEQ_FE(0x98, 0xcc), GCHD_SEQ_FE(0x99, 0xcc),
-  GCHD_SEQ_FE(0x9a, 0xcc), GCHD_SEQ_FE(0x9b, 0xdc),
-  GCHD_SEQ_FE(0x9c, 0xcc), GCHD_SEQ_FE(0x9d, 0xcc),
-  GCHD_SEQ_FE(0x9e, 0xcc), GCHD_SEQ_FE(0x9f, 0xcc),
-  GCHD_SEQ_FE(0xa0, 0xcc), GCHD_SEQ_FE(0xa1, 0xcc),
-  GCHD_SEQ_FE(0xa2, 0xcc), GCHD_SEQ_FE(0xa3, 0xdc),
-  GCHD_SEQ_FE(0xa4, 0xcc), GCHD_SEQ_FE(0xa5, 0xec),
-  GCHD_SEQ_FE(0xa6, 0xcc), GCHD_SEQ_FE(0xa7, 0xc8),
-  GCHD_SEQ_FE(0xa8, 0xcd), GCHD_SEQ_FE(0xa9, 0xec),
-  GCHD_SEQ_FE(0xaa, 0xcc),
- };
- if (d->input == 1) {
-  int r = gchd_seq(d, component_prefix, ARRAY_SIZE(component_prefix));
-  if (r)
-   return r;
- }
- if (d->input == 1) {
-  static const struct gchd_mail_cmd mode[] = {
-   GCHD_SEQ_FE(0xb2, 0xcc), GCHD_SEQ_FE(0xb5, 0xc4),
-   GCHD_SEQ_FE(0x03, 0x0c),
-  };
-  static const struct gchd_mail_cmd mode1080p[] = {
-   GCHD_SEQ_FE(0xb2, 0xcc), GCHD_SEQ_FE(0xb5, 0xc4),
-   GCHD_SEQ_FE(0x03, 0x04),
-  };
-  static const struct gchd_mail_cmd mode_sd[] = {
-   GCHD_SEQ_FE(0xb2, 0xcf), GCHD_SEQ_FE(0xb5, 0xc4),
-   GCHD_SEQ_FE(0x03, 0x8c),
-  };
-  static const struct gchd_mail_cmd mode_sdp[] = {
-   GCHD_SEQ_FE(0xb2, 0xcf), GCHD_SEQ_FE(0xb5, 0xc4),
-   GCHD_SEQ_FE(0x03, 0x84),
-  };
-  if (d->input_width == 1920 && !d->input_interlaced)
-   return gchd_seq(d, mode1080p, ARRAY_SIZE(mode1080p));
-  if (d->input_width < 1280 && !d->input_interlaced)
-   return gchd_seq(d, mode_sdp, ARRAY_SIZE(mode_sdp));
-  if (d->input_width < 1280)
-   return gchd_seq(d, mode_sd, ARRAY_SIZE(mode_sd));
-  return gchd_seq(d, mode, ARRAY_SIZE(mode));
- }
- return gchd_seq(d, seq, ARRAY_SIZE(seq));
+  return gchd_mail_seq(d, ntsc_i, ARRAY_SIZE(ntsc_i));
+ return gchd_mail_seq(d, ntsc_p, ARRAY_SIZE(ntsc_p));
 }
 
 static int gchd_post_encoder_prefix(struct gchd *d);
@@ -285,7 +229,7 @@ static int gchd_encoder_start(struct gchd *d)
  return 0;
 }
 
-static int gchd_read_9dcd(struct gchd *d, u8 index, u8 *value)
+static int gchd_fe_read(struct gchd *d, u8 index, u8 *value)
 {
  u8 cmd[3] = {GCHD_RD_FE_0, GCHD_RD_FE_1, index};
  int r = gchd_mail_write(d, GCHD_PORT_BRIDGE, cmd, sizeof(cmd));
@@ -478,168 +422,6 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  return 0;
 }
 
-static int __maybe_unused gchd_post_encoder_calibration(struct gchd *d)
-{
- static const struct gchd_mail_cmd common44[] = {
-  GCHD_SEQ_DEC(0x02, 0xc9), GCHD_SEQ_DEC(0x14, 0xd2), GCHD_SEQ_DEC(0x3c, 0x6b),
-  GCHD_SEQ_DEC(0x28, 0x88), GCHD_SEQ_DEC(0x10, 0x88), GCHD_SEQ_DEC(0x11, 0xd4),
-  GCHD_SEQ_DEC(0x12, 0xd0), GCHD_SEQ_DEC(0x13, 0x08), GCHD_SEQ_DEC(0x14, 0x08),
-  GCHD_SEQ_DEC(0x15, 0x88),
-  GCHD_SEQ_AUX(0x47, 0xf9), GCHD_SEQ_AUX(0x40, 0xf3),
-  GCHD_SEQ_AUX(0x43, 0xb7), GCHD_SEQ_AUX(0x4e, 0xb7),
-  GCHD_SEQ_AUX(0x4f, 0xb7), GCHD_SEQ_AUX(0x48, 0xb7),
-  GCHD_SEQ_AUX(0x49, 0xb7), GCHD_SEQ_AUX(0x58, 0x77),
-  GCHD_SEQ_AUX(0x40, 0xf1), GCHD_SEQ_AUX(0x4d, 0xf5),
-  GCHD_SEQ_AUX(0x4a, 0xaf), GCHD_SEQ_AUX(0x4b, 0xaf),
-  GCHD_SEQ_AUX(0x5c, 0xb7), GCHD_SEQ_AUX(0x46, 0xd7),
- };
- static const struct gchd_mail_cmd block4e[] = {
-  GCHD_SEQ_FE(0xb7, 0xce), GCHD_SEQ_FE(0x41, 0xa3), GCHD_SEQ_FE(0xb8, 0xcc),
-  GCHD_SEQ_FE(0x00, 0xcd), GCHD_SEQ_FE(0x0f, 0xce), GCHD_SEQ_FE(0x16, 0xfc),
-  GCHD_SEQ_FE(0x17, 0xcc), GCHD_SEQ_FE(0x18, 0xcc), GCHD_SEQ_FE(0x19, 0xcc),
-  GCHD_SEQ_FE(0x1a, 0x9c), GCHD_SEQ_FE(0x2a, 0xcb), GCHD_SEQ_FE(0x00, 0xce),
-  GCHD_SEQ_FE(0x08, 0xcf), GCHD_SEQ_FE(0x00, 0xcd),
-  GCHD_SEQ_FE(0x25, 0xcc), GCHD_SEQ_FE(0x30, 0x4c), GCHD_SEQ_FE(0x31, 0xcc),
-  GCHD_SEQ_FE(0x32, 0xcc), GCHD_SEQ_FE(0x25, 0xcc), GCHD_SEQ_FE(0x26, 0xcc),
-  GCHD_SEQ_FE(0x27, 0xcc), GCHD_SEQ_FE(0x27, 0xcc), GCHD_SEQ_FE(0x27, 0xcc),
-  GCHD_SEQ_FE(0x27, 0xcc), GCHD_SEQ_FE(0x27, 0xcc),
-  GCHD_SEQ_FE(0x00, 0xcc), GCHD_SEQ_FE(0xb0, 0xe8),
-  GCHD_SEQ_FE(0xae, 0xc8), GCHD_SEQ_FE(0xb1, 0x0c), GCHD_SEQ_FE(0xb2, 0xcc),
-  GCHD_SEQ_FE(0xb3, 0xcc), GCHD_SEQ_FE(0xb4, 0x99), GCHD_SEQ_FE(0xb4, 0x98),
-  GCHD_SEQ_FE(0x00, 0xce), GCHD_SEQ_FE(0x01, 0xad), GCHD_SEQ_FE(0x02, 0x39),
-  GCHD_SEQ_FE(0x03, 0xce), GCHD_SEQ_FE(0x04, 0xcd), GCHD_SEQ_FE(0x05, 0xcc),
-  GCHD_SEQ_FE(0x06, 0xc4), GCHD_SEQ_FE(0x1c, 0xd6), GCHD_SEQ_FE(0x1d, 0xcc),
-  GCHD_SEQ_FE(0x1e, 0xcc), GCHD_SEQ_FE(0x1f, 0xcc), GCHD_SEQ_FE(0x25, 0x6e),
-  GCHD_SEQ_FE(0x02, 0x39), GCHD_SEQ_FE(0x07, 0xc8), GCHD_SEQ_FE(0x17, 0x0c),
-  GCHD_SEQ_FE(0x19, 0x33), GCHD_SEQ_FE(0x1a, 0x33), GCHD_SEQ_FE(0x1b, 0x30),
-  GCHD_SEQ_FE(0x20, 0xcc), GCHD_SEQ_FE(0x21, 0xcc), GCHD_SEQ_FE(0x22, 0xea),
-  GCHD_SEQ_FE(0x27, 0xcc), GCHD_SEQ_FE(0x2e, 0x6d),
- };
- static const struct gchd_mail_cmd tail4c[] = {
-  GCHD_SEQ_BE(0x05, 0x88), GCHD_SEQ_BE(0x04, 0xb5), GCHD_SEQ_BE(0x04, 0x95),
-  GCHD_SEQ_BE(0x61, 0xb8), GCHD_SEQ_BE(0x09, 0x3a), GCHD_SEQ_BE(0x0a, 0x70),
-  GCHD_SEQ_BE(0x0b, 0xbf), GCHD_SEQ_BE(0xc9, 0x88), GCHD_SEQ_BE(0xca, 0x88),
-  GCHD_SEQ_BE(0xcb, 0x88), GCHD_SEQ_BE(0xcc, 0x88), GCHD_SEQ_BE(0xcd, 0x88),
-  GCHD_SEQ_BE(0xce, 0x88), GCHD_SEQ_BE(0xcf, 0x88), GCHD_SEQ_BE(0xd0, 0x88),
- };
- static const struct gchd_mail_cmd hdnew[] = {
-  GCHD_SEQ_BRIDGE3(0x21, 0x01, 0x72), GCHD_SEQ_BRIDGE3(0x20, 0x02, 0x63),
-  GCHD_SEQ_BRIDGE3(0x20, 0x03, 0x63), GCHD_SEQ_BRIDGE3(0x20, 0x04, 0x77),
-  GCHD_SEQ_BRIDGE3(0x20, 0x05, 0x73), GCHD_SEQ_BRIDGE3(0x20, 0x06, 0x73),
-  GCHD_SEQ_BRIDGE3(0x20, 0x07, 0x33), GCHD_SEQ_BRIDGE3(0x20, 0x08, 0x31),
-  GCHD_SEQ_BRIDGE3(0x20, 0x09, 0x33), GCHD_SEQ_BRIDGE3(0x20, 0x0a, 0x57),
-  GCHD_SEQ_BRIDGE3(0x20, 0x0b, 0x7b), GCHD_SEQ_BRIDGE3(0x20, 0x0c, 0xf7),
-  GCHD_SEQ_BRIDGE3(0x20, 0x0d, 0xf7), GCHD_SEQ_BRIDGE3(0x20, 0x0e, 0x73),
-  GCHD_SEQ_BRIDGE3(0x20, 0x0f, 0x73),
- };
- static const u8 probes[] = {0x88,0x3f,0x15,0x3f,0x91,0x8b,0x3f,0x3c,0x1a,0x3d,0x38,0x1e,0x11};
- u8 value;
- int r, i;
-
- r = gchd_seq(d, common44, ARRAY_SIZE(common44));
- if (r) return r;
- for (i = 0; i < 4; ++i) {
-  r = gchd_read_9dcd(d, probes[i], &value);
-  if (r) return r;
- }
- GCHD_FE_W(d, 0x24, d->family == GCHD_FAMILY_HDNEW ? 0x8c : 0x8d);
- r = gchd_seq(d, block4e, ARRAY_SIZE(block4e));
- if (r) return r;
- for (i = 4; i < ARRAY_SIZE(probes); ++i) {
-  r = gchd_read_9dcd(d, probes[i], &value);
-  if (r) return r;
- }
- r = gchd_seq(d, tail4c, ARRAY_SIZE(tail4c));
- if (r) return r;
- if (d->family == GCHD_FAMILY_HDNEW) {
-  r = gchd_seq(d, hdnew, ARRAY_SIZE(hdnew));
-  if (r) return r;
-  GCHD_BRIDGE_R(d, &value, 1);
- }
- GCHD_BRIDGE_W(d, 0xaa, 0x8f, 0x3b);
- return 0;
-}
-
-static int __maybe_unused gchd_post_encoder_setup(struct gchd *d)
-{
- static const struct gchd_mail_cmd tail[] = {
-  {GCHD_PORT_BRIDGE,1,{0x28}},
-  GCHD_SEQ_BRIDGE3(0x29, 0x89, 0x5b),
-  {GCHD_PORT_BRIDGE,4,{0xdd,0xce,0x3f,0xb2}},
- };
- static const struct gchd_mail_cmd finish[] = {
-  GCHD_SEQ_BRIDGE3(0x89, 0x89, 0xfb),
-  GCHD_SEQ_DEC(0x02, 0xc9), GCHD_SEQ_DEC(0x14, 0xd2), GCHD_SEQ_DEC(0x3c, 0x6b),
-  GCHD_SEQ_BRIDGE3(0x89, 0x89, 0xfa),
-  GCHD_SEQ_BRIDGE3(0x89, 0x89, 0xca),
-  GCHD_SEQ_BRIDGE3(0x89, 0x89, 0xe7),
-  GCHD_SEQ_DEC(0x03, 0x2a), GCHD_SEQ_DEC(0x05, 0x89),
-  GCHD_SEQ_DEC(0x19, 0xde), GCHD_SEQ_DEC(0x1a, 0x87),
-  GCHD_SEQ_DEC(0x1b, 0x88), GCHD_SEQ_DEC(0x29, 0x8b),
-  GCHD_SEQ_DEC(0x2d, 0x8f), GCHD_SEQ_DEC(0x4c, 0x89),
-  GCHD_SEQ_DEC(0x55, 0x88), GCHD_SEQ_DEC(0x6b, 0xae),
-  GCHD_SEQ_DEC(0x6c, 0xbe), GCHD_SEQ_DEC(0x6d, 0x78),
-  GCHD_SEQ_DEC(0x6e, 0xa0), GCHD_SEQ_DEC(0x06, 0x08),
- };
- u8 reply[2];
- int r, i;
-
- r = gchd_seq(d, tail, ARRAY_SIZE(tail));
- if (r)
-  return r;
- GCHD_BRIDGE_R(d, reply, 1);
- GCHD_BRIDGE_R(d, reply, 2);
-
- r = gchd_do_enable(d, GCHD_EB_ENCODER_TRIGGER, GCHD_EB_ENCODER_TRIGGER);
- if (r)
-  return r;
- for (i = 0; i < 100; ++i) {
-  u8 cmd[] = {GCHD_BRIDGE_TRIGGER_0,GCHD_BRIDGE_TRIGGER_1,GCHD_BRIDGE_TRIGGER_2};
-  r = gchd_mail_write(d, GCHD_PORT_BRIDGE, cmd, sizeof(cmd));
-  if (r)
-   return r;
-  GCHD_BRIDGE_R(d, reply, 1);
-  if (reply[0] == GCHD_TRIGGER_DONE)
-   break;
-  usleep_range(1000, 2000);
- }
- if (i == 100)
-  return -ETIMEDOUT;
- r = gchd_do_enable(d, GCHD_EB_ENCODER_TRIGGER, 0);
- if (r)
-  return r;
-
- GCHD_DEC_R(d, 0xfb, reply[0]);
-
- r = gchd_seq(d, finish + 1, ARRAY_SIZE(finish) - 1);
- if (r)
-  return r;
-
- if (d->input == 0)
-  r = gchd_seq(d, (const struct gchd_mail_cmd[]){
-   GCHD_SEQ_DEC(0x08, 0x9b),
-   GCHD_SEQ_DEC(0x09, 0x7a)
-  }, 2);
- else
-  r = gchd_seq(d, (const struct gchd_mail_cmd[]){
-   GCHD_SEQ_DEC(0x08, 0x91),
-   GCHD_SEQ_DEC(0x09, 0xa8)
-  }, 2);
- if (r)
-  return r;
-
- {
-  static const u8 indices[] = {0x88,0x3f,0x15,0x3f};
-  for (i = 0; i < ARRAY_SIZE(indices); ++i) {
-   u8 value;
-   r = gchd_read_9dcd(d, indices[i], &value);
-   if (r)
-    return r;
-  }
- }
- return 0;
-}
-
 static int __maybe_unused gchd_post_encoder_sweep(struct gchd *d)
 {
  static const u8 addr[][2] = {
@@ -758,7 +540,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
   GCHD_DEC_W(d, 0x03, 0x2f);
  }
 
- r = gchd_read_9dcd(d, 0x3f, reply);
+ r = gchd_fe_read(d, 0x3f, reply);
  if (r)
   return r;
 
@@ -766,7 +548,7 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  if (d->input < 2) {
   GCHD_FE_W(d, 0xb3, 0xcc);
  }
- r = gchd_read_9dcd(d, 0x3f, reply);
+ r = gchd_fe_read(d, 0x3f, reply);
  if (r)
   return r;
 
@@ -776,11 +558,11 @@ static int __maybe_unused gchd_input_finalize(struct gchd *d)
  }
 
  if (d->input >= 2) {
-  r = gchd_read_9dcd(d, 0x3f, reply);
+  r = gchd_fe_read(d, 0x3f, reply);
   if (r)
    return r;
   GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
-  r = gchd_read_9dcd(d, 0x6e, reply);
+  r = gchd_fe_read(d, 0x6e, reply);
   if (r)
    return r;
  }
@@ -933,7 +715,7 @@ static int gchd_prepare_analog_detection(struct gchd *d)
    GCHD_SEQ_DEC(0x14, 0x1b),
    GCHD_SEQ_DEC(0x15, 0x88),
   };
-  r = gchd_seq(d, tune, ARRAY_SIZE(tune));
+  r = gchd_mail_seq(d, tune, ARRAY_SIZE(tune));
   if (r) return r;
  }
  GCHD_AUX_W(d, 0x41, 0x37);
@@ -1240,14 +1022,14 @@ int gchd_color_space_exact(struct gchd *d)
  };
  int r;
  if (d->input == 1) {
-  r=gchd_seq(d,prefix,ARRAY_SIZE(prefix));
+  r=gchd_mail_seq(d,prefix,ARRAY_SIZE(prefix));
   if(r)return r;
  }
  /* HDMI autodetect selects RGB/YUV from the same status bit used by
   * userspace. Component and Composite remain YUV by default. */
  if (d->input == 0 && d->rgb_input)
-  return gchd_seq(d,rgb,ARRAY_SIZE(rgb));
- return gchd_seq(d,yuv,ARRAY_SIZE(yuv));
+  return gchd_mail_seq(d,rgb,ARRAY_SIZE(rgb));
+ return gchd_mail_seq(d,yuv,ARRAY_SIZE(yuv));
 }
 
 static int gchd_configure_composite_exact(struct gchd *d)
@@ -1385,7 +1167,7 @@ static int gchd_configure_component_exact(struct gchd *d)
   static const struct gchd_mail_cmd select_component[] = {
    GCHD_SEQ_FE(GCHD_FE_REG_INPUT_SEL, GCHD_FE_SEL_COMPONENT),
   };
-  r = gchd_seq(d, select_component, ARRAY_SIZE(select_component));
+  r = gchd_mail_seq(d, select_component, ARRAY_SIZE(select_component));
   if (r) return r;
  }
  GCHD_FE_R(d, 0x88, v); GCHD_FE_W(d, 0xb7, 0xce);
