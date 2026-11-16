@@ -4,13 +4,20 @@
 # Used to prove that a cleanup/refactor (renames, macros, moved code) does not
 # change behaviour (RULES.md C9). Identical output means identical code.
 #
-# Usage: tools/compare-objs.sh [OLD_REV] [NEW_REV|WORKTREE]
+# Usage: tools/compare-objs.sh [--relaxed] [OLD_REV] [NEW_REV|WORKTREE]
+#   --relaxed  compare, per function, only the ordered list of call targets
+#              and immediate constants ($0x..). Register allocation and stack
+#              layout may differ. Use it when strict mode reports differences
+#              that are only codegen noise. Strict mode is the default and the
+#              stronger proof.
 #   OLD_REV  defaults to origin/dev
 #   NEW_REV  defaults to WORKTREE (the current, possibly uncommitted, dkms/)
 # Env:     KDIR (default: /lib/modules/$(uname -r)/build, falls back to
 #          the newest /usr/src/linux-headers-*-generic)
 set -euo pipefail
 
+RELAXED=0
+if [ "${1:-}" = --relaxed ]; then RELAXED=1; shift; fi
 OLD=${1:-origin/dev}
 NEW=${2:-WORKTREE}
 TOP=$(git rev-parse --show-toplevel)
@@ -40,9 +47,17 @@ dump() { # dir out
 	# difference. Addresses and offsets are dropped.
 	objdump -d --no-show-raw-insn -r "$1/elgato_gchd.ko" |
 		grep -v 'file format' |
-		sed -E 's/^[[:space:]]*[0-9a-f]+:[[:space:]]+//; s/[0-9a-f]+ <([^>+]+)(\+0x[0-9a-f]+)?>/<\1>/g; s/(\.[a-z.0-9_]+)\+0x[0-9a-f]+/\1+X/g' |
-		awk '/^[0-9a-f]+ <.*>:$/ { name=$2; next } NF { print name "\t" $0 }' |
-		sort -s -k1,1 >"$2.code"
+		awk '/^[0-9a-f]+ <[^>]+>:$/ { name=$2; next } NF { print name "\t" $0 }' |
+		sed -E 's/\t[[:space:]]*[0-9a-f]+:[[:space:]]+/\t/; s/[0-9a-f]+ <([^>+]+)(\+0x[0-9a-f]+)?>/<\1>/g; s/(\.[a-z.0-9_]+)\+0x[0-9a-f]+/\1+X/g' |
+		sort -s -t "$(printf '\t')" -k1,1 >"$2.code"
+	if [ $RELAXED = 1 ]; then
+		# Keep only call targets and immediates, in order, per function.
+		awk -F'\t' '{
+			line=$2
+			if (line ~ /call/) { match(line, /<[^>]+>/); if (RSTART) print $1 "\tcall " substr(line, RSTART, RLENGTH); next }
+			while (match(line, /\$0x[0-9a-f]+/)) { print $1 "\t" substr(line, RSTART, RLENGTH); line = substr(line, RSTART + RLENGTH) }
+		}' "$2.code" >"$2.code.tmp" && mv "$2.code.tmp" "$2.code"
+	fi
 	# Data: printable strings of all .rodata* sections, with source line
 	# numbers (from FORTIFY/WARN strings) normalised.
 	: >"$2.data"
