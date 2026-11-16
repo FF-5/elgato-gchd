@@ -18,12 +18,19 @@ tool works one level higher:
 Identical output means: same functions, same control flow, same mailbox
 operations with the same bytes in the same order. Anything else is printed.
 
-Usage: tools/compare-mailbox-ops.py [OLD_REV] [NEW_REV|WORKTREE]
+Usage: tools/compare-mailbox-ops.py [--alias old=new ...] [OLD_REV] [NEW_REV|WORKTREE]
+  --alias  treat identifier `old` in OLD_REV as `new` (renamed helpers).
 """
 import os, re, subprocess, sys, tempfile, glob, difflib
 
-OLD = sys.argv[1] if len(sys.argv) > 1 else 'origin/dev'
-NEW = sys.argv[2] if len(sys.argv) > 2 else 'WORKTREE'
+ALIAS = {}
+args = sys.argv[1:]
+while args and args[0] == '--alias':
+    o, n = args[1].split('=')
+    ALIAS[o] = n
+    args = args[2:]
+OLD = args[0] if len(args) > 0 else 'origin/dev'
+NEW = args[1] if len(args) > 1 else 'WORKTREE'
 TOP = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
 KDIR = os.environ.get('KDIR') or '/lib/modules/%s/build' % os.uname().release
 if not os.path.isdir(KDIR):
@@ -118,10 +125,17 @@ def canon(text):
                lambda m: ' MR(%s|%s|%s) ' % (intval(m.group(1)) or norm_expr(m.group(1)), norm_expr(m.group(2)), intval(m.group(3)) or m.group(3)), t)
     t = re.sub(r'r\s*=\s*gchd_mail_read\s*\(\s*d\s*,\s*([^,]+?)\s*,\s*([^,]+?)\s*,\s*(\w+)\s*\)\s*;\s*if\s*\(\s*r\s*\)\s*return\s+r\s*;',
                lambda m: ' MR(%s|%s|%s) ' % (intval(m.group(1)) or norm_expr(m.group(1)), norm_expr(m.group(2)), intval(m.group(3)) or m.group(3)), t)
+    # old GCHD_MR1: read into a temporary, then assign
+    t = re.sub(r'u8\s+(\w+)\s*;\s*int\s+(\w+)\s*=\s*gchd_mail_read\s*\(\s*\(?d\)?\s*,\s*\(?(\w+)\)?\s*,\s*&\1\s*,\s*1\s*\)\s*;\s*if\s*\(\s*\2\s*\)\s*return\s+\2\s*;\s*\(?(\w+)\)?\s*=\s*\1\s*;',
+               lambda m: ' MR(%s|&%s|1) ' % (intval(m.group(3)) or m.group(3), m.group(4)), t)
     # generic GCHD_TRY(expr) and `r = expr; if (r) return r;`
-    t = re.sub(r'do\s*\{\s*int\s+(\w+)\s*=\s*\((.*?)\)\s*;\s*if\s*\(\s*\1\s*\)\s*return\s+\1\s*;\s*\}\s*while\s*\(\s*0\s*\)', r' TRY(\2) ', t)
+    t = re.sub(r'do\s*\{\s*int\s+(\w+)\s*=\s*(.*?)\s*;\s*if\s*\(\s*\1\s*\)\s*return\s+\1\s*;\s*\}\s*while\s*\(?\s*0\s*\)?', lambda m: ' TRY(%s) ' % strip_outer(m.group(2)), t)
+    t = re.sub(r'TRY\(\s*gchd_mail_read\s*\(\s*\(?d\)?\s*,\s*\(?(\w+)\)?\s*,\s*\(?([^,()]+(?:\[[^\]]*\])?)\)?\s*,\s*\(?(\w+)\)?\s*\)\s*\)',
+               lambda m: ' MR(%s|%s|%s) ' % (intval(m.group(1)) or m.group(1), norm_expr(m.group(2)), intval(m.group(3)) or m.group(3)), t)
     t = re.sub(r'\br\s*=\s*([^;]+?)\s*;\s*if\s*\(\s*r\s*\)\s*return\s+r\s*;', r' TRY(\1) ', t)
-    # wrappers and noise
+    # wrappers and noise: do { ... } while (0) carries no control flow
+    t = re.sub(r'\}\s*while\s*\(?\s*0\s*\)?\s*;?', ' ', t)
+    t = re.sub(r'\bdo\s*\{', ' ', t)
     for _ in range(3):
         t = re.sub(r'do\s*\{\s*((?:\s*(?:MW|MR|TRY)\([^()]*(?:\([^()]*\)[^()]*)*\)\s*;?)+)\s*\}\s*while\s*\(\s*0\s*\)', r' \1 ', t)
     t = re.sub(r'\s+', ' ', t)
@@ -137,6 +151,20 @@ def canon(text):
     t = re.sub(r'__UNIQUE_ID_\w+?\d+', '__UNIQUE_ID', t)
     t = '\n'.join(l.strip() for l in t.split('\n') if l.strip())
     return t
+
+
+def strip_outer(e):
+    e = e.strip()
+    if e.startswith('(') and e.endswith(')'):
+        depth = 0
+        for i, ch in enumerate(e):
+            depth += ch == '('
+            depth -= ch == ')'
+            if depth == 0 and i < len(e) - 1:
+                return re.sub(r'\s+', ' ', e)
+        e = e[1:-1]
+    e = re.sub(r'(?<=[(,])\s*\(\s*d\s*\)', 'd', e)
+    return re.sub(r'\s+', ' ', e).replace(' ,', ',').replace(', ', ',')
 
 
 def norm_expr_numbers(t):
@@ -177,6 +205,8 @@ def main():
         pass
     fa, fb = {}, {}
     for f, t in a.items():
+        for o, n in ALIAS.items():
+            t = re.sub(r'\b%s\b' % re.escape(o), n, t)
         fa.update(functions(t))
     for f, t in b.items():
         fb.update(functions(t))

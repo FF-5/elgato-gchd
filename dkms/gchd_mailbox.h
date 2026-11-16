@@ -13,6 +13,10 @@
  *   GCHD_BE_R(d, reg, var)    read  back end    (bridge: 99 89 reg, 1 byte)
  *   GCHD_BRIDGE_W(d, b0, ...) raw bridge command bytes
  *   GCHD_BRIDGE_R(d, buf, n)  read n bytes of a bridge reply
+ *   GCHD_BRIDGE_SKIP(d, n)    read n bytes of a bridge reply and discard them
+ *   GCHD_FE_RX / GCHD_DEC_RX / GCHD_BE_RX (d, reg)
+ *                             read a register and discard the value (the read
+ *                             itself is part of the recorded sequence)
  *
  * Every macro in this file RETURNS FROM THE CALLING FUNCTION with the error
  * code when the USB operation fails (RULES.md D10). The calling function
@@ -42,12 +46,32 @@
 #define GCHD_BRIDGE_R(d, buf, n) \
 	GCHD_TRY(gchd_mail_read((d), GCHD_PORT_BRIDGE, (buf), (n)))
 
+/* Reply bytes that the protocol requires us to read but that are not used. */
+static inline int gchd_mail_read_discard(struct gchd *d, u8 port, u8 len)
+{
+	u8 buf[56];
+
+	if (len > sizeof(buf))
+		return -EINVAL;
+	return gchd_mail_read(d, port, buf, len);
+}
+
+#define GCHD_BRIDGE_SKIP(d, n) \
+	GCHD_TRY(gchd_mail_read_discard((d), GCHD_PORT_BRIDGE, (n)))
+
 #define GCHD_BRIDGE_RD1(d, p0, p1, reg, var) \
 	do { GCHD_BRIDGE_W(d, p0, p1, reg); GCHD_BRIDGE_R(d, &(var), 1); } while (0)
 
 #define GCHD_FE_R(d, reg, var)	GCHD_BRIDGE_RD1(d, GCHD_RD_FE_0, GCHD_RD_FE_1, reg, var)
 #define GCHD_DEC_R(d, reg, var)	GCHD_BRIDGE_RD1(d, GCHD_RD_DEC_0, GCHD_RD_DEC_1, reg, var)
 #define GCHD_BE_R(d, reg, var)	GCHD_BRIDGE_RD1(d, GCHD_RD_BE_0, GCHD_RD_BE_1, reg, var)
+
+#define GCHD_BRIDGE_RX1(d, p0, p1, reg) \
+	do { GCHD_BRIDGE_W(d, p0, p1, reg); GCHD_BRIDGE_SKIP(d, 1); } while (0)
+
+#define GCHD_FE_RX(d, reg)	GCHD_BRIDGE_RX1(d, GCHD_RD_FE_0, GCHD_RD_FE_1, reg)
+#define GCHD_DEC_RX(d, reg)	GCHD_BRIDGE_RX1(d, GCHD_RD_DEC_0, GCHD_RD_DEC_1, reg)
+#define GCHD_BE_RX(d, reg)	GCHD_BRIDGE_RX1(d, GCHD_RD_BE_0, GCHD_RD_BE_1, reg)
 
 /* Table entries for gchd_mail_seq() */
 struct gchd_mail_cmd {
