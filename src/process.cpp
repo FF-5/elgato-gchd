@@ -17,7 +17,7 @@
 #include <process.hpp>
 
 // constants
-constexpr auto version = "0.8.0";
+constexpr auto version = "0.2.0";
 
 std::atomic<bool> Process::isActive_;
 
@@ -98,8 +98,8 @@ Process::Process() {
 	pidFd_ = 0;
 
 	// signal handling
-	struct sigaction action{}; 
-    //{} is critical because it value initializes it to zero.
+	struct sigaction action{};
+	//{} is critical because it value initializes it to zero.
 
 	action.sa_handler = sigHandler;
 	sigaction(SIGINT, &action, nullptr);

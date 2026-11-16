@@ -5,7 +5,7 @@
  * under the MIT License. For more information, see LICENSE file.
  */
 
-/* Abstract class used for reading and 
+/* Abstract class used for reading and
  * writing data in program specific information (PSI) as specified by
  * ISO/IEC 13818-1
  *
@@ -15,10 +15,10 @@
 
 void PSI_Data::bytes( std::vector<uint8_t> &outputVector )
 {
-    int size=this->calculateSize();
-    outputVector.resize(size);
-    std::vector<uint8_t>::iterator offset= outputVector.begin();
-    this->pack( outputVector, offset );
+	int size=this->calculateSize();
+	outputVector.resize(size);
+	std::vector<uint8_t>::iterator offset= outputVector.begin();
+	this->pack( outputVector, offset );
 };
 
 

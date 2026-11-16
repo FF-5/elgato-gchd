@@ -23,74 +23,74 @@
 
 class PAT_Entry:public PSI_Data
 {
-public:
-    //Always use this constructor.
-    PAT_Entry(uint16_t programNumber, uint16_t pid);
+	public:
+		//Always use this constructor.
+		PAT_Entry(uint16_t programNumber, uint16_t pid);
 
-    //This default constructor shouldn't be used except by unpacking,
-    //and by stl for creation of entries..
-    PAT_Entry(): programNumber_(0), pid_(0xf) {}; //0xf illegal value on purpose.
+		//This default constructor shouldn't be used except by unpacking,
+		//and by stl for creation of entries..
+		PAT_Entry(): programNumber_(0), pid_(0xf) {}; //0xf illegal value on purpose.
 
-    uint16_t programNumber_;
-    uint16_t pid_;
+		uint16_t programNumber_;
+		uint16_t pid_;
 
-    virtual int calculateSize();
+		virtual int calculateSize();
 
-    virtual void pack(std::vector<uint8_t> &outputData,
-                      std::vector<uint8_t>::iterator &offset);
+		virtual void pack(std::vector<uint8_t> &outputData,
+				  std::vector<uint8_t>::iterator &offset);
 
-    virtual void unpack(const std::vector<uint8_t> &inputData,
-                        std::vector<uint8_t>::const_iterator &offset,
-                        int size ); //Abstract method.
+		virtual void unpack(const std::vector<uint8_t> &inputData,
+				    std::vector<uint8_t>::const_iterator &offset,
+				    int size ); //Abstract method.
 
 };
 
 //This is used to hold the internal data
-//of a PAT. You probably want to use 
+//of a PAT. You probably want to use
 //PAT not PAT_Data if you want to create
 //a PAT
 class PAT_Data:public PSI_Data
 {
-public:
-    PAT_Data(): entries_() {};
+	public:
+		PAT_Data(): entries_() {};
 
-    virtual int calculateSize();
+		virtual int calculateSize();
 
-    virtual void pack(std::vector<uint8_t> &outputData,
-                      std::vector<uint8_t>::iterator &offset);
+		virtual void pack(std::vector<uint8_t> &outputData,
+				  std::vector<uint8_t>::iterator &offset);
 
-    virtual void unpack(const std::vector<uint8_t> &inputData,
-                        std::vector<uint8_t>::const_iterator &offset,
-                        int size ); //Abstract method.
+		virtual void unpack(const std::vector<uint8_t> &inputData,
+				    std::vector<uint8_t>::const_iterator &offset,
+				    int size ); //Abstract method.
 
-    std::vector< PAT_Entry > entries_;
+		std::vector< PAT_Entry > entries_;
 };
 
 class PAT:public PSI_Data
 {
-public:
-    PAT(uint16_t transportStreamIdentifier):
-        header_(TABLE_ID_PAT, true, false), syntaxSection_(transportStreamIdentifier), data_() {};
+	public:
+		PAT(uint16_t transportStreamIdentifier):
+			header_(TABLE_ID_PAT, true, false), syntaxSection_(transportStreamIdentifier), data_() {};
 
-    PSI_TableHeader header_;
-    PSI_Syntax syntaxSection_;
-    PAT_Data data_;
+		PSI_TableHeader header_;
+		PSI_Syntax syntaxSection_;
+		PAT_Data data_;
 
-    virtual int calculateSize();
+		virtual int calculateSize();
 
-    virtual void pack(std::vector<uint8_t> &outputData,
-                      std::vector<uint8_t>::iterator &offset);
+		virtual void pack(std::vector<uint8_t> &outputData,
+				  std::vector<uint8_t>::iterator &offset);
 
-    virtual void unpack(const std::vector<uint8_t> &inputData,
-                        std::vector<uint8_t>::const_iterator &offset,
-                        int size );
+		virtual void unpack(const std::vector<uint8_t> &inputData,
+				    std::vector<uint8_t>::const_iterator &offset,
+				    int size );
 
-    virtual void clearEntries();
-    virtual void addEntry( PAT_Entry entry );
+		virtual void clearEntries();
+		virtual void addEntry( PAT_Entry entry );
 
-    //Pointer is invalid if PAT instance is destroyed.
-    virtual std::vector<PAT_Entry> *getEntries(); 
-    uint16_t getTransportStreamIdentifier();
+		//Pointer is invalid if PAT instance is destroyed.
+		virtual std::vector<PAT_Entry> *getEntries();
+		uint16_t getTransportStreamIdentifier();
 };
 
 #endif

@@ -42,20 +42,20 @@ enum class Resolution {
 };
 
 enum class ScanMode {
-    Unknown,
-    Progressive,
-    Interlaced
+	Unknown,
+	Progressive,
+	Interlaced
 };
 
 enum class BitRateMode {
-    Constant,
-    Variable,
+	Constant,
+	Variable,
 };
 
 enum class H264Profile {
-    Baseline,
-    Main,
-    High
+	Baseline,
+	Main,
+	High
 };
 
 void convertResolution( unsigned &horizontal, unsigned &vertical, const Resolution resolution );
@@ -66,122 +66,122 @@ Resolution convertResolution( unsigned long horizontal, unsigned long vertical )
 using std::runtime_error;
 class setting_error: public std::runtime_error
 {
-    using runtime_error::runtime_error; //This inherits all constructors.
+		using runtime_error::runtime_error; //This inherits all constructors.
 };
 
 //This is used both to hold forced modes from the command line
 //AND to carry the currently being used mode.
 class InputSettings {
-    public:
-        InputSettings();
+	public:
+		InputSettings();
 
 		InputSource getSource();
 		void setSource(InputSource inputSource);
 
 		Resolution getResolution();
-        void getResolution(unsigned &horizontal, unsigned &vertical);
+		void getResolution(unsigned &horizontal, unsigned &vertical);
 		void setResolution(Resolution resolution);
 
 		ScanMode getScanMode();
 		void setScanMode(ScanMode mode);
 
-        double getRefreshRate();  //0.0=autodetect
-        void setRefreshRate(double);    //0.0=autodetect
+		double getRefreshRate();  //0.0=autodetect
+		void setRefreshRate(double);    //0.0=autodetect
 
 		ColorSpace getColorSpace();
 		void setColorSpace(ColorSpace colorSpace);
 
-        //Does not do anything currently
+		//Does not do anything currently
 		HDMIColorSpace getHDMIColorSpace();
 		void setHDMIColorSpace(HDMIColorSpace hdmiColorSpace);
 
 		bool getSDStretch();
 		void setSDStretch(bool shouldStretchSD);
 
-        //Sets current inputsettings based on prototype
-        //and autodetected settings.
-        void mergeAutodetect( InputSettings &prototype,
-                              Resolution resolution,
-                              ScanMode scanMode,
-                              double refreshRate);
+		//Sets current inputsettings based on prototype
+		//and autodetected settings.
+		void mergeAutodetect( InputSettings &prototype,
+				      Resolution resolution,
+				      ScanMode scanMode,
+				      double refreshRate);
 
-        void checkInputSettingsValidity(bool configured);
-        void dumpMode();
+		void checkInputSettingsValidity(bool configured);
+		void dumpMode();
 
-    private:
-        void checkRefresh( double value, const char *string );
+	private:
+		void checkRefresh( double value, const char *string );
 
 		InputSource source_;
-        Resolution resolution_;
-        ScanMode scanMode_;
-        double refreshRate_;
+		Resolution resolution_;
+		ScanMode scanMode_;
+		double refreshRate_;
 		ColorSpace colorSpace_;
 		HDMIColorSpace hdmiColorSpace_;
-        bool stretchedSD_;
+		bool stretchedSD_;
 };
 
 class TranscoderSettings {
 	public:
-        TranscoderSettings();
+		TranscoderSettings();
 
-        void getResolution( unsigned &x, unsigned &y);
-        void setResolution( unsigned x, unsigned y);
-        void setResolution( const Resolution &resolution );
+		void getResolution( unsigned &x, unsigned &y);
+		void setResolution( unsigned x, unsigned y);
+		void setResolution( const Resolution &resolution );
 
-        void setBitRateMode(BitRateMode bitRateMode);
-        BitRateMode getBitRateMode();
+		void setBitRateMode(BitRateMode bitRateMode);
+		BitRateMode getBitRateMode();
 
-        //Sets values use by variable bit rate
-        //All 0s means default high quality settings will be used.
-        //values are in mbps
-        void setVariableBitRateMbps( float max, float average, float minimum );
-        void getVariableBitRateMbps( float &max, float &average, float &minimum );
-        void getVariableBitRateKbps( unsigned &max, unsigned &average, unsigned &minimum );
+		//Sets values use by variable bit rate
+		//All 0s means default high quality settings will be used.
+		//values are in mbps
+		void setVariableBitRateMbps( float max, float average, float minimum );
+		void getVariableBitRateMbps( float &max, float &average, float &minimum );
+		void getVariableBitRateKbps( unsigned &max, unsigned &average, unsigned &minimum );
 
-        //Sets value used by constant bit rate.
-        //0 means default high quality settings will be used.
-        //Values are in mbps.
+		//Sets value used by constant bit rate.
+		//0 means default high quality settings will be used.
+		//Values are in mbps.
 
-        void setConstantBitRateMbps( float bitRate );
-        float getConstantBitRateMbps();
-        unsigned getConstantBitRateKbps();
+		void setConstantBitRateMbps( float bitRate );
+		float getConstantBitRateMbps();
+		unsigned getConstantBitRateKbps();
 
-        //Maximum bitrate based on settings, variable or constant.
-        unsigned getRealMaxBitRateKbps();
+		//Maximum bitrate based on settings, variable or constant.
+		unsigned getRealMaxBitRateKbps();
 
-        void setFrameRate(double frameRate); //0.0 means auto.
-        double getFrameRate();               //0.0 means auto.
-        double getEffectiveFrameRate(); //Refresh rate if frame rate is 0.0
+		void setFrameRate(double frameRate); //0.0 means auto.
+		double getFrameRate();               //0.0 means auto.
+		double getEffectiveFrameRate(); //Refresh rate if frame rate is 0.0
 
-        //Value is in kbps
-        void setAudioBitRate(unsigned bitRate);
-        unsigned getAudioBitRate();
+		//Value is in kbps
+		void setAudioBitRate(unsigned bitRate);
+		unsigned getAudioBitRate();
 
-        void setH264Profile( H264Profile value );
-        H264Profile getH264Profile();
+		void setH264Profile( H264Profile value );
+		H264Profile getH264Profile();
 
-        //Setting it to 0.0 will make it auto-set
-        //based on bit rates and whatnot.
-        void setH264Level( float value );
-        float getH264Level();
+		//Setting it to 0.0 will make it auto-set
+		//based on bit rates and whatnot.
+		void setH264Level( float value );
+		float getH264Level();
 
-        static unsigned unsignedH264Level(float value);
+		static unsigned unsignedH264Level(float value);
 
-        void mergeAutodetect( TranscoderSettings &prototype, InputSettings &currentInput );
-    private:
-        unsigned resolution_[2];
-        BitRateMode bitRateMode_;
+		void mergeAutodetect( TranscoderSettings &prototype, InputSettings &currentInput );
+	private:
+		unsigned resolution_[2];
+		BitRateMode bitRateMode_;
 
-        unsigned constantBitRate_;
-        unsigned maxVariableBitRate_;
-        unsigned averageVariableBitRate_;
-        unsigned minVariableBitRate_;
+		unsigned constantBitRate_;
+		unsigned maxVariableBitRate_;
+		unsigned averageVariableBitRate_;
+		unsigned minVariableBitRate_;
 
-        unsigned audioBitRate_;
-        double frameRate_;
-        double effectiveFrameRate_; //If frameRate_ ends up 0, this will be refresh rate.
-        H264Profile h264Profile_;
-        float h264Level_;
+		unsigned audioBitRate_;
+		double frameRate_;
+		double effectiveFrameRate_; //If frameRate_ ends up 0, this will be refresh rate.
+		H264Profile h264Profile_;
+		float h264Level_;
 
 };
 

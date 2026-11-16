@@ -35,11 +35,11 @@ int Socket::enable(std::string ip, std::string port) {
 
 	auto ret = getaddrinfo(ipAddress, port.c_str(), &hints, &result);
 
-    //Removal of this message makes socket error cryptic sometimes.
-    std::cerr << "SOCKET: Binding to address ";
-    if( ipAddress != NULL ) {
-        std::cerr << "[" <<ipAddress << "]";
-    }
+	//Removal of this message makes socket error cryptic sometimes.
+	std::cerr << "SOCKET: Binding to address ";
+	if( ipAddress != NULL ) {
+		std::cerr << "[" <<ipAddress << "]";
+	}
 	std::cerr << ":" <<port <<std::endl;
 
 	if (ret) {

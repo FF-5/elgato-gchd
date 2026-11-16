@@ -24,45 +24,45 @@
 #include "psi_descriptors.hpp"
 
 //This is used to hold the internal data
-//of a SIT. You probably want to use 
+//of a SIT. You probably want to use
 //SIT not SIT_Data if you want to create
 //a SIT
 class SIT_Data:public PSI_Data
 {
-public:
-    SIT_Data(): transmissionParameters_(), services_() {};
+	public:
+		SIT_Data(): transmissionParameters_(), services_() {};
 
-    virtual int calculateSize();
+		virtual int calculateSize();
 
-    virtual void pack(std::vector<uint8_t> &outputData,
-                      std::vector<uint8_t>::iterator &offset);
+		virtual void pack(std::vector<uint8_t> &outputData,
+				  std::vector<uint8_t>::iterator &offset);
 
-    virtual void unpack(const std::vector<uint8_t> &inputData,
-                        std::vector<uint8_t>::const_iterator &offset,
-                        int size ); //Abstract method.
+		virtual void unpack(const std::vector<uint8_t> &inputData,
+				    std::vector<uint8_t>::const_iterator &offset,
+				    int size ); //Abstract method.
 
-    std::vector< std::shared_ptr<PSI_Descriptor> > transmissionParameters_;
-    std::vector< std::shared_ptr<PSI_Descriptor> > services_;
+		std::vector< std::shared_ptr<PSI_Descriptor> > transmissionParameters_;
+		std::vector< std::shared_ptr<PSI_Descriptor> > services_;
 };
 
 class SIT:public PSI_Data
 {
-public:
-    SIT():
-        header_(TABLE_ID_SIT, true, true), syntaxSection_(0xffff), data_() {};
+	public:
+		SIT():
+			header_(TABLE_ID_SIT, true, true), syntaxSection_(0xffff), data_() {};
 
-    PSI_TableHeader header_;
-    PSI_Syntax syntaxSection_;
-    SIT_Data data_;
+		PSI_TableHeader header_;
+		PSI_Syntax syntaxSection_;
+		SIT_Data data_;
 
-    virtual int calculateSize();
+		virtual int calculateSize();
 
-    virtual void pack(std::vector<uint8_t> &outputData,
-                      std::vector<uint8_t>::iterator &offset);
+		virtual void pack(std::vector<uint8_t> &outputData,
+				  std::vector<uint8_t>::iterator &offset);
 
-    virtual void unpack(const std::vector<uint8_t> &inputData,
-                        std::vector<uint8_t>::const_iterator &offset,
-                        int size );
+		virtual void unpack(const std::vector<uint8_t> &inputData,
+				    std::vector<uint8_t>::const_iterator &offset,
+				    int size );
 };
 
 #endif

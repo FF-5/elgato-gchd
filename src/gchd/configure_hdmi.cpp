@@ -11,22 +11,22 @@
 #include "../gchd.hpp"
 
 void GCHD::readHdmiSignalInformation( unsigned &sum6463, unsigned &countSum6463,
-                                      unsigned &sum6665, unsigned &countSum6665, bool &rgbBit)
+				      unsigned &sum6665, unsigned &countSum6665, bool &rgbBit)
 {
-    mailWrite( 0x4e, VC{0x00, 0xcc} );
-    unsigned value6665  = readDevice0x9DCD(0x66) <<8;
-    value6665 |= readDevice0x9DCD(0x65);
-    sum6665 += value6665;
-    countSum6665 += 1;
+	mailWrite( 0x4e, VC{0x00, 0xcc} );
+	unsigned value6665  = readDevice0x9DCD(0x66) <<8;
+	value6665 |= readDevice0x9DCD(0x65);
+	sum6665 += value6665;
+	countSum6665 += 1;
 
-    unsigned value6463=readDevice0x9DCD(0x64) <<8;
-    value6463 |= readDevice0x9DCD(0x63);
-    sum6463 += value6463;
-    countSum6463 += 1;
+	unsigned value6463=readDevice0x9DCD(0x64) <<8;
+	value6463 |= readDevice0x9DCD(0x63);
+	sum6463 += value6463;
+	countSum6463 += 1;
 
-    mailWrite( 0x4e, VC{0x00, 0xce} ); //bank switch.
-    uint8_t value=readDevice0x9DCD(0x34);
-    rgbBit=(value >>2) & 1;
+	mailWrite( 0x4e, VC{0x00, 0xce} ); //bank switch.
+	uint8_t value=readDevice0x9DCD(0x34);
+	rgbBit=(value >>2) & 1;
 }
 
 void GCHD::configureHDMI()
@@ -57,7 +57,7 @@ void GCHD::configureHDMI()
 	readDevice0x9DCD(0x88); //EXPECTED 0xb0
 	mailWrite( 0x4e, VC{0xb7, 0xcc} );
 
-    //Do nothing enable. No idea what it really checks
+	//Do nothing enable. No idea what it really checks
 	doEnable( 0x0000, 0x0000); //state 031e->031e, enable 000a->000a
 	readDevice0x9DCD(0x3f); //EXPECTED 0xb2
 	mailWrite( 0x4e, VC{0x00, 0xce} );
@@ -84,111 +84,111 @@ void GCHD::configureHDMI()
 	mailWrite( 0x4e, VC{0xcf, 0xce} );
 	readDevice0x9DCD(0x3f); //EXPECTED 0xb2
 
-    unsigned sum6665=0;
-    unsigned sum6463=0;
-    unsigned countSum6665=0;
-    unsigned countSum6463=0;
-    double value6665;
-    bool rgbBit;
+	unsigned sum6665=0;
+	unsigned sum6463=0;
+	unsigned countSum6665=0;
+	unsigned countSum6463=0;
+	double value6665;
+	bool rgbBit;
 
-    unsigned iterationCount=0;
-    do {
-        if(iterationCount >= 10) { //Roughly 2 seconds given usleep below, after firmware load.
-            throw runtime_error( "No HDMI signal found.");
-        }
-        sum6665=0;
-        sum6463=0;
-        countSum6665=0;
-        countSum6463=0;
-        //When first read information is bad, and it seems to kick off lock.
-        for( unsigned j = 0; j<10; ++j ) { //Read 10 times for average. Probably not at all necessary.
-             readHdmiSignalInformation(sum6463, countSum6463, sum6665, countSum6665, rgbBit);
-        }
-        value6665=((double)sum6665) / countSum6665;
+	unsigned iterationCount=0;
+	do {
+		if(iterationCount >= 10) { //Roughly 2 seconds given usleep below, after firmware load.
+			throw runtime_error( "No HDMI signal found.");
+		}
+		sum6665=0;
+		sum6463=0;
+		countSum6665=0;
+		countSum6463=0;
+		//When first read information is bad, and it seems to kick off lock.
+		for( unsigned j = 0; j<10; ++j ) { //Read 10 times for average. Probably not at all necessary.
+			readHdmiSignalInformation(sum6463, countSum6463, sum6665, countSum6665, rgbBit);
+		}
+		value6665=((double)sum6665) / countSum6665;
 
-        usleep( 1000000 / 5 ); //1/5th of a second, long enough time for more than 4 frames at low frame rate.
-                               //Should be enough to lock on.
+		usleep( 1000000 / 5 ); //1/5th of a second, long enough time for more than 4 frames at low frame rate.
+		//Should be enough to lock on.
 
-        iterationCount+=1;
-    } while( (iterationCount < 3) || (std::abs( value6665 - 0xad4d )<10.0) );
-    //^^^^^ Need to go through loop at least twice, to stabilize read, and value read must not be value
-    //gotten when no signal
+		iterationCount+=1;
+	} while( (iterationCount < 3) || (std::abs( value6665 - 0xad4d )<10.0) );
+	//^^^^^ Need to go through loop at least twice, to stabilize read, and value read must not be value
+	//gotten when no signal
 
-    Resolution resolution = Resolution::Unknown;
-    ScanMode scanMode = ScanMode::Progressive;
-    double refreshRate = 0.0;
+	Resolution resolution = Resolution::Unknown;
+	ScanMode scanMode = ScanMode::Progressive;
+	double refreshRate = 0.0;
 
-    if (currentInputSettings_.getResolution() == Resolution::Unknown) {
-        double value6463=((double)sum6463) / countSum6463;
-        //0xb690
-        if(fabs( value6463 - 0xb6d7 )<10.0) { //Allow for error.
-            //1080p
-            resolution = Resolution::HD1080;
-            refreshRate = 60.0;
-        } else if(fabs( value6463 - 0xb081 )<10.0) { //0xb123
-            //1080i
-            resolution = Resolution::HD1080;
-            refreshRate = 60.0;
-            scanMode = ScanMode::Interlaced;;
-        } else if(std::abs( value6463 - 0xb05c )<10.0) { //Allow for error.
-            //720p
-            resolution = Resolution::HD720;
-            refreshRate = 60.0;
-        } else if(std::abs( value6463 - 0xb0c1 )<12.0) { //480p is 0xb0bf,
-                                                         //576p is 0xb0c3
-                                                         //midpoint is 0xb0c1
-            //0xba95 is NTSC, bb75 is PAL. Code here has a slight NTSC
-            //region bias. ;)
-            resolution = Resolution::NTSC;
-            refreshRate = 60.0;
-            if( std::abs( value6665 - 0xbb75 ) < 10 ) {
-                resolution = Resolution::PAL;
-                refreshRate = 60.0;
-            }
-        } else {
-            if( passedInputSettings_.getResolution() == Resolution::Unknown ) {
-                throw runtime_error( "Mode detection failed, does not appear to be a suported mode for HDMI.");
-            }
-        }
-    }
-    if( refreshRate == 0.0 ) {
-        switch( passedInputSettings_.getResolution() ) {
-           case Resolution::PAL:
-                refreshRate=50.0;
-                break;
-           default:
-                refreshRate=60.0;
-                break;
-        }
-    }
-    //Merge passed arguments and autodetect information.
-    currentInputSettings_.mergeAutodetect( passedInputSettings_, resolution, scanMode, refreshRate );
+	if (currentInputSettings_.getResolution() == Resolution::Unknown) {
+		double value6463=((double)sum6463) / countSum6463;
+		//0xb690
+		if(fabs( value6463 - 0xb6d7 )<10.0) { //Allow for error.
+			//1080p
+			resolution = Resolution::HD1080;
+			refreshRate = 60.0;
+		} else if(fabs( value6463 - 0xb081 )<10.0) { //0xb123
+			//1080i
+			resolution = Resolution::HD1080;
+			refreshRate = 60.0;
+			scanMode = ScanMode::Interlaced;;
+		} else if(std::abs( value6463 - 0xb05c )<10.0) { //Allow for error.
+			//720p
+			resolution = Resolution::HD720;
+			refreshRate = 60.0;
+		} else if(std::abs( value6463 - 0xb0c1 )<12.0) { //480p is 0xb0bf,
+			//576p is 0xb0c3
+			//midpoint is 0xb0c1
+			//0xba95 is NTSC, bb75 is PAL. Code here has a slight NTSC
+			//region bias. ;)
+			resolution = Resolution::NTSC;
+			refreshRate = 60.0;
+			if( std::abs( value6665 - 0xbb75 ) < 10 ) {
+				resolution = Resolution::PAL;
+				refreshRate = 60.0;
+			}
+		} else {
+			if( passedInputSettings_.getResolution() == Resolution::Unknown ) {
+				throw runtime_error( "Mode detection failed, does not appear to be a suported mode for HDMI.");
+			}
+		}
+	}
+	if( refreshRate == 0.0 ) {
+		switch( passedInputSettings_.getResolution() ) {
+			case Resolution::PAL:
+				refreshRate=50.0;
+				break;
+			default:
+				refreshRate=60.0;
+				break;
+		}
+	}
+	//Merge passed arguments and autodetect information.
+	currentInputSettings_.mergeAutodetect( passedInputSettings_, resolution, scanMode, refreshRate );
 
-    //Color space isn't set yet, but that shouldn't be a problem.
-    currentTranscoderSettings_.mergeAutodetect( passedTranscoderSettings_, currentInputSettings_ );
+	//Color space isn't set yet, but that shouldn't be a problem.
+	currentTranscoderSettings_.mergeAutodetect( passedTranscoderSettings_, currentInputSettings_ );
 
 	mailWrite( 0x4e, VC{0x00, 0xcc} );
 
-    //Mystery setup difference. May be more appropriate to switch on reading back 0x95 instead of 0x97
-    //Based on input resolution.
-    switch( currentInputSettings_.getResolution() ) {
-        case Resolution::HD1080:
-            mailWrite( 0x4e, VC{0xb2, 0xc4} );
-            mailWrite( 0x4e, VC{0xb5, 0xd0} );
-            break;
-        case Resolution::HD720:
-            mailWrite( 0x4e, VC{0xb2, 0xcc} );
-            mailWrite( 0x4e, VC{0xb5, 0xcc} );
-            break;
-        case Resolution::NTSC:
-        case Resolution::PAL:
-            mailWrite( 0x4e, VC{0xb2, 0xcf} );
-            mailWrite( 0x4e, VC{0xb5, 0xcc} );
-            break;
-        case Resolution::Unknown:
-            throw std::logic_error( "Error in configuring resolution for HDMI." );
-            break;
-    }
+	//Mystery setup difference. May be more appropriate to switch on reading back 0x95 instead of 0x97
+	//Based on input resolution.
+	switch( currentInputSettings_.getResolution() ) {
+		case Resolution::HD1080:
+			mailWrite( 0x4e, VC{0xb2, 0xc4} );
+			mailWrite( 0x4e, VC{0xb5, 0xd0} );
+			break;
+		case Resolution::HD720:
+			mailWrite( 0x4e, VC{0xb2, 0xcc} );
+			mailWrite( 0x4e, VC{0xb5, 0xcc} );
+			break;
+		case Resolution::NTSC:
+		case Resolution::PAL:
+			mailWrite( 0x4e, VC{0xb2, 0xcf} );
+			mailWrite( 0x4e, VC{0xb5, 0xcc} );
+			break;
+		case Resolution::Unknown:
+			throw std::logic_error( "Error in configuring resolution for HDMI." );
+			break;
+	}
 	mailWrite( 0x4e, VC{0x00, 0xce} );
 	mailWrite( 0x4e, VC{0x1b, 0x30} );
 
@@ -229,9 +229,9 @@ void GCHD::configureHDMI()
 	mailRead( 0x33, 1 ); //EXPECTED {0x82}
 	mailWrite( 0x4c, VC{0x0e, 0x65} );
 	mailWrite( 0x4c, VC{0x0e, 0x64} );
-    configureCommonBlockA();
+	configureCommonBlockA();
 
-    configureSetupSubblock();
+	configureSetupSubblock();
 
 	mailWrite( 0x33, VC{0x99, 0x89, 0x6b} );
 	mailRead( 0x33, 1 ); //EXPECTED {0x6e}
@@ -241,38 +241,38 @@ void GCHD::configureHDMI()
 	mailRead( 0x33, 1 ); //EXPECTED {0x91}
 	mailWrite( 0x4c, VC{0xc0, 0x77} );
 
-    bool mysteryParameter=false;
-    if (currentInputSettings_.getResolution() != Resolution::HD1080) {
-        if( currentInputSettings_.getScanMode() == ScanMode::Progressive ) {
-            mysteryParameter=true;
-        }
-    }
-    configureCommonBlockB1(mysteryParameter);
-    configureCommonBlockB2();
-    configureCommonBlockB3();
-    configureCommonBlockC();
-    readHdmiSignalInformation( sum6463, countSum6463, sum6665, countSum6665, rgbBit);
+	bool mysteryParameter=false;
+	if (currentInputSettings_.getResolution() != Resolution::HD1080) {
+		if( currentInputSettings_.getScanMode() == ScanMode::Progressive ) {
+			mysteryParameter=true;
+		}
+	}
+	configureCommonBlockB1(mysteryParameter);
+	configureCommonBlockB2();
+	configureCommonBlockB3();
+	configureCommonBlockC();
+	readHdmiSignalInformation( sum6463, countSum6463, sum6665, countSum6665, rgbBit);
 
-    if( passedInputSettings_.getColorSpace()==ColorSpace::Unknown ) {
-        if( rgbBit ) {
-            currentInputSettings_.setColorSpace(ColorSpace::RGB);
-        } else {
-            currentInputSettings_.setColorSpace(ColorSpace::YUV);
-        }
-    } else {
-        currentInputSettings_.setColorSpace( passedInputSettings_.getColorSpace() );
-    }
+	if( passedInputSettings_.getColorSpace()==ColorSpace::Unknown ) {
+		if( rgbBit ) {
+			currentInputSettings_.setColorSpace(ColorSpace::RGB);
+		} else {
+			currentInputSettings_.setColorSpace(ColorSpace::YUV);
+		}
+	} else {
+		currentInputSettings_.setColorSpace( passedInputSettings_.getColorSpace() );
+	}
 
-    mailWrite( 0x4e, VC{0x00, 0xcc} ); //Make sure on right bank for color space configure.
-    configureColorSpace();
-    transcoderFinalConfigure( currentInputSettings_,  currentTranscoderSettings_ );
-    transcoderSetup( currentInputSettings_,  currentTranscoderSettings_ );
+	mailWrite( 0x4e, VC{0x00, 0xcc} ); //Make sure on right bank for color space configure.
+	configureColorSpace();
+	transcoderFinalConfigure( currentInputSettings_,  currentTranscoderSettings_ );
+	transcoderSetup( currentInputSettings_,  currentTranscoderSettings_ );
 
-    scmd(SCMD_INIT, 0xa0, 0x0000);
-    uint16_t state=read_config<uint16_t>(SCMD_STATE_READBACK_REGISTER); //EXPECTED=0x0001
-    scmd(SCMD_STATE_CHANGE, 0x00, SCMD_STATE_START);
-    completeStateChange(state, SCMD_STATE_START); //EXPECTED 0x0001
-    currentInputSettings_.dumpMode();
+	scmd(SCMD_INIT, 0xa0, 0x0000);
+	uint16_t state=read_config<uint16_t>(SCMD_STATE_READBACK_REGISTER); //EXPECTED=0x0001
+	scmd(SCMD_STATE_CHANGE, 0x00, SCMD_STATE_START);
+	completeStateChange(state, SCMD_STATE_START); //EXPECTED 0x0001
+	currentInputSettings_.dumpMode();
 }
 
 

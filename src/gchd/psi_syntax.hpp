@@ -23,27 +23,27 @@
 //Empty for right now
 class PSI_Syntax: public PSI_Data
 {
-public:    
-    PSI_Syntax():
-       extension_(0xffff), version_(0), currentIndicator_(true), sectionNumber_(0), lastSectionNumber_(0) {};
-    PSI_Syntax(uint16_t extension, uint8_t version=0, bool currentIndicator=true, uint8_t sectionNumber=0, uint8_t lastSectionNumber=0):
-       extension_(extension), version_(version), currentIndicator_(true), sectionNumber_(sectionNumber), lastSectionNumber_(lastSectionNumber) {};
+	public:
+		PSI_Syntax():
+			extension_(0xffff), version_(0), currentIndicator_(true), sectionNumber_(0), lastSectionNumber_(0) {};
+		PSI_Syntax(uint16_t extension, uint8_t version=0, bool currentIndicator=true, uint8_t sectionNumber=0, uint8_t lastSectionNumber=0):
+			extension_(extension), version_(version), currentIndicator_(true), sectionNumber_(sectionNumber), lastSectionNumber_(lastSectionNumber) {};
 
 
-    uint16_t extension_;
-    uint8_t version_;
-    bool currentIndicator_;
-    uint8_t sectionNumber_;
-    uint8_t lastSectionNumber_;
+		uint16_t extension_;
+		uint8_t version_;
+		bool currentIndicator_;
+		uint8_t sectionNumber_;
+		uint8_t lastSectionNumber_;
 
-    virtual int calculateSize();
+		virtual int calculateSize();
 
-    virtual void pack(std::vector<uint8_t> &outputData,
-                      std::vector<uint8_t>::iterator &offset);
+		virtual void pack(std::vector<uint8_t> &outputData,
+				  std::vector<uint8_t>::iterator &offset);
 
-    virtual void unpack(const std::vector<uint8_t> &inputData,
-                        std::vector<uint8_t>::const_iterator &offset,
-                        int size);
+		virtual void unpack(const std::vector<uint8_t> &inputData,
+				    std::vector<uint8_t>::const_iterator &offset,
+				    int size);
 };
 
 #endif

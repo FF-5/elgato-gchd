@@ -13,16 +13,16 @@
 void Streamer::loop() {
 	std::vector<unsigned char> buffer=std::vector<unsigned char>(DATA_BUF);
 
-    if (process_->isActive()) {
-	    std::cerr << "Streamer has been started." << std::endl;
-    }
-    while (process_->isActive()) {
-        gchd_->stream(&buffer);
-        if( buffer.size() != 0 ) {
-            disk.output(&buffer);
-            fifo.output(&buffer);
-            socket.output(&buffer);
-        }
+	if (process_->isActive()) {
+		std::cerr << "Streamer has been started." << std::endl;
+	}
+	while (process_->isActive()) {
+		gchd_->stream(&buffer);
+		if( buffer.size() != 0 ) {
+			disk.output(&buffer);
+			fifo.output(&buffer);
+			socket.output(&buffer);
+		}
 	}
 }
 
