@@ -29,6 +29,7 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 |---|---|---|---|
 | 2026-11-17 | `fix/analog-start-per-traces` | composite 480i (switched from HDMI while streaming) | START completes in ~0.1 s (10 completion polls), 65 KB bulk transfers flow. guvcview crashed: format changed from 1280×720 to 720×480 underneath it. |
 | 2026-11-17 | `fix/v4l2-format-negotiation` 42aebdb | composite 480i (selected before guvcview) | G_FMT 720×480 interlaced, START ~0.1 s, data flows. guvcview showed a picture briefly, then crashed ~0.3 s after the first data. Led to the delivery fix 374fc83. |
+| 2026-11-17 | `fix/v4l2-format-negotiation` 6e8841a | composite 480i | guvcview: briefly a black-and-white picture with the bottom quarter garbled, then crash (read fault in `memcpy`). ffmpeg recorded 10 s without errors: H.264 High 720×480, `field_order tt`, 22.9 Mbit/s (driver bitrate twice the recorded value; fixed in 81bc5ec). The guvcview symptoms match copying a decoded 720-wide picture without its 768-byte line stride. |
 
 ## Phase 0 — Repository consolidation
 
@@ -165,6 +166,7 @@ the mode in question can be tested; change one at a time (RULES D5).
 | `0x1004` "stout_mode" | bit 0 written | not yet checked (T-004) |
 | 480i → 240p live change | full encoder restart (`gchd_mode_workfn`) | decoder registers only (`0x88:07/08/09/28/0A`), no SCMD |
 | 288p detection | not detected (PAL always treated as 576i) | `0x88:CA = 7E`; apply block with `28=8A`, `0A=8F` in the noinput trace |
+| `system_rate` | driver formula: 12693 kbit/s at 720 wide | 12539 (NTSC), 12531 (PAL) |
 | Bulk IN `0x84` | required (`-ENODEV` if absent) | queued (8 URBs) during start |
 | START completion | timed out with state already `0x02` (`2da03ea` log) | loop until target state |
 

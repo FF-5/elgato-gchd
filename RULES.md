@@ -170,9 +170,11 @@ A task may be merged to `dev` only when all of these hold:
    to `TODO.md` instead of widening the branch.
 4. Never delete traces, logs or captures; they live on the `traces` branch.
 5. Hardware tests are done by the maintainer: build and load the module,
-   select the input (`v4l2-ctl -i N`) before starting `guvcview`, check the
-   picture, and paste the `dmesg` output into the maintainer comments of
-   `TASK.md`. Provide exact commands in `TASK.md` "Hardware test".
+   select the input (`v4l2-ctl -i N`) before starting the viewer, check the
+   picture, and paste the `dmesg` and viewer output into the maintainer
+   comments of `TASK.md`. Viewers: `guvcview` and, for the H.264 stream,
+   `ffplay` (guvcview 2.0.8 mishandles 720-pixel-wide H.264). Provide exact
+   commands in `TASK.md` "Hardware test".
 6. Do not copy statements from task descriptions or conversations into the
    documentation; verify them against traces or code first, and record
    unverified information in `TODO.md`.

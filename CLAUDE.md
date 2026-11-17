@@ -59,7 +59,8 @@ material.
 ## Hardware testing
 
 Only the maintainer has the device. Testing: build and load the module,
-select the input with `v4l2-ctl -i N`, start `guvcview`, check the picture,
+select the input with `v4l2-ctl -i N`, start the viewer (`guvcview`, or
+`ffplay` for the H.264 stream), check the picture,
 paste `dmesg` and application output into the maintainer comments of
 `TASK.md`. Write exact commands in `TASK.md` "Hardware test".
 
