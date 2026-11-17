@@ -34,6 +34,7 @@ struct gchd_ring {
  unsigned int head, count;
  size_t bytes;
  u64 sequence;
+ u64 dropped; /* frames discarded because the ring was full */
  spinlock_t lock;
 };
 struct gchd_buffer {

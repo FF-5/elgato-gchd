@@ -163,7 +163,7 @@ int gchd_ring_push(struct gchd_ring *r, const u8 *data, size_t len, u64 ts90)
  spin_lock_irqsave(&r->lock, flags);
  while (r->count && (r->count >= GCHD_RING_FRAMES || r->bytes + len > ring_bytes)) {
   tail=(r->head+GCHD_RING_FRAMES-r->count)%GCHD_RING_FRAMES;
-  kvfree(r->frames[tail].data); r->bytes-=r->frames[tail].len;
+  kvfree(r->frames[tail].data); r->bytes-=r->frames[tail].len; r->dropped++;
   r->frames[tail].data=NULL; r->frames[tail].len=0; r->count--;
  }
  f=&r->frames[r->head]; f->data=copy; f->len=len; f->ts90=ts90; f->sequence=++r->sequence;
@@ -659,13 +659,15 @@ static int gchd_rx(void *arg)
    gchd_deliver(d);
    if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
     dev_info(&d->intf->dev,
-             "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu queued=%u start_pending=%u\n",
+             "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
              (unsigned long long)rx_reads,
              (unsigned long long)rx_bytes,
              (unsigned long long)rx_empty,
              (unsigned long long)rx_errors,
              !list_empty_careful(&d->rx_done),
-             READ_ONCE(d->start_pending));
+             READ_ONCE(d->start_pending),
+             (unsigned long long)d->ring.dropped,
+             gchd_ring_count(&d->ring));
     report_jiffies = jiffies;
    }
    continue;
@@ -725,13 +727,15 @@ static int gchd_rx(void *arg)
 
   if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
    dev_info(&d->intf->dev,
-            "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu queued=%u start_pending=%u\n",
+            "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
             (unsigned long long)rx_reads,
             (unsigned long long)rx_bytes,
             (unsigned long long)rx_empty,
             (unsigned long long)rx_errors,
             !list_empty_careful(&d->rx_done),
-            READ_ONCE(d->start_pending));
+            READ_ONCE(d->start_pending),
+            (unsigned long long)d->ring.dropped,
+            gchd_ring_count(&d->ring));
    report_jiffies = jiffies;
   }
  }

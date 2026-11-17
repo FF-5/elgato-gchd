@@ -800,11 +800,19 @@ int gchd_probe_video_source(struct gchd *d)
    */
   GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
   dev_info(&d->intf->dev,
-           "gchd-diag detect %s: pre-config raw_status=0x%02x mode=0x%x\\n",
+           "gchd-diag detect %s: pre-config raw_status=0x%02x mode=0x%x\n",
            d->input == 2 ? "composite" : "s-video", v, v & 0x0f);
   v &= 0x0f;
-  if (v != 6 && v != 7)
+  if (v != 6 && v != 7) {
+   u8 lock;
+
+   /* Diagnostic only: decoder lock status while no family is reported. */
+   GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, lock);
+   dev_info_ratelimited(&d->intf->dev,
+                        "gchd-diag no analog family: 0x88:FA=0x%02x 0x88:CA=0x%02x\n",
+                        v, lock);
    return -ENOLINK;
+  }
 
   /*
    * Family recognized: query decoder status/ready/height in sequence.
@@ -826,20 +834,15 @@ int gchd_probe_video_source(struct gchd *d)
    d->input_interlaced=true; d->input_fps_num=60;
    /* 0xCA is the decoder's authoritative 240p/480i lock indicator. */
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, mode);
-   /*
-    * Start with the 480i receiver/encoder setup. A 240p lock is applied
-    * only after capture starts and
-    * the live monitor sees 0x66; this avoids skipping the transition recipe
-    * when 0x66 is already present during initial detection.
-    */
    if (mode != GCHD_DEC_LOCK_480I && mode != GCHD_DEC_LOCK_240P)
     dev_dbg(&d->intf->dev,
-            "analog format status not locked yet: 0x%02x; starting in 480i\n",
+            "analog format status not locked yet: 0x%02x; using 480i\n",
             mode);
+   /* 0x66 = 240p; anything else is configured as 480i. */
+   d->input_interlaced = mode != GCHD_DEC_LOCK_240P;
    dev_info(&d->intf->dev,
-            "analog format initial status=0x%02x; starting in 480i\n",
-            mode);
-   d->input_interlaced = true;
+            "analog format initial status=0x%02x; configuring %s\n",
+            mode, d->input_interlaced ? "480i" : "240p");
   } else if (v == 7) {
    d->input_width=720; d->input_height=576;
    d->input_interlaced=true; d->input_fps_num=50;
@@ -1048,7 +1051,7 @@ static int gchd_be_retrigger(struct gchd *d, u8 value)
  return 0;
 }
 
-static int gchd_analog_backend(struct gchd *d, bool pal)
+static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
 {
  /* 0x98 per-mode table: NTSC writes all of 90-A3, PAL a sparse set. */
  static const struct gchd_mail_cmd table_ntsc[] = {
@@ -1070,11 +1073,13 @@ static int gchd_analog_backend(struct gchd *d, bool pal)
  u8 v;
  int r;
 
- GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
- GCHD_DEC_R(d, 0xe7, v);
- GCHD_DEC_R(d, 0xf1, v);
- GCHD_DEC_R(d, 0xcb, v);
- GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
+ if (status_reads) {
+  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
+  GCHD_DEC_R(d, 0xe7, v);
+  GCHD_DEC_R(d, 0xf1, v);
+  GCHD_DEC_R(d, 0xcb, v);
+  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
+ }
 
  GCHD_BE_W(d, 0x04, 0x95);
  GCHD_BE_R(d, 0x8b, v);
@@ -1170,11 +1175,28 @@ static int gchd_configure_composite_exact(struct gchd *d)
   GCHD_DEC_W(d, 0x07, 0x8a); GCHD_DEC_W(d, 0x08, 0x9b); GCHD_DEC_W(d, 0x09, 0x7a);
   GCHD_DEC_W(d, 0x28, d->input_interlaced ? 0x88 : 0x8a);
   GCHD_DEC_R(d, 0xfd, v); GCHD_DEC_W(d, 0x06, 0x08);
-  if (!d->input_interlaced)
-   GCHD_DEC_W(d, 0x0a, 0x98);
+ }
+ if (!d->input_interlaced && d->input_height == 480) {
+  /* 240p: retrigger, wait for the decoder to settle, then 0x88:0A = 98. */
+  int i;
+
+  GCHD_DEC_R(d, 0xe7, v);
+  r = gchd_be_retrigger(d, 0x15);
+  if (r)
+   return r;
+  for (i = 0; i < 40; ++i) {
+   GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
+   GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
+   GCHD_DEC_R(d, 0xe7, v);
+   if (v == 0x69)
+    break;
+   msleep(40);
+  }
+  GCHD_DEC_R(d, 0xf1, v);
+  GCHD_DEC_W(d, 0x0a, 0x98);
  }
  /* Back-end programming after analog lock (composite and S-video). */
- r = gchd_analog_backend(d, d->input_height == 576);
+ r = gchd_analog_backend(d, d->input_height == 576, d->input_interlaced);
  if (r)
   return r;
  return 0;
