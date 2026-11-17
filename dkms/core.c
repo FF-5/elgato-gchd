@@ -1028,7 +1028,8 @@ static void gchd_detection_worker(struct work_struct *work)
    }
    WRITE_ONCE(d->capture_active, true);
    gchd_set_lifecycle(d, GCHD_STREAMING);
-   if (d->input >= 2 && d->input_height == 480)
+   if (d->input >= 2 &&
+       (d->input_height == 480 || d->input_height == 576))
     schedule_delayed_work(&d->mode_work, msecs_to_jiffies(250));
   }
  }
@@ -1058,7 +1059,8 @@ static void gchd_mode_workfn(struct work_struct *work)
 
  mutex_lock(&d->lifecycle_lock);
  if (d->disconnected || !READ_ONCE(d->capture_active) ||
-     d->input < 2 || d->input_height != 480 ||
+     d->input < 2 ||
+     (d->input_height != 480 && d->input_height != 576) ||
      !d->input_configured || !READ_ONCE(d->signal_present))
   goto out;
 
@@ -1071,6 +1073,28 @@ static void gchd_mode_workfn(struct work_struct *work)
  }
  if (target_interlaced == d->input_interlaced)
   goto reschedule;
+
+ if (d->input_height == 576) {
+  /* 576i <-> 288p: decoder only, the encoder keeps running. */
+  dev_info(&d->intf->dev, "analog mode change detected: %s -> %s\n",
+           d->input_interlaced ? "576i" : "288p",
+           target_interlaced ? "576i" : "288p");
+  WRITE_ONCE(d->stop_pending, true);
+  r = gchd_analog_pal_mode_change(d, target_interlaced);
+  d->last_video_jiffies = jiffies;
+  WRITE_ONCE(d->stop_pending, false);
+  if (r) {
+   dev_warn(&d->intf->dev, "analog mode change failed: %d\n", r);
+   goto reschedule;
+  }
+  d->input_interlaced = target_interlaced;
+  ev.id = d->input;
+  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
+  v4l2_event_queue(&d->vdev, &ev);
+  dev_info(&d->intf->dev, "analog mode now %s\n",
+           d->input_interlaced ? "576i" : "288p");
+  goto reschedule;
+ }
 
  dev_info(&d->intf->dev, "analog mode change detected: %s -> %s\n",
           d->input_interlaced ? "480i" : "240p",

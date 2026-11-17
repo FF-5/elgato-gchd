@@ -25,12 +25,12 @@ on the `traces` branch.
 
 ## Next
 
-- [ ] **T-053 [WIN+HW] (M)** PAL 576i and 288p on composite and S-video,
-      including 576i ↔ 288p changes. The driver treats every PAL source as
-      576i and checks for mode changes only on 480-line sources. Recorded:
-      288p only (`CA = 7E`, `E7 = 79`, `F1 = 63`; no apply block when the
-      source is locked at selection). 576i and a 576i ↔ 288p change are not
-      recorded, so 576i and 288p cannot be told apart yet.
+- [ ] **T-053 [HW] (M)** PAL 576i and 288p on composite and S-video,
+      including 576i ↔ 288p changes (decoder only, `docs/composite.md §8`).
+      Implemented on `feat/pal`; hardware test pending. Not yet done: the
+      retrigger on `0x98:F5` bit 7 while capturing (recorded at the start of
+      a 576i → 288p change). 288p capture start is not recorded (driver uses
+      the apply block of the change).
 - [ ] **T-044 [HW] (S)** Reopening right after closing failed once while the
       old ffplay process was still exiting; the stop on close takes ~1 s.
       Make a new open wait for the running stop.
@@ -49,8 +49,11 @@ on the `traces` branch.
 - [ ] **T-055 [OFF→HW] (M)** Encoder output size independent of the input
       (`docs/hdmi.md §4`: 1920×1080 … 480×360, per-size bitrate/level,
       transport output 1 or 2). Maintainer report: analog inputs offer only
-      480×360 and 640×480 in the Windows application; unconfirmed (the
-      composite recording was encoded at 720×480).
+      480×360 and 640×480 in the Windows application. Recorded for analog
+      sources (`docs/composite.md §10`): 640×480 and 480×360 use
+      `v_ip_format 2`, GOP 6 and transport output 2; HD sizes and cropping
+      are done by the application (no device access); bitrate slider and
+      "stretch" (`v_in_source_type 2`) are encoder fields.
 - [ ] **T-054 [HW] (S)** Source loss and return.
 
 ## Data path and usability
