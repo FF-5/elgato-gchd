@@ -72,20 +72,44 @@ Docs: `composite.md` (PAL observed, 288p status values, apply block),
 6. Analyse the 480i recordings once uploaded (control traffic only:
    `tshark -r big.pcapng -Y "usb.transfer_type != 0x03" -w small.pcapng`).
 
+## Hardware test results
+
+**2026-11-17, composite 480i, branch `fix/analog-start-per-traces`:**
+
+- Device side works: START completed after 10 completion polls (~0.1 s);
+  65 KB bulk transfers followed immediately (previously START took ~17 s
+  or never completed).
+- guvcview crashed (read fault in `memcpy`). Cause: it negotiated the
+  default 1280×720 (HDMI) format, then the input was switched to composite
+  while streaming and the driver changed the size to 720×480 underneath it.
+  Also logged: `TRY_FMT` rejected width/height 0, `G_PARM` unsupported.
+- Fixed on `fix/v4l2-format-negotiation` (stacked on the analog branch).
+
 ## Hardware test (maintainer)
 
+Select the input **before** starting the application; guvcview does not
+renegotiate when the source size changes during capture.
+
 ```sh
-git fetch origin && git checkout fix/analog-start-per-traces
+git fetch origin && git checkout fix/v4l2-format-negotiation
 cd dkms && make -C /lib/modules/$(uname -r)/build M=$PWD modules
 sudo rmmod elgato_gchd 2>/dev/null; sudo dmesg -C; sudo insmod elgato_gchd.ko
-guvcview   # select the input with the connected 480i source, check the picture
+v4l2-ctl -d /dev/videoN -i 2        # composite (3 = S-video)
+v4l2-ctl -d /dev/videoN --get-fmt-video   # expect 720x480, interlaced
+guvcview -d /dev/videoN
 sudo dmesg > dmesg.txt
 ```
 
-Paste the `dmesg` output (or the relevant part) into the maintainer comments
-below, with a note on what guvcview showed. The H.264 delivery path is still
-lossy (TODO T-020), so some corruption is expected even if the device side is
-correct.
+Independent check of the stream (does not depend on guvcview):
+
+```sh
+ffmpeg -f v4l2 -input_format h264 -i /dev/videoN -t 10 -c copy test.h264
+ffprobe test.h264
+```
+
+Paste dmesg, what guvcview showed, and the `ffprobe` output into the
+maintainer comments. The H.264 delivery path is still lossy (TODO T-020),
+so some corruption is expected.
 
 ---
 
