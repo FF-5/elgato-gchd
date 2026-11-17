@@ -1051,7 +1051,12 @@ static int gchd_be_retrigger(struct gchd *d, u8 value)
  return 0;
 }
 
-static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
+/*
+ * Back-end per-mode table and the following block, then two retrigger
+ * pulses with the given values.
+ */
+static int gchd_analog_backend_table(struct gchd *d, bool pal, u8 pulse1,
+                                     u8 pulse2)
 {
  /* 0x98 per-mode table: NTSC writes all of 90-A3, PAL a sparse set. */
  static const struct gchd_mail_cmd table_ntsc[] = {
@@ -1073,14 +1078,6 @@ static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
  u8 v;
  int r;
 
- if (status_reads) {
-  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
-  GCHD_DEC_R(d, 0xe7, v);
-  GCHD_DEC_R(d, 0xf1, v);
-  GCHD_DEC_R(d, 0xcb, v);
-  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
- }
-
  GCHD_BE_W(d, 0x04, 0x95);
  GCHD_BE_R(d, 0x8b, v);
  r = pal ? gchd_mail_seq(d, table_pal, ARRAY_SIZE(table_pal)) :
@@ -1098,10 +1095,26 @@ static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
  GCHD_BE_W(d, 0x04, 0x8d);
  GCHD_BE_W(d, 0x62, 0x91);
 
- r = gchd_be_retrigger(d, 0x05);
+ r = gchd_be_retrigger(d, pulse1);
  if (r)
   return r;
- r = gchd_be_retrigger(d, 0x15);
+ return gchd_be_retrigger(d, pulse2);
+}
+
+static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
+{
+ u8 v;
+ int r;
+
+ if (status_reads) {
+  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
+  GCHD_DEC_R(d, 0xe7, v);
+  GCHD_DEC_R(d, 0xf1, v);
+  GCHD_DEC_R(d, 0xcb, v);
+  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
+ }
+
+ r = gchd_analog_backend_table(d, pal, 0x05, 0x15);
  if (r)
   return r;
 
@@ -1212,14 +1225,78 @@ int gchd_input_read_analog_mode(struct gchd *d, bool *interlaced)
   return -EOPNOTSUPP;
  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, status);
 
- /* FE is unlocked and EE is transitional: neither is a mode change. */
- if (status == GCHD_DEC_LOCK_240P)
+ switch (status) {
+ case GCHD_DEC_LOCK_240P:
   *interlaced = false;
- else if (status == GCHD_DEC_LOCK_480I)
+  break;
+ case GCHD_DEC_LOCK_480I:
+ case GCHD_DEC_LOCK_TO_480I:
   *interlaced = true;
- else
+  break;
+ case GCHD_DEC_LOCK_TO_240P:
+  /* Leaving 480i: pulse the back end once and wait for 240p lock. */
+  if (d->input_interlaced && !d->mode_retriggered) {
+   int r = gchd_be_retrigger(d, 0x15);
+
+   if (r)
+    return r;
+   d->mode_retriggered = true;
+  }
   return -EAGAIN;
+ default:
+  /* FE is unlocked; EE/E6 are transitional. */
+  return -EAGAIN;
+ }
+ d->mode_retriggered = false;
  return 0;
+}
+
+/*
+ * Mode change while capturing, first part (encoder still in START): apply
+ * the decoder setting for the new mode and load the neutral back-end table.
+ */
+int gchd_analog_mode_pre_stop(struct gchd *d, bool interlaced)
+{
+ static const struct gchd_mail_cmd table_neutral[] = {
+  GCHD_SEQ_BE(0x70, 0xc8),
+  GCHD_SEQ_BE(0x90, 0x88), GCHD_SEQ_BE(0x91, 0x77), GCHD_SEQ_BE(0x92, 0x77),
+  GCHD_SEQ_BE(0x93, 0x77), GCHD_SEQ_BE(0x94, 0x77), GCHD_SEQ_BE(0x95, 0x77),
+  GCHD_SEQ_BE(0x96, 0x77), GCHD_SEQ_BE(0x97, 0x77), GCHD_SEQ_BE(0x98, 0x77),
+  GCHD_SEQ_BE(0x99, 0x77), GCHD_SEQ_BE(0x9a, 0x77), GCHD_SEQ_BE(0x9b, 0x77),
+  GCHD_SEQ_BE(0x9c, 0x77), GCHD_SEQ_BE(0x9d, 0x77), GCHD_SEQ_BE(0x9e, 0x77),
+  GCHD_SEQ_BE(0x9f, 0x77), GCHD_SEQ_BE(0xa0, 0x77), GCHD_SEQ_BE(0xa1, 0x77),
+  GCHD_SEQ_BE(0xa2, 0x77), GCHD_SEQ_BE(0xa3, 0x77),
+ };
+ u8 v;
+ int r;
+
+ GCHD_DEC_W(d, 0x07, 0x8a); GCHD_DEC_W(d, 0x08, 0x9b); GCHD_DEC_W(d, 0x09, 0x7a);
+ GCHD_DEC_W(d, 0x28, interlaced ? 0x88 : 0x8a);
+ GCHD_DEC_R(d, 0xfd, v); GCHD_DEC_W(d, 0x06, 0x08);
+ msleep(400);
+ GCHD_DEC_R(d, 0xe7, v);
+
+ GCHD_BE_W(d, 0x04, 0x95);
+ GCHD_BE_R(d, 0x8b, v);
+ r = gchd_mail_seq(d, table_neutral, ARRAY_SIZE(table_neutral));
+ if (r)
+  return r;
+ GCHD_BE_R(d, 0x6b, v);
+ GCHD_BE_W(d, 0xc0, 0x80);
+ GCHD_BE_W(d, 0xa2, 0x77);
+ GCHD_BE_R(d, 0x58, v);
+ GCHD_BE_W(d, 0xc0, 0x77);
+ GCHD_BE_R(d, 0x89, v);
+ GCHD_BE_W(d, 0x72, 0x88);
+ GCHD_BE_W(d, 0xc0, 0x88);
+ GCHD_BE_W(d, 0x61, 0x98);
+ GCHD_BE_W(d, 0x63, 0x89);
+ GCHD_BE_W(d, 0x64, 0x96);
+ GCHD_BE_W(d, 0x65, 0x88);
+ GCHD_BE_R(d, 0xff, v);
+ GCHD_BE_W(d, 0x04, 0x8d);
+ GCHD_BE_W(d, 0x62, 0x91);
+ return gchd_be_retrigger(d, 0x05);
 }
 
 static int gchd_configure_component_exact(struct gchd *d)
@@ -1408,6 +1485,59 @@ static int gchd_configure_component_exact(struct gchd *d)
 
 }
 
+/*
+ * Encoder programming common to all inputs, ending with SCMD INIT (mode
+ * 0xa0) and a state readback; START follows separately.
+ */
+static int gchd_encoder_program(struct gchd *d)
+{
+ int r;
+
+ /* Encoder configuration common to HDMI, Component and Composite. */
+ r = gchd_transcoder_final_configure(d);
+ if (r) {
+  dev_err(&d->intf->dev, "capture setup: transcoder final configuration failed: %d\n", r);
+  return r;
+ }
+ dev_info(&d->intf->dev, "capture setup: transcoder final configuration completed\n");
+
+ r = gchd_transcoder_setup(d);
+ if (r) {
+  dev_err(&d->intf->dev, "capture setup: transcoder setup failed: %d\n", r);
+  return r;
+ }
+ dev_info(&d->intf->dev, "capture setup: transcoder setup completed\n");
+
+ /*
+  * Every input finishes with: encoder final configuration, encoder setup,
+  * SCMD INIT (mode 0xa0), state readback, then SCMD STATE_CHANGE (START).
+  * The second INIT is issued here
+  * (after the final transcoder programming); the earlier INIT in
+  * gchd_input_finalize() is a separate stage before connector configuration.
+  * Mode 0xa0 suppresses the INIT interrupt/readback handshake.
+  */
+ r = gchd_scmd(d, GCHD_SCMD_INIT, GCHD_SCMD_INIT_NO_RELOAD, 0);
+ if (r) {
+  dev_err(&d->intf->dev, "capture setup: final SCMD_INIT failed: %d\n", r);
+  return r;
+ }
+
+ /* Read the encoder state after the mode 0xa0 INIT. */
+ {
+  u16 state;
+
+  r = gchd_raw_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
+  if (r) {
+   dev_err(&d->intf->dev,
+           "capture setup: state readback after final SCMD_INIT failed: %d\n", r);
+   return r;
+  }
+  dev_info(&d->intf->dev,
+           "capture setup: state after final SCMD_INIT=0x%04x\n", state);
+ }
+ return 0;
+}
+
 static int gchd_input_configure_mode(struct gchd *d)
 {
  int r;
@@ -1469,50 +1599,33 @@ static int gchd_input_configure_mode(struct gchd *d)
  }
  dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
 
- /* Encoder configuration common to HDMI, Component and Composite. */
- r = gchd_transcoder_final_configure(d);
- if (r) {
-  dev_err(&d->intf->dev, "capture setup: transcoder final configuration failed: %d\n", r);
+ r = gchd_encoder_program(d);
+ if (r)
   return r;
- }
- dev_info(&d->intf->dev, "capture setup: transcoder final configuration completed\n");
-
- r = gchd_transcoder_setup(d);
- if (r) {
-  dev_err(&d->intf->dev, "capture setup: transcoder setup failed: %d\n", r);
-  return r;
- }
- dev_info(&d->intf->dev, "capture setup: transcoder setup completed\n");
-
- /*
-  * Every input finishes with: encoder final configuration, encoder setup,
-  * SCMD INIT (mode 0xa0), state readback, then SCMD STATE_CHANGE (START).
-  * The second INIT is issued here
-  * (after the final transcoder programming); the earlier INIT in
-  * gchd_input_finalize() is a separate stage before connector configuration.
-  * Mode 0xa0 suppresses the INIT interrupt/readback handshake.
-  */
- r = gchd_scmd(d, GCHD_SCMD_INIT, GCHD_SCMD_INIT_NO_RELOAD, 0);
- if (r) {
-  dev_err(&d->intf->dev, "capture setup: final SCMD_INIT failed: %d\n", r);
-  return r;
- }
-
- /* Read the encoder state after the mode 0xa0 INIT. */
- {
-  u16 state;
-
-  r = gchd_raw_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
-  if (r) {
-   dev_err(&d->intf->dev,
-           "capture setup: state readback after final SCMD_INIT failed: %d\n", r);
-   return r;
-  }
-  dev_info(&d->intf->dev,
-           "capture setup: state after final SCMD_INIT=0x%04x\n", state);
- }
 
  /* A successfully configured input stays configured while hardware is idle. */
+ d->input_prepared = false;
+ d->input_configured = true;
+ return 0;
+}
+
+/*
+ * Mode change while capturing, second part (encoder in STOP): load the
+ * back-end table for the new mode and program the encoder. START follows.
+ */
+int gchd_analog_mode_reconfigure(struct gchd *d)
+{
+ int r;
+
+ r = gchd_analog_backend_table(d, d->input_height == 576,
+                               d->input_interlaced ? 0x05 : 0x15, 0x15);
+ if (r) {
+  dev_err(&d->intf->dev, "mode change: back-end setup failed: %d\n", r);
+  return r;
+ }
+ r = gchd_encoder_program(d);
+ if (r)
+  return r;
  d->input_prepared = false;
  d->input_configured = true;
  return 0;

@@ -146,9 +146,14 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 - [x] **T-040 [OFF] (M)** Keep the encoder at 480i for 240p (`v_format 4`,
       `v_ip_format 0`, WIN). Remove the 240p-as-480p programming.
       Done on `dev` (analog inputs always encoded interlaced, v_in_source_type 3).
-- [ ] **T-041 [OFF→HW] (M)** Live 480i → 240p decoder-only transition
-      (`docs/composite.md §4`) and the 240p → 480i restart (`§5`), exactly
-      as traced, from the lock status `0x88:CA` (`7E` / `66`).
+- [ ] **T-041 [OFF→HW] (M)** Live 480i ↔ 240p transition exactly as traced
+      in `traces/composite/gchd_240p-480i_composite` (`docs/composite.md §4`):
+      both directions stop and restart the encoder (decoder apply block,
+      neutral back-end table, NULL, STOP, back-end table, encoder setup,
+      INIT A0, START). The earlier "480i → 240p decoder-only" description
+      came from the deleted previous analysis and is not confirmed by this
+      recording. Implemented on `fix/mode-change-restart`; hardware test
+      pending. Open: S-video and 576i ↔ 288p equivalents (trace wanted).
 - [ ] **T-042 [OFF] (S)** Expose the 240p/480i status to userspace and emit
       `V4L2_EVENT_SOURCE_CHANGE` on change.
 - [ ] **T-043 [HW] (S)** Milestone with a 240p console: clean decode;
@@ -173,7 +178,7 @@ the mode in question can be tested; change one at a time (RULES D5).
 
 | Item | Driver (from the C++ port) | Recorded traces |
 |---|---|---|
-| 240p encoder programming | `v_format 8`, `v_ip_format 2`, full restart on 480i ↔ 240p | `v_format 4`, `v_ip_format 0`; 480i → 240p decoder-only — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
+| 240p encoder programming | `v_format 8`, `v_ip_format 2`, full restart on 480i ↔ 240p | `v_format 4`, `v_ip_format 0`; full restart in both directions (`gchd_240p-480i_composite`) — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
 | Composite selector `0x9C:51` | `CC` | `44` (from HDMI), `EC` (from analog) |
 | Decoder tuning `0x88:10` | single pass, `10 = 88` | three passes, `10 = 6F` — **already matched in the analog prepare path** |
 | Composite NTSC back-end table `0x98:90–A3` | sparse (`90=68, 91=BF, 95=AB, 96=17, 97=88, A0=8C, A1=F8, A2=82, A3=59`) | all 20 registers (`01 BD 9A … 81 49`) — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |

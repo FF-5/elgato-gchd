@@ -174,6 +174,8 @@
 #define GCHD_DEC_REG_LOCK		0xca	/* lock/format status */
 #define GCHD_DEC_LOCK_480I		0x7e
 #define GCHD_DEC_LOCK_240P		0x66
+#define GCHD_DEC_LOCK_TO_480I		0x76	/* first value after a 240p -> 480i change */
+#define GCHD_DEC_LOCK_TO_240P		0x6e	/* first value after a 480i -> 240p change */
 #define GCHD_DEC_REG_FAMILY		0xfa	/* low nibble: 6 = NTSC/60 Hz, 7 = PAL/50 Hz */
 
 /* Back end, device 0x98 (GCHD_PORT_BACKEND) */

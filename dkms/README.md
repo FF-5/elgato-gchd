@@ -33,7 +33,7 @@ DKMS:
 
 ```sh
 sudo dkms add ./dkms
-sudo dkms install elgato-gchd/0.2.0
+sudo dkms install elgato-gchd/0.2.1
 ```
 
 ## Module parameters

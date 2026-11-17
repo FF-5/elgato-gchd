@@ -10,7 +10,7 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.2.0");
+MODULE_VERSION("0.2.1");
 
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
@@ -1044,9 +1044,13 @@ static void gchd_mode_workfn(struct work_struct *work)
           target_interlaced ? "480i" : "240p");
 
  /*
-  * Reconfigure the analog pipeline through the common setup path for either
-  * direction.
+  * Either direction: decoder and neutral back-end setup while still in
+  * START, then NULL/STOP, the new back-end table, encoder programming and
+  * START. Input routing and decoder tuning are kept.
   */
+ r = gchd_analog_mode_pre_stop(d, target_interlaced);
+ if (r)
+  goto restart_failed;
  r = gchd_capture_stop(d);
  if (r)
   goto restart_failed;
@@ -1056,7 +1060,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  d->input_configured = false;
  d->input_interlaced = target_interlaced;
  gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
- r = gchd_input_configure_idle(d);
+ r = gchd_analog_mode_reconfigure(d);
  if (r)
   goto restart_failed;
 

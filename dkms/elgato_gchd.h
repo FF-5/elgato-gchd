@@ -100,6 +100,7 @@ struct gchd {
  bool capture_active; /* Hardware capture is active while a source is present. */
  bool start_pending;
  bool stop_pending;
+ bool mode_retriggered;
  bool detect_requested;
  bool disconnected;
  bool hw_initialized;
@@ -154,6 +155,8 @@ int gchd_input_configure_idle(struct gchd *);
 int gchd_prepare_input_detection(struct gchd *);
 int gchd_probe_video_source(struct gchd *);
 int gchd_input_read_analog_mode(struct gchd *, bool *);
+int gchd_analog_mode_pre_stop(struct gchd *, bool);
+int gchd_analog_mode_reconfigure(struct gchd *);
 int gchd_common_block_a(struct gchd *);
 int gchd_common_block_b1(struct gchd *, bool);
 int gchd_common_block_b2(struct gchd *);

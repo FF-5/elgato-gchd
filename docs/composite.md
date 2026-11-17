@@ -18,15 +18,15 @@ A 240p or 288p source is encoded as an interlaced stream (720 × 480 at 60
 fields per second, or 720 × 576 at 50 fields per second): each field carries
 one complete picture. The analog decoder
 reports the format in register `0x88:CA` and is reconfigured when the source
-switches between 480i and 240p (§4, §5).
+switches between 480i and 240p (§4).
 
 ## 2. Status registers
 
 | Read | Meaning |
 |---|---|
-| `0x88:CA` | Lock and format: `FE` unlocked, `7E` 480i, 576i or 288p locked, `66` 240p locked, `EE`/`E6` transitional. |
+| `0x88:CA` | Lock and format: `FE` unlocked, `7E` 480i, 576i or 288p locked, `66` 240p locked, `76` first value after a change to 480i, `6E` first value after a change to 240p, `EE`/`E6` transitional. |
 | `0x88:FA` | Low nibble `6` = NTSC (60 Hz) family, `7` = PAL (50 Hz) family once a signal is present. Reads `1F`/`3E` immediately after the input is selected. Polled while no signal is present. |
-| `0x88:E7` | `69` when stable; `09` right after a 240p change. |
+| `0x88:E7` | `69` when stable; `09` right after a 240p change; `E9` during a mode change. |
 | `0x88:F1` | `7E` when stable (NTSC). |
 | `0x88:CB` | `6E` when stable; `44` right after a 240p change. |
 | `0x88:FD`, `0x88:F8` | `6E`, `C9`. Unknown. |
@@ -50,38 +50,37 @@ switches between 480i and 240p (§4, §5).
    `0E = 04`; then the same with `0E = 15`, `0E = 14`.
 7. Capture start ([hardware.md §6](hardware.md#6-capture-start-observed)).
 
-## 4. 480i → 240p while capturing (Observed)
+## 4. 480i ↔ 240p while capturing (Observed)
 
-No SCMD and no encoder writes are issued; the stream continues.
+Both directions use the same sequence; the encoder is stopped and restarted.
+The lock status is polled together with `0x88:FA`, `E7` and `F1`.
 
-```
-read 0x88:CA -> 7E (480i) ... read 0x88:CA -> 66 (240p)
-0x88:07 = 8A   0x88:08 = 9B   0x88:09 = 7A   0x88:28 = 8A
-read 0x88:FD   0x88:06 = 08
-read 0x88:E7 (09)   read 0x88:F1 (7E)
-0x88:0A = 8F
-read 0x88:CB (44)   read 0x88:CA (EE)
-read 0x98:FD/FC/F3   0x98:0D = C8   0x98:0E = 15   0x98:0E = 14
-read 0x88:FA (16)  CA (66)  E7 (69)  F1 (69)
-0x88:0A = 98
-steady state: FA 06, CA 66, E7 69, F1 7E
-```
+1. Lock status change. 240p → 480i: `0x88:CA` reads `76`, then the change
+   starts. 480i → 240p: `0x88:CA` first reads `6E`; one retrigger
+   (`0x98:0D = C8`, `0E = 15`, `0E = 14`, preceded by reads of `0x98:FD`,
+   `FC`, `F3`) is issued; the change starts when `0x88:CA` reads `66`.
+2. Decoder: `0x88:07 = 8A`, `08 = 9B`, `09 = 7A`, `28 = 88` (to 480i) or
+   `28 = 8A` (to 240p); read `0x88:FD`; `0x88:06 = 08`.
+3. About 0.4 s later: read `0x88:E7` (`E9`).
+4. Neutral back-end table: `0x98:04 = 95`; read `0x98:8B`; `0x98:70 = C8`,
+   `90 = 88`, `91`–`A3 = 77`; read `0x98:6B`; `0x98:C0 = 80`, `A2 = 77`;
+   read `0x98:58`; `0x98:C0 = 77`; read `0x98:89`; `0x98:72 = 88`,
+   `C0 = 88`, `61 = 98`, `63 = 89`, `64 = 96`, `65 = 88`; read `0x98:FF`;
+   `0x98:04 = 8D`, `62 = 91`; retrigger `0E = 05`, `04`.
+5. SCMD STATE_CHANGE NULL (`05 00 00 04`). The state stays `0x02` and
+   `0900:0074` reads `011A` for about 0.7 s, then the state reads `0x04` and
+   `0900:0074` reads `011E`.
+6. SCMD STATE_CHANGE STOP (`05 00 00 01`), completed after about 0.3 s.
+7. Back-end table and following block as in §3 step 5, then two retriggers:
+   `05` and `15` (to 480i) or `15` and `15` (to 240p).
+8. Encoder setup (identical in both directions: `v_format = 4`,
+   `v_ip_format = 0`, `v_in_source_type = 3`, 720 × 480), SCMD INIT mode
+   `A0`, SCMD STATE_CHANGE START (`05 00 00 02`).
 
-## 5. 240p → 480i (Observed)
+No `0x88:0A` write occurs in this sequence. Input routing and the decoder
+tuning passes are not repeated.
 
-The encoder is stopped and restarted:
-
-1. `0x98:65 = 88`; read `0x98:FF`; `0x98:04 = 8D`, `62 = 91`; retrigger
-   `0E = 05`, `04`.
-2. SCMD STATE_CHANGE NULL (`05 00 00 04`), then STOP (`05 00 00 01`).
-3. Read `0x88:CA` (`7E`).
-4. Back-end table and following block as in §3 step 5; both retriggers.
-5. SCMD INIT mode `A0`; SCMD STATE_CHANGE START (`05 00 00 02`).
-
-The two directions are not symmetric: 480i → 240p changes decoder registers
-only, while 240p → 480i restarts the encoder.
-
-## 6. Switching from HDMI to composite with a 240p source (Observed)
+## 5. Switching from HDMI to composite with a 240p source (Observed)
 
 1. Read `0x88:FD`; `0x88:06 = 08`; read `0x88:F8`; `0x88:03 = 28`;
    `0x9C:B3 = 33`; bank `CE`, `0x9C:27 = 33`; bank `CC`; `0x9C:51 = 44`;
@@ -98,7 +97,7 @@ only, while 240p → 480i restarts the encoder.
 8. Encoder setup including `v_format = 4`, `v_ip_format = 0`,
    `v_in_source_type = 3`, 720 × 480; capture start.
 
-## 7. Input selector values
+## 6. Input selector values
 
 `0x9C:51` (Observed, no source present):
 
@@ -112,13 +111,13 @@ only, while 240p → 480i restarts the encoder.
 Composite and S-video are distinguished by `0x88:02` (`C9` / `DC`) and
 `0x88:14 = D2`, not by the selector.
 
-## 8. No-signal polling
+## 7. No-signal polling
 
 Read `0x88:FA`, read `0x98:F5`, about every 50 ms. When a source is
 connected, `0x88:CA` changes from `FE`, polling ends, and the sequence
 continues with §3 step 3.
 
-## 9. PAL (Observed)
+## 8. PAL (Observed)
 
 For a 50 Hz source (`0x88:FA` low nibble `7`) the back-end step of §3 step 5
 uses a different per-mode table; all other writes are identical:
@@ -128,7 +127,7 @@ uses a different per-mode table; all other writes are identical:
 
 Status values with a 288p source: `0x88:CA = 7E`, `E7 = 79`, `F1 = 63`.
 
-## 10. Decoder apply block
+## 9. Decoder apply block
 
 The writes `0x88:07 = 8A`, `08 = 9B`, `09 = 7A`, `28 = …` followed by a read
 of `0x88:FD` and `0x88:06 = 08` occur when lock is acquired after the input
