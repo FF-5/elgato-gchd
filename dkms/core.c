@@ -1853,7 +1853,14 @@ static int gchd_fop_release(struct file *file)
   cancel_delayed_work_sync(&d->mode_work);
   mutex_lock(&d->lifecycle_lock);
 
-  if (d->rx_thread) {
+  /* Stop the stream with the receive queue still running, then join RX. */
+  if (d->hw_initialized) {
+   int stop_r = gchd_capture_stop(d);
+
+   if (stop_r)
+    dev_warn(&d->intf->dev, "capture stop on last close failed: %d\n",
+             stop_r);
+  } else if (d->rx_thread) {
    kthread_stop(d->rx_thread);
    d->rx_thread = NULL;
   }
@@ -2057,10 +2064,7 @@ static void gchd_shutdown(struct device *dev)
  mutex_lock(&d->lifecycle_lock);
  WRITE_ONCE(d->streaming, false);
  WRITE_ONCE(d->capture_active, false);
- if (d->rx_thread) {
-  kthread_stop(d->rx_thread);
-  d->rx_thread = NULL;
- }
+ gchd_capture_stop(d);
 
  /*
   * Use the same ordered teardown as last-close rather than issuing RESET

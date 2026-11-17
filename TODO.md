@@ -15,11 +15,13 @@ on the `traces` branch.
 
 - Works on `dev`: composite 480i and 240p from a fresh start (ffplay, H.264
   stream, clean decode). No audio. guvcview cannot display the stream.
-- Open on `fix/mode-change-restart` (T-041): any START after the first one
-  since plugging in streams only a few transfers and stops; NULL then never
-  completes. Seen after mode changes, after redetection and after closing and
-  reopening the device. Source used: N64 *Star Wars Episode I: Racer*, which
-  switches 480i ↔ 240p by itself (menu ↔ attract demo).
+- Open on `fix/mode-change-restart` (T-041): a second START after a stop
+  fails. Found so far: the close path stopped the stream after joining the
+  receive thread (NULL then never completes and the device stays stuck);
+  detection accepted transitional `0x88:CA` values. Source used: N64
+  *Star Wars Episode I: Racer* (switches 480i ↔ 240p by itself).
+- Test setup: VirtualBox with the USB 3.0 (xHCI) controller is 5–8× faster
+  than EHCI (firmware load 0.8 s instead of 6 s).
 - Bring-up order: composite and S-video (all resolutions), component, HDMI.
 
 ## Next

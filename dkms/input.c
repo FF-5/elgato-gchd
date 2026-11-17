@@ -834,11 +834,12 @@ int gchd_probe_video_source(struct gchd *d)
    d->input_interlaced=true; d->input_fps_num=60;
    /* 0xCA is the decoder's authoritative 240p/480i lock indicator. */
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, mode);
-   if (mode != GCHD_DEC_LOCK_480I && mode != GCHD_DEC_LOCK_240P)
-    dev_dbg(&d->intf->dev,
-            "analog format status not locked yet: 0x%02x; using 480i\n",
-            mode);
-   /* 0x66 = 240p; anything else is configured as 480i. */
+   if (mode != GCHD_DEC_LOCK_480I && mode != GCHD_DEC_LOCK_240P) {
+    /* Transitional value: detect again until the decoder has locked. */
+    dev_info(&d->intf->dev,
+             "analog format status 0x%02x not locked yet\n", mode);
+    return -ENOLINK;
+   }
    d->input_interlaced = mode != GCHD_DEC_LOCK_240P;
    dev_info(&d->intf->dev,
             "analog format initial status=0x%02x; configuring %s\n",
