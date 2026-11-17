@@ -33,6 +33,7 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 | 2026-11-17 | `fix/v4l2-format-negotiation` 2748f45 (merged to `dev`) | composite 480i | **Accepted.** ffplay shows the picture, occasional stutter (buffer timestamps; fix 6aaf465 on `fix/buffer-timestamps`). 10 s recording: H.264 High, level 31, 720×480, `field_order tt`, 9.7 Mbit/s, decodes without errors. 23 bulk transfers/s, no errors. START ~0.12 s. guvcview not retried. |
 | 2026-11-17 | `fix/buffer-timestamps` a242815 | composite 480i / 240p | 480i: plays in ffplay, still occasional stutter; guvcview still crashes. 240p (CA=66 at detection): configured as 480i, START never completed. Source switching 240p→480i before capture: never detected (FA stayed ED/FD). Fixes on `fix/composite-240p-start` e30ebeb. Maintainer note: ffplay working does not show that OBS works. |
 | 2026-11-17 | `fix/composite-240p-start` ba57bb9 (merged to `dev`) | composite 240p / 240p→480i | **240p accepted:** "configuring 240p", START ~0.1 s, picture in ffplay (start takes a while). Stutter remains with `ring_dropped=0` — not caused by driver frame drops; to be re-checked outside the VM. 240p→480i while capturing: stop took ~70 s, then IDLE (0x11) and START timed out. Fix 8a4b2af on `fix/mode-change-restart`. |
+| 2026-11-17 | `fix/mode-change-restart` 8a4b2af | composite 480i → 240p while capturing | 480i plays. Change detected, but the NULL completion timed out after ~63 s ("reconfiguration failed: -110"): the receive queue had been stopped before NULL/STOP and the fast synchronous drain did not consume the stream. Redetection then stopped, configured 240p and START completed, but "signal lost" was reported 0.37 s later (stale video timestamp from before configuration), which stopped capture again; ffplay killed. No audio (expected: only video PID `0x1011` is delivered). Fix on `fix/mode-change-restart`: receive queue kept running through NULL/STOP, video timestamp refreshed when START completes. |
 
 ## Phase 0 — Repository consolidation
 
@@ -111,6 +112,12 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
       delivery. Robust TS resync (several `0x47` at 188-byte spacing).
 - [ ] **T-021 [OFF] (S)** Make bulk IN `0x84` optional (queue it like Windows
       when present; never fail without it).
+- [ ] **T-023 [OFF→HW] (M)** Audio. The device multiplexes MPEG-1 Layer II
+      audio (PID `0x010F`) into the TS; the driver currently delivers only the
+      video PES, so applications receive no sound (maintainer report,
+      2026-11-17). Audio arrives with TS passthrough (T-020: ffplay/OBS demux
+      it); an additional ALSA capture device would need decoded PCM and is not
+      possible in the kernel (E2), so it belongs to the userspace bridge (T-060).
 - [ ] **T-022 [OFF] (S)** Report `V4L2_FIELD_INTERLACED` for 480i/576i and
       240p in `G_FMT`.
 

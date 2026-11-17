@@ -406,8 +406,8 @@ reset_pes:
 
 static void gchd_signal_check(struct gchd *d)
 {
- /* START can take longer than the normal signal-loss debounce. */
- if (READ_ONCE(d->start_pending))
+ /* START and STOP can take longer than the signal-loss debounce. */
+ if (READ_ONCE(d->start_pending) || READ_ONCE(d->stop_pending))
   return;
 
  if (!READ_ONCE(d->signal_present) &&
@@ -772,6 +772,24 @@ out_free:
  return r;
 }
 
+/*
+ * Leave START with the bulk-IN receive queue still running, so the device can
+ * flush its output during NULL and STOP, then join the RX thread.
+ */
+static int gchd_capture_stop(struct gchd *d)
+{
+ int r;
+
+ WRITE_ONCE(d->stop_pending, true);
+ r = gchd_stream_stop(d);
+ if (d->rx_thread) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+ }
+ WRITE_ONCE(d->stop_pending, false);
+ return r;
+}
+
 static void gchd_detection_worker(struct work_struct *work)
 {
  struct gchd *d = container_of(to_delayed_work(work), struct gchd,
@@ -789,11 +807,7 @@ static void gchd_detection_worker(struct work_struct *work)
 
  /* Only the RX thread may own bulk-IN while START is active. */
  if (d->rx_thread || READ_ONCE(d->capture_active)) {
-  if (d->rx_thread) {
-   kthread_stop(d->rx_thread);
-   d->rx_thread = NULL;
-  }
-  r = gchd_stream_stop(d);
+  r = gchd_capture_stop(d);
   if (r) {
    /*
     * Keep capture_active set so the next pass retries the stop even though
@@ -943,6 +957,7 @@ static void gchd_detection_worker(struct work_struct *work)
    }
 
    r = gchd_input_start(d);
+   d->last_video_jiffies = jiffies;
    WRITE_ONCE(d->start_pending, false);
    if (r) {
     int start_error = r;
@@ -1030,13 +1045,9 @@ static void gchd_mode_workfn(struct work_struct *work)
 
  /*
   * Reconfigure the analog pipeline through the common setup path for either
-  * direction. The former 480i-to-240p register-only helper no longer exists.
+  * direction.
   */
- if (d->rx_thread) {
-  kthread_stop(d->rx_thread);
-  d->rx_thread = NULL;
- }
- r = gchd_stream_stop(d);
+ r = gchd_capture_stop(d);
  if (r)
   goto restart_failed;
 
@@ -1078,6 +1089,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   goto restart_failed;
  }
  r = gchd_input_start(d);
+ d->last_video_jiffies = jiffies;
  WRITE_ONCE(d->start_pending, false);
  if (r) {
   kthread_stop(d->rx_thread);
@@ -1098,7 +1110,7 @@ restart_failed:
  WRITE_ONCE(d->capture_active, false);
  gchd_set_lifecycle(d, GCHD_ERROR);
  dev_warn(&d->intf->dev,
-          "240p-to-480i reconfiguration failed: %d\n", r);
+          "analog mode change failed: %d\n", r);
  WRITE_ONCE(d->signal_present, false);
  WRITE_ONCE(d->detect_requested, true);
  gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
@@ -1305,12 +1317,12 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   * after a signal-loss or STREAMOFF race. The stop helper is a no-op in STOP
   * or IDLE and performs the NULL/STOP drain sequence otherwise.
   */
- if (d->rx_thread) {
+ if (!READ_ONCE(d->hw_initialized) && d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
  }
  if (READ_ONCE(d->hw_initialized)) {
-  r = gchd_stream_stop(d);
+  r = gchd_capture_stop(d);
   if (r) {
    dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\n", r);
    WRITE_ONCE(d->streaming, false);

@@ -99,6 +99,7 @@ struct gchd {
  bool streaming; /* V4L2 queue delivery only. */
  bool capture_active; /* Hardware capture is active while a source is present. */
  bool start_pending;
+ bool stop_pending;
  bool detect_requested;
  bool disconnected;
  bool hw_initialized;

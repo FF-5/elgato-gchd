@@ -652,6 +652,12 @@ static int gchd_drain_stream(struct gchd *d, unsigned int count)
  unsigned int i;
  int actual, r;
 
+ /* The RX thread's receive queue is consuming the stream: only pace. */
+ if (READ_ONCE(d->rx_thread)) {
+  msleep(10);
+  return 0;
+ }
+
  for (i = 0; i < count; ++i) {
   actual = 0;
   r = usb_bulk_msg(d->udev, usb_rcvbulkpipe(d->udev, GCHD_EP_TS_IN),
