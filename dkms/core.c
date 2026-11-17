@@ -191,6 +191,32 @@ void gchd_ring_free(struct gchd_ring *r)
  r->count=0; r->bytes=0; spin_unlock_irqrestore(&r->lock,flags);
 }
 
+/* True if the H.264 byte stream contains a sequence parameter set. */
+static bool gchd_has_sps(const u8 *p, size_t n)
+{
+ size_t i;
+
+ for (i = 0; i + 3 < n; ++i)
+  if (p[i] == 0 && p[i + 1] == 0 && p[i + 2] == 1 && (p[i + 3] & 0x1f) == 7)
+   return true;
+ return false;
+}
+
+/*
+ * Queue one video PES payload. After a stream (re)start, payloads are held
+ * back until the first one carrying an SPS, so that consumers start at a
+ * decodable picture.
+ */
+static int gchd_queue_pes(struct gchd *d, const u8 *pes, size_t n)
+{
+ if (READ_ONCE(d->wait_sps)) {
+  if (!gchd_has_sps(pes, n))
+   return 0;
+  WRITE_ONCE(d->wait_sps, false);
+ }
+ return gchd_ring_push(&d->ring, pes, n);
+}
+
 /*
  * Parse the video PID from the device's MPEG-TS stream.
  *
@@ -284,7 +310,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
 
  if (start) {
   if (*pes_active && *n) {
-   int r = gchd_ring_push(&d->ring, pes, *n);
+   int r = gchd_queue_pes(d, pes, *n);
 
    if (r)
     dev_warn_ratelimited(&d->intf->dev,
@@ -366,33 +392,63 @@ static void gchd_signal_check(struct gchd *d)
  }
 }
 
+/* Number of encoded frames waiting in the ring. */
+static unsigned int gchd_ring_count(struct gchd_ring *r)
+{
+ unsigned long flags;
+ unsigned int n;
+
+ spin_lock_irqsave(&r->lock, flags);
+ n = r->count;
+ spin_unlock_irqrestore(&r->lock, flags);
+ return n;
+}
+
+/*
+ * Move encoded frames from the ring into queued V4L2 buffers, in order.
+ * A frame is taken from the ring only when a buffer is available, so frames
+ * wait in the ring instead of being dropped. Serialized by deliver_lock
+ * because both the receive thread and buf_queue call it.
+ */
 static void gchd_deliver(struct gchd *d)
 {
  struct gchd_frame *f; struct gchd_buffer *b; unsigned long flags; void *dst;
- if(!d->streaming)return;
- f=gchd_ring_pop(&d->ring); if(!f)return;
- spin_lock_irqsave(&d->qlock,flags);
- if(list_empty(&d->queued)){
+
+ mutex_lock(&d->deliver_lock);
+ while (READ_ONCE(d->streaming) && gchd_ring_count(&d->ring)) {
+  spin_lock_irqsave(&d->qlock,flags);
+  if (list_empty(&d->queued)) {
+   spin_unlock_irqrestore(&d->qlock,flags);
+   break;
+  }
+  b=list_first_entry(&d->queued,struct gchd_buffer,list);list_del(&b->list);
   spin_unlock_irqrestore(&d->qlock,flags);
-  dev_dbg(&d->intf->dev, "discarding payload: bytes=%zu, no V4L2 buffer queued\n", f->len);
-  kvfree(f->data);kfree(f);return;
+
+  f=gchd_ring_pop(&d->ring);
+  if (!f) {
+   spin_lock_irqsave(&d->qlock,flags);
+   list_add(&b->list,&d->queued);
+   spin_unlock_irqrestore(&d->qlock,flags);
+   break;
+  }
+  dst=vb2_plane_vaddr(&b->vb.vb2_buf,0);
+  if(!dst || f->len>d->sizeimage) {
+   dev_warn_ratelimited(&d->intf->dev,
+                        "V4L2 buffer error: dst=%p payload=%zu sizeimage=%u\n",
+                        dst, f->len, d->sizeimage);
+   vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);
+  } else {
+   memcpy(dst,f->data,f->len);vb2_set_plane_payload(&b->vb.vb2_buf,0,f->len);
+   b->vb.sequence=f->sequence;b->vb.vb2_buf.timestamp=ktime_get_ns();
+   b->vb.field=(d->input >= 2 || d->input_interlaced) ?
+               V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+   dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%llu bytes=%zu sizeimage=%u\n",
+           (unsigned long long)f->sequence, f->len, d->sizeimage);
+   vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_DONE);
+  }
+  kvfree(f->data);kfree(f);
  }
- b=list_first_entry(&d->queued,struct gchd_buffer,list);list_del(&b->list);
- spin_unlock_irqrestore(&d->qlock,flags);
- dst=vb2_plane_vaddr(&b->vb.vb2_buf,0);
- if(!dst || f->len>d->sizeimage) {
-  dev_warn_ratelimited(&d->intf->dev,
-                       "V4L2 buffer error: dst=%p payload=%zu sizeimage=%u\n",
-                       dst, f->len, d->sizeimage);
-  vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);
- } else {
-  memcpy(dst,f->data,f->len);vb2_set_plane_payload(&b->vb.vb2_buf,0,f->len);
-  b->vb.sequence=f->sequence;b->vb.vb2_buf.timestamp=ktime_get_ns();
-  dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%llu bytes=%zu sizeimage=%u\n",
-          (unsigned long long)f->sequence, f->len, d->sizeimage);
-  vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_DONE);
- }
- kvfree(f->data);kfree(f);
+ mutex_unlock(&d->deliver_lock);
 }
 
 #define GCHD_RX_URB_COUNT (GCHD_RX_URBS_EP_IN + GCHD_RX_URBS_AUX_IN)
@@ -657,7 +713,7 @@ out_kill:
   spin_unlock_irqrestore(&d->rx_lock, flags);
  }
  if (pes_active && n)
-  gchd_ring_push(&d->ring, pes, n);
+  gchd_queue_pes(d, pes, n);
 out_free:
  if (READ_ONCE(d->rx_setup_status) == -EINPROGRESS) {
   WRITE_ONCE(d->rx_setup_status, r ? r : -EIO);
@@ -713,7 +769,7 @@ static void gchd_detection_worker(struct work_struct *work)
    * Keep the encoder firmware running: restarting it after an input change
    * fails with -EINVAL.
    */
-  gchd_ring_free(&d->ring);
+  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
   d->ts_partial_len = 0;
   r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) {
@@ -945,7 +1001,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  if (r)
   goto restart_failed;
 
- gchd_ring_free(&d->ring);
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
  d->ts_partial_len = 0;
  d->input_configured = false;
  d->input_interlaced = target_interlaced;
@@ -1065,6 +1121,8 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   r = -ENODEV;
   goto err;
  }
+ /* Deliver only from the first SPS of this stream onwards. */
+ WRITE_ONCE(d->wait_sps, true);
 
  /*
   * A file open is not proof that an application intends to capture:
@@ -1252,7 +1310,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->input_detect_prepared = false;
  d->input_prepared = false;
  WRITE_ONCE(d->signal_present, false);
- gchd_ring_free(&d->ring);
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
  d->ts_partial_len = 0;
  d->previous_input = d->input;
  d->input = i;
@@ -1741,7 +1799,7 @@ static int gchd_fop_release(struct file *file)
   d->input_prepared = false;
   d->encoder_started = false;
   d->signal_present = false;
-  gchd_ring_free(&d->ring);
+  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
   d->ts_partial_len = 0;
   mutex_unlock(&d->lifecycle_lock);
  }
@@ -1827,6 +1885,8 @@ static int gchd_probe(struct usb_interface *i,
  INIT_LIST_HEAD(&d->rx_done);
  init_waitqueue_head(&d->rx_wait);
  init_completion(&d->rx_ready);
+ mutex_init(&d->deliver_lock);
+ d->wait_sps = true;
  d->rx_setup_status = -EINPROGRESS;
  spin_lock_init(&d->ring.lock);
  d->width = 1280;
@@ -1892,7 +1952,7 @@ static void gchd_disconnect(struct usb_interface *i)
 
  /* The interface may already be gone: never issue USB commands here. */
  gchd_v4l2_unregister(d);
- gchd_ring_free(&d->ring);
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
  kref_put(&d->refcount, gchd_release_ref);
 }
 

@@ -86,6 +86,8 @@ struct gchd {
  int rx_setup_status;
  bool rx_active;
  struct gchd_ring ring;
+ struct mutex deliver_lock; /* serializes gchd_deliver() */
+ bool wait_sps; /* drop video until the first SPS after a (re)start */
  u8 *usb_buf;
  u8 ts_partial[GCHD_TS_PACKET];
  u16 ts_partial_len;
