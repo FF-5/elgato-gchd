@@ -198,6 +198,26 @@ static int gchd_transcoder_defaults(struct gchd *d)
 /* Exact configure.cpp transcoderSetup() parameter stage.  The V4L2 driver
  * currently exposes one encoder profile/rate tuple, so the corresponding
  * source values are derived from the active capture mode. */
+/*
+ * Analog inputs (composite, S-video) are always encoded as interlaced
+ * 720x480/576 with v_in_source_type 3, also for 240p/288p sources: the
+ * progressive source arrives as one picture per field. Recorded in
+ * filtered_240p_composite/svideo.pcapng (t=5.437: v_format 4, v_ip_format 0,
+ * v_in_source_type 3) and filtered_288p_pal_composite/svideo.pcapng
+ * (v_format 5, v_ip_format 0, v_in_source_type 3).
+ */
+static bool gchd_enc_interlaced(const struct gchd *d)
+{
+ return d->input >= 2 ? true : d->input_interlaced;
+}
+
+static u8 gchd_enc_source_type(const struct gchd *d)
+{
+ if (d->input >= 2)
+  return 3;
+ return d->input_height == 576 ? 3 : 0;
+}
+
 int gchd_transcoder_setup(struct gchd *d)
 {
  u16 width = d->input_width;
@@ -259,10 +279,10 @@ int gchd_transcoder_setup(struct gchd *d)
  u16 colour = d->input == 0 ? 1 : 6;
  u8 vformat;
 
- if (height == 1080) vformat = d->input_interlaced ? 0 : 32;
+ if (height == 1080) vformat = gchd_enc_interlaced(d) ? 0 : 32;
  else if (height == 720) vformat = 2;
- else if (height == 576) vformat = d->input_interlaced ? 5 : 9;
- else if (height == 480) vformat = d->input_interlaced ? 4 : 8;
+ else if (height == 576) vformat = gchd_enc_interlaced(d) ? 5 : 9;
+ else if (height == 480) vformat = gchd_enc_interlaced(d) ? 4 : 8;
  else return -EINVAL;
  if (fps == 50) vformat |= 1;
 
@@ -286,7 +306,7 @@ int gchd_transcoder_setup(struct gchd *d)
  GCHD_TC_SET(d, GCHD_TC_E_MPEG_PROTECT_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_MODE_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_COPYR_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_ORIG_BL,1); GCHD_TC_SET(d, GCHD_TC_E_MPEG_EMP_BL,0); GCHD_TC_SET(d, GCHD_TC_A_BITRATE_BL,audio);
  GCHD_TC_SET(d, GCHD_TC_COLOUR_DESCRIPTION_PRESENT_FLAG_BL,1); GCHD_TC_SET(d, GCHD_TC_COLOUR_PRIMARIES_BL,colour); GCHD_TC_SET(d, GCHD_TC_TRANSFER_CHARACTERISTICS_BL,1); GCHD_TC_SET(d, GCHD_TC_MATRIX_COEFFICIENTS_BL,colour); GCHD_TC_SET(d, GCHD_TC_VIDEO_FULL_RANGE_FLAG_BL,0); GCHD_TC_SET(d, GCHD_TC_VIDEO_SIGNAL_TYPE_PRESENT_FLAG_BL,1); GCHD_TC_SET(d, GCHD_TC_VIDEO_FORMAT_BL,5);
  GCHD_TC_SET(d, GCHD_TC_V_TS_OUT_MODE,1); GCHD_TC_SET(d, GCHD_TC_A_MODE,3); GCHD_TC_SET(d, GCHD_TC_V_TS_OUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A_TS_OUT_MODE,2); GCHD_TC_SET(d, GCHD_TC_SOUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A_TS_OUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A2_MODE,0);
- GCHD_TC_SET(d, GCHD_TC_V_IN_SOURCE_TYPE,(height==576)?3:0); GCHD_TC_SET(d, GCHD_TC_V_FORMAT,vformat); GCHD_TC_SET(d, GCHD_TC_V_IP_FORMAT,d->input_interlaced ? 0 : 2); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1);
+ GCHD_TC_SET(d, GCHD_TC_V_IN_SOURCE_TYPE, gchd_enc_source_type(d)); GCHD_TC_SET(d, GCHD_TC_V_FORMAT,vformat); GCHD_TC_SET(d, GCHD_TC_V_IP_FORMAT, gchd_enc_interlaced(d) ? 0 : 2); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1);
  GCHD_TC_SET(d, GCHD_TC_A_SAMPLE,0); GCHD_TC_SET(d, GCHD_TC_AIN_MASTER,0); GCHD_TC_SET(d, GCHD_TC_AIN_LSB_FIRST,0); GCHD_TC_SET(d, GCHD_TC_AIN_BIT_POSB,0); GCHD_TC_SET(d, GCHD_TC_AMCK_MODE,1); GCHD_TC_SET(d, GCHD_TC_AIN_DLENGTH,2); GCHD_TC_SET(d, GCHD_TC_AIN_LR_HLSET,1); GCHD_TC_SET(d, GCHD_TC_AIN_I2S,1); GCHD_TC_SET(d, GCHD_TC_AIN_LRCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_SCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_BCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_BCLK_HL,0); GCHD_TC_SET(d, GCHD_TC_AIN_OFFSET_MODE,0); GCHD_TC_SET(d, GCHD_TC_AIN_OFFSET,0);
  GCHD_TC_SET(d, GCHD_TC_V_DISABLE_ASPECT_RATIO_INFO_PRESENT_FLAG,0); GCHD_TC_SET(d, GCHD_TC_V_DISABLE_ASPECT_RATIO_INFO_PRESENT_FLAG_BL,0); GCHD_TC_SET(d, GCHD_TC_V_PIC_ORDER_PRESENT_FLAG,1); GCHD_TC_SET(d, GCHD_TC_V_PIC_ORDER_PRESENT_FLAG_BL,1);
  return 0;
@@ -318,14 +338,10 @@ int gchd_transcoder_final_configure(struct gchd *d)
  u8 source_type = 0;
 
  /*
-  * Match the reference transcoderFinalConfigure() mapping:
-  * PAL 4:3 = 3, NTSC 4:3 = 0, and HD/other sources = 0.
-  * The kernel driver does not currently expose SD stretch modes.
+  * v_in_source_type: 3 for analog inputs (recorded) and 576-line digital
+  * sources, 0 otherwise. SD stretch modes are not exposed.
   */
- if (d->input_height == 576)
-  source_type = 3;
- else if (d->input_height == 480)
-  source_type = 0;
+ source_type = gchd_enc_source_type(d);
 
  /*
   * v_format:
@@ -340,15 +356,15 @@ int gchd_transcoder_final_configure(struct gchd *d)
   * As in the reference, bit 0 selects the 50 Hz variant.
   */
  if (d->input_height == 1080) {
-  video_format = d->input_interlaced ? 0 : 32;
+  video_format = gchd_enc_interlaced(d) ? 0 : 32;
  } else if (d->input_height == 720) {
-  if (d->input_interlaced)
+  if (gchd_enc_interlaced(d))
    return -EINVAL;
   video_format = 2;
  } else if (d->input_height == 576) {
-  video_format = d->input_interlaced ? 5 : 9;
+  video_format = gchd_enc_interlaced(d) ? 5 : 9;
  } else if (d->input_height == 480) {
-  video_format = d->input_interlaced ? 4 : 8;
+  video_format = gchd_enc_interlaced(d) ? 4 : 8;
  } else {
   return -EINVAL;
  }
@@ -369,7 +385,7 @@ int gchd_transcoder_final_configure(struct gchd *d)
  GCHD_TC_SET(d, GCHD_TC_V_IN_SOURCE_TYPE, source_type);
  GCHD_TC_SET(d, GCHD_TC_V_FORMAT, video_format);
  GCHD_TC_SET(d, GCHD_TC_V_IP_FORMAT,
-                 d->input_interlaced ? 0 : 2);
+                 gchd_enc_interlaced(d) ? 0 : 2);
  GCHD_TC_SET(d, GCHD_TC_V_VINPELCLK, 0);
  GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1);
  GCHD_TC_SET(d, GCHD_TC_A_SAMPLE, 0);
