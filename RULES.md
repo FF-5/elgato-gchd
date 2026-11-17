@@ -13,9 +13,11 @@ and re-check them before every commit.
    bottom.** Those comments override anything else in `TASK.md`.
 2. **The "Maintainer comments" section of `TASK.md` belongs to the
    maintainer.** Never write in it. Lasting information from it goes to
-   `RULES.md` (how to work) or `TODO.md` (plans, facts, test results). When
-   `TASK.md` is prepared for the next task, the section is emptied after its
-   content has been transferred.
+   `RULES.md` (how to work), `TODO.md` (roadmap: open items and known
+   differences only) or the `traces` branch (test results:
+   `logs/hardware-test-log.md`, one row per test). When `TASK.md` is prepared
+   for the next task, the section is emptied after its content has been
+   transferred.
 3. Check that the task is the top open item in `TODO.md`, or that the
    maintainer explicitly asked for a different one.
 4. `git fetch` and start from the current `origin/dev`:
@@ -64,6 +66,9 @@ and re-check them before every commit.
 6. One feature branch per task. Merge into `dev` only when the task's
    acceptance criteria are met (rule F). Before merging, re-read the diff of
    the whole branch against `dev`.
+7. A feature branch is deleted (locally and on GitHub) once it is merged into
+   `dev` or abandoned. If the session cannot delete remote branches, list
+   them in `TODO.md` Phase 0 for the maintainer.
 
 ## C. Documentation (`docs/`, `dkms/README.md`)
 
@@ -158,8 +163,10 @@ A task may be merged to `dev` only when all of these hold:
    reports the expected size and field order. The sample and output go to the
    `traces` branch.
 4. `docs/` is updated to match what was learned, following section C.
-5. `TODO.md` is updated, and `TASK.md` is rewritten for the next task,
-   keeping the maintainer-comments section.
+5. `TODO.md` is updated (open items only; finished items are removed), the
+   test result is in `logs/hardware-test-log.md` on the `traces` branch, and
+   `TASK.md` is rewritten for the next task, keeping the maintainer-comments
+   section.
 
 ## G. While working
 

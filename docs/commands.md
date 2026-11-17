@@ -85,7 +85,7 @@ Repeated reads used by the driver:
 |---|---|
 | `70`, `0F`, `90`–`A3` | Per-mode table (`gchd_setup_subblock`). |
 | `72`, `C0`, `61`, `63`, `64`, `65`, `04`, `62` | Block written after the per-mode table (`gchd_common_block_b1`). |
-| `0D`, `0E` | Retrigger: `0D = C8`, then `0E` written twice with bit 0 set and then cleared; bit 4 follows bit 4 of `0x98:F5`. Observed values: `15`/`14`, `05`/`04`. |
+| `0D`, `0E` | Retrigger: read `0x98:F5`; read `FD`, `FC`, `F3`; read `F5`; `0D = C8`; read `F5`; then `0E` written twice with bit 0 set and then cleared. Bit 4 of the `0E` value equals bit 4 of the `0x98:F5` read just before it (all 44 recorded pulses). Observed values: `15`/`14`, `05`/`04`. |
 | `10`–`15`, `65` | Calibration rounds (`gchd_common_block_a`), each followed by `gchd_be_poll_ed()` and 32 reads of `0x98:EC`. |
 | `04` | Written (`95`, `8D`, `8C`, `88`) between blocks, after reading `0x98:FF`. |
 
@@ -98,7 +98,7 @@ Repeated reads used by the driver:
 | `0x88:E7` | `69`, `09`, `E9`, `89` | `09` right after a 240p change. |
 | `0x88:F1` | `7E`, `69` | |
 | `0x88:CB` | `6E`, `44` | `44` right after a 240p change. |
-| `0x98:F5` | `62`, `72`, `F2`, `E2`, `82` | Bit 4 is copied into `0x98:0E`. |
+| `0x98:F5` | `62`, `72`, `F2`, `E2`, `82` | Bit 4 is copied into `0x98:0E`. Before capture start: after a retrigger, polled about every 4 ms; `62` until bit 7 is set (`F2`), then a second retrigger, after which it reads `72`. |
 | `0x98:FD`, `FC`, `F3` | `6E`, `6E`, `7E` | Read before every retrigger. |
 | `0x98:FF` | `73`, `6B`, `6A` | Read before every `0x98:04` write. |
 | `0x98:8B` | `2E`, `6E` | Session-dependent. |

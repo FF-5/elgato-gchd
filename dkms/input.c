@@ -834,11 +834,12 @@ int gchd_probe_video_source(struct gchd *d)
    d->input_interlaced=true; d->input_fps_num=60;
    /* 0xCA is the decoder's authoritative 240p/480i lock indicator. */
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, mode);
-   if (mode != GCHD_DEC_LOCK_480I && mode != GCHD_DEC_LOCK_240P)
-    dev_dbg(&d->intf->dev,
-            "analog format status not locked yet: 0x%02x; using 480i\n",
-            mode);
-   /* 0x66 = 240p; anything else is configured as 480i. */
+   if (mode != GCHD_DEC_LOCK_480I && mode != GCHD_DEC_LOCK_240P) {
+    /* Transitional value: detect again until the decoder has locked. */
+    dev_info(&d->intf->dev,
+             "analog format status 0x%02x not locked yet\n", mode);
+    return -ENOLINK;
+   }
    d->input_interlaced = mode != GCHD_DEC_LOCK_240P;
    dev_info(&d->intf->dev,
             "analog format initial status=0x%02x; configuring %s\n",
@@ -1038,20 +1039,81 @@ int gchd_color_space_exact(struct gchd *d)
  * Back-end retrigger: read 0x98:FD/FC/F3, then 0x98:0D = C8 and two writes
  * to 0x98:0E (value, then value with bit 0 cleared).
  */
-static int gchd_be_retrigger(struct gchd *d, u8 value)
+static int gchd_be_retrigger(struct gchd *d)
 {
  u8 v;
+ u8 pulse;
 
+ GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
  GCHD_BE_R(d, 0xfd, v);
  GCHD_BE_R(d, 0xfc, v);
  GCHD_BE_R(d, 0xf3, v);
+ GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
  GCHD_BE_W(d, GCHD_BE_REG_RETRIGGER, GCHD_BE_RETRIGGER_VALUE);
- GCHD_BE_W(d, GCHD_BE_REG_PULSE, value);
- GCHD_BE_W(d, GCHD_BE_REG_PULSE, value & ~0x01);
+ GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
+ /* Bit 4 of the pulse follows bit 4 of the status read just before it. */
+ pulse = GCHD_BE_PULSE_BASE | (v & GCHD_BE_STATUS_PULSE_BIT);
+ GCHD_BE_W(d, GCHD_BE_REG_PULSE, pulse);
+ GCHD_BE_W(d, GCHD_BE_REG_PULSE, pulse & ~0x01);
+ return 0;
+}
+/*
+ * Poll the back-end status about every 4 ms until it reads
+ * GCHD_BE_STATUS_SETTLED or has GCHD_BE_STATUS_FLAG set; *status gets the
+ * last value. A timeout is reported but not treated as an error.
+ */
+static int gchd_be_wait_status(struct gchd *d, unsigned int timeout_ms, u8 *status)
+{
+ unsigned long deadline = jiffies + msecs_to_jiffies(timeout_ms);
+ unsigned int polls = 0;
+ u8 v;
+
+ for (;;) {
+  GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
+  polls++;
+  if (v == GCHD_BE_STATUS_SETTLED || (v & GCHD_BE_STATUS_FLAG))
+   break;
+  if (time_after(jiffies, deadline)) {
+   dev_warn(&d->intf->dev,
+            "back-end status 0x%02x after %u polls\n", v, polls);
+   break;
+  }
+  usleep_range(3000, 4000);
+ }
+ dev_dbg(&d->intf->dev, "back-end status 0x%02x after %u polls\n", v, polls);
+ *status = v;
  return 0;
 }
 
-static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
+/*
+ * Retrigger the back end; when the status then shows the flag instead of
+ * the settled value, retrigger once more and wait again.
+ */
+static int gchd_be_retrigger_settle(struct gchd *d)
+{
+ u8 v;
+ int r;
+
+ r = gchd_be_retrigger(d);
+ if (r)
+  return r;
+ r = gchd_be_wait_status(d, 1500, &v);
+ if (r || v == GCHD_BE_STATUS_SETTLED)
+  return r;
+ r = gchd_be_retrigger(d);
+ if (r)
+  return r;
+ r = gchd_be_wait_status(d, 1000, &v);
+ if (!r && v != GCHD_BE_STATUS_SETTLED)
+  dev_warn(&d->intf->dev, "back-end not settled: status 0x%02x\n", v);
+ return r;
+}
+
+/*
+ * Back-end per-mode table and the following block, then retrigger and
+ * settle.
+ */
+static int gchd_analog_backend_table(struct gchd *d, bool pal)
 {
  /* 0x98 per-mode table: NTSC writes all of 90-A3, PAL a sparse set. */
  static const struct gchd_mail_cmd table_ntsc[] = {
@@ -1073,14 +1135,6 @@ static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
  u8 v;
  int r;
 
- if (status_reads) {
-  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
-  GCHD_DEC_R(d, 0xe7, v);
-  GCHD_DEC_R(d, 0xf1, v);
-  GCHD_DEC_R(d, 0xcb, v);
-  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
- }
-
  GCHD_BE_W(d, 0x04, 0x95);
  GCHD_BE_R(d, 0x8b, v);
  r = pal ? gchd_mail_seq(d, table_pal, ARRAY_SIZE(table_pal)) :
@@ -1098,10 +1152,23 @@ static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
  GCHD_BE_W(d, 0x04, 0x8d);
  GCHD_BE_W(d, 0x62, 0x91);
 
- r = gchd_be_retrigger(d, 0x05);
- if (r)
-  return r;
- r = gchd_be_retrigger(d, 0x15);
+ return gchd_be_retrigger_settle(d);
+}
+
+static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
+{
+ u8 v;
+ int r;
+
+ if (status_reads) {
+  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
+  GCHD_DEC_R(d, 0xe7, v);
+  GCHD_DEC_R(d, 0xf1, v);
+  GCHD_DEC_R(d, 0xcb, v);
+  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
+ }
+
+ r = gchd_analog_backend_table(d, pal);
  if (r)
   return r;
 
@@ -1181,7 +1248,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
   int i;
 
   GCHD_DEC_R(d, 0xe7, v);
-  r = gchd_be_retrigger(d, 0x15);
+  r = gchd_be_retrigger(d);
   if (r)
    return r;
   for (i = 0; i < 40; ++i) {
@@ -1212,14 +1279,78 @@ int gchd_input_read_analog_mode(struct gchd *d, bool *interlaced)
   return -EOPNOTSUPP;
  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, status);
 
- /* FE is unlocked and EE is transitional: neither is a mode change. */
- if (status == GCHD_DEC_LOCK_240P)
+ switch (status) {
+ case GCHD_DEC_LOCK_240P:
   *interlaced = false;
- else if (status == GCHD_DEC_LOCK_480I)
+  break;
+ case GCHD_DEC_LOCK_480I:
+ case GCHD_DEC_LOCK_TO_480I:
   *interlaced = true;
- else
+  break;
+ case GCHD_DEC_LOCK_TO_240P:
+  /* Leaving 480i: pulse the back end once and wait for 240p lock. */
+  if (d->input_interlaced && !d->mode_retriggered) {
+   int r = gchd_be_retrigger(d);
+
+   if (r)
+    return r;
+   d->mode_retriggered = true;
+  }
   return -EAGAIN;
+ default:
+  /* FE is unlocked; EE/E6 are transitional. */
+  return -EAGAIN;
+ }
+ d->mode_retriggered = false;
  return 0;
+}
+
+/*
+ * Mode change while capturing, first part (encoder still in START): apply
+ * the decoder setting for the new mode and load the neutral back-end table.
+ */
+int gchd_analog_mode_pre_stop(struct gchd *d, bool interlaced)
+{
+ static const struct gchd_mail_cmd table_neutral[] = {
+  GCHD_SEQ_BE(0x70, 0xc8),
+  GCHD_SEQ_BE(0x90, 0x88), GCHD_SEQ_BE(0x91, 0x77), GCHD_SEQ_BE(0x92, 0x77),
+  GCHD_SEQ_BE(0x93, 0x77), GCHD_SEQ_BE(0x94, 0x77), GCHD_SEQ_BE(0x95, 0x77),
+  GCHD_SEQ_BE(0x96, 0x77), GCHD_SEQ_BE(0x97, 0x77), GCHD_SEQ_BE(0x98, 0x77),
+  GCHD_SEQ_BE(0x99, 0x77), GCHD_SEQ_BE(0x9a, 0x77), GCHD_SEQ_BE(0x9b, 0x77),
+  GCHD_SEQ_BE(0x9c, 0x77), GCHD_SEQ_BE(0x9d, 0x77), GCHD_SEQ_BE(0x9e, 0x77),
+  GCHD_SEQ_BE(0x9f, 0x77), GCHD_SEQ_BE(0xa0, 0x77), GCHD_SEQ_BE(0xa1, 0x77),
+  GCHD_SEQ_BE(0xa2, 0x77), GCHD_SEQ_BE(0xa3, 0x77),
+ };
+ u8 v;
+ int r;
+
+ GCHD_DEC_W(d, 0x07, 0x8a); GCHD_DEC_W(d, 0x08, 0x9b); GCHD_DEC_W(d, 0x09, 0x7a);
+ GCHD_DEC_W(d, 0x28, interlaced ? 0x88 : 0x8a);
+ GCHD_DEC_R(d, 0xfd, v); GCHD_DEC_W(d, 0x06, 0x08);
+ msleep(400);
+ GCHD_DEC_R(d, 0xe7, v);
+
+ GCHD_BE_W(d, 0x04, 0x95);
+ GCHD_BE_R(d, 0x8b, v);
+ r = gchd_mail_seq(d, table_neutral, ARRAY_SIZE(table_neutral));
+ if (r)
+  return r;
+ GCHD_BE_R(d, 0x6b, v);
+ GCHD_BE_W(d, 0xc0, 0x80);
+ GCHD_BE_W(d, 0xa2, 0x77);
+ GCHD_BE_R(d, 0x58, v);
+ GCHD_BE_W(d, 0xc0, 0x77);
+ GCHD_BE_R(d, 0x89, v);
+ GCHD_BE_W(d, 0x72, 0x88);
+ GCHD_BE_W(d, 0xc0, 0x88);
+ GCHD_BE_W(d, 0x61, 0x98);
+ GCHD_BE_W(d, 0x63, 0x89);
+ GCHD_BE_W(d, 0x64, 0x96);
+ GCHD_BE_W(d, 0x65, 0x88);
+ GCHD_BE_R(d, 0xff, v);
+ GCHD_BE_W(d, 0x04, 0x8d);
+ GCHD_BE_W(d, 0x62, 0x91);
+ return gchd_be_retrigger(d);
 }
 
 static int gchd_configure_component_exact(struct gchd *d)
@@ -1408,6 +1539,52 @@ static int gchd_configure_component_exact(struct gchd *d)
 
 }
 
+/*
+ * Encoder programming common to all inputs, ending with SCMD INIT (mode
+ * 0xa0) and a state readback; START follows separately.
+ */
+static int gchd_encoder_program(struct gchd *d)
+{
+ int r;
+
+ /* Encoder programming issued before every capture start. */
+ r = gchd_transcoder_start_block(d);
+ if (r) {
+  dev_err(&d->intf->dev, "capture setup: encoder programming failed: %d\n", r);
+  return r;
+ }
+ dev_info(&d->intf->dev, "capture setup: encoder programming completed\n");
+
+ /*
+  * Every input finishes with: encoder programming,
+  * SCMD INIT (mode 0xa0), state readback, then SCMD STATE_CHANGE (START).
+  * The second INIT is issued here
+  * (after the final transcoder programming); the earlier INIT in
+  * gchd_input_finalize() is a separate stage before connector configuration.
+  * Mode 0xa0 suppresses the INIT interrupt/readback handshake.
+  */
+ r = gchd_scmd(d, GCHD_SCMD_INIT, GCHD_SCMD_INIT_NO_RELOAD, 0);
+ if (r) {
+  dev_err(&d->intf->dev, "capture setup: final SCMD_INIT failed: %d\n", r);
+  return r;
+ }
+
+ /* Read the encoder state after the mode 0xa0 INIT. */
+ {
+  u16 state;
+
+  r = gchd_raw_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
+  if (r) {
+   dev_err(&d->intf->dev,
+           "capture setup: state readback after final SCMD_INIT failed: %d\n", r);
+   return r;
+  }
+  dev_info(&d->intf->dev,
+           "capture setup: state after final SCMD_INIT=0x%04x\n", state);
+ }
+ return 0;
+}
+
 static int gchd_input_configure_mode(struct gchd *d)
 {
  int r;
@@ -1453,66 +1630,48 @@ static int gchd_input_configure_mode(struct gchd *d)
   r = gchd_configure_component_exact(d);
  if (r) {
   if (r == -ENOLINK) {
-   /* Keep the prepared receiver in IDLE; the worker now polls timing only. */
+   /* Keep the prepared receiver stopped; the worker now polls timing only. */
    d->input_prepared = true;
    return r;
   }
   /*
    * Connector setup failed after the encoder firmware was already running.
-   * Return to IDLE, but do not tear down the encoder: input changes reuse the
+   * Return to the stopped state, but do not tear down the encoder: input changes reuse the
    * initialized encoder and retry only the connector-specific configuration.
    */
-  gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+  gchd_return_to_stop(d);
   d->input_prepared = false;
   dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\n", r);
   return r;
  }
  dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
 
- /* Encoder configuration common to HDMI, Component and Composite. */
- r = gchd_transcoder_final_configure(d);
- if (r) {
-  dev_err(&d->intf->dev, "capture setup: transcoder final configuration failed: %d\n", r);
+ r = gchd_encoder_program(d);
+ if (r)
   return r;
- }
- dev_info(&d->intf->dev, "capture setup: transcoder final configuration completed\n");
-
- r = gchd_transcoder_setup(d);
- if (r) {
-  dev_err(&d->intf->dev, "capture setup: transcoder setup failed: %d\n", r);
-  return r;
- }
- dev_info(&d->intf->dev, "capture setup: transcoder setup completed\n");
-
- /*
-  * Every input finishes with: encoder final configuration, encoder setup,
-  * SCMD INIT (mode 0xa0), state readback, then SCMD STATE_CHANGE (START).
-  * The second INIT is issued here
-  * (after the final transcoder programming); the earlier INIT in
-  * gchd_input_finalize() is a separate stage before connector configuration.
-  * Mode 0xa0 suppresses the INIT interrupt/readback handshake.
-  */
- r = gchd_scmd(d, GCHD_SCMD_INIT, GCHD_SCMD_INIT_NO_RELOAD, 0);
- if (r) {
-  dev_err(&d->intf->dev, "capture setup: final SCMD_INIT failed: %d\n", r);
-  return r;
- }
-
- /* Read the encoder state after the mode 0xa0 INIT. */
- {
-  u16 state;
-
-  r = gchd_raw_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
-  if (r) {
-   dev_err(&d->intf->dev,
-           "capture setup: state readback after final SCMD_INIT failed: %d\n", r);
-   return r;
-  }
-  dev_info(&d->intf->dev,
-           "capture setup: state after final SCMD_INIT=0x%04x\n", state);
- }
 
  /* A successfully configured input stays configured while hardware is idle. */
+ d->input_prepared = false;
+ d->input_configured = true;
+ return 0;
+}
+
+/*
+ * Mode change while capturing, second part (encoder in STOP): load the
+ * back-end table for the new mode and program the encoder. START follows.
+ */
+int gchd_analog_mode_reconfigure(struct gchd *d)
+{
+ int r;
+
+ r = gchd_analog_backend_table(d, d->input_height == 576);
+ if (r) {
+  dev_err(&d->intf->dev, "mode change: back-end setup failed: %d\n", r);
+  return r;
+ }
+ r = gchd_encoder_program(d);
+ if (r)
+  return r;
  d->input_prepared = false;
  d->input_configured = true;
  return 0;
@@ -1526,6 +1685,26 @@ int gchd_input_configure(struct gchd *d)
 int gchd_input_configure_idle(struct gchd *d)
 {
  return gchd_input_configure_mode(d);
+}
+
+/*
+ * Analog sources can change between 480i and 240p while the input is being
+ * configured. START does not complete while the back end is set up for the
+ * other mode; returns -EAGAIN so that the caller configures again.
+ */
+int gchd_input_check_mode(struct gchd *d)
+{
+ bool interlaced;
+
+ if (d->input < 2 || d->input_height != 480)
+  return 0;
+ if (gchd_input_read_analog_mode(d, &interlaced) ||
+     interlaced == d->input_interlaced)
+  return 0;
+ dev_info(&d->intf->dev,
+          "source changed to %s during setup; configuring again\n",
+          interlaced ? "480i" : "240p");
+ return -EAGAIN;
 }
 
 int gchd_input_start(struct gchd *d)

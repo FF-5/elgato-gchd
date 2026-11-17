@@ -18,7 +18,7 @@ material.
    2. **`TASK.md`**: the current task, its acceptance criteria and the test
       steps, and at the end the **maintainer comments** (test results, logs,
       instructions). Those comments override the rest of `TASK.md`.
-   3. **`TODO.md`**: the plan, the hardware test log, and the known
+   3. **`TODO.md`**: the roadmap and the known
       differences between the driver and the traces.
 3. Act on the maintainer comments first: analyse logs, fix the driver,
    update the test steps.

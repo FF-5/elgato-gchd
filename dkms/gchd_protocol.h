@@ -174,12 +174,19 @@
 #define GCHD_DEC_REG_LOCK		0xca	/* lock/format status */
 #define GCHD_DEC_LOCK_480I		0x7e
 #define GCHD_DEC_LOCK_240P		0x66
+#define GCHD_DEC_LOCK_TO_480I		0x76	/* first value after a 240p -> 480i change */
+#define GCHD_DEC_LOCK_TO_240P		0x6e	/* first value after a 480i -> 240p change */
 #define GCHD_DEC_REG_FAMILY		0xfa	/* low nibble: 6 = NTSC/60 Hz, 7 = PAL/50 Hz */
 
 /* Back end, device 0x98 (GCHD_PORT_BACKEND) */
 #define GCHD_BE_REG_RETRIGGER		0x0d	/* written 0xc8 around the 0x0e pulse */
 #define GCHD_BE_RETRIGGER_VALUE		0xc8
-#define GCHD_BE_REG_PULSE		0x0e	/* (status & 0x10) | 0x65, then | 0x64 */
+#define GCHD_BE_REG_PULSE		0x0e	/* pulse value, then the value with bit 0 clear */
+#define GCHD_BE_REG_STATUS		0xf5	/* polled around the 0x0e pulses */
+#define GCHD_BE_STATUS_FLAG		0x80	/* set before the next pulse is issued */
+#define GCHD_BE_STATUS_SETTLED		0x72	/* value after the final pulse */
+#define GCHD_BE_STATUS_PULSE_BIT	0x10	/* copied into the pulse value */
+#define GCHD_BE_PULSE_BASE		0x05
 
 /* ---------------------------------------------------------------------- */
 /* MPEG transport stream produced by the encoder (docs/video-output.md)   */

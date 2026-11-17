@@ -48,6 +48,7 @@ HDMI (0), Component (1), Composite (2) and S-Video (3).
 | Buffer content | Payload of one video PES packet (PID `0x1011`) per buffer, starting with the first packet that contains an SPS; audio is not delivered |
 | Timestamps | Decoding timestamp of the PES packet (DTS, or PTS if no DTS), converted to the monotonic clock and anchored at the first buffer of a stream |
 | Hardware start | `VIDIOC_STREAMON`; firmware is loaded and the input configured at this point |
-| Source changes | `V4L2_EVENT_SOURCE_CHANGE` is queued when the signal appears or is lost |
+| Source changes | `V4L2_EVENT_SOURCE_CHANGE` is queued when the signal appears or is lost, and after a composite or S-video source changes between 480i and 240p |
+| Analog mode change | The encoder is stopped and restarted for the new mode (`composite.md` §4); the stream resumes with a new SPS after about 1.5 s |
 
 The interface is experimental and expected to change.

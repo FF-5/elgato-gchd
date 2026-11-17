@@ -10,7 +10,7 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.2.0");
+MODULE_VERSION("0.3.0");
 
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
@@ -406,8 +406,8 @@ reset_pes:
 
 static void gchd_signal_check(struct gchd *d)
 {
- /* START can take longer than the normal signal-loss debounce. */
- if (READ_ONCE(d->start_pending))
+ /* START and STOP can take longer than the signal-loss debounce. */
+ if (READ_ONCE(d->start_pending) || READ_ONCE(d->stop_pending))
   return;
 
  if (!READ_ONCE(d->signal_present) &&
@@ -522,6 +522,8 @@ static void gchd_rx_complete(struct urb *urb)
   return;
 
  if (urb->status) {
+  atomic_inc(&d->rx_urb_errors);
+  WRITE_ONCE(d->rx_urb_last_status, urb->status);
   r = usb_submit_urb(urb, GFP_ATOMIC);
   if (r && READ_ONCE(d->rx_active))
    dev_err_ratelimited(&d->intf->dev,
@@ -612,6 +614,8 @@ static int gchd_rx(void *arg)
                     gchd_rx_complete, &rx[i]);
  }
 
+ atomic_set(&d->rx_urb_errors, 0);
+ WRITE_ONCE(d->rx_urb_last_status, 0);
  WRITE_ONCE(d->rx_active, true);
  dev_info(&d->intf->dev,
           "async bulk-IN starting: ep=0x81 URBs=%u maxpacket=%u; ep=0x84 URBs=%u maxpacket=%u speed=%u alt=%u\n",
@@ -659,11 +663,13 @@ static int gchd_rx(void *arg)
    gchd_deliver(d);
    if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
     dev_info(&d->intf->dev,
-             "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
+             "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
              (unsigned long long)rx_reads,
              (unsigned long long)rx_bytes,
              (unsigned long long)rx_empty,
              (unsigned long long)rx_errors,
+             atomic_read(&d->rx_urb_errors),
+             READ_ONCE(d->rx_urb_last_status),
              !list_empty_careful(&d->rx_done),
              READ_ONCE(d->start_pending),
              (unsigned long long)d->ring.dropped,
@@ -709,7 +715,7 @@ static int gchd_rx(void *arg)
 
   if (rx_reads <= 5)
    dev_info(&d->intf->dev,
-            "async bulk-IN data: read=%llu ep=0x81 actual=%d total_bytes=%llu\n",
+            "bulk-IN first reads: read=%llu ep=0x81 actual=%d total_bytes=%llu\n",
             (unsigned long long)rx_reads, done->urb->actual_length,
             (unsigned long long)rx_bytes);
 
@@ -727,11 +733,13 @@ static int gchd_rx(void *arg)
 
   if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
    dev_info(&d->intf->dev,
-            "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
+            "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
             (unsigned long long)rx_reads,
             (unsigned long long)rx_bytes,
             (unsigned long long)rx_empty,
             (unsigned long long)rx_errors,
+            atomic_read(&d->rx_urb_errors),
+            READ_ONCE(d->rx_urb_last_status),
             !list_empty_careful(&d->rx_done),
             READ_ONCE(d->start_pending),
             (unsigned long long)d->ring.dropped,
@@ -772,6 +780,24 @@ out_free:
  return r;
 }
 
+/*
+ * Leave START with the bulk-IN receive queue still running, so the device can
+ * flush its output during NULL and STOP, then join the RX thread.
+ */
+static int gchd_capture_stop(struct gchd *d)
+{
+ int r;
+
+ WRITE_ONCE(d->stop_pending, true);
+ r = gchd_stream_stop(d);
+ if (d->rx_thread) {
+  kthread_stop(d->rx_thread);
+  d->rx_thread = NULL;
+ }
+ WRITE_ONCE(d->stop_pending, false);
+ return r;
+}
+
 static void gchd_detection_worker(struct work_struct *work)
 {
  struct gchd *d = container_of(to_delayed_work(work), struct gchd,
@@ -789,11 +815,23 @@ static void gchd_detection_worker(struct work_struct *work)
 
  /* Only the RX thread may own bulk-IN while START is active. */
  if (d->rx_thread || READ_ONCE(d->capture_active)) {
-  if (d->rx_thread) {
-   kthread_stop(d->rx_thread);
-   d->rx_thread = NULL;
+  /*
+   * When the analog source changed mode, the encoder gets no pictures and
+   * NULL does not complete; prepare the new mode first, as on a mode change.
+   */
+  if (READ_ONCE(d->capture_active) && d->input >= 2 &&
+      d->input_height == 480 && d->input_configured) {
+   bool interlaced;
+
+   if (!gchd_input_read_analog_mode(d, &interlaced) &&
+       interlaced != d->input_interlaced) {
+    dev_info(&d->intf->dev,
+             "redetection: source is now %s; preparing before stop\n",
+             interlaced ? "480i" : "240p");
+    gchd_analog_mode_pre_stop(d, interlaced);
+   }
   }
-  r = gchd_stream_stop(d);
+  r = gchd_capture_stop(d);
   if (r) {
    /*
     * Keep capture_active set so the next pass retries the stop even though
@@ -807,19 +845,18 @@ static void gchd_detection_worker(struct work_struct *work)
   WRITE_ONCE(d->capture_active, false);
 
   /*
-   * Stop transport and return to IDLE without re-running hardware init.
-   * hw_init() issues RESET from every nonzero state; on HDNew that RESET
-   * transition times out when the device is already IDLE (state 0x11).
+   * Stop transport and return to the stopped state without re-running
+   * hardware init.
    * Keep the encoder firmware running: restarting it after an input change
    * fails with -EINVAL.
    */
   gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
   d->ts_partial_len = 0;
-  r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+  r = gchd_return_to_stop(d);
   if (r) {
    WRITE_ONCE(d->signal_present, false);
    dev_warn(&d->intf->dev,
-            "redetection: transition to IDLE failed: %d\n", r);
+            "redetection: stop failed: %d\n", r);
    goto retry;
   }
   d->input_configured = false;
@@ -829,14 +866,14 @@ static void gchd_detection_worker(struct work_struct *work)
  if (d->input_configured && !READ_ONCE(d->signal_present)) {
   /*
    * Signal-loss notification can race with detector work. Invalidate the old
-   * timing and return to IDLE without resetting/reloading the device. Keep
-   * the configured marker until IDLE succeeds so a failed transition is
+   * timing and return to the stopped state without resetting/reloading the device. Keep
+   * the configured marker until the stop succeeds so a failed transition is
    * retried before any new source probe.
    */
-  r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+  r = gchd_return_to_stop(d);
   if (r) {
    dev_warn(&d->intf->dev,
-            "redetection: transition to IDLE after signal loss failed: %d\n", r);
+            "redetection: stop after signal loss failed: %d\n", r);
    goto retry;
   }
   d->input_configured = false;
@@ -845,7 +882,7 @@ static void gchd_detection_worker(struct work_struct *work)
  if (!d->input_configured) {
   /*
    * Run connector preparation only after any previous capture has been
-   * stopped and the device is back in IDLE. The setup helper is idempotent
+   * stopped and the device is back in the stopped state. The setup helper is idempotent
    * for the current input and stays complete across no-source retries.
    */
   if (!d->input_detect_prepared) {
@@ -890,9 +927,8 @@ static void gchd_detection_worker(struct work_struct *work)
     dev_warn(&d->intf->dev,
              "redetection: input configuration failed: %d\n", r);
     /*
-     * Configuration began from IDLE and has not issued START. Do not send
-     * another IDLE state-change command here: HDNew can time out when asked
-     * to transition to the state it is already in. Re-probe and retry setup.
+     * Configuration began from the stopped state and has not issued START.
+     * Re-probe and retry setup.
      */
     d->input_configured = false;
     d->input_prepared = false;
@@ -915,6 +951,15 @@ static void gchd_detection_worker(struct work_struct *work)
     * Capture starts automatically once a source is configured. V4L2
     * STREAMON only controls delivery into queued buffers.
     */
+   r = gchd_input_check_mode(d);
+   if (r) {
+    d->input_configured = false;
+    d->input_prepared = false;
+    WRITE_ONCE(d->signal_present, false);
+    gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
+    schedule_delayed_work(&d->detect_work, msecs_to_jiffies(50));
+    goto out;
+   }
    gchd_set_lifecycle(d, GCHD_CAPTURE_START);
    d->last_video_jiffies = jiffies;
    WRITE_ONCE(d->start_pending, true);
@@ -945,6 +990,7 @@ static void gchd_detection_worker(struct work_struct *work)
    }
 
    r = gchd_input_start(d);
+   d->last_video_jiffies = jiffies;
    WRITE_ONCE(d->start_pending, false);
    if (r) {
     int start_error = r;
@@ -956,15 +1002,15 @@ static void gchd_detection_worker(struct work_struct *work)
     /*
      * A failed START must not leave the cached "configured + signal present"
      * flags set: that would make the next detection pass skip configuration
-     * and never attempt capture again. Recover to IDLE before allowing the
+     * and never attempt capture again. Return to the stopped state before allowing the
      * detector to probe or configure the input again.
      */
-    idle_error = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+    idle_error = gchd_return_to_stop(d);
     WRITE_ONCE(d->capture_active, false);
     if (idle_error) {
      gchd_set_lifecycle(d, GCHD_ERROR);
      dev_err(&d->intf->dev,
-             "capture start failed: %d; recovery to IDLE failed: %d\n",
+             "capture start failed: %d; recovery to stopped state failed: %d\n",
              start_error, idle_error);
      goto out;
     }
@@ -974,7 +1020,7 @@ static void gchd_detection_worker(struct work_struct *work)
     WRITE_ONCE(d->signal_present, false);
     gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
     dev_warn(&d->intf->dev,
-             "capture start failed: %d; recovered to IDLE, retrying detection\n",
+             "capture start failed: %d; stopped, retrying detection\n",
              start_error);
     /* Avoid hammering START if the state transition timed out. */
     schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
@@ -1031,17 +1077,14 @@ static void gchd_mode_workfn(struct work_struct *work)
           target_interlaced ? "480i" : "240p");
 
  /*
-  * Reconfigure the analog pipeline through the common setup path for either
-  * direction. The former 480i-to-240p register-only helper no longer exists.
+  * Either direction: decoder and neutral back-end setup while still in
+  * START, then NULL/STOP, the new back-end table, encoder programming and
+  * START. Input routing and decoder tuning are kept.
   */
- if (d->rx_thread) {
-  kthread_stop(d->rx_thread);
-  d->rx_thread = NULL;
- }
- r = gchd_stream_stop(d);
+ r = gchd_analog_mode_pre_stop(d, target_interlaced);
  if (r)
   goto restart_failed;
- r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+ r = gchd_capture_stop(d);
  if (r)
   goto restart_failed;
 
@@ -1050,7 +1093,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  d->input_configured = false;
  d->input_interlaced = target_interlaced;
  gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
- r = gchd_input_configure_idle(d);
+ r = gchd_analog_mode_reconfigure(d);
  if (r)
   goto restart_failed;
 
@@ -1083,6 +1126,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   goto restart_failed;
  }
  r = gchd_input_start(d);
+ d->last_video_jiffies = jiffies;
  WRITE_ONCE(d->start_pending, false);
  if (r) {
   kthread_stop(d->rx_thread);
@@ -1103,7 +1147,7 @@ restart_failed:
  WRITE_ONCE(d->capture_active, false);
  gchd_set_lifecycle(d, GCHD_ERROR);
  dev_warn(&d->intf->dev,
-          "240p-to-480i reconfiguration failed: %d\n", r);
+          "analog mode change failed: %d\n", r);
  WRITE_ONCE(d->signal_present, false);
  WRITE_ONCE(d->detect_requested, true);
  gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
@@ -1310,12 +1354,12 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   * after a signal-loss or STREAMOFF race. The stop helper is a no-op in STOP
   * or IDLE and performs the NULL/STOP drain sequence otherwise.
   */
- if (d->rx_thread) {
+ if (!READ_ONCE(d->hw_initialized) && d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
  }
  if (READ_ONCE(d->hw_initialized)) {
-  r = gchd_stream_stop(d);
+  r = gchd_capture_stop(d);
   if (r) {
    dev_err(&d->intf->dev, "input switch: hardware stop failed: %d\n", r);
    WRITE_ONCE(d->streaming, false);
@@ -1329,13 +1373,12 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 
   /*
    * Keep encoder firmware initialized; do not run full hardware shutdown or
-   * input-specific teardown. gchd_state_cmd skips an already-completed IDLE
-   * transition, which matters when switching between no-signal inputs.
+   * input-specific teardown; a running stream is stopped (NULL -> STOP).
    */
-  r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+  r = gchd_return_to_stop(d);
   if (r) {
    dev_err(&d->intf->dev,
-           "input switch: transition to IDLE failed: %d\n", r);
+           "input switch: stop failed: %d\n", r);
    WRITE_ONCE(d->signal_present, false);
    WRITE_ONCE(d->streaming, false);
    WRITE_ONCE(d->detect_requested, true);
@@ -1348,7 +1391,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   WRITE_ONCE(d->capture_active, false);
  }
 
- /* Clear connector-specific cached state only after reaching IDLE. */
+ /* Clear connector-specific cached state only after the stream is stopped. */
  d->input_configured = false;
  d->input_routed = false;
  d->input_detect_prepared = false;
@@ -1810,7 +1853,14 @@ static int gchd_fop_release(struct file *file)
   cancel_delayed_work_sync(&d->mode_work);
   mutex_lock(&d->lifecycle_lock);
 
-  if (d->rx_thread) {
+  /* Stop the stream with the receive queue still running, then join RX. */
+  if (d->hw_initialized) {
+   int stop_r = gchd_capture_stop(d);
+
+   if (stop_r)
+    dev_warn(&d->intf->dev, "capture stop on last close failed: %d\n",
+             stop_r);
+  } else if (d->rx_thread) {
    kthread_stop(d->rx_thread);
    d->rx_thread = NULL;
   }
@@ -2014,10 +2064,7 @@ static void gchd_shutdown(struct device *dev)
  mutex_lock(&d->lifecycle_lock);
  WRITE_ONCE(d->streaming, false);
  WRITE_ONCE(d->capture_active, false);
- if (d->rx_thread) {
-  kthread_stop(d->rx_thread);
-  d->rx_thread = NULL;
- }
+ gchd_capture_stop(d);
 
  /*
   * Use the same ordered teardown as last-close rather than issuing RESET

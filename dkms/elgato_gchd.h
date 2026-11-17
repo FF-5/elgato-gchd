@@ -87,6 +87,8 @@ struct gchd {
  struct completion rx_ready;
  int rx_setup_status;
  bool rx_active;
+ atomic_t rx_urb_errors;  /* failed receive transfers since RX start */
+ int rx_urb_last_status;
  struct gchd_ring ring;
  struct mutex deliver_lock; /* serializes gchd_deliver() */
  bool wait_sps; /* drop video until the first SPS after a (re)start */
@@ -99,6 +101,8 @@ struct gchd {
  bool streaming; /* V4L2 queue delivery only. */
  bool capture_active; /* Hardware capture is active while a source is present. */
  bool start_pending;
+ bool stop_pending;
+ bool mode_retriggered;
  bool detect_requested;
  bool disconnected;
  bool hw_initialized;
@@ -135,8 +139,8 @@ int gchd_hw_init(struct gchd *);
 int gchd_hw_shutdown(struct gchd *);
 int gchd_transcoder_init(struct gchd *);
 int gchd_transcoder_setup(struct gchd *);
+int gchd_transcoder_start_block(struct gchd *);
 int gchd_transcoder_output_enable(struct gchd *, bool);
-int gchd_transcoder_final_configure(struct gchd *);
 int gchd_mail_write(struct gchd *, u8, const u8 *, u8);
 int gchd_mail_read(struct gchd *, u8, u8 *, u8);
 int gchd_state_cmd(struct gchd *, u8, u8, u16, u16);
@@ -149,10 +153,13 @@ int gchd_raw_read16(struct gchd *, u16, u16, u16 *);
 int gchd_load_encoder_firmware(struct gchd *);
 int gchd_input_configure(struct gchd *);
 int gchd_input_start(struct gchd *);
+int gchd_input_check_mode(struct gchd *);
 int gchd_input_configure_idle(struct gchd *);
 int gchd_prepare_input_detection(struct gchd *);
 int gchd_probe_video_source(struct gchd *);
 int gchd_input_read_analog_mode(struct gchd *, bool *);
+int gchd_analog_mode_pre_stop(struct gchd *, bool);
+int gchd_analog_mode_reconfigure(struct gchd *);
 int gchd_common_block_a(struct gchd *);
 int gchd_common_block_b1(struct gchd *, bool);
 int gchd_common_block_b2(struct gchd *);
@@ -162,6 +169,7 @@ int gchd_color_space_exact(struct gchd *);
 int gchd_setup_subblock_exact(struct gchd *);
 void gchd_input_stop(struct gchd *);
 int gchd_stream_stop(struct gchd *);
+int gchd_return_to_stop(struct gchd *);
 
 int gchd_ring_push(struct gchd_ring *, const u8 *, size_t, u64);
 struct gchd_frame *gchd_ring_pop(struct gchd_ring *);
