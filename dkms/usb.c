@@ -18,7 +18,7 @@ MODULE_FIRMWARE("gchd/MB86M01_ASSP_NSEC_ENC_H");
 #define FW_ENC_NEW  "gchd/MB86M01_ASSP_NSEC_ENC_H"
 
 
-/* Enable ordered raw mailbox traces for 480i/240p comparison. */
+/* Log every mailbox transfer. */
 static bool trace_mailbox;
 module_param(trace_mailbox, bool, 0644);
 MODULE_PARM_DESC(trace_mailbox, "Log raw mailbox commands and replies for input-detection diagnostics");
@@ -279,8 +279,8 @@ int gchd_send_enable_state(struct gchd *d)
    return r;
 
   /*
-   * Match GCHD::sendEnableState(): every successful status read narrows
-   * the cable/source detection mask before we wait for MAIL_REQUEST_READY.
+   * Every successful status read narrows the cable/source detection mask
+   * before waiting for the mailbox-ready bit.
    */
   d->special_detect_mask &= GCHD_MAIL_READY_DETECT(status);
 
@@ -468,8 +468,8 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
   return 0;
 
  /*
-  * Match the reference userspace driver's HDNew SCMD protocol: mode 0xa0
-  * suppresses the interrupt/readback handshake (notably GCHD_SCMD_INIT).
+  * HD-New SCMD receipt: mode 0xa0 suppresses the interrupt/readback
+  * handshake (notably for GCHD_SCMD_INIT).
   */
  if ((command == GCHD_SCMD_IDLE || command == GCHD_SCMD_INIT ||
       command == GCHD_SCMD_STATE_CHANGE) &&
@@ -534,7 +534,7 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
    /*
     * Keep START diagnostics useful without flooding dmesg for the full
     * 2000-poll timeout: log initial polls, periodic samples, and changes
-    * in the three values used by the userspace completion handshake.
+    * in the three values used by the completion handshake.
     */
    if (trace_start &&
        (tries < 16 || (tries % 100) == 0 ||
@@ -643,7 +643,7 @@ int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
 
 
 /*
- * Reproduce GCHD::stopStream(true) from the userspace driver. The caller
+ * Stop the stream (START -> NULL -> STOP) while draining. The caller
  * must stop/join the RX thread first: this function owns bulk-IN endpoint
  * 0x81 while draining the device's queued transport stream.
  */
@@ -708,8 +708,8 @@ static int gchd_complete_state_change_draining(struct gchd *d,
  }
 }
 
-/* Exact userspace stopStream(true): START -> NULL, drain 200, complete;
- * drain 20, NULL -> STOP, complete; drain 5. */
+/* START -> NULL, drain 200, complete; drain 20, NULL -> STOP, complete;
+ * drain 5. */
 int gchd_stream_stop(struct gchd *d)
 {
  int r;
@@ -769,8 +769,8 @@ int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
   return r;
 
  /*
-  * doEnable() in the userspace reference updates the saved enable-state
-  * snapshot after reading back the hardware. Mailbox writes restore this
+  * The saved enable-state snapshot is updated after reading back the
+  * hardware. Mailbox writes restore this
   * snapshot, so leaving it stale would undo the processor-enable bits on
   * the next mailbox transaction.
   */
@@ -807,7 +807,7 @@ int gchd_hw_init(struct gchd *d)
  int r, tries;
  u32 version0, version1;
 
- /* The reference driver reads the hardware revision before BANKSEL. */
+ /* Read the hardware revision before BANKSEL. */
  r = gchd_ctrl_read(d, GCHD_REQ_REG, GCHD_BANK_SYS, GCHD_REG_HDNEW_VERSION0, &version0, sizeof(version0));
  if (r)
   return r;
@@ -883,8 +883,8 @@ int gchd_hw_init(struct gchd *d)
     return r;
   } else {
    /*
-    * On Original HD, reading state 0 triggers the transition. Match
-    * completeStateChange(0, 0) before loading the idle firmware.
+    * On the original HD model, reading state 0 triggers the transition;
+    * complete it before loading the idle firmware.
     */
    r = gchd_complete_state_change(d, 0, 0);
    if (r)
@@ -897,7 +897,7 @@ int gchd_hw_init(struct gchd *d)
 
   /*
    * The post-download acknowledgement is a different register from the
-   * state-transition completion flag above: userspace writes 0900:0070.
+   * state-transition completion flag above: 0900:0070.
    */
   r = gchd_reg_write16(d, GCHD_REG_POST_IDLE_FW, GCHD_SCMD_COMPLETE_BIT);
   if (r)
@@ -912,7 +912,7 @@ int gchd_hw_init(struct gchd *d)
   if (r)
    return r;
 
-  /* The reference reads ENABLE_STATE only once here; reuse that value. */
+  /* ENABLE_STATE is read only once here; reuse that value. */
   d->hw_enable_state = d->saved_enable_state;
   r = gchd_reg_read16(d, GCHD_REG_ENABLE, &d->hw_enable_register);
   if (r)
@@ -986,8 +986,8 @@ int gchd_hw_init(struct gchd *d)
     */
    if (first_time) {
     /*
-     * Userspace always calls enableAnalogInput() here, even for HDMI.
-     * Keep the same operation rather than optimizing it away.
+     * The analog-input enable bit is always updated here, even for HDMI.
+     * Keep the operation.
      */
     r = gchd_enable_analog(d);
     if (r)
@@ -1056,7 +1056,7 @@ int gchd_hw_shutdown(struct gchd *d)
   return 0;
 
  /*
-  * Match GCHD::uninitDevice(): stop transport only when the firmware is
+  * Stop transport only when the firmware is
   * actually in START/NULL, and do not run the teardown sequence twice when
   * the processor is already reset or still in boot state.
   */
@@ -1082,7 +1082,7 @@ int gchd_hw_shutdown(struct gchd *d)
   return 0;
  }
 
- /* Pre-shutdown decoder sequence (C++ uninitDevice; docs/hardware.md §8). */
+ /* Pre-shutdown decoder sequence. */
  GCHD_DEC_W(d, 0x06, 0x86);
  GCHD_DEC_R(d, 0xf8, v);
  GCHD_DEC_W(d, 0x03, 0x2f);
@@ -1092,7 +1092,7 @@ int gchd_hw_shutdown(struct gchd *d)
  r = gchd_reg_read16(d, GCHD_REG_ENABLE_SHADOW, &d->hw_enable_state);
  if (r) return r;
 
- /* Preserve the userspace ordering: read state before disabling output. */
+ /* Read the state before disabling output. */
  r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
  if (r) return r;
  r = gchd_transcoder_output_enable(d, false);
@@ -1101,7 +1101,7 @@ int gchd_hw_shutdown(struct gchd *d)
  r = gchd_scmd(d, GCHD_SCMD_INIT, GCHD_SCMD_INIT_NO_RELOAD, 0x0000);
  if (r) return r;
 
- /* clearEnableState() in userspace clears the state mask before processor-off. */
+ /* Clear the state mask before switching the processor off. */
  r = gchd_reg_write16(d, GCHD_REG_ENABLE_SHADOW, 0);
  if (r) return r;
  d->hw_enable_state = 0;

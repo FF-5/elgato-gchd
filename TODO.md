@@ -20,15 +20,25 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
   configuration (the driver programs 240p as 480p, which Windows does not do;
   see `docs/composite.md`).
 - Next hardware session: composite **480i first**, then 240p.
+- Input order (maintainer, 2026-11-17): composite and S-video with all their
+  resolutions first, then component with all its resolutions, HDMI last.
+
+## Hardware test log
+
+| Date | Branch / commit | Input, source | Result |
+|---|---|---|---|
+| 2026-11-17 | `fix/analog-start-per-traces` | composite 480i (switched from HDMI while streaming) | START completes in ~0.1 s (10 completion polls), 65 KB bulk transfers flow. guvcview crashed: format changed from 1280×720 to 720×480 underneath it. |
+| 2026-11-17 | `fix/v4l2-format-negotiation` 42aebdb | composite 480i (selected before guvcview) | G_FMT 720×480 interlaced, START ~0.1 s, data flows. guvcview showed a picture briefly, then crashed ~0.3 s after the first data. Led to the delivery fix 374fc83. |
+| 2026-11-17 | `fix/v4l2-format-negotiation` 6e8841a | composite 480i | guvcview: briefly a black-and-white picture with the bottom quarter garbled, then crash (read fault in `memcpy`). ffmpeg recorded 10 s without errors: H.264 High 720×480, `field_order tt`, 22.9 Mbit/s (driver bitrate twice the recorded value; fixed in 81bc5ec). The guvcview symptoms match copying a decoded 720-wide picture without its 768-byte line stride. |
 
 ## Phase 0 — Repository consolidation
 
-- [x] Assess all branches (notes: `traces` branch, `traces/previous-analysis/branch-history.md`).
+- [x] Assess all branches .
 - [x] Merge `master` into `dev`; `dev` is the integration branch.
 - [x] Copy the latest driver (`state-machine` tip) to `dkms/`; it builds with
       `W=1` against 6.8 headers.
-- [x] Restore deleted analysis material (now on the `traces` branch,
-      `traces/previous-analysis/`).
+- [x] Old analysis material removed (partly inaccurate); the `traces`
+      branch holds only the maintainer's recordings, sorted by input.
 - [x] Rewrite `docs/`; Windows traces are the reference.
 - [x] Firmware extract script writes directly to `/lib/firmware/gchd`
       (maintainer commit `9ddf703`, cherry-picked).
@@ -40,8 +50,8 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 - [x] Documentation rewritten to neutral product documentation (RULES C);
       analysis material and branch history moved out of `docs/`.
 - [x] Orphan `traces` branch for trace recordings and analysis material.
-- [ ] Decide what to do with the historical branches (archive tags, then
-      delete?). Maintainer's decision.
+- [ ] Delete all historical branches once composite, S-video and component
+      480i/576i work on `dev` (maintainer decision, 2026-11-17).
 
 ## Phase 1 — Code cleanup (no behaviour change)
 
@@ -54,7 +64,7 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
       Expected USB-traffic effect: none.
 - [ ] **T-003 [OFF] (S)** Make `vb2_fops` in `fops.c` static (currently a
       global `EXPORT_SYMBOL_GPL`).
-- [ ] **T-005 [OFF] (S)** Code comments in `dkms/*.c` still refer to C++
+- [x] **T-005 [OFF] (S)** Code comments in `dkms/*.c` still refer to C++
       function names, "userspace" and "original driver" (about 40 lines). Rewrite
       them neutrally (RULES E10); comments only, verify code-identical.
 - [ ] **T-004 [WIN] (S)** `0x1004` "stout_mode" write: the kernel writes bit 0,
@@ -71,10 +81,18 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 - [ ] **T-011 [OFF] (M)** Analyse the trace recordings uploaded to the
       `traces` branch (composite 480i first). Produce decoded listings next to
       the recordings and update `docs/` with the observed sequences.
-      → current `TASK.md`
+      First upload analysed (`traces/ANALYSIS-2026-11-17.md`). Open:
+      - compare `input-switching/filtered_init_switch_to_component` with
+        `gchd_hw_init()` and the component switch, and
+        `input-switching/filtered_novideo_input_switching` with
+        `gchd_set_input()`;
+      - `gchd_configure_composite_exact()` repeats `0x88:02`, `0x88:3C` and
+        the three `0x94` writes after detection; the traces do not (check
+        against the noinput traces before removing);
+      - analyse the 480i recordings once uploaded (control traffic only:
+        `tshark -r big.pcapng -Y "usb.transfer_type != 0x03" -w small.pcapng`).
 - [ ] **T-012 [OFF] (S)** Port the `debug` branch's debugfs raw bulk-IN dump
-      (`traces` branch: `traces/previous-analysis/debug-branch-trace/trace.c`)
-      behind a module parameter,
+      (`debug` branch, `drivers/elgato_gchd/trace.c`) behind a module parameter,
       so the exact device output can be saved from the kernel driver.
 
 ## Phase 3 — Kernel data path (make the output verifiable)
@@ -136,16 +154,19 @@ the mode in question can be tested; change one at a time (RULES D5).
 
 | Item | Driver (from the C++ port) | Recorded traces |
 |---|---|---|
-| 240p encoder programming | `v_format 8`, `v_ip_format 2`, full restart on 480i ↔ 240p | `v_format 4`, `v_ip_format 0`; 480i → 240p decoder-only |
+| 240p encoder programming | `v_format 8`, `v_ip_format 2`, full restart on 480i ↔ 240p | `v_format 4`, `v_ip_format 0`; 480i → 240p decoder-only — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
 | Composite selector `0x9C:51` | `CC` | `44` (from HDMI), `EC` (from analog) |
-| Decoder tuning `0x88:10` | single pass, `10 = 88` | three passes, `10 = 6F` |
-| Composite NTSC back-end table `0x98:90–A3` | sparse (`90=68, 91=BF, 95=AB, 96=17, 97=88, A0=8C, A1=F8, A2=82, A3=59`) | all 20 registers (`01 BD 9A … 81 49`) |
-| `0x98:C0` in the B1 block | `89` | `88` |
-| `0x98:0E` retrigger base | `65`/`64` | `05`/`04` and `15`/`14` |
-| `0x94:4A`, `0x94:4B` | `AF` | `B7` (also `BB`) |
-| `v_in_source_type` for NTSC | `0` | `3` (240p composite) |
+| Decoder tuning `0x88:10` | single pass, `10 = 88` | three passes, `10 = 6F` — **already matched in the analog prepare path** |
+| Composite NTSC back-end table `0x98:90–A3` | sparse (`90=68, 91=BF, 95=AB, 96=17, 97=88, A0=8C, A1=F8, A2=82, A3=59`) | all 20 registers (`01 BD 9A … 81 49`) — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
+| `0x98:C0` in the B1 block | `89` | `88` — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
+| `0x98:0E` retrigger base | `65`/`64` | `05`/`04` and `15`/`14` — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
+| `0x94:4A`, `0x94:4B` | `AF` | `B7` (also `BB`) — **already matched in the analog prepare path** |
+| `v_in_source_type` for NTSC | `0` | `3` (240p composite) — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
 | `0900:0018` for HDMI | `00 0A` (bit 9 clear) | `02 0A` |
 | `0x1004` "stout_mode" | bit 0 written | not yet checked (T-004) |
+| 480i → 240p live change | full encoder restart (`gchd_mode_workfn`) | decoder registers only (`0x88:07/08/09/28/0A`), no SCMD |
+| 288p detection | not detected (PAL always treated as 576i) | `0x88:CA = 7E`; apply block with `28=8A`, `0A=8F` in the noinput trace |
+| `system_rate` | driver formula: 12693 kbit/s at 720 wide | 12539 (NTSC), 12531 (PAL) |
 | Bulk IN `0x84` | required (`-ENODEV` if absent) | queued (8 URBs) during start |
 | START completion | timed out with state already `0x02` (`2da03ea` log) | loop until target state |
 
@@ -164,4 +185,3 @@ the mode in question can be tested; change one at a time (RULES D5).
 
 - Windows: composite 480i (T-011), HDMI with signal, component with signal,
   PAL 576i/288p, a session that starts directly in 240p.
-- The raw `.ts` files behind `traces/previous-analysis/reference-ts/`.

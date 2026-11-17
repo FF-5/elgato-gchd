@@ -52,6 +52,31 @@ static const struct gchd_mode gchd_modes[] = {
  {720, 480, 60, 1, true},
 };
 
+/*
+ * Negotiated format seen by applications (G_FMT). It changes only while no
+ * buffers are allocated; a source change during capture is reported with
+ * V4L2_EVENT_SOURCE_CHANGE and takes effect at the next negotiation.
+ */
+static void gchd_set_negotiated(struct gchd *d, u32 width, u32 height)
+{
+ if (!width || !height || vb2_is_busy(&d->vbq))
+  return;
+ d->width = width;
+ d->height = height;
+}
+
+/* Nominal format of an input before a signal has been measured. */
+static void gchd_nominal_format(const struct gchd *d, u32 *width, u32 *height)
+{
+ if (d->input >= 2) {
+  *width = 720;
+  *height = d->input_height == 576 ? 576 : 480;
+ } else {
+  *width = 1280;
+  *height = 720;
+ }
+}
+
 /* Input-selection state owns the HDMI default and remembered selection. */
 static DEFINE_MUTEX(gchd_last_input_lock);
 static unsigned int gchd_last_input;
@@ -166,6 +191,32 @@ void gchd_ring_free(struct gchd_ring *r)
  r->count=0; r->bytes=0; spin_unlock_irqrestore(&r->lock,flags);
 }
 
+/* True if the H.264 byte stream contains a sequence parameter set. */
+static bool gchd_has_sps(const u8 *p, size_t n)
+{
+ size_t i;
+
+ for (i = 0; i + 3 < n; ++i)
+  if (p[i] == 0 && p[i + 1] == 0 && p[i + 2] == 1 && (p[i + 3] & 0x1f) == 7)
+   return true;
+ return false;
+}
+
+/*
+ * Queue one video PES payload. After a stream (re)start, payloads are held
+ * back until the first one carrying an SPS, so that consumers start at a
+ * decodable picture.
+ */
+static int gchd_queue_pes(struct gchd *d, const u8 *pes, size_t n)
+{
+ if (READ_ONCE(d->wait_sps)) {
+  if (!gchd_has_sps(pes, n))
+   return 0;
+  WRITE_ONCE(d->wait_sps, false);
+ }
+ return gchd_ring_push(&d->ring, pes, n);
+}
+
 /*
  * Parse the video PID from the device's MPEG-TS stream.
  *
@@ -259,7 +310,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
 
  if (start) {
   if (*pes_active && *n) {
-   int r = gchd_ring_push(&d->ring, pes, *n);
+   int r = gchd_queue_pes(d, pes, *n);
 
    if (r)
     dev_warn_ratelimited(&d->intf->dev,
@@ -341,33 +392,63 @@ static void gchd_signal_check(struct gchd *d)
  }
 }
 
+/* Number of encoded frames waiting in the ring. */
+static unsigned int gchd_ring_count(struct gchd_ring *r)
+{
+ unsigned long flags;
+ unsigned int n;
+
+ spin_lock_irqsave(&r->lock, flags);
+ n = r->count;
+ spin_unlock_irqrestore(&r->lock, flags);
+ return n;
+}
+
+/*
+ * Move encoded frames from the ring into queued V4L2 buffers, in order.
+ * A frame is taken from the ring only when a buffer is available, so frames
+ * wait in the ring instead of being dropped. Serialized by deliver_lock
+ * because both the receive thread and buf_queue call it.
+ */
 static void gchd_deliver(struct gchd *d)
 {
  struct gchd_frame *f; struct gchd_buffer *b; unsigned long flags; void *dst;
- if(!d->streaming)return;
- f=gchd_ring_pop(&d->ring); if(!f)return;
- spin_lock_irqsave(&d->qlock,flags);
- if(list_empty(&d->queued)){
+
+ mutex_lock(&d->deliver_lock);
+ while (READ_ONCE(d->streaming) && gchd_ring_count(&d->ring)) {
+  spin_lock_irqsave(&d->qlock,flags);
+  if (list_empty(&d->queued)) {
+   spin_unlock_irqrestore(&d->qlock,flags);
+   break;
+  }
+  b=list_first_entry(&d->queued,struct gchd_buffer,list);list_del(&b->list);
   spin_unlock_irqrestore(&d->qlock,flags);
-  dev_dbg(&d->intf->dev, "discarding payload: bytes=%zu, no V4L2 buffer queued\n", f->len);
-  kvfree(f->data);kfree(f);return;
+
+  f=gchd_ring_pop(&d->ring);
+  if (!f) {
+   spin_lock_irqsave(&d->qlock,flags);
+   list_add(&b->list,&d->queued);
+   spin_unlock_irqrestore(&d->qlock,flags);
+   break;
+  }
+  dst=vb2_plane_vaddr(&b->vb.vb2_buf,0);
+  if(!dst || f->len>d->sizeimage) {
+   dev_warn_ratelimited(&d->intf->dev,
+                        "V4L2 buffer error: dst=%p payload=%zu sizeimage=%u\n",
+                        dst, f->len, d->sizeimage);
+   vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);
+  } else {
+   memcpy(dst,f->data,f->len);vb2_set_plane_payload(&b->vb.vb2_buf,0,f->len);
+   b->vb.sequence=f->sequence;b->vb.vb2_buf.timestamp=ktime_get_ns();
+   b->vb.field=(d->input >= 2 || d->input_interlaced) ?
+               V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+   dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%llu bytes=%zu sizeimage=%u\n",
+           (unsigned long long)f->sequence, f->len, d->sizeimage);
+   vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_DONE);
+  }
+  kvfree(f->data);kfree(f);
  }
- b=list_first_entry(&d->queued,struct gchd_buffer,list);list_del(&b->list);
- spin_unlock_irqrestore(&d->qlock,flags);
- dst=vb2_plane_vaddr(&b->vb.vb2_buf,0);
- if(!dst || f->len>d->sizeimage) {
-  dev_warn_ratelimited(&d->intf->dev,
-                       "V4L2 buffer error: dst=%p payload=%zu sizeimage=%u\n",
-                       dst, f->len, d->sizeimage);
-  vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);
- } else {
-  memcpy(dst,f->data,f->len);vb2_set_plane_payload(&b->vb.vb2_buf,0,f->len);
-  b->vb.sequence=f->sequence;b->vb.vb2_buf.timestamp=ktime_get_ns();
-  dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%llu bytes=%zu sizeimage=%u\n",
-          (unsigned long long)f->sequence, f->len, d->sizeimage);
-  vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_DONE);
- }
- kvfree(f->data);kfree(f);
+ mutex_unlock(&d->deliver_lock);
 }
 
 #define GCHD_RX_URB_COUNT (GCHD_RX_URBS_EP_IN + GCHD_RX_URBS_AUX_IN)
@@ -387,9 +468,8 @@ static bool gchd_rx_urb_stopped(int status)
 }
 
 /*
- * Endpoint 0x81 carries the MPEG-TS stream. Endpoint 0x84 is also submitted
- * as observed in the USB trace, but its payload role is not established, so
- * it is kept queued without being fed into the TS parser.
+ * Endpoint 0x81 carries the MPEG-TS stream. Receive transfers are also kept
+ * queued on endpoint 0x84; its payload is not passed to the TS parser.
  */
 static void gchd_rx_complete(struct urb *urb)
 {
@@ -411,7 +491,7 @@ static void gchd_rx_complete(struct urb *urb)
  }
 
  if (rx->endpoint == GCHD_EP_AUX_IN) {
-  /* Preserve the observed 0x84 receive queue; do not interpret its payload. */
+  /* Keep the 0x84 receive queue running; its payload is not interpreted. */
   r = usb_submit_urb(urb, GFP_ATOMIC);
   if (r && READ_ONCE(d->rx_active))
    dev_err_ratelimited(&d->intf->dev,
@@ -633,7 +713,7 @@ out_kill:
   spin_unlock_irqrestore(&d->rx_lock, flags);
  }
  if (pes_active && n)
-  gchd_ring_push(&d->ring, pes, n);
+  gchd_queue_pes(d, pes, n);
 out_free:
  if (READ_ONCE(d->rx_setup_status) == -EINPROGRESS) {
   WRITE_ONCE(d->rx_setup_status, r ? r : -EIO);
@@ -686,10 +766,10 @@ static void gchd_detection_worker(struct work_struct *work)
    * Stop transport and return to IDLE without re-running hardware init.
    * hw_init() issues RESET from every nonzero state; on HDNew that RESET
    * transition times out when the device is already IDLE (state 0x11).
-   * Keep the encoder firmware alive: restarting it after input changes has
-   * been observed to fail with -EINVAL.
+   * Keep the encoder firmware running: restarting it after an input change
+   * fails with -EINVAL.
    */
-  gchd_ring_free(&d->ring);
+  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
   d->ts_partial_len = 0;
   r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) {
@@ -781,8 +861,7 @@ static void gchd_detection_worker(struct work_struct *work)
  if (READ_ONCE(d->signal_present)) {
   struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
 
-  d->width = d->input_width;
-  d->height = d->input_height;
+  gchd_set_negotiated(d, d->input_width, d->input_height);
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
@@ -922,7 +1001,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  if (r)
   goto restart_failed;
 
- gchd_ring_free(&d->ring);
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
  d->ts_partial_len = 0;
  d->input_configured = false;
  d->input_interlaced = target_interlaced;
@@ -968,8 +1047,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  }
 
  gchd_set_lifecycle(d, GCHD_STREAMING);
- d->width = d->input_width;
- d->height = d->input_height;
+ gchd_set_negotiated(d, d->input_width, d->input_height);
  ev.id = d->input;
  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
  v4l2_event_queue(&d->vdev, &ev);
@@ -1043,6 +1121,8 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   r = -ENODEV;
   goto err;
  }
+ /* Deliver only from the first SPS of this stream onwards. */
+ WRITE_ONCE(d->wait_sps, true);
 
  /*
   * A file open is not proof that an application intends to capture:
@@ -1184,7 +1264,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   * Stop/join RX before taking over bulk-IN. Stop the transport even if the
   * V4L2 streaming flag is already clear: the device may still be in START
   * after a signal-loss or STREAMOFF race. The stop helper is a no-op in STOP
-  * or IDLE and performs the userspace-compatible drain sequence otherwise.
+  * or IDLE and performs the NULL/STOP drain sequence otherwise.
   */
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
@@ -1230,7 +1310,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->input_detect_prepared = false;
  d->input_prepared = false;
  WRITE_ONCE(d->signal_present, false);
- gchd_ring_free(&d->ring);
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
  d->ts_partial_len = 0;
  d->previous_input = d->input;
  d->input = i;
@@ -1246,6 +1326,12 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->input_fps_num = 0;
  d->input_fps_den = 0;
  d->input_interlaced = false;
+ {
+  u32 w, h;
+
+  gchd_nominal_format(d, &w, &h);
+  gchd_set_negotiated(d, w, h);
+ }
 
  /*
   * Before first open, only remember the selection; hardware remains
@@ -1434,58 +1520,111 @@ static int gchd_gfmt(struct file*f,void*p,struct v4l2_format*x)
  struct gchd*d=video_drvdata(f);
  x->fmt.pix.width=d->width;x->fmt.pix.height=d->height;
  x->fmt.pix.pixelformat=V4L2_PIX_FMT_H264;
- x->fmt.pix.field=d->input_interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+ /* Analog inputs are always encoded interlaced (also 240p/288p). */
+ x->fmt.pix.field=(d->input >= 2 || d->input_interlaced) ?
+                  V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
  x->fmt.pix.sizeimage=d->sizeimage;
  x->fmt.pix.colorspace=V4L2_COLORSPACE_REC709;
  return 0;
+}
+
+/*
+ * Adjust a requested format to one the current input can deliver.
+ * Composite and S-video always deliver interlaced 720x480 or 720x576.
+ * For HDMI and component the closest allowed mode is chosen; an unknown
+ * size falls back to the negotiated one. Returns the mode for digital
+ * inputs, or NULL for analog inputs.
+ */
+static const struct gchd_mode *gchd_adjust_fmt(struct gchd *d,
+                                               struct v4l2_pix_format *pix)
+{
+ const struct gchd_mode *m = NULL;
+ bool interlaced = pix->field == V4L2_FIELD_INTERLACED;
+
+ pix->pixelformat = V4L2_PIX_FMT_H264;
+ if (d->input >= 2) {
+  pix->width = 720;
+  pix->height = pix->height == 576 ? 576 :
+                (pix->height == 480 ? 480 : d->height == 576 ? 576 : 480);
+  pix->field = V4L2_FIELD_INTERLACED;
+ } else {
+  m = gchd_find_mode(pix->width, pix->height, interlaced);
+  if (!m || !gchd_mode_allowed(d, m))
+   m = gchd_find_mode(pix->width, pix->height, !interlaced);
+  if (!m || !gchd_mode_allowed(d, m))
+   m = gchd_find_mode(d->width, d->height, d->input_interlaced);
+  if (m && !gchd_mode_allowed(d, m))
+   m = NULL;
+  if (m) {
+   pix->width = m->width;
+   pix->height = m->height;
+   pix->field = m->interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+  } else {
+   pix->width = d->width;
+   pix->height = d->height;
+   pix->field = d->input_interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+  }
+ }
+ pix->bytesperline = 0;
+ pix->sizeimage = GCHD_MAX_FRAME;
+ pix->colorspace = V4L2_COLORSPACE_REC709;
+ return m;
 }
 
 static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
 {
  struct gchd*d=video_drvdata(f);
  const struct gchd_mode *m;
- bool interlaced = x->fmt.pix.field == V4L2_FIELD_INTERLACED;
 
- if (vb2_is_busy(&d->vbq) || x->fmt.pix.pixelformat!=V4L2_PIX_FMT_H264)
-  return-EINVAL;
+ if (vb2_is_busy(&d->vbq))
+  return -EBUSY;
 
- m = gchd_find_mode(x->fmt.pix.width, x->fmt.pix.height, interlaced);
- if (!m || !gchd_mode_allowed(d, m))
-  return -EINVAL;
-
- d->width=m->width;
- d->height=m->height;
- d->input_width=m->width;
- d->input_height=m->height;
- d->input_fps_num=m->fps_num;
- d->input_fps_den=m->fps_den;
- d->input_interlaced=m->interlaced;
- d->mode_forced=true;
- d->input_configured=false;
- d->sizeimage=GCHD_MAX_FRAME;
-
+ m = gchd_adjust_fmt(d, &x->fmt.pix);
+ d->width = x->fmt.pix.width;
+ d->height = x->fmt.pix.height;
+ d->sizeimage = GCHD_MAX_FRAME;
+ if (m) {
+  /* Digital inputs: the requested mode is programmed as given. */
+  d->input_width=m->width;
+  d->input_height=m->height;
+  d->input_fps_num=m->fps_num;
+  d->input_fps_den=m->fps_den;
+  d->input_interlaced=m->interlaced;
+  d->mode_forced=true;
+  d->input_configured=false;
+ }
  return gchd_gfmt(f,p,x);
 }
 
 static int gchd_tryfmt(struct file*f,void*p,struct v4l2_format*x)
 {
- struct gchd*d=video_drvdata(f);
- const struct gchd_mode *m;
- bool interlaced = x->fmt.pix.field == V4L2_FIELD_INTERLACED;
-
- if (x->fmt.pix.pixelformat != V4L2_PIX_FMT_H264)
-  return -EINVAL;
-
- m = gchd_find_mode(x->fmt.pix.width, x->fmt.pix.height, interlaced);
- if (!m || !gchd_mode_allowed(d, m))
-  return -EINVAL;
-
- x->fmt.pix.width=m->width;
- x->fmt.pix.height=m->height;
- x->fmt.pix.field=m->interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
- x->fmt.pix.sizeimage=GCHD_MAX_FRAME;
- x->fmt.pix.colorspace=V4L2_COLORSPACE_REC709;
+ gchd_adjust_fmt(video_drvdata(f), &x->fmt.pix);
  return 0;
+}
+
+static int gchd_g_parm(struct file *f, void *p, struct v4l2_streamparm *a)
+{
+ struct gchd *d = video_drvdata(f);
+ struct v4l2_fract *t = &a->parm.capture.timeperframe;
+
+ if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+  return -EINVAL;
+ memset(&a->parm.capture, 0, sizeof(a->parm.capture));
+ a->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
+ if (d->input_fps_num && d->input_fps_den) {
+  t->numerator = d->input_fps_den;
+  t->denominator = d->input_fps_num;
+ } else {
+  t->numerator = 1;
+  t->denominator = d->height == 576 ? 50 : 60;
+ }
+ return 0;
+}
+
+/* The frame rate follows the source; S_PARM reports the current rate. */
+static int gchd_s_parm(struct file *f, void *p, struct v4l2_streamparm *a)
+{
+ return gchd_g_parm(f, p, a);
 }
 
 static int gchd_subscribe_event(struct v4l2_fh *fh,
@@ -1508,6 +1647,7 @@ static const struct v4l2_ioctl_ops gchd_ioctl={
  .vidioc_g_input=gchd_ginput,.vidioc_s_input=gchd_sinput,
  .vidioc_g_fmt_vid_cap=gchd_gfmt,.vidioc_s_fmt_vid_cap=gchd_sfmt,
 .vidioc_try_fmt_vid_cap=gchd_tryfmt,
+ .vidioc_g_parm=gchd_g_parm,.vidioc_s_parm=gchd_s_parm,
  .vidioc_query_dv_timings=gchd_query_dv_timings,
  .vidioc_enum_dv_timings=gchd_enum_dv_timings,
  .vidioc_reqbufs=vb2_ioctl_reqbufs,.vidioc_querybuf=vb2_ioctl_querybuf,
@@ -1659,7 +1799,7 @@ static int gchd_fop_release(struct file *file)
   d->input_prepared = false;
   d->encoder_started = false;
   d->signal_present = false;
-  gchd_ring_free(&d->ring);
+  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
   d->ts_partial_len = 0;
   mutex_unlock(&d->lifecycle_lock);
  }
@@ -1745,6 +1885,8 @@ static int gchd_probe(struct usb_interface *i,
  INIT_LIST_HEAD(&d->rx_done);
  init_waitqueue_head(&d->rx_wait);
  init_completion(&d->rx_ready);
+ mutex_init(&d->deliver_lock);
+ d->wait_sps = true;
  d->rx_setup_status = -EINPROGRESS;
  spin_lock_init(&d->ring.lock);
  d->width = 1280;
@@ -1810,7 +1952,7 @@ static void gchd_disconnect(struct usb_interface *i)
 
  /* The interface may already be gone: never issue USB commands here. */
  gchd_v4l2_unregister(d);
- gchd_ring_free(&d->ring);
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
  kref_put(&d->refcount, gchd_release_ref);
 }
 

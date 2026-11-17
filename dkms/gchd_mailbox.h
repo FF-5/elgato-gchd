@@ -16,7 +16,7 @@
  *   GCHD_BRIDGE_SKIP(d, n)    read n bytes of a bridge reply and discard them
  *   GCHD_FE_RX / GCHD_DEC_RX / GCHD_BE_RX (d, reg)
  *                             read a register and discard the value (the read
- *                             itself is part of the recorded sequence)
+ *                             itself is part of the sequence)
  *
  * Every macro in this file RETURNS FROM THE CALLING FUNCTION with the error
  * code when the USB operation fails. The calling function

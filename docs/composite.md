@@ -10,10 +10,13 @@ Initialization and capture start are described in [hardware.md](hardware.md).
 | 480i (NTSC) | Observed | `v_format = 4`, `v_ip_format = 0` (interlaced), 720 × 480 |
 | 240p (NTSC line timing, progressive) | Observed | Same as 480i: `v_format = 4`, `v_ip_format = 0`, 720 × 480 |
 | 576i (PAL) | Driver | `v_format = 5`, `v_ip_format = 0`, 720 × 576 |
-| 288p (PAL line timing, progressive) | Not characterized | — |
+| 288p (PAL line timing, progressive) | Observed | Same as 576i: `v_format = 5`, `v_ip_format = 0`, 720 × 576 |
 
-A 240p source is encoded as an interlaced 720 × 480 stream at 60 fields per
-second: each field carries one complete 240-line picture. The analog decoder
+All analog formats are encoded with `v_in_source_type = 3`.
+
+A 240p or 288p source is encoded as an interlaced stream (720 × 480 at 60
+fields per second, or 720 × 576 at 50 fields per second): each field carries
+one complete picture. The analog decoder
 reports the format in register `0x88:CA` and is reconfigured when the source
 switches between 480i and 240p (§4, §5).
 
@@ -21,7 +24,7 @@ switches between 480i and 240p (§4, §5).
 
 | Read | Meaning |
 |---|---|
-| `0x88:CA` | Lock and format: `FE` unlocked, `7E` 480i locked, `66` 240p locked, `EE`/`E6` transitional. |
+| `0x88:CA` | Lock and format: `FE` unlocked, `7E` 480i, 576i or 288p locked, `66` 240p locked, `EE`/`E6` transitional. |
 | `0x88:FA` | Low nibble `6` = NTSC (60 Hz) family, `7` = PAL (50 Hz) family once a signal is present. Reads `1F`/`3E` immediately after the input is selected. Polled while no signal is present. |
 | `0x88:E7` | `69` when stable; `09` right after a 240p change. |
 | `0x88:F1` | `7E` when stable (NTSC). |
@@ -115,10 +118,21 @@ Read `0x88:FA`, read `0x98:F5`, about every 50 ms. When a source is
 connected, `0x88:CA` changes from `FE`, polling ends, and the sequence
 continues with §3 step 3.
 
-## 9. PAL (Driver)
+## 9. PAL (Observed)
 
-For a 50 Hz source (`0x88:FA` low nibble `7`), the driver reads `0x88:F1`,
-writes `0x98:04 = 95`, and uses the PAL entry of the per-mode back-end table:
+For a 50 Hz source (`0x88:FA` low nibble `7`) the back-end step of §3 step 5
+uses a different per-mode table; all other writes are identical:
+
 `0x98:70 = D0`, `0F = 88`, `90 = D8`, `91 = BF`, `95 = 9D`, `96 = 1B`,
-`97 = 88`, `A0 = 8A`, `A1 = D8`, `A2 = B2`, `A3 = 59`. This sequence has not
-been confirmed by a trace.
+`97 = 88`, `A0 = 8A`, `A1 = D8`, `A2 = B2`, `A3 = 59`.
+
+Status values with a 288p source: `0x88:CA = 7E`, `E7 = 79`, `F1 = 63`.
+
+## 10. Decoder apply block
+
+The writes `0x88:07 = 8A`, `08 = 9B`, `09 = 7A`, `28 = …` followed by a read
+of `0x88:FD` and `0x88:06 = 08` occur when lock is acquired after the input
+was selected without a source (Observed). With a progressive source the block
+is written twice: first with `28 = 88`, then with `28 = 8A`, followed by
+`0x88:0A = 98` (NTSC 240p) or `0x88:0A = 8F` (PAL 288p). When the source is
+already locked at input selection, the block is not written.

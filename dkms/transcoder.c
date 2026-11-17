@@ -4,10 +4,9 @@
 #include "gchd_mailbox.h"
 
 /*
- * The original driver programs the Fujitsu transcoder through two USB
- * vendor requests: SLSI writes a 16-bit register, while SPARAM updates a
- * masked bit-field in a 32-bit register.  Keep this table-driven here so
- * the kernel driver does not need any userspace configuration program.
+ * The Fujitsu transcoder is programmed through two USB vendor requests:
+ * SLSI writes a 16-bit register, SPARAM updates a masked bit-field in a
+ * 32-bit register.
  */
 
 
@@ -29,7 +28,7 @@ static int gchd_transcoder_table_write(struct gchd *d, u16 address,
  return 0;
 }
 
-/* The userspace PSI builders leave the CRC to the transcoder hardware. */
+/* The PSI tables are written without CRC; the transcoder adds it. */
 static const u8 gchd_pat[] = {
  0x00,0xb0,0x11,0x00,0x00,0x01,0x00,0x00,
  0x00,0x01,0xe1,0x10,0x00,0x00,0xe0,0x1f
@@ -56,8 +55,7 @@ static int gchd_transcoder_defaults(struct gchd *d)
 
  GCHD_TC_SET(d, GCHD_TC_V_VINPELCLK, 0); /* v_vinpelclk */
  GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1); /* tbc_mode */
- /* FIXME (T-001 finding): C++ stout_mode is 0x1004 bit 15; this writes bit 0
-  * (part of stoutclk). Kept as ported; verify against a Windows trace. */
+ /* FIXME: stout_mode is bit 15 of 0x1004; this writes bit 0 (stoutclk). */
  GCHD_TC_SET(d, 0x1004, 0, 1, 0); /* stout_mode */
  GCHD_TC_SET(d, GCHD_TC_EXTRA_INFO_BIT, 0);
  GCHD_TC_SET(d, GCHD_TC_TSOUT_PACKET_SIZE, 0);
@@ -80,7 +78,7 @@ static int gchd_transcoder_defaults(struct gchd *d)
  GCHD_TC_SET(d, GCHD_TC_SYSTEM_MIN_RATE, 0);
  GCHD_TC_SET(d, GCHD_TC_SYSTEM_MIN_RATE_TS_OUT2, 0);
 
- /* Fixed transport/PES identifiers used by the original encoder. */
+ /* Fixed transport/PES identifiers. */
  GCHD_TC_SET(d, GCHD_TC_V_PID_OUT, GCHD_TS_PID_VIDEO);
  GCHD_TC_SET(d, GCHD_TC_V_PID_OUT_TS_OUT2, GCHD_TS_PID_VIDEO);
  GCHD_TC_SET(d, GCHD_TC_A_PID_OUT, GCHD_TS_PID_AUDIO);
@@ -189,15 +187,30 @@ static int gchd_transcoder_defaults(struct gchd *d)
 }
 
 /*
- * This deliberately performs only the common transcoder stage. The original
- * program has large analog/HDMI signal-lock scripts; those are being moved
- * behind the V4L2 input/mode controls rather than executed by a userspace
- * process. Until a mode is selected, the encoder is left stopped.
+ * Common transcoder stage only. Input-specific signal-lock sequences run
+ * from the V4L2 input/mode paths. Until a mode is selected, the encoder is
+ * left stopped.
  */
 
-/* Exact configure.cpp transcoderSetup() parameter stage.  The V4L2 driver
- * currently exposes one encoder profile/rate tuple, so the corresponding
- * source values are derived from the active capture mode. */
+/* Encoder parameter stage. One encoder profile/rate tuple is exposed;
+ * the values are derived from the active capture mode. */
+/*
+ * Analog inputs (composite, S-video) are always encoded as interlaced
+ * 720x480/576 with v_in_source_type 3, also for 240p/288p sources: the
+ * progressive source is carried as one picture per field.
+ */
+static bool gchd_enc_interlaced(const struct gchd *d)
+{
+ return d->input >= 2 ? true : d->input_interlaced;
+}
+
+static u8 gchd_enc_source_type(const struct gchd *d)
+{
+ if (d->input >= 2)
+  return 3;
+ return d->input_height == 576 ? 3 : 0;
+}
+
 int gchd_transcoder_setup(struct gchd *d)
 {
  u16 width = d->input_width;
@@ -210,10 +223,12 @@ int gchd_transcoder_setup(struct gchd *d)
  u32 auto_average_bitrate;
  u32 auto_min_bitrate;
 
- auto_bitrate = min_t(u32, (31250U * width) / 1000U, 40000U);
+ /* Default rate: 15625 kbit/s per 1000 pixels of width (11250 kbit/s at
+  * 720), maximum 90 %, average 50 %, minimum 25 %. */
+ auto_bitrate = min_t(u32, (15625U * width) / 1000U, 40000U);
  auto_max_bitrate = min_t(u32, (auto_bitrate * 9U) / 10U, 40000U);
  auto_average_bitrate = min_t(u32, auto_bitrate / 2U, 40000U);
- auto_min_bitrate = min_t(u32, (auto_bitrate * 35U) / 100U, 40000U);
+ auto_min_bitrate = min_t(u32, auto_bitrate / 4U, 40000U);
  bitrate = d->bitrate_forced ? d->bitrate : (u16)auto_bitrate;
  u16 gop = (fps + 10) / 5;
  u16 anchor = 3;
@@ -222,7 +237,7 @@ int gchd_transcoder_setup(struct gchd *d)
 
  /*
   * V4L2 profile values are API enum values; the Fujitsu encoder uses
-  * 1=High and 2=Main.  The userspace driver maps Baseline to Main too.
+  * 1=High and 2=Main. Baseline is mapped to Main.
   */
  if (d->h264_profile == V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)
   profile = 1;
@@ -259,10 +274,10 @@ int gchd_transcoder_setup(struct gchd *d)
  u16 colour = d->input == 0 ? 1 : 6;
  u8 vformat;
 
- if (height == 1080) vformat = d->input_interlaced ? 0 : 32;
+ if (height == 1080) vformat = gchd_enc_interlaced(d) ? 0 : 32;
  else if (height == 720) vformat = 2;
- else if (height == 576) vformat = d->input_interlaced ? 5 : 9;
- else if (height == 480) vformat = d->input_interlaced ? 4 : 8;
+ else if (height == 576) vformat = gchd_enc_interlaced(d) ? 5 : 9;
+ else if (height == 480) vformat = gchd_enc_interlaced(d) ? 4 : 8;
  else return -EINVAL;
  if (fps == 50) vformat |= 1;
 
@@ -286,7 +301,7 @@ int gchd_transcoder_setup(struct gchd *d)
  GCHD_TC_SET(d, GCHD_TC_E_MPEG_PROTECT_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_MODE_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_COPYR_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_ORIG_BL,1); GCHD_TC_SET(d, GCHD_TC_E_MPEG_EMP_BL,0); GCHD_TC_SET(d, GCHD_TC_A_BITRATE_BL,audio);
  GCHD_TC_SET(d, GCHD_TC_COLOUR_DESCRIPTION_PRESENT_FLAG_BL,1); GCHD_TC_SET(d, GCHD_TC_COLOUR_PRIMARIES_BL,colour); GCHD_TC_SET(d, GCHD_TC_TRANSFER_CHARACTERISTICS_BL,1); GCHD_TC_SET(d, GCHD_TC_MATRIX_COEFFICIENTS_BL,colour); GCHD_TC_SET(d, GCHD_TC_VIDEO_FULL_RANGE_FLAG_BL,0); GCHD_TC_SET(d, GCHD_TC_VIDEO_SIGNAL_TYPE_PRESENT_FLAG_BL,1); GCHD_TC_SET(d, GCHD_TC_VIDEO_FORMAT_BL,5);
  GCHD_TC_SET(d, GCHD_TC_V_TS_OUT_MODE,1); GCHD_TC_SET(d, GCHD_TC_A_MODE,3); GCHD_TC_SET(d, GCHD_TC_V_TS_OUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A_TS_OUT_MODE,2); GCHD_TC_SET(d, GCHD_TC_SOUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A_TS_OUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A2_MODE,0);
- GCHD_TC_SET(d, GCHD_TC_V_IN_SOURCE_TYPE,(height==576)?3:0); GCHD_TC_SET(d, GCHD_TC_V_FORMAT,vformat); GCHD_TC_SET(d, GCHD_TC_V_IP_FORMAT,d->input_interlaced ? 0 : 2); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1);
+ GCHD_TC_SET(d, GCHD_TC_V_IN_SOURCE_TYPE, gchd_enc_source_type(d)); GCHD_TC_SET(d, GCHD_TC_V_FORMAT,vformat); GCHD_TC_SET(d, GCHD_TC_V_IP_FORMAT, gchd_enc_interlaced(d) ? 0 : 2); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1);
  GCHD_TC_SET(d, GCHD_TC_A_SAMPLE,0); GCHD_TC_SET(d, GCHD_TC_AIN_MASTER,0); GCHD_TC_SET(d, GCHD_TC_AIN_LSB_FIRST,0); GCHD_TC_SET(d, GCHD_TC_AIN_BIT_POSB,0); GCHD_TC_SET(d, GCHD_TC_AMCK_MODE,1); GCHD_TC_SET(d, GCHD_TC_AIN_DLENGTH,2); GCHD_TC_SET(d, GCHD_TC_AIN_LR_HLSET,1); GCHD_TC_SET(d, GCHD_TC_AIN_I2S,1); GCHD_TC_SET(d, GCHD_TC_AIN_LRCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_SCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_BCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_BCLK_HL,0); GCHD_TC_SET(d, GCHD_TC_AIN_OFFSET_MODE,0); GCHD_TC_SET(d, GCHD_TC_AIN_OFFSET,0);
  GCHD_TC_SET(d, GCHD_TC_V_DISABLE_ASPECT_RATIO_INFO_PRESENT_FLAG,0); GCHD_TC_SET(d, GCHD_TC_V_DISABLE_ASPECT_RATIO_INFO_PRESENT_FLAG_BL,0); GCHD_TC_SET(d, GCHD_TC_V_PIC_ORDER_PRESENT_FLAG,1); GCHD_TC_SET(d, GCHD_TC_V_PIC_ORDER_PRESENT_FLAG_BL,1);
  return 0;
@@ -318,14 +333,10 @@ int gchd_transcoder_final_configure(struct gchd *d)
  u8 source_type = 0;
 
  /*
-  * Match the reference transcoderFinalConfigure() mapping:
-  * PAL 4:3 = 3, NTSC 4:3 = 0, and HD/other sources = 0.
-  * The kernel driver does not currently expose SD stretch modes.
+  * v_in_source_type: 3 for analog inputs and 576-line digital
+  * sources, 0 otherwise. SD stretch modes are not exposed.
   */
- if (d->input_height == 576)
-  source_type = 3;
- else if (d->input_height == 480)
-  source_type = 0;
+ source_type = gchd_enc_source_type(d);
 
  /*
   * v_format:
@@ -337,18 +348,18 @@ int gchd_transcoder_final_configure(struct gchd *d)
   *   9 = 576p50
   *  32 = 1080p60
   *
-  * As in the reference, bit 0 selects the 50 Hz variant.
+  * Bit 0 selects the 50 Hz variant.
   */
  if (d->input_height == 1080) {
-  video_format = d->input_interlaced ? 0 : 32;
+  video_format = gchd_enc_interlaced(d) ? 0 : 32;
  } else if (d->input_height == 720) {
-  if (d->input_interlaced)
+  if (gchd_enc_interlaced(d))
    return -EINVAL;
   video_format = 2;
  } else if (d->input_height == 576) {
-  video_format = d->input_interlaced ? 5 : 9;
+  video_format = gchd_enc_interlaced(d) ? 5 : 9;
  } else if (d->input_height == 480) {
-  video_format = d->input_interlaced ? 4 : 8;
+  video_format = gchd_enc_interlaced(d) ? 4 : 8;
  } else {
   return -EINVAL;
  }
@@ -369,7 +380,7 @@ int gchd_transcoder_final_configure(struct gchd *d)
  GCHD_TC_SET(d, GCHD_TC_V_IN_SOURCE_TYPE, source_type);
  GCHD_TC_SET(d, GCHD_TC_V_FORMAT, video_format);
  GCHD_TC_SET(d, GCHD_TC_V_IP_FORMAT,
-                 d->input_interlaced ? 0 : 2);
+                 gchd_enc_interlaced(d) ? 0 : 2);
  GCHD_TC_SET(d, GCHD_TC_V_VINPELCLK, 0);
  GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1);
  GCHD_TC_SET(d, GCHD_TC_A_SAMPLE, 0);
@@ -379,7 +390,7 @@ int gchd_transcoder_final_configure(struct gchd *d)
  GCHD_TC_SET(d, GCHD_TC_AIN_I2S, 1);
  GCHD_TC_SET(d, GCHD_TC_TFRFF, 2);
 
- /* These are emitted twice by the reference implementation. */
+ /* Written twice. */
  GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1);
  GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1);
 

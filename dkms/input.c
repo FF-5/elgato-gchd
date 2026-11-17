@@ -376,8 +376,8 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  GCHD_FE_W(d, 0x2e, 0x6d);
 
 
- /* configure.cpp continues immediately with the four 0x99 0x89 reads,
-  * then the fixed 0x4c tail and HDNew-only 0x20 block. */
+ /* Four back-end reads, then the fixed 0x4c tail and the HD-New-only
+  * 0x20 block. */
  GCHD_BE_R(d, 0xfa, v);
  GCHD_BE_R(d, 0xf9, v);
  GCHD_BE_R(d, 0xf8, v);
@@ -503,9 +503,8 @@ static int gchd_input_finalize(struct gchd *d)
  int r;
 
  /*
-  * This is the final source-routing stage from configure.cpp.  The
-  * connector-specific setup above establishes the input path; these writes
-  * put the device into its streaming state without a userspace daemon.
+  * Final source-routing stage. The connector-specific setup above
+  * establishes the input path; these writes complete the routing.
   */
  r = gchd_scmd(d, GCHD_SCMD_INIT, GCHD_SCMD_INIT_NO_RELOAD, 0);
  if (r)
@@ -629,12 +628,12 @@ static int gchd_prepare_analog_detection(struct gchd *d)
 
  /*
   * Do not write the composite discriminator (0x02=C9) during the shared
-  * HDMI/component -> composite detection prefix. The observed source-detect
-  * sequence goes straight from the initial FD poll to 0x06=08 and F8.
+  * HDMI/component -> composite detection prefix: the sequence goes from the
+  * initial FD poll directly to 0x06=08 and the F8 read.
   * The discriminator is applied in late configuration after detection.
   *
   * S-video needs its distinct decoder mode before detection. When switching
-  * from S-video back to composite, the traces show C9 + D2 as a special
+  * from S-video back to composite, C9 + D2 are written as an
   * analog-to-analog transition prefix.
   */
  if (d->input == 3) {
@@ -663,7 +662,7 @@ static int gchd_prepare_analog_detection(struct gchd *d)
 
  /*
   * Apply connector routing before looking for a source. The three masked
-  * writes preserve unrelated enable bits and match the observed
+  * writes preserve unrelated enable bits and produce the
   * 02 0E -> 03 0E -> 03 0E routing progression for analog inputs.
   */
  r = gchd_do_enable(d, GCHD_EB_COMPOSITE_MUX, GCHD_EB_COMPOSITE_MUX);
@@ -674,8 +673,8 @@ static int gchd_prepare_analog_detection(struct gchd *d)
  if (r) return r;
 
  /*
-  * Match the captured pre-tuning idle sequence exactly: two FA/F5 cycles.
-  * FA replies (1F, then 3E in the NTSC 240p trace) are ordinary poll results,
+  * Pre-tuning idle sequence: two FA/F5 cycles. FA replies (for example 1F,
+  * then 3E) are ordinary poll results,
   * not the later CA source-found marker. Always consume both cycles here;
   * SOURCE_DETECTION owns the subsequent CA/E7/F1 polling and retries.
   */
@@ -828,8 +827,8 @@ int gchd_probe_video_source(struct gchd *d)
    /* 0xCA is the decoder's authoritative 240p/480i lock indicator. */
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, mode);
    /*
-    * Start with the known-good 480i receiver/encoder setup, as in the
-    * reference trace. A 240p lock is applied only after capture starts and
+    * Start with the 480i receiver/encoder setup. A 240p lock is applied
+    * only after capture starts and
     * the live monitor sees 0x66; this avoids skipping the transition recipe
     * when 0x66 is already present during initial detection.
     */
@@ -903,7 +902,7 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
  /*
   * The timing register can retain a plausible value with no source attached.
   * Require both a recognized timing and a non-idle 0x6665 measurement.
-  * 0xad4d +/- 10 is the no-signal signature observed in the original driver.
+  * 0xad4d +/- 10 is the no-signal value.
   */
  d->signal_present = gchd_hdmi_timing_valid(value6463) &&
                      abs((int)value6665 - 0xad4d) >= 10;
@@ -1025,11 +1024,87 @@ int gchd_color_space_exact(struct gchd *d)
   r=gchd_mail_seq(d,prefix,ARRAY_SIZE(prefix));
   if(r)return r;
  }
- /* HDMI autodetect selects RGB/YUV from the same status bit used by
-  * userspace. Component and Composite remain YUV by default. */
+ /* HDMI selects RGB/YUV from the front-end status bit (0x9C:34 bit 2).
+  * Component and Composite use YUV. */
  if (d->input == 0 && d->rgb_input)
   return gchd_mail_seq(d,rgb,ARRAY_SIZE(rgb));
  return gchd_mail_seq(d,yuv,ARRAY_SIZE(yuv));
+}
+
+/*
+ * Back-end retrigger: read 0x98:FD/FC/F3, then 0x98:0D = C8 and two writes
+ * to 0x98:0E (value, then value with bit 0 cleared).
+ */
+static int gchd_be_retrigger(struct gchd *d, u8 value)
+{
+ u8 v;
+
+ GCHD_BE_R(d, 0xfd, v);
+ GCHD_BE_R(d, 0xfc, v);
+ GCHD_BE_R(d, 0xf3, v);
+ GCHD_BE_W(d, GCHD_BE_REG_RETRIGGER, GCHD_BE_RETRIGGER_VALUE);
+ GCHD_BE_W(d, GCHD_BE_REG_PULSE, value);
+ GCHD_BE_W(d, GCHD_BE_REG_PULSE, value & ~0x01);
+ return 0;
+}
+
+static int gchd_analog_backend(struct gchd *d, bool pal)
+{
+ /* 0x98 per-mode table: NTSC writes all of 90-A3, PAL a sparse set. */
+ static const struct gchd_mail_cmd table_ntsc[] = {
+  GCHD_SEQ_BE(0x70, 0xd0), GCHD_SEQ_BE(0x0f, 0x88),
+  GCHD_SEQ_BE(0x90, 0x01), GCHD_SEQ_BE(0x91, 0xbd), GCHD_SEQ_BE(0x92, 0x9a),
+  GCHD_SEQ_BE(0x93, 0x3a), GCHD_SEQ_BE(0x94, 0xe9), GCHD_SEQ_BE(0x95, 0xab),
+  GCHD_SEQ_BE(0x96, 0x17), GCHD_SEQ_BE(0x97, 0x88), GCHD_SEQ_BE(0x98, 0x84),
+  GCHD_SEQ_BE(0x99, 0x8a), GCHD_SEQ_BE(0x9a, 0x9c), GCHD_SEQ_BE(0x9b, 0x8c),
+  GCHD_SEQ_BE(0x9c, 0x98), GCHD_SEQ_BE(0x9d, 0x93), GCHD_SEQ_BE(0x9e, 0x83),
+  GCHD_SEQ_BE(0x9f, 0xa9), GCHD_SEQ_BE(0xa0, 0x8b), GCHD_SEQ_BE(0xa1, 0xe8),
+  GCHD_SEQ_BE(0xa2, 0x81), GCHD_SEQ_BE(0xa3, 0x49),
+ };
+ static const struct gchd_mail_cmd table_pal[] = {
+  GCHD_SEQ_BE(0x70, 0xd0), GCHD_SEQ_BE(0x0f, 0x88),
+  GCHD_SEQ_BE(0x90, 0xd8), GCHD_SEQ_BE(0x91, 0xbf), GCHD_SEQ_BE(0x95, 0x9d),
+  GCHD_SEQ_BE(0x96, 0x1b), GCHD_SEQ_BE(0x97, 0x88), GCHD_SEQ_BE(0xa0, 0x8a),
+  GCHD_SEQ_BE(0xa1, 0xd8), GCHD_SEQ_BE(0xa2, 0xb2), GCHD_SEQ_BE(0xa3, 0x59),
+ };
+ u8 v;
+ int r;
+
+ GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
+ GCHD_DEC_R(d, 0xe7, v);
+ GCHD_DEC_R(d, 0xf1, v);
+ GCHD_DEC_R(d, 0xcb, v);
+ GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
+
+ GCHD_BE_W(d, 0x04, 0x95);
+ GCHD_BE_R(d, 0x8b, v);
+ r = pal ? gchd_mail_seq(d, table_pal, ARRAY_SIZE(table_pal)) :
+           gchd_mail_seq(d, table_ntsc, ARRAY_SIZE(table_ntsc));
+ if (r)
+  return r;
+ GCHD_BE_R(d, 0x89, v);
+ GCHD_BE_W(d, 0x72, 0x88);
+ GCHD_BE_W(d, 0xc0, 0x88);
+ GCHD_BE_W(d, 0x61, 0x98);
+ GCHD_BE_W(d, 0x63, 0x89);
+ GCHD_BE_W(d, 0x64, 0x96);
+ GCHD_BE_W(d, 0x65, 0x88);
+ GCHD_BE_R(d, 0xff, v);
+ GCHD_BE_W(d, 0x04, 0x8d);
+ GCHD_BE_W(d, 0x62, 0x91);
+
+ r = gchd_be_retrigger(d, 0x05);
+ if (r)
+  return r;
+ r = gchd_be_retrigger(d, 0x15);
+ if (r)
+  return r;
+
+ GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
+ GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
+ GCHD_DEC_R(d, 0xe7, v);
+ GCHD_DEC_R(d, 0xf1, v);
+ return 0;
 }
 
 static int gchd_configure_composite_exact(struct gchd *d)
@@ -1098,35 +1173,10 @@ static int gchd_configure_composite_exact(struct gchd *d)
   if (!d->input_interlaced)
    GCHD_DEC_W(d, 0x0a, 0x98);
  }
- GCHD_DEC_R(d, 0xe7, v);
- if (d->input_height==576) { GCHD_DEC_R(d, 0xf1, v); GCHD_BE_W(d, 0x04, 0x95); }
-
- r=gchd_setup_subblock_exact(d); if(r)return r;
- r=gchd_common_block_b1(d,false); if(r)return r;
-
- GCHD_BE_R(d, 0xf5, v); GCHD_BE_R(d, 0xfd, v);
- GCHD_BE_R(d, 0xf5, v); GCHD_BE_R(d, 0xfc, v);
- GCHD_BE_R(d, 0xf3, v);
- GCHD_BE_W(d, 0x0c, 0x89); GCHD_BE_W(d, GCHD_BE_REG_RETRIGGER, GCHD_BE_RETRIGGER_VALUE);
- GCHD_BE_R(d, 0xf5, v);
- {
-  u8 mask=v&0x10;
-  GCHD_BE_W(d, GCHD_BE_REG_PULSE, mask|0x65); GCHD_BE_W(d, GCHD_BE_REG_PULSE, mask|0x64);
- }
-
- r=gchd_common_block_a(d); if(r)return r;
- r=gchd_setup_subblock_exact(d); if(r)return r;
- r=gchd_common_block_b1(d,false); if(r)return r;
- r=gchd_common_block_b2(d); if(r)return r;
- r=gchd_common_block_b3(d); if(r)return r;
- r=gchd_common_block_c(d); if(r)return r;
- r=gchd_common_block_b3(d); if(r)return r;
-
- /*
-  * Composite userspace does not invoke configureColorSpace() here.
-  * Its YUV selection is carried in the transcoder settings; adding the
-  * component/HDMI color-space mailbox sequence changes the protocol order.
-  */
+ /* Back-end programming after analog lock (composite and S-video). */
+ r = gchd_analog_backend(d, d->input_height == 576);
+ if (r)
+  return r;
  return 0;
 
 }
@@ -1397,7 +1447,7 @@ static int gchd_input_configure_mode(struct gchd *d)
  }
  dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
 
- /* Match the userspace tail common to HDMI, Component and Composite. */
+ /* Encoder configuration common to HDMI, Component and Composite. */
  r = gchd_transcoder_final_configure(d);
  if (r) {
   dev_err(&d->intf->dev, "capture setup: transcoder final configuration failed: %d\n", r);
@@ -1413,9 +1463,9 @@ static int gchd_input_configure_mode(struct gchd *d)
  dev_info(&d->intf->dev, "capture setup: transcoder setup completed\n");
 
  /*
-  * The userspace connector-specific configure routines all finish with:
-  * transcoderFinalConfigure(), transcoderSetup(), GCHD_SCMD_INIT(mode=0xa0),
-  * state readback, then GCHD_SCMD_STATE_CHANGE(START). Keep the second INIT here
+  * Every input finishes with: encoder final configuration, encoder setup,
+  * SCMD INIT (mode 0xa0), state readback, then SCMD STATE_CHANGE (START).
+  * The second INIT is issued here
   * (after the final transcoder programming); the earlier INIT in
   * gchd_input_finalize() is a separate stage before connector configuration.
   * Mode 0xa0 suppresses the INIT interrupt/readback handshake.
@@ -1426,7 +1476,7 @@ static int gchd_input_configure_mode(struct gchd *d)
   return r;
  }
 
- /* Match userspace: read encoder state after the mode=0xa0 INIT. */
+ /* Read the encoder state after the mode 0xa0 INIT. */
  {
   u16 state;
 

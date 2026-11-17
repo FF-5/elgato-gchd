@@ -1,7 +1,7 @@
 # RULES — guardrails for every task
 
-**Development-only file.** `RULES.md`, `TODO.md` and `TASK.md` never reach
-`master` (rule B2).
+**Development-only file.** `CLAUDE.md`, `RULES.md`, `TODO.md` and `TASK.md`
+never reach `master` (rule B2).
 
 These rules apply to anyone, human or AI, working on the kernel driver
 (`dkms/`) and the documentation (`docs/`). Read them before starting a task
@@ -11,14 +11,19 @@ and re-check them before every commit.
 
 1. **Read `TASK.md` completely, including the maintainer comments at the
    bottom.** Those comments override anything else in `TASK.md`.
-2. Check that the task is the top open item in `TODO.md`, or that the
+2. **The "Maintainer comments" section of `TASK.md` belongs to the
+   maintainer.** Never write in it. Lasting information from it goes to
+   `RULES.md` (how to work) or `TODO.md` (plans, facts, test results). When
+   `TASK.md` is prepared for the next task, the section is emptied after its
+   content has been transferred.
+3. Check that the task is the top open item in `TODO.md`, or that the
    maintainer explicitly asked for a different one.
-3. `git fetch` and start from the current `origin/dev`:
+4. `git fetch` and start from the current `origin/dev`:
    `git checkout -b <feature-branch> origin/dev`. Branch names: `feat/…`,
    `fix/…`, `docs/…`, `refactor/…`, `diag/…`.
-4. State the acceptance criteria from `TASK.md` in your own words. If you
+5. State the acceptance criteria from `TASK.md` in your own words. If you
    cannot, the task is not ready; ask instead of guessing.
-5. Identify the traces the task depends on (`traces` branch) and open them.
+6. Identify the traces the task depends on (`traces` branch) and open them.
 
 ## B. Branches, files and merges
 
@@ -33,16 +38,16 @@ and re-check them before every commit.
    | `tools` (orphan) | Development scripts (comparison tools, generators). | never |
    | historical (`state-machine`, `async-bulk-in-queue`, `diagnostic-input-baseline`, `debug*`, `v4l2-*`, `video-output-lazy-init`, `cherry3`) | Frozen. Cherry-pick deliberately, naming the source commit. | never |
 
-2. **Development-only files never reach `master`:** `TODO.md`, `TASK.md`,
-   `RULES.md`. When the maintainer merges `dev` into `master`, the merge
+2. **Development-only files never reach `master`:** `CLAUDE.md`, `TODO.md`,
+   `TASK.md`, `RULES.md`. When the maintainer merges `dev` into `master`, the merge
    commit removes them:
 
    ```sh
    git checkout master
    git merge --no-ff --no-commit dev
-   git rm -q --cached TODO.md TASK.md RULES.md && rm -f TODO.md TASK.md RULES.md
+   git rm -q --cached CLAUDE.md TODO.md TASK.md RULES.md && rm -f CLAUDE.md TODO.md TASK.md RULES.md
    git commit
-   git ls-tree --name-only master | grep -E '^(TODO|TASK|RULES)\.md$' && echo "ERROR: dev-only file on master"
+   git ls-tree --name-only master | grep -E '^(CLAUDE|TODO|TASK|RULES)\.md$' && echo "ERROR: dev-only file on master"
    ```
 
    The last command must print nothing. Nothing that refers to these files
@@ -90,8 +95,9 @@ documentation.
    it, the C++ may be used as a stopgap; record the gap as a "trace wanted"
    item in `TODO.md`.
 3. **Do not invent register writes, values, delays, or orderings.** Every new
-   protocol operation in the kernel cites its source in a code comment, by
-   trace file and time (`/* trace composite_480i.pcapng t=25.892 */`).
+   protocol operation must come from a trace. The trace file and time range
+   are named in the **commit message** and, where useful, in `TODO.md` /
+   `TASK.md` — never in the code.
 4. **Do not "simplify" sequences.** Repeated writes, reads whose values are
    discarded, odd orderings and asymmetric transitions (for example 480i → 240p
    vs 240p → 480i) are kept exactly as recorded.
@@ -99,10 +105,12 @@ documentation.
    a before/after capture.
 6. Session-specific values (`0900:0014` shadow, `0900:001C` ready word,
    `0900:01B0`) are read and restored, never hard-coded.
-7. Bring up modes in this order: **480i composite → 240p composite → 576i →
-   HDMI/component SD → HD modes → S-video**. Do not debug a mode until the
+7. Bring up inputs in this order: **composite and S-video first** (480i,
+   240p, 576i, 288p), **then component** (all its resolutions), **HDMI
+   last**. Within an input, start with 480i. Do not debug a mode until the
    previous simpler mode works end to end. Resolution changes (480i ↔ 240p,
-   HDMI mode changes) are tested as soon as the mode on each side works.
+   576i ↔ 288p, HDMI mode changes) are tested as soon as the modes on both
+   sides work.
 8. **Refactors do not change behaviour.** Verify mechanically with the
    `tools` branch: `compare-objs.sh` (identical machine code) or, when an idiom
    change makes machine code differ, `compare-mailbox-ops.py` (identical USB
@@ -133,8 +141,10 @@ documentation.
 8. Diagnostics stay behind module parameters or `dev_dbg`.
 9. Keep `dkms/dkms.conf` `PACKAGE_VERSION` in sync with user-visible
    behaviour changes.
-10. Code comments are neutral as well: cite traces as in D3, and do not
-    refer to the Windows driver.
+10. **Code comments describe only the code itself and what it does.** No
+    references to traces, trace files, the Windows driver, the C++ code,
+    "userspace", "the original driver" or "the reference". Sources belong in
+    commit messages (D3).
 
 ## F. Definition of done for a task
 
@@ -159,8 +169,12 @@ A task may be merged to `dev` only when all of these hold:
 3. If a task grows beyond its acceptance criteria, split it and add the rest
    to `TODO.md` instead of widening the branch.
 4. Never delete traces, logs or captures; they live on the `traces` branch.
-5. Hardware tests are done by the maintainer. Provide exact commands to run
-   and exactly which output to send back.
+5. Hardware tests are done by the maintainer: build and load the module,
+   select the input (`v4l2-ctl -i N`) before starting the viewer, check the
+   picture, and paste the `dmesg` and viewer output into the maintainer
+   comments of `TASK.md`. Viewers: `guvcview` and, for the H.264 stream,
+   `ffplay` (guvcview 2.0.8 mishandles 720-pixel-wide H.264). Provide exact
+   commands in `TASK.md` "Hardware test".
 6. Do not copy statements from task descriptions or conversations into the
    documentation; verify them against traces or code first, and record
    unverified information in `TODO.md`.
