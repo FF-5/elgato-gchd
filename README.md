@@ -9,7 +9,7 @@ ships with the driver.
 | `traces/composite/` | Composite input recordings |
 | `traces/s-video/` | S-video input recordings |
 | `traces/component/` | Component input recordings |
-| `traces/hdmi/` | HDMI input recordings (create when needed) |
+| `traces/hdmi/` | HDMI input recordings |
 | `traces/input-switching/` | Initialization and input switching, no source |
 | `traces/ANALYSIS-*.md` | Analysis notes per upload |
 
