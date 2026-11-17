@@ -59,4 +59,38 @@ The driver configuration is implemented in `gchd_configure_hdmi_exact()`
    `1` for HDMI, `6` for analog inputs.
 5. Encoder setup and capture start ([hardware.md §6](hardware.md#6-capture-start-observed)).
 
-HDMI capture with a source present has not yet been confirmed by a trace.
+## 4. Capture with a 1080p60 source; output size changes (Observed)
+
+While capturing, the receiver is polled about once per second: bank `CC`,
+read `0x9C:6A`, `64`, `63` (`B6 D7` for 1080p60); bank `CE`, read `16`,
+`17`; bank `CC`, read `66`, `65`; bank `CD`, read `3E`, `0B`; bank `CE`,
+read `34`, `33`, `31`; `0x9C:1B = 30`; read `2B`, `77`, `74`, `76`; then
+read `6A`, `A7`, `69`.
+
+The encoder input stays `v_format = 32` (1080p60), `v_ip_format = 2`,
+`v_in_source_type = 0`; the encoder output size can differ from the input
+size. A change of output size stops and restarts the encoder without any
+receiver or back-end writes:
+
+1. SCMD STATE_CHANGE NULL (`05 00 00 04`); completes after 0.7–1.4 s.
+2. SCMD STATE_CHANGE STOP (`05 00 00 01`).
+3. Encoder setup for the new output size, SCMD INIT mode `A0`, SCMD
+   STATE_CHANGE START (`05 00 00 02`).
+
+Encoder settings per output size:
+
+| Output | `v_bitrate` / `v_max_bitrate` / `v_ave_bitrate` / `v_min_bitrate` | `system_rate` | `v_h264_level` | Transport output |
+|---|---|---|---|---|
+| 1920 × 1080 | 30000 / 27000 / 15000 / 10500 | 32655 | 40 | 1 |
+| 1280 × 720 | 15000 / 13500 / 7500 / 3750 | 16562 | 31 | 1 |
+| 640 × 480 | 11250 / 10125 / 5625 / 2812 | 12539 | 30 | 2 |
+| 480 × 360 | 15000 / 13500 / 7500 / 3750 | 16562 | 22 | 2 |
+
+Transport output 1: `v_ts_out_mode = 1`, `a_ts_out_mode = 2`, `a_mode = 3`,
+`v_ts_out2_mode = 0`, `a_ts_out2_mode = 0`, `a2_mode = 0`. Transport
+output 2: `v_ts_out_mode = 0`, `a_ts_out_mode = 0`, `a_mode = 0`,
+`v_ts_out2_mode = 1`, `a_ts_out2_mode = 2`, `a2_mode = 3`. For 480 × 360
+additionally `v_rate_mode = 1` and `v_max_cpb_delay = 10`.
+
+The driver encodes HDMI at the input size and always uses transport
+output 1 (Driver).

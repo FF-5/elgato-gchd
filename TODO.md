@@ -34,6 +34,7 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 | 2026-11-17 | `fix/buffer-timestamps` a242815 | composite 480i / 240p | 480i: plays in ffplay, still occasional stutter; guvcview still crashes. 240p (CA=66 at detection): configured as 480i, START never completed. Source switching 240p→480i before capture: never detected (FA stayed ED/FD). Fixes on `fix/composite-240p-start` e30ebeb. Maintainer note: ffplay working does not show that OBS works. |
 | 2026-11-17 | `fix/composite-240p-start` ba57bb9 (merged to `dev`) | composite 240p / 240p→480i | **240p accepted:** "configuring 240p", START ~0.1 s, picture in ffplay (start takes a while). Stutter remains with `ring_dropped=0` — not caused by driver frame drops; to be re-checked outside the VM. 240p→480i while capturing: stop took ~70 s, then IDLE (0x11) and START timed out. Fix 8a4b2af on `fix/mode-change-restart`. |
 | 2026-11-17 | `fix/mode-change-restart` 8a4b2af | composite 480i → 240p while capturing | 480i plays. Change detected, but the NULL completion timed out after ~63 s ("reconfiguration failed: -110"): the receive queue had been stopped before NULL/STOP and the fast synchronous drain did not consume the stream. Redetection then stopped, configured 240p and START completed, but "signal lost" was reported 0.37 s later (stale video timestamp from before configuration), which stopped capture again; ffplay killed. No audio (expected: only video PID `0x1011` is delivered). Fix on `fix/mode-change-restart`: receive queue kept running through NULL/STOP, video timestamp refreshed when START completes. |
+| 2026-11-17 | `fix/mode-change-restart` 9382bcb | composite 240p → 480i while capturing, then ffplay restarted | Mode change sequence ran as recorded: NULL completed in 0.73 s, STOP, back end, INIT A0, START completed. Picture went black. After START only 5–7 bulk transfers (≈0.4 MB) arrived, then nothing; "signal lost" ~1.2 s after START; the following NULL never completed (-110 after 40 s). The same happened on every later START, including a fresh firmware load after closing ffplay; only the first START after plugging in the device streamed. Suspect: state left behind by stopping since 8a4b2af (no reading of the stream after STOP). Diagnostics and post-STOP drain on `fix/mode-change-restart`. |
 
 ## Phase 0 — Repository consolidation
 
@@ -165,7 +166,15 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 ## Phase 6 — Remaining inputs and resolution changes
 
 - [ ] **T-050 [WIN+HW] (M)** HDMI with a signal: trace Windows (1080p, 720p,
-      480p), implement, and test mode changes while streaming.
+      480p), implement, and test mode changes while streaming. Recorded so
+      far: `traces/hdmi/gchd_output_switch_hdmi` (1080p60 source, output
+      size changes; `docs/hdmi.md §4`).
+- [ ] **T-055 [OFF→HW] (M)** Encoder output size independent of the input
+      (scaling): 1920×1080, 1280×720, 640×480, 480×360 from a 1080p60
+      source, with per-size bitrate/level and transport output 1 or 2
+      (`docs/hdmi.md §4`). Needs a V4L2 interface for the output size
+      (S_FMT) and support for transport output 2 (which endpoint carries it
+      is unknown).
 - [ ] **T-051 [WIN+HW] (M)** Component, the same.
 - [ ] **T-052 [HW] (M)** S-video 480i then 240p (`0x88:02=DC`, `14=D2`).
 - [ ] **T-053 [WIN+HW] (S)** PAL: composite 576i/288p traces and support.
@@ -191,7 +200,9 @@ the mode in question can be tested; change one at a time (RULES D5).
 | 480i → 240p live change | full encoder restart (`gchd_mode_workfn`) | decoder registers only (`0x88:07/08/09/28/0A`), no SCMD |
 | 288p detection | not detected (PAL always treated as 576i) | `0x88:CA = 7E`; apply block with `28=8A`, `0A=8F` in the noinput trace |
 | `system_rate` | driver formula: 12693 kbit/s at 720 wide | 12539 (NTSC), 12531 (PAL) |
-| Bulk IN `0x84` | required (`-ENODEV` if absent) | queued (8 URBs) during start |
+| HDMI encoder fields | `v_vinpelclk = 0`, `time_scale_l = 0`, `num_units_in_tick = 0`, `v_gop_size = 14`, bitrate 15625 kbit/s per 1000 px of width | `v_vinpelclk = 1`, `time_scale_l = 60`, `num_units_in_tick = 1`, `v_gop_size = 8`, bitrate per output size (`gchd_output_switch_hdmi`) |
+| Pipe handling at STOP | receive URBs killed when the RX thread is joined, then the stream is read until empty | `ABORT_PIPE` on `0x81` and `0x84` right after STOP completes; whether data is read in between is not visible (recordings have no bulk data) |
+| Bulk IN `0x84` (`-ENODEV` if absent) | queued (8 URBs) during start |
 | START completion | timed out with state already `0x02` (`2da03ea` log) | loop until target state |
 
 ## Phase 7 — Usability
@@ -210,3 +221,6 @@ the mode in question can be tested; change one at a time (RULES D5).
 
 - Windows: composite 480i (T-011), HDMI with signal, component with signal,
   PAL 576i/288p, a session that starts directly in 240p.
+- Windows, **with bulk data** (not reduced to control traffic): one composite
+  240p ↔ 480i change, a few seconds around it. Shows whether the stream is
+  read between NULL, STOP, the pipe abort and the next START.

@@ -717,6 +717,33 @@ static int gchd_complete_state_change_draining(struct gchd *d,
 
 /* START -> NULL, drain 200, complete; drain 20, NULL -> STOP, complete;
  * drain 5. */
+/*
+ * Read what is left on the stream endpoint after STOP, until a read returns
+ * nothing within 200 ms (at most 100 reads).
+ */
+int gchd_drain_after_stop(struct gchd *d)
+{
+ unsigned int i;
+ size_t total = 0;
+ int actual, r = 0;
+
+ for (i = 0; i < 100; ++i) {
+  actual = 0;
+  r = usb_bulk_msg(d->udev, usb_rcvbulkpipe(d->udev, GCHD_EP_TS_IN),
+                   d->usb_buf, GCHD_USB_BUFSIZE, &actual, 200);
+  total += actual;
+  if (r == -ETIMEDOUT || r == -EAGAIN) {
+   r = 0;
+   break;
+  }
+  if (r)
+   break;
+ }
+ dev_info(&d->intf->dev, "post-stop drain: reads=%u bytes=%zu status=%d\n",
+          i, total, r);
+ return r;
+}
+
 int gchd_stream_stop(struct gchd *d)
 {
  int r;
@@ -745,9 +772,11 @@ int gchd_stream_stop(struct gchd *d)
  if (r) return r;
  r = gchd_complete_state_change_draining(d, GCHD_STATE_NULL, GCHD_STATE_STOP);
  if (r) return r;
- r = gchd_drain_stream(d, 5);
+ /* With the RX thread running, the caller drains after joining it. */
+ if (READ_ONCE(d->rx_thread))
+  return 0;
  /* Successful STOP keeps input configuration for the next STREAMON. */
- return r;
+ return gchd_drain_after_stop(d);
 }
 
 /*

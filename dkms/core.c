@@ -522,6 +522,8 @@ static void gchd_rx_complete(struct urb *urb)
   return;
 
  if (urb->status) {
+  atomic_inc(&d->rx_urb_errors);
+  WRITE_ONCE(d->rx_urb_last_status, urb->status);
   r = usb_submit_urb(urb, GFP_ATOMIC);
   if (r && READ_ONCE(d->rx_active))
    dev_err_ratelimited(&d->intf->dev,
@@ -612,6 +614,8 @@ static int gchd_rx(void *arg)
                     gchd_rx_complete, &rx[i]);
  }
 
+ atomic_set(&d->rx_urb_errors, 0);
+ WRITE_ONCE(d->rx_urb_last_status, 0);
  WRITE_ONCE(d->rx_active, true);
  dev_info(&d->intf->dev,
           "async bulk-IN starting: ep=0x81 URBs=%u maxpacket=%u; ep=0x84 URBs=%u maxpacket=%u speed=%u alt=%u\n",
@@ -659,11 +663,13 @@ static int gchd_rx(void *arg)
    gchd_deliver(d);
    if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
     dev_info(&d->intf->dev,
-             "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
+             "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
              (unsigned long long)rx_reads,
              (unsigned long long)rx_bytes,
              (unsigned long long)rx_empty,
              (unsigned long long)rx_errors,
+             atomic_read(&d->rx_urb_errors),
+             READ_ONCE(d->rx_urb_last_status),
              !list_empty_careful(&d->rx_done),
              READ_ONCE(d->start_pending),
              (unsigned long long)d->ring.dropped,
@@ -709,7 +715,7 @@ static int gchd_rx(void *arg)
 
   if (rx_reads <= 5)
    dev_info(&d->intf->dev,
-            "async bulk-IN data: read=%llu ep=0x81 actual=%d total_bytes=%llu\n",
+            "bulk-IN first reads: read=%llu ep=0x81 actual=%d total_bytes=%llu\n",
             (unsigned long long)rx_reads, done->urb->actual_length,
             (unsigned long long)rx_bytes);
 
@@ -727,11 +733,13 @@ static int gchd_rx(void *arg)
 
   if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
    dev_info(&d->intf->dev,
-            "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
+            "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
             (unsigned long long)rx_reads,
             (unsigned long long)rx_bytes,
             (unsigned long long)rx_empty,
             (unsigned long long)rx_errors,
+            atomic_read(&d->rx_urb_errors),
+            READ_ONCE(d->rx_urb_last_status),
             !list_empty_careful(&d->rx_done),
             READ_ONCE(d->start_pending),
             (unsigned long long)d->ring.dropped,
@@ -785,6 +793,8 @@ static int gchd_capture_stop(struct gchd *d)
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
+  if (!r)
+   r = gchd_drain_after_stop(d);
  }
  WRITE_ONCE(d->stop_pending, false);
  return r;

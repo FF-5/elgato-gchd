@@ -87,6 +87,8 @@ struct gchd {
  struct completion rx_ready;
  int rx_setup_status;
  bool rx_active;
+ atomic_t rx_urb_errors;  /* failed receive transfers since RX start */
+ int rx_urb_last_status;
  struct gchd_ring ring;
  struct mutex deliver_lock; /* serializes gchd_deliver() */
  bool wait_sps; /* drop video until the first SPS after a (re)start */
@@ -167,6 +169,7 @@ int gchd_setup_subblock_exact(struct gchd *);
 void gchd_input_stop(struct gchd *);
 int gchd_stream_stop(struct gchd *);
 int gchd_return_to_stop(struct gchd *);
+int gchd_drain_after_stop(struct gchd *);
 
 int gchd_ring_push(struct gchd_ring *, const u8 *, size_t, u64);
 struct gchd_frame *gchd_ring_pop(struct gchd_ring *);
