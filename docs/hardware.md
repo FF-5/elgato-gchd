@@ -188,7 +188,11 @@ step 24.
 
 ## 6. Capture start (Observed)
 
-1. Encoder setup for the detected mode (about 120 field writes).
+1. Encoder setup for the detected mode: the same 120 field writes in the
+   same order in every recording (only mode-dependent values differ),
+   starting with the PIDs and `dma_sel_out = 1` and ending with the
+   transport-output selection (`sout_mode` … `a2_mode`). Stream ids are not
+   part of it.
 2. Receive transfers are queued on bulk IN `0x81` (32–36 × 65 536 bytes)
    and `0x84` (8 transfers) right before or during the encoder writes.
    No data is received on `0x84`.

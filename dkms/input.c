@@ -1057,11 +1057,11 @@ static int gchd_be_retrigger(struct gchd *d)
  return 0;
 }
 /*
- * Poll the back-end status about every 4 ms until it reads @want (or, with
- * @want == 0, until GCHD_BE_STATUS_FLAG is set). A timeout is reported but
- * not treated as an error.
+ * Poll the back-end status about every 4 ms until it reads
+ * GCHD_BE_STATUS_SETTLED or has GCHD_BE_STATUS_FLAG set; *status gets the
+ * last value. A timeout is reported but not treated as an error.
  */
-static int gchd_be_wait_status(struct gchd *d, u8 want, unsigned int timeout_ms)
+static int gchd_be_wait_status(struct gchd *d, unsigned int timeout_ms, u8 *status)
 {
  unsigned long deadline = jiffies + msecs_to_jiffies(timeout_ms);
  unsigned int polls = 0;
@@ -1070,43 +1070,47 @@ static int gchd_be_wait_status(struct gchd *d, u8 want, unsigned int timeout_ms)
  for (;;) {
   GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
   polls++;
-  if (want ? v == want : (v & GCHD_BE_STATUS_FLAG))
+  if (v == GCHD_BE_STATUS_SETTLED || (v & GCHD_BE_STATUS_FLAG))
    break;
   if (time_after(jiffies, deadline)) {
    dev_warn(&d->intf->dev,
-            "back-end status 0x%02x after %u polls, waiting for %s\n",
-            v, polls, want ? "0x72" : "flag 0x80");
-   return 0;
+            "back-end status 0x%02x after %u polls\n", v, polls);
+   break;
   }
   usleep_range(3000, 4000);
  }
  dev_dbg(&d->intf->dev, "back-end status 0x%02x after %u polls\n", v, polls);
+ *status = v;
  return 0;
 }
 
 /*
- * Two retrigger pulses: after the first, wait until the status flag is set;
- * after the second, wait until the status reads GCHD_BE_STATUS_SETTLED.
+ * Retrigger the back end; when the status then shows the flag instead of
+ * the settled value, retrigger once more and wait again.
  */
 static int gchd_be_retrigger_settle(struct gchd *d)
 {
+ u8 v;
  int r;
 
  r = gchd_be_retrigger(d);
  if (r)
   return r;
- r = gchd_be_wait_status(d, 0, 1500);
- if (r)
+ r = gchd_be_wait_status(d, 1500, &v);
+ if (r || v == GCHD_BE_STATUS_SETTLED)
   return r;
  r = gchd_be_retrigger(d);
  if (r)
   return r;
- return gchd_be_wait_status(d, GCHD_BE_STATUS_SETTLED, 1000);
+ r = gchd_be_wait_status(d, 1000, &v);
+ if (!r && v != GCHD_BE_STATUS_SETTLED)
+  dev_warn(&d->intf->dev, "back-end not settled: status 0x%02x\n", v);
+ return r;
 }
 
 /*
- * Back-end per-mode table and the following block, then two retrigger
- * pulses, each followed by its status wait.
+ * Back-end per-mode table and the following block, then retrigger and
+ * settle.
  */
 static int gchd_analog_backend_table(struct gchd *d, bool pal)
 {
@@ -1542,23 +1546,16 @@ static int gchd_encoder_program(struct gchd *d)
 {
  int r;
 
- /* Encoder configuration common to HDMI, Component and Composite. */
- r = gchd_transcoder_final_configure(d);
+ /* Encoder programming issued before every capture start. */
+ r = gchd_transcoder_start_block(d);
  if (r) {
-  dev_err(&d->intf->dev, "capture setup: transcoder final configuration failed: %d\n", r);
+  dev_err(&d->intf->dev, "capture setup: encoder programming failed: %d\n", r);
   return r;
  }
- dev_info(&d->intf->dev, "capture setup: transcoder final configuration completed\n");
-
- r = gchd_transcoder_setup(d);
- if (r) {
-  dev_err(&d->intf->dev, "capture setup: transcoder setup failed: %d\n", r);
-  return r;
- }
- dev_info(&d->intf->dev, "capture setup: transcoder setup completed\n");
+ dev_info(&d->intf->dev, "capture setup: encoder programming completed\n");
 
  /*
-  * Every input finishes with: encoder final configuration, encoder setup,
+  * Every input finishes with: encoder programming,
   * SCMD INIT (mode 0xa0), state readback, then SCMD STATE_CHANGE (START).
   * The second INIT is issued here
   * (after the final transcoder programming); the earlier INIT in
