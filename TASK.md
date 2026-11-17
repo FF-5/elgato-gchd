@@ -71,3 +71,13 @@ Paste the outputs into the maintainer comments below.
 
 ## Maintainer comments
 
+I'm uploading some traces:
+- composite 288p-576i (I saw the original software claim that the input was 480i at the beginning so the original software maybe struggles recognizing NTSC and PAL?)
+- S-Video 288p-576i
+- I captured 288p while changing the output starting at HD 1080, then HD 720, then standard (which it shows as 720x480 or 720x576), and mobile which is the 480x360 one (I forgot to record a change to HD 1080)
+- I'm recording traces where I change the bitrate for Mobile and Standard with a 288p composite input. For all the steps are start at max bitrate, then change to lowest bitrate, then change somewhere midpoint in the slider, then back to max bitrate. Mobile marks the bitrate for max as 7.5Mbps and low as 2.0Mbps. Standard marks the bitrate for max as 11.3Mbps and low as 3.0 Mbps.
+- There's another trace that captures cropping setting (none or overscan). The trace starts at none then switches to ovesrcan and then back to none. Recorded 288p composite input.
+- There's another trace for a setting that only works when standard output profile is selected, that converts the output to 640x480 instead of 720x480 or 720x576. Also recorded with 288p composite input.
+- There's another trace for a setting that is called "Stretch Standard Definition Input". Also recorded with 288p composite.
+
+I observed these issues with PAL sources with the code as it is. Bottom 1/4 of the frame was cropped and there was some green bars at the very bottom. Starting ffplay a second time didn't always work. No logs yet, so please analyze the traces and then we test your findings and I'll give you some logs after that.
