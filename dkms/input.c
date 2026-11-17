@@ -1176,10 +1176,8 @@ static int gchd_configure_composite_exact(struct gchd *d)
  }
  /*
   * Back end after analog lock, as recorded for composite and S-video:
-  * trace filtered_240p_composite.pcapng t=4.542-5.050 (NTSC) and
-  * filtered_288p_pal_composite.pcapng t=5.073-5.625 (PAL). The same
-  * sequence precedes START for 480i (previous-analysis trace_analysis.txt
-  * t=9.635-9.859).
+  * trace composite/filtered_240p_composite.pcapng t=4.542-5.050 (NTSC) and
+  * composite/filtered_288p_pal_composite.pcapng t=5.073-5.625 (PAL).
   */
  r = gchd_analog_backend(d, d->input_height == 576);
  if (r)

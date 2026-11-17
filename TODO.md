@@ -23,12 +23,12 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 
 ## Phase 0 — Repository consolidation
 
-- [x] Assess all branches (notes: `traces` branch, `traces/previous-analysis/branch-history.md`).
+- [x] Assess all branches .
 - [x] Merge `master` into `dev`; `dev` is the integration branch.
 - [x] Copy the latest driver (`state-machine` tip) to `dkms/`; it builds with
       `W=1` against 6.8 headers.
-- [x] Restore deleted analysis material (now on the `traces` branch,
-      `traces/previous-analysis/`).
+- [x] Old analysis material removed (partly inaccurate); the `traces`
+      branch holds only the maintainer's recordings, sorted by input.
 - [x] Rewrite `docs/`; Windows traces are the reference.
 - [x] Firmware extract script writes directly to `/lib/firmware/gchd`
       (maintainer commit `9ddf703`, cherry-picked).
@@ -40,8 +40,8 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 - [x] Documentation rewritten to neutral product documentation (RULES C);
       analysis material and branch history moved out of `docs/`.
 - [x] Orphan `traces` branch for trace recordings and analysis material.
-- [ ] Decide what to do with the historical branches (archive tags, then
-      delete?). Maintainer's decision.
+- [ ] Delete all historical branches once composite, S-video and component
+      480i/576i work on `dev` (maintainer decision, 2026-11-17).
 
 ## Phase 1 — Code cleanup (no behaviour change)
 
@@ -73,8 +73,7 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
       the recordings and update `docs/` with the observed sequences.
       → current `TASK.md`
 - [ ] **T-012 [OFF] (S)** Port the `debug` branch's debugfs raw bulk-IN dump
-      (`traces` branch: `traces/previous-analysis/debug-branch-trace/trace.c`)
-      behind a module parameter,
+      (`debug` branch, `drivers/elgato_gchd/trace.c`) behind a module parameter,
       so the exact device output can be saved from the kernel driver.
 
 ## Phase 3 — Kernel data path (make the output verifiable)
@@ -166,4 +165,3 @@ the mode in question can be tested; change one at a time (RULES D5).
 
 - Windows: composite 480i (T-011), HDMI with signal, component with signal,
   PAL 576i/288p, a session that starts directly in 240p.
-- The raw `.ts` files behind `traces/previous-analysis/reference-ts/`.

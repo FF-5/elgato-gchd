@@ -18,7 +18,6 @@ with composite 480i, decide what the driver must send.
 ## Inputs
 
 - Recordings uploaded by the maintainer to `traces/` on the `traces` branch.
-- `traces/previous-analysis/` (earlier decoded listings) for comparison.
 
 ## Deliverables
 
@@ -47,7 +46,7 @@ with composite 480i, decide what the driver must send.
 ## Findings
 
 Full notes: `traces` branch, `traces/ANALYSIS-2026-11-17.md`; decoded
-listings `traces/*.ops.txt` (decoder: `tools/gchd-pcap-ops.py`).
+listings `traces/<input>/*.ops.txt` (decoder: `tools/gchd-pcap-ops.py`).
 
 Driver changes made (branch `fix/analog-start-per-traces`, builds with W=1):
 
@@ -61,33 +60,32 @@ Docs: `composite.md` (PAL observed, 288p status values, apply block),
 
 ## Where to resume
 
-1. Compare `filtered_init_switch_to_component.ops.txt` with the driver's
+1. Compare `input-switching/filtered_init_switch_to_component.ops.txt` with the driver's
    `gchd_hw_init()` and component switch; compare
-   `filtered_novideo_input_switching.ops.txt` with `gchd_set_input()`.
+   `input-switching/filtered_novideo_input_switching.ops.txt` with `gchd_set_input()`.
 2. 480i → 240p live change: replace the full restart in
    `gchd_mode_workfn()` with the decoder-only transition (TODO T-041).
 3. 288p detection (TODO "Known differences").
 5. `gchd_configure_composite_exact()` repeats `0x88:02`, `0x88:3C` and the
    three `0x94` writes after detection; the traces do not. Check against the
    noinput traces before removing.
-4. Analyse the 480i recordings once they can be uploaded (split the pcapng,
-   for example `editcap -c 200000 big.pcapng part.pcapng`, or filter out the
-   bulk-IN data: `tshark -r big.pcapng -Y "usb.transfer_type != 0x03" -w small.pcapng`).
+6. Analyse the 480i recordings once uploaded (control traffic only:
+   `tshark -r big.pcapng -Y "usb.transfer_type != 0x03" -w small.pcapng`).
 
 ## Hardware test (maintainer)
 
 ```sh
 git fetch origin && git checkout fix/analog-start-per-traces
 cd dkms && make -C /lib/modules/$(uname -r)/build M=$PWD modules
-sudo rmmod elgato_gchd 2>/dev/null; sudo insmod elgato_gchd.ko
-v4l2-ctl -d /dev/videoN -i 2          # composite
-ffmpeg -f v4l2 -input_format h264 -i /dev/videoN -t 20 -c copy test480i.h264
-sudo dmesg > test480i-dmesg.txt
+sudo rmmod elgato_gchd 2>/dev/null; sudo dmesg -C; sudo insmod elgato_gchd.ko
+guvcview   # select the input with the connected 480i source, check the picture
+sudo dmesg > dmesg.txt
 ```
 
-Send back `test480i-dmesg.txt`, and whether `ffplay test480i.h264` shows a
-picture (the H.264 delivery path is still lossy, TODO T-020, so some
-corruption is expected even if the device side is correct).
+Paste the `dmesg` output (or the relevant part) into the maintainer comments
+below, with a note on what guvcview showed. The H.264 delivery path is still
+lossy (TODO T-020), so some corruption is expected even if the device side is
+correct.
 
 ---
 
