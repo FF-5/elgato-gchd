@@ -46,8 +46,10 @@ switches between 480i and 240p (§4).
    `01 BD 9A 3A E9 AB 17 88 84 8A 9C 8C 98 93 83 A9 8B E8 81 49`;
    read `0x98:89`; `0x98:72 = 88`, `C0 = 88`, `61 = 98`, `63 = 89`,
    `64 = 96`, `65 = 88`; read `0x98:FF`; `0x98:04 = 8D`, `62 = 91`.
-6. Retrigger: read `0x98:FD`, `FC`, `F3`; `0x98:0D = C8`, `0E = 05`,
-   `0E = 04`; then the same with `0E = 15`, `0E = 14`.
+6. Retrigger and settle ([commands.md §3](commands.md)): retrigger (`05`);
+   `0x98:F5` is read about every 4 ms and reads `62` until bit 7 is set
+   (`F2`, after 40–700 ms); retrigger (`15`); `0x98:F5` reads `72`.
+   INIT and START follow only after `0x98:F5` reads `72`.
 7. Capture start ([hardware.md §6](hardware.md#6-capture-start-observed)).
 
 ## 4. 480i ↔ 240p while capturing (Observed)
@@ -71,8 +73,9 @@ The lock status is polled together with `0x88:FA`, `E7` and `F1`.
    `0900:0074` reads `011A` for about 0.7 s, then the state reads `0x04` and
    `0900:0074` reads `011E`.
 6. SCMD STATE_CHANGE STOP (`05 00 00 01`), completed after about 0.3 s.
-7. Back-end table and following block as in §3 step 5, then two retriggers:
-   `05` and `15` (to 480i) or `15` and `15` (to 240p).
+7. Back-end table and following block as in §3 step 5, then retrigger and
+   settle as in §3 step 6. The pulse values follow `0x98:F5` (`05`/`15` to
+   480i, `15`/`15` to 240p in the recording).
 8. Encoder setup (identical in both directions: `v_format = 4`,
    `v_ip_format = 0`, `v_in_source_type = 3`, 720 × 480), SCMD INIT mode
    `A0`, SCMD STATE_CHANGE START (`05 00 00 02`).

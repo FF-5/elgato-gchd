@@ -1038,25 +1038,77 @@ int gchd_color_space_exact(struct gchd *d)
  * Back-end retrigger: read 0x98:FD/FC/F3, then 0x98:0D = C8 and two writes
  * to 0x98:0E (value, then value with bit 0 cleared).
  */
-static int gchd_be_retrigger(struct gchd *d, u8 value)
+static int gchd_be_retrigger(struct gchd *d)
 {
  u8 v;
+ u8 pulse;
 
+ GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
  GCHD_BE_R(d, 0xfd, v);
  GCHD_BE_R(d, 0xfc, v);
  GCHD_BE_R(d, 0xf3, v);
+ GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
  GCHD_BE_W(d, GCHD_BE_REG_RETRIGGER, GCHD_BE_RETRIGGER_VALUE);
- GCHD_BE_W(d, GCHD_BE_REG_PULSE, value);
- GCHD_BE_W(d, GCHD_BE_REG_PULSE, value & ~0x01);
+ GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
+ /* Bit 4 of the pulse follows bit 4 of the status read just before it. */
+ pulse = GCHD_BE_PULSE_BASE | (v & GCHD_BE_STATUS_PULSE_BIT);
+ GCHD_BE_W(d, GCHD_BE_REG_PULSE, pulse);
+ GCHD_BE_W(d, GCHD_BE_REG_PULSE, pulse & ~0x01);
+ return 0;
+}
+/*
+ * Poll the back-end status about every 4 ms until it reads @want (or, with
+ * @want == 0, until GCHD_BE_STATUS_FLAG is set). A timeout is reported but
+ * not treated as an error.
+ */
+static int gchd_be_wait_status(struct gchd *d, u8 want, unsigned int timeout_ms)
+{
+ unsigned long deadline = jiffies + msecs_to_jiffies(timeout_ms);
+ unsigned int polls = 0;
+ u8 v;
+
+ for (;;) {
+  GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
+  polls++;
+  if (want ? v == want : (v & GCHD_BE_STATUS_FLAG))
+   break;
+  if (time_after(jiffies, deadline)) {
+   dev_warn(&d->intf->dev,
+            "back-end status 0x%02x after %u polls, waiting for %s\n",
+            v, polls, want ? "0x72" : "flag 0x80");
+   return 0;
+  }
+  usleep_range(3000, 4000);
+ }
+ dev_dbg(&d->intf->dev, "back-end status 0x%02x after %u polls\n", v, polls);
  return 0;
 }
 
 /*
- * Back-end per-mode table and the following block, then two retrigger
- * pulses with the given values.
+ * Two retrigger pulses: after the first, wait until the status flag is set;
+ * after the second, wait until the status reads GCHD_BE_STATUS_SETTLED.
  */
-static int gchd_analog_backend_table(struct gchd *d, bool pal, u8 pulse1,
-                                     u8 pulse2)
+static int gchd_be_retrigger_settle(struct gchd *d)
+{
+ int r;
+
+ r = gchd_be_retrigger(d);
+ if (r)
+  return r;
+ r = gchd_be_wait_status(d, 0, 1500);
+ if (r)
+  return r;
+ r = gchd_be_retrigger(d);
+ if (r)
+  return r;
+ return gchd_be_wait_status(d, GCHD_BE_STATUS_SETTLED, 1000);
+}
+
+/*
+ * Back-end per-mode table and the following block, then two retrigger
+ * pulses, each followed by its status wait.
+ */
+static int gchd_analog_backend_table(struct gchd *d, bool pal)
 {
  /* 0x98 per-mode table: NTSC writes all of 90-A3, PAL a sparse set. */
  static const struct gchd_mail_cmd table_ntsc[] = {
@@ -1095,10 +1147,7 @@ static int gchd_analog_backend_table(struct gchd *d, bool pal, u8 pulse1,
  GCHD_BE_W(d, 0x04, 0x8d);
  GCHD_BE_W(d, 0x62, 0x91);
 
- r = gchd_be_retrigger(d, pulse1);
- if (r)
-  return r;
- return gchd_be_retrigger(d, pulse2);
+ return gchd_be_retrigger_settle(d);
 }
 
 static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
@@ -1114,7 +1163,7 @@ static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
   GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
  }
 
- r = gchd_analog_backend_table(d, pal, 0x05, 0x15);
+ r = gchd_analog_backend_table(d, pal);
  if (r)
   return r;
 
@@ -1194,7 +1243,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
   int i;
 
   GCHD_DEC_R(d, 0xe7, v);
-  r = gchd_be_retrigger(d, 0x15);
+  r = gchd_be_retrigger(d);
   if (r)
    return r;
   for (i = 0; i < 40; ++i) {
@@ -1236,7 +1285,7 @@ int gchd_input_read_analog_mode(struct gchd *d, bool *interlaced)
  case GCHD_DEC_LOCK_TO_240P:
   /* Leaving 480i: pulse the back end once and wait for 240p lock. */
   if (d->input_interlaced && !d->mode_retriggered) {
-   int r = gchd_be_retrigger(d, 0x15);
+   int r = gchd_be_retrigger(d);
 
    if (r)
     return r;
@@ -1296,7 +1345,7 @@ int gchd_analog_mode_pre_stop(struct gchd *d, bool interlaced)
  GCHD_BE_R(d, 0xff, v);
  GCHD_BE_W(d, 0x04, 0x8d);
  GCHD_BE_W(d, 0x62, 0x91);
- return gchd_be_retrigger(d, 0x05);
+ return gchd_be_retrigger(d);
 }
 
 static int gchd_configure_component_exact(struct gchd *d)
@@ -1617,8 +1666,7 @@ int gchd_analog_mode_reconfigure(struct gchd *d)
 {
  int r;
 
- r = gchd_analog_backend_table(d, d->input_height == 576,
-                               d->input_interlaced ? 0x05 : 0x15, 0x15);
+ r = gchd_analog_backend_table(d, d->input_height == 576);
  if (r) {
   dev_err(&d->intf->dev, "mode change: back-end setup failed: %d\n", r);
   return r;
