@@ -223,10 +223,12 @@ int gchd_transcoder_setup(struct gchd *d)
  u32 auto_average_bitrate;
  u32 auto_min_bitrate;
 
- auto_bitrate = min_t(u32, (31250U * width) / 1000U, 40000U);
+ /* Default rate: 15625 kbit/s per 1000 pixels of width (11250 kbit/s at
+  * 720), maximum 90 %, average 50 %, minimum 25 %. */
+ auto_bitrate = min_t(u32, (15625U * width) / 1000U, 40000U);
  auto_max_bitrate = min_t(u32, (auto_bitrate * 9U) / 10U, 40000U);
  auto_average_bitrate = min_t(u32, auto_bitrate / 2U, 40000U);
- auto_min_bitrate = min_t(u32, (auto_bitrate * 35U) / 100U, 40000U);
+ auto_min_bitrate = min_t(u32, auto_bitrate / 4U, 40000U);
  bitrate = d->bitrate_forced ? d->bitrate : (u16)auto_bitrate;
  u16 gop = (fps + 10) / 5;
  u16 anchor = 3;
