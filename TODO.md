@@ -56,7 +56,7 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
       Expected USB-traffic effect: none.
 - [ ] **T-003 [OFF] (S)** Make `vb2_fops` in `fops.c` static (currently a
       global `EXPORT_SYMBOL_GPL`).
-- [ ] **T-005 [OFF] (S)** Code comments in `dkms/*.c` still refer to C++
+- [x] **T-005 [OFF] (S)** Code comments in `dkms/*.c` still refer to C++
       function names, "userspace" and "original driver" (about 40 lines). Rewrite
       them neutrally (RULES E10); comments only, verify code-identical.
 - [ ] **T-004 [WIN] (S)** `0x1004` "stout_mode" write: the kernel writes bit 0,

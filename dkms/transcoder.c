@@ -4,10 +4,9 @@
 #include "gchd_mailbox.h"
 
 /*
- * The original driver programs the Fujitsu transcoder through two USB
- * vendor requests: SLSI writes a 16-bit register, while SPARAM updates a
- * masked bit-field in a 32-bit register.  Keep this table-driven here so
- * the kernel driver does not need any userspace configuration program.
+ * The Fujitsu transcoder is programmed through two USB vendor requests:
+ * SLSI writes a 16-bit register, SPARAM updates a masked bit-field in a
+ * 32-bit register.
  */
 
 
@@ -29,7 +28,7 @@ static int gchd_transcoder_table_write(struct gchd *d, u16 address,
  return 0;
 }
 
-/* The userspace PSI builders leave the CRC to the transcoder hardware. */
+/* The PSI tables are written without CRC; the transcoder adds it. */
 static const u8 gchd_pat[] = {
  0x00,0xb0,0x11,0x00,0x00,0x01,0x00,0x00,
  0x00,0x01,0xe1,0x10,0x00,0x00,0xe0,0x1f
@@ -56,8 +55,7 @@ static int gchd_transcoder_defaults(struct gchd *d)
 
  GCHD_TC_SET(d, GCHD_TC_V_VINPELCLK, 0); /* v_vinpelclk */
  GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1); /* tbc_mode */
- /* FIXME (T-001 finding): C++ stout_mode is 0x1004 bit 15; this writes bit 0
-  * (part of stoutclk). Kept as ported; verify against a Windows trace. */
+ /* FIXME: stout_mode is bit 15 of 0x1004; this writes bit 0 (stoutclk). */
  GCHD_TC_SET(d, 0x1004, 0, 1, 0); /* stout_mode */
  GCHD_TC_SET(d, GCHD_TC_EXTRA_INFO_BIT, 0);
  GCHD_TC_SET(d, GCHD_TC_TSOUT_PACKET_SIZE, 0);
@@ -80,7 +78,7 @@ static int gchd_transcoder_defaults(struct gchd *d)
  GCHD_TC_SET(d, GCHD_TC_SYSTEM_MIN_RATE, 0);
  GCHD_TC_SET(d, GCHD_TC_SYSTEM_MIN_RATE_TS_OUT2, 0);
 
- /* Fixed transport/PES identifiers used by the original encoder. */
+ /* Fixed transport/PES identifiers. */
  GCHD_TC_SET(d, GCHD_TC_V_PID_OUT, GCHD_TS_PID_VIDEO);
  GCHD_TC_SET(d, GCHD_TC_V_PID_OUT_TS_OUT2, GCHD_TS_PID_VIDEO);
  GCHD_TC_SET(d, GCHD_TC_A_PID_OUT, GCHD_TS_PID_AUDIO);
@@ -189,22 +187,17 @@ static int gchd_transcoder_defaults(struct gchd *d)
 }
 
 /*
- * This deliberately performs only the common transcoder stage. The original
- * program has large analog/HDMI signal-lock scripts; those are being moved
- * behind the V4L2 input/mode controls rather than executed by a userspace
- * process. Until a mode is selected, the encoder is left stopped.
+ * Common transcoder stage only. Input-specific signal-lock sequences run
+ * from the V4L2 input/mode paths. Until a mode is selected, the encoder is
+ * left stopped.
  */
 
-/* Exact configure.cpp transcoderSetup() parameter stage.  The V4L2 driver
- * currently exposes one encoder profile/rate tuple, so the corresponding
- * source values are derived from the active capture mode. */
+/* Encoder parameter stage. One encoder profile/rate tuple is exposed;
+ * the values are derived from the active capture mode. */
 /*
  * Analog inputs (composite, S-video) are always encoded as interlaced
  * 720x480/576 with v_in_source_type 3, also for 240p/288p sources: the
- * progressive source arrives as one picture per field. Recorded in
- * filtered_240p_composite/svideo.pcapng (t=5.437: v_format 4, v_ip_format 0,
- * v_in_source_type 3) and filtered_288p_pal_composite/svideo.pcapng
- * (v_format 5, v_ip_format 0, v_in_source_type 3).
+ * progressive source is carried as one picture per field.
  */
 static bool gchd_enc_interlaced(const struct gchd *d)
 {
@@ -242,7 +235,7 @@ int gchd_transcoder_setup(struct gchd *d)
 
  /*
   * V4L2 profile values are API enum values; the Fujitsu encoder uses
-  * 1=High and 2=Main.  The userspace driver maps Baseline to Main too.
+  * 1=High and 2=Main. Baseline is mapped to Main.
   */
  if (d->h264_profile == V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)
   profile = 1;
@@ -338,7 +331,7 @@ int gchd_transcoder_final_configure(struct gchd *d)
  u8 source_type = 0;
 
  /*
-  * v_in_source_type: 3 for analog inputs (recorded) and 576-line digital
+  * v_in_source_type: 3 for analog inputs and 576-line digital
   * sources, 0 otherwise. SD stretch modes are not exposed.
   */
  source_type = gchd_enc_source_type(d);
@@ -353,7 +346,7 @@ int gchd_transcoder_final_configure(struct gchd *d)
   *   9 = 576p50
   *  32 = 1080p60
   *
-  * As in the reference, bit 0 selects the 50 Hz variant.
+  * Bit 0 selects the 50 Hz variant.
   */
  if (d->input_height == 1080) {
   video_format = gchd_enc_interlaced(d) ? 0 : 32;
@@ -395,7 +388,7 @@ int gchd_transcoder_final_configure(struct gchd *d)
  GCHD_TC_SET(d, GCHD_TC_AIN_I2S, 1);
  GCHD_TC_SET(d, GCHD_TC_TFRFF, 2);
 
- /* These are emitted twice by the reference implementation. */
+ /* Written twice. */
  GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1);
  GCHD_TC_SET(d, GCHD_TC_TBC_MODE, 1);
 

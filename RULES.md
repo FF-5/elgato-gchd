@@ -90,8 +90,9 @@ documentation.
    it, the C++ may be used as a stopgap; record the gap as a "trace wanted"
    item in `TODO.md`.
 3. **Do not invent register writes, values, delays, or orderings.** Every new
-   protocol operation in the kernel cites its source in a code comment, by
-   trace file and time (`/* trace composite_480i.pcapng t=25.892 */`).
+   protocol operation must come from a trace. The trace file and time range
+   are named in the **commit message** and, where useful, in `TODO.md` /
+   `TASK.md` — never in the code.
 4. **Do not "simplify" sequences.** Repeated writes, reads whose values are
    discarded, odd orderings and asymmetric transitions (for example 480i → 240p
    vs 240p → 480i) are kept exactly as recorded.
@@ -135,8 +136,10 @@ documentation.
 8. Diagnostics stay behind module parameters or `dev_dbg`.
 9. Keep `dkms/dkms.conf` `PACKAGE_VERSION` in sync with user-visible
    behaviour changes.
-10. Code comments are neutral as well: cite traces as in D3, and do not
-    refer to the Windows driver.
+10. **Code comments describe only the code itself and what it does.** No
+    references to traces, trace files, the Windows driver, the C++ code,
+    "userspace", "the original driver" or "the reference". Sources belong in
+    commit messages (D3).
 
 ## F. Definition of done for a task
 

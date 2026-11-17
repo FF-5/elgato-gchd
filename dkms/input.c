@@ -376,8 +376,8 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  GCHD_FE_W(d, 0x2e, 0x6d);
 
 
- /* configure.cpp continues immediately with the four 0x99 0x89 reads,
-  * then the fixed 0x4c tail and HDNew-only 0x20 block. */
+ /* Four back-end reads, then the fixed 0x4c tail and the HD-New-only
+  * 0x20 block. */
  GCHD_BE_R(d, 0xfa, v);
  GCHD_BE_R(d, 0xf9, v);
  GCHD_BE_R(d, 0xf8, v);
@@ -503,9 +503,8 @@ static int gchd_input_finalize(struct gchd *d)
  int r;
 
  /*
-  * This is the final source-routing stage from configure.cpp.  The
-  * connector-specific setup above establishes the input path; these writes
-  * put the device into its streaming state without a userspace daemon.
+  * Final source-routing stage. The connector-specific setup above
+  * establishes the input path; these writes complete the routing.
   */
  r = gchd_scmd(d, GCHD_SCMD_INIT, GCHD_SCMD_INIT_NO_RELOAD, 0);
  if (r)
@@ -629,12 +628,12 @@ static int gchd_prepare_analog_detection(struct gchd *d)
 
  /*
   * Do not write the composite discriminator (0x02=C9) during the shared
-  * HDMI/component -> composite detection prefix. The observed source-detect
-  * sequence goes straight from the initial FD poll to 0x06=08 and F8.
+  * HDMI/component -> composite detection prefix: the sequence goes from the
+  * initial FD poll directly to 0x06=08 and the F8 read.
   * The discriminator is applied in late configuration after detection.
   *
   * S-video needs its distinct decoder mode before detection. When switching
-  * from S-video back to composite, the traces show C9 + D2 as a special
+  * from S-video back to composite, C9 + D2 are written as an
   * analog-to-analog transition prefix.
   */
  if (d->input == 3) {
@@ -663,7 +662,7 @@ static int gchd_prepare_analog_detection(struct gchd *d)
 
  /*
   * Apply connector routing before looking for a source. The three masked
-  * writes preserve unrelated enable bits and match the observed
+  * writes preserve unrelated enable bits and produce the
   * 02 0E -> 03 0E -> 03 0E routing progression for analog inputs.
   */
  r = gchd_do_enable(d, GCHD_EB_COMPOSITE_MUX, GCHD_EB_COMPOSITE_MUX);
@@ -674,8 +673,8 @@ static int gchd_prepare_analog_detection(struct gchd *d)
  if (r) return r;
 
  /*
-  * Match the captured pre-tuning idle sequence exactly: two FA/F5 cycles.
-  * FA replies (1F, then 3E in the NTSC 240p trace) are ordinary poll results,
+  * Pre-tuning idle sequence: two FA/F5 cycles. FA replies (for example 1F,
+  * then 3E) are ordinary poll results,
   * not the later CA source-found marker. Always consume both cycles here;
   * SOURCE_DETECTION owns the subsequent CA/E7/F1 polling and retries.
   */
@@ -828,8 +827,8 @@ int gchd_probe_video_source(struct gchd *d)
    /* 0xCA is the decoder's authoritative 240p/480i lock indicator. */
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, mode);
    /*
-    * Start with the known-good 480i receiver/encoder setup, as in the
-    * reference trace. A 240p lock is applied only after capture starts and
+    * Start with the 480i receiver/encoder setup. A 240p lock is applied
+    * only after capture starts and
     * the live monitor sees 0x66; this avoids skipping the transition recipe
     * when 0x66 is already present during initial detection.
     */
@@ -903,7 +902,7 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
  /*
   * The timing register can retain a plausible value with no source attached.
   * Require both a recognized timing and a non-idle 0x6665 measurement.
-  * 0xad4d +/- 10 is the no-signal signature observed in the original driver.
+  * 0xad4d +/- 10 is the no-signal value.
   */
  d->signal_present = gchd_hdmi_timing_valid(value6463) &&
                      abs((int)value6665 - 0xad4d) >= 10;
@@ -1025,8 +1024,8 @@ int gchd_color_space_exact(struct gchd *d)
   r=gchd_mail_seq(d,prefix,ARRAY_SIZE(prefix));
   if(r)return r;
  }
- /* HDMI autodetect selects RGB/YUV from the same status bit used by
-  * userspace. Component and Composite remain YUV by default. */
+ /* HDMI selects RGB/YUV from the front-end status bit (0x9C:34 bit 2).
+  * Component and Composite use YUV. */
  if (d->input == 0 && d->rgb_input)
   return gchd_mail_seq(d,rgb,ARRAY_SIZE(rgb));
  return gchd_mail_seq(d,yuv,ARRAY_SIZE(yuv));
@@ -1174,11 +1173,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
   if (!d->input_interlaced)
    GCHD_DEC_W(d, 0x0a, 0x98);
  }
- /*
-  * Back end after analog lock, as recorded for composite and S-video:
-  * trace composite/filtered_240p_composite.pcapng t=4.542-5.050 (NTSC) and
-  * composite/filtered_288p_pal_composite.pcapng t=5.073-5.625 (PAL).
-  */
+ /* Back-end programming after analog lock (composite and S-video). */
  r = gchd_analog_backend(d, d->input_height == 576);
  if (r)
   return r;
@@ -1452,7 +1447,7 @@ static int gchd_input_configure_mode(struct gchd *d)
  }
  dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
 
- /* Match the userspace tail common to HDMI, Component and Composite. */
+ /* Encoder configuration common to HDMI, Component and Composite. */
  r = gchd_transcoder_final_configure(d);
  if (r) {
   dev_err(&d->intf->dev, "capture setup: transcoder final configuration failed: %d\n", r);
@@ -1468,9 +1463,9 @@ static int gchd_input_configure_mode(struct gchd *d)
  dev_info(&d->intf->dev, "capture setup: transcoder setup completed\n");
 
  /*
-  * The userspace connector-specific configure routines all finish with:
-  * transcoderFinalConfigure(), transcoderSetup(), GCHD_SCMD_INIT(mode=0xa0),
-  * state readback, then GCHD_SCMD_STATE_CHANGE(START). Keep the second INIT here
+  * Every input finishes with: encoder final configuration, encoder setup,
+  * SCMD INIT (mode 0xa0), state readback, then SCMD STATE_CHANGE (START).
+  * The second INIT is issued here
   * (after the final transcoder programming); the earlier INIT in
   * gchd_input_finalize() is a separate stage before connector configuration.
   * Mode 0xa0 suppresses the INIT interrupt/readback handshake.
@@ -1481,7 +1476,7 @@ static int gchd_input_configure_mode(struct gchd *d)
   return r;
  }
 
- /* Match userspace: read encoder state after the mode=0xa0 INIT. */
+ /* Read the encoder state after the mode 0xa0 INIT. */
  {
   u16 state;
 

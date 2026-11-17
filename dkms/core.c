@@ -387,9 +387,8 @@ static bool gchd_rx_urb_stopped(int status)
 }
 
 /*
- * Endpoint 0x81 carries the MPEG-TS stream. Endpoint 0x84 is also submitted
- * as observed in the USB trace, but its payload role is not established, so
- * it is kept queued without being fed into the TS parser.
+ * Endpoint 0x81 carries the MPEG-TS stream. Receive transfers are also kept
+ * queued on endpoint 0x84; its payload is not passed to the TS parser.
  */
 static void gchd_rx_complete(struct urb *urb)
 {
@@ -411,7 +410,7 @@ static void gchd_rx_complete(struct urb *urb)
  }
 
  if (rx->endpoint == GCHD_EP_AUX_IN) {
-  /* Preserve the observed 0x84 receive queue; do not interpret its payload. */
+  /* Keep the 0x84 receive queue running; its payload is not interpreted. */
   r = usb_submit_urb(urb, GFP_ATOMIC);
   if (r && READ_ONCE(d->rx_active))
    dev_err_ratelimited(&d->intf->dev,
@@ -686,8 +685,8 @@ static void gchd_detection_worker(struct work_struct *work)
    * Stop transport and return to IDLE without re-running hardware init.
    * hw_init() issues RESET from every nonzero state; on HDNew that RESET
    * transition times out when the device is already IDLE (state 0x11).
-   * Keep the encoder firmware alive: restarting it after input changes has
-   * been observed to fail with -EINVAL.
+   * Keep the encoder firmware running: restarting it after an input change
+   * fails with -EINVAL.
    */
   gchd_ring_free(&d->ring);
   d->ts_partial_len = 0;
@@ -1184,7 +1183,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   * Stop/join RX before taking over bulk-IN. Stop the transport even if the
   * V4L2 streaming flag is already clear: the device may still be in START
   * after a signal-loss or STREAMOFF race. The stop helper is a no-op in STOP
-  * or IDLE and performs the userspace-compatible drain sequence otherwise.
+  * or IDLE and performs the NULL/STOP drain sequence otherwise.
   */
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);

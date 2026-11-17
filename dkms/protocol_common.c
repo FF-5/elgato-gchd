@@ -14,7 +14,7 @@ static int gchd_resolution(struct gchd *d)
  return 0;
 }
 
-/* C++ pollOn0x9989ED(): read back-end register 0xED until bit 6 is set. */
+/* Read back-end register 0xED until bit 6 is set. */
 static int gchd_be_poll_ed(struct gchd *d)
 {
  u8 v;
@@ -24,7 +24,7 @@ static int gchd_be_poll_ed(struct gchd *d)
  return 0;
 }
 
-/* C++ readFrom0x9989EC(): read back-end register 0xEC count times, discard. */
+/* Read back-end register 0xEC count times; the values are not used. */
 static int gchd_be_read_ec(struct gchd *d, unsigned int count)
 {
  u8 v;
@@ -306,7 +306,7 @@ int gchd_common_block_b2(struct gchd *d)
 
 	u8 status, mask;
 
-	//This is a subroutine in original driver as it happens at a few lone times.
+	/* Status poll and retrigger sequence. */
 	{
 		uint8_t testValue;
 		do {
