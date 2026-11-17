@@ -82,7 +82,7 @@ on the `traces` branch.
 - [ ] **T-012 [OFF] (S)** debugfs raw bulk-IN dump behind a module parameter.
 - [ ] Remote branches to delete on GitHub (not possible from the session):
       `claude/inspiring-bardeen-xjao9v`, `fix/analog-start-per-traces`,
-      `fix/mode-change-restart`,
+      `fix/mode-change-restart`, `feat/svideo`,
       `fix/buffer-timestamps`, `fix/composite-240p-start`,
       `fix/v4l2-format-negotiation`, `refactor/t001-names-and-macros`.
       Historical branches: once composite, S-video and component work on
