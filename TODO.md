@@ -30,6 +30,7 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 | 2026-11-17 | `fix/analog-start-per-traces` | composite 480i (switched from HDMI while streaming) | START completes in ~0.1 s (10 completion polls), 65 KB bulk transfers flow. guvcview crashed: format changed from 1280×720 to 720×480 underneath it. |
 | 2026-11-17 | `fix/v4l2-format-negotiation` 42aebdb | composite 480i (selected before guvcview) | G_FMT 720×480 interlaced, START ~0.1 s, data flows. guvcview showed a picture briefly, then crashed ~0.3 s after the first data. Led to the delivery fix 374fc83. |
 | 2026-11-17 | `fix/v4l2-format-negotiation` 6e8841a | composite 480i | guvcview: briefly a black-and-white picture with the bottom quarter garbled, then crash (read fault in `memcpy`). ffmpeg recorded 10 s without errors: H.264 High 720×480, `field_order tt`, 22.9 Mbit/s (driver bitrate twice the recorded value; fixed in 81bc5ec). The guvcview symptoms match copying a decoded 720-wide picture without its 768-byte line stride. |
+| 2026-11-17 | `fix/v4l2-format-negotiation` 2748f45 (merged to `dev`) | composite 480i | **Accepted.** ffplay shows the picture, occasional stutter (buffer timestamps; fix 6aaf465 on `fix/buffer-timestamps`). 10 s recording: H.264 High, level 31, 720×480, `field_order tt`, 9.7 Mbit/s, decodes without errors. 23 bulk transfers/s, no errors. START ~0.12 s. guvcview not retried. |
 
 ## Phase 0 — Repository consolidation
 
@@ -108,25 +109,29 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 
 ## Phase 4 — State machine and composite 480i (first milestone)
 
-- [ ] **T-030 [OFF→HW] (M)** SCMD completion as traced by Windows
+- [x] **T-030 [OFF→HW] (M)** SCMD completion as traced by Windows
       (`docs/hardware.md §4.3`): the loop ends on the target state, a stale
       sticky bit costs one extra round. Fixes "START failed while state =
       0x02" (`2da03ea` log). Per-round debug log.
+      Done: completion loop ends on the target state; START completes in ~0.1 s on hardware.
 - [ ] **T-031 [OFF→HW] (S)** Stop sequence NULL → STOP with draining, and
       shutdown; STREAMOFF → STREAMON without replugging.
 - [ ] **T-032 [OFF] (M)** Diff the DKMS composite path against the Windows
       480i trace (T-010 tool, T-011 trace, `trace_analysis.txt`). Follow
       the trace.
-- [ ] **T-033 [HW] (S)** Milestone: `ffmpeg -f mpegts -i /dev/videoN -t 20 out.ts`
+- [x] **T-033 [HW] (S)** Milestone: `ffmpeg -f mpegts -i /dev/videoN -t 20 out.ts`
       decodes without errors; 720×480, field order `tt`/`bb`, H.264 + MP2.
       Merge to `dev`; propose a `master` release.
-- [ ] **T-034 [HW] (S)** Investigate the ~17 s START latency at `2da03ea`
+      Done 2026-11-17 for composite 480i with the H.264 interface (ffplay, clean decode).
+- [x] **T-034 [HW] (S)** Investigate the ~17 s START latency at `2da03ea`
       against the Windows timing (START → first bulk data about 0.5 s).
+      Resolved: START now completes in ~0.1 s (receive URBs queued before START, completion loop on target state).
 
 ## Phase 5 — 240p and the 480i ↔ 240p resolution change
 
-- [ ] **T-040 [OFF] (M)** Keep the encoder at 480i for 240p (`v_format 4`,
+- [x] **T-040 [OFF] (M)** Keep the encoder at 480i for 240p (`v_format 4`,
       `v_ip_format 0`, WIN). Remove the 240p-as-480p programming.
+      Done on `dev` (analog inputs always encoded interlaced, v_in_source_type 3).
 - [ ] **T-041 [OFF→HW] (M)** Live 480i → 240p decoder-only transition
       (`docs/composite.md §4`) and the 240p → 480i restart (`§5`), exactly
       as traced, from the lock status `0x88:CA` (`7E` / `66`).
