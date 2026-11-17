@@ -44,6 +44,7 @@ When the previous input was component or composite, the selector value is
 
 ## 4. Other formats
 
-A PAL 288p S-video source uses the PAL back-end table and encoder programming
-described in [composite.md §8](composite.md#8-pal-observed). 480i and 576i
-S-video sequences have not been characterized.
+PAL sources use the PAL back-end table, encoder programming and the
+decoder-only 576i ↔ 288p change described in
+[composite.md §8](composite.md#8-pal-observed) (Observed: S-video 576i start,
+576i → 288p change with the same register writes as composite).

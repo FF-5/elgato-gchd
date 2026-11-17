@@ -13,24 +13,28 @@ on the `traces` branch.
 
 ## Current state
 
-- Works on `dev` (0.3.0): composite and S-video, 480i and 240p from a fresh
-  start, 480i ↔ 240p changes while capturing (~1.5 s), source off/on, close
-  and reopen. ffplay,
-  H.264 stream. No audio. guvcview cannot display the stream. Source used:
-  N64 *Star Wars Episode I: Racer* (menu 480i, demo 240p, switches by
-  itself).
+- Works on `dev` (0.4.0): composite NTSC 480i/240p and PAL 576i/288p,
+  S-video NTSC 480i/240p, from a fresh start and with mode changes while
+  capturing (NTSC ~1.5 s with encoder restart, PAL ~0.5 s decoder-only),
+  source off/on, close and reopen. ffplay, H.264 stream. No audio. guvcview
+  cannot display the stream. Sources used: N64 (NTSC, menu 480i / demo
+  240p), PS1 (PAL, intro 576i / 288p).
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller (5–8× faster
   than EHCI). Performance to be judged on non-virtualised hardware.
 - Bring-up order: composite and S-video (all resolutions), component, HDMI.
 
 ## Next
 
-- [ ] **T-053 [WIN+HW] (M)** PAL 576i and 288p on composite and S-video,
-      including 576i ↔ 288p changes. The driver treats every PAL source as
-      576i and checks for mode changes only on 480-line sources. Recorded:
-      288p only (`CA = 7E`, `E7 = 79`, `F1 = 63`; no apply block when the
-      source is locked at selection). 576i and a 576i ↔ 288p change are not
-      recorded, so 576i and 288p cannot be told apart yet.
+- [ ] **T-051 [WIN+HW] (M)** Component, all modes (480i, 480p, 576i, 576p,
+      720p, 1080i; mode changes). The driver uses the C++ blocks; no
+      recording of component with a signal yet.
+- [ ] **T-053b [HW] (S)** PAL S-video: no signal with the PS1
+      (`0x88:FA = ED/FD`), needs another PAL S-video source or a check with
+      the Windows software. Also open for PAL: the retrigger on `0x98:F5`
+      bit 7 while capturing; 288p capture start not recorded.
+- [ ] **T-046 [OFF] (S)** The frame rate reported before the source is
+      detected is the NTSC default: ffplay showed 60 fps for a PAL stream on
+      the first open after loading the module (50 fps on the second).
 - [ ] **T-044 [HW] (S)** Reopening right after closing failed once while the
       old ffplay process was still exiting; the stop on close takes ~1 s.
       Make a new open wait for the running stop.
@@ -44,13 +48,16 @@ on the `traces` branch.
 
 ## Inputs and modes
 
-- [ ] **T-051 [WIN+HW] (M)** Component, all modes.
 - [ ] **T-050 [WIN+HW] (M)** HDMI with a signal, all modes, mode changes.
 - [ ] **T-055 [OFF→HW] (M)** Encoder output size independent of the input
       (`docs/hdmi.md §4`: 1920×1080 … 480×360, per-size bitrate/level,
       transport output 1 or 2). Maintainer report: analog inputs offer only
-      480×360 and 640×480 in the Windows application; unconfirmed (the
-      composite recording was encoded at 720×480).
+      480×360 and 640×480 in the Windows application. Recorded for analog
+      sources (`docs/composite.md §10`): 640×480 and 480×360 use
+      `v_ip_format 2`, GOP 6 and transport output 2; HD sizes and cropping
+      cause no control transfers (bulk OUT `0x02` not in the reduced
+      recordings; check with the filter below); bitrate slider and
+      "stretch" (`v_in_source_type 2`) are encoder fields.
 - [ ] **T-054 [HW] (S)** Source loss and return.
 
 ## Data path and usability
@@ -82,7 +89,7 @@ on the `traces` branch.
 - [ ] **T-012 [OFF] (S)** debugfs raw bulk-IN dump behind a module parameter.
 - [ ] Remote branches to delete on GitHub (not possible from the session):
       `claude/inspiring-bardeen-xjao9v`, `fix/analog-start-per-traces`,
-      `fix/mode-change-restart`,
+      `fix/mode-change-restart`, `feat/svideo`, `feat/pal`,
       `fix/buffer-timestamps`, `fix/composite-240p-start`,
       `fix/v4l2-format-negotiation`, `refactor/t001-names-and-macros`.
       Historical branches: once composite, S-video and component work on
@@ -102,6 +109,13 @@ Change one at a time (RULES D5), when the mode can be tested.
 | Repeated `0x88:02/3C`, `0x94` writes after detection | written | not written (T-011) |
 
 ## Evidence wanted (maintainer, opportunistic)
+
+Reduce recordings with a filter that keeps bulk OUT (only the incoming
+stream on `0x81`/`0x84` is large):
+`tshark -r big.pcapng -Y "usb.transfer_type != 0x03 || usb.endpoint_address.direction == 0" -w small.pcapng`
+
+- Cropping on/off and an HD output size with this filter, to confirm that
+  nothing is sent on bulk OUT `0x02`.
 
 - Windows: composite 480i start, PAL 576i/288p, S-video, component and HDMI
   with a signal.

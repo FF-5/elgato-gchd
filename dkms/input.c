@@ -845,8 +845,20 @@ int gchd_probe_video_source(struct gchd *d)
             "analog format initial status=0x%02x; configuring %s\n",
             mode, d->input_interlaced ? "480i" : "240p");
   } else if (v == 7) {
+   u8 mode;
+
    d->input_width=720; d->input_height=576;
    d->input_interlaced=true; d->input_fps_num=50;
+   GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, mode);
+   if (mode != GCHD_DEC_LOCK_480I && mode != GCHD_DEC_LOCK_240P) {
+    dev_info(&d->intf->dev,
+             "analog format status 0x%02x not locked yet\n", mode);
+    return -ENOLINK;
+   }
+   d->input_interlaced = mode != GCHD_DEC_LOCK_240P;
+   dev_info(&d->intf->dev,
+            "analog format initial status=0x%02x; configuring %s\n",
+            mode, d->input_interlaced ? "576i" : "288p");
   } else return -ENOLINK;
   d->input_fps_den=1;
  }
@@ -1179,6 +1191,35 @@ static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
  return 0;
 }
 
+/* Decoder apply block for a 50 Hz source: 576i (0x28 = 88) or 288p (8A). */
+static int gchd_pal_apply(struct gchd *d, bool interlaced)
+{
+ u8 v;
+
+ GCHD_DEC_W(d, 0x07, 0x9a); GCHD_DEC_W(d, 0x08, 0x90); GCHD_DEC_W(d, 0x09, 0xa8);
+ GCHD_DEC_W(d, 0x28, interlaced ? 0x88 : 0x8a);
+ GCHD_DEC_R(d, 0xfd, v); GCHD_DEC_W(d, 0x06, 0x08);
+ return 0;
+}
+
+/*
+ * 576i <-> 288p while capturing: decoder apply block, then one back-end
+ * retrigger. The encoder keeps running.
+ */
+int gchd_analog_pal_mode_change(struct gchd *d, bool interlaced)
+{
+ u8 v;
+ int r;
+
+ r = gchd_pal_apply(d, interlaced);
+ if (r)
+  return r;
+ msleep(430);
+ GCHD_DEC_R(d, 0xe7, v);
+ GCHD_DEC_R(d, 0xf1, v);
+ return gchd_be_retrigger(d);
+}
+
 static int gchd_configure_composite_exact(struct gchd *d)
 {
  u8 v;
@@ -1200,7 +1241,11 @@ static int gchd_configure_composite_exact(struct gchd *d)
   /* Preserve the 240p/480i decision made by gchd_probe_video_source(). */
   d->input_fps_num=60; d->input_fps_den=1;
  }
- else if (v == 7) { d->input_width=720; d->input_height=576; d->input_interlaced=true; d->input_fps_num=50; d->input_fps_den=1; }
+ else if (v == 7) {
+  d->input_width=720; d->input_height=576;
+  /* Preserve the 288p/576i decision made by gchd_probe_video_source(). */
+  d->input_fps_num=50; d->input_fps_den=1;
+ }
  else if (!d->input_height) {
   u8 x;
   gchd_mail_write(d,GCHD_PORT_BRIDGE,(u8[]){GCHD_RD_FE_0,GCHD_RD_FE_1,0x3f},3);
@@ -1238,10 +1283,15 @@ static int gchd_configure_composite_exact(struct gchd *d)
  if (!d->signal_present)
   return -ENOLINK;
 
- if (d->input_height==480 || d->input_height==576) {
+ if (d->input_height == 480) {
   GCHD_DEC_W(d, 0x07, 0x8a); GCHD_DEC_W(d, 0x08, 0x9b); GCHD_DEC_W(d, 0x09, 0x7a);
   GCHD_DEC_W(d, 0x28, d->input_interlaced ? 0x88 : 0x8a);
   GCHD_DEC_R(d, 0xfd, v); GCHD_DEC_W(d, 0x06, 0x08);
+ } else if (d->input_height == 576 && !d->input_interlaced) {
+  /* 288p; a 576i source needs no apply block. */
+  r = gchd_pal_apply(d, false);
+  if (r)
+   return r;
  }
  if (!d->input_interlaced && d->input_height == 480) {
   /* 240p: retrigger, wait for the decoder to settle, then 0x88:0A = 98. */
@@ -1275,7 +1325,7 @@ int gchd_input_read_analog_mode(struct gchd *d, bool *interlaced)
 {
  u8 status;
 
- if (d->input < 2 || d->input_height != 480)
+ if (d->input < 2 || (d->input_height != 480 && d->input_height != 576))
   return -EOPNOTSUPP;
  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, status);
 
@@ -1696,14 +1746,15 @@ int gchd_input_check_mode(struct gchd *d)
 {
  bool interlaced;
 
- if (d->input < 2 || d->input_height != 480)
+ if (d->input < 2 || (d->input_height != 480 && d->input_height != 576))
   return 0;
  if (gchd_input_read_analog_mode(d, &interlaced) ||
      interlaced == d->input_interlaced)
   return 0;
  dev_info(&d->intf->dev,
           "source changed to %s during setup; configuring again\n",
-          interlaced ? "480i" : "240p");
+          d->input_height == 576 ? (interlaced ? "576i" : "288p") :
+          (interlaced ? "480i" : "240p"));
  return -EAGAIN;
 }
 

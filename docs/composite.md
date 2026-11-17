@@ -9,7 +9,7 @@ Initialization and capture start are described in [hardware.md](hardware.md).
 |---|---|---|
 | 480i (NTSC) | Observed | `v_format = 4`, `v_ip_format = 0` (interlaced), 720 × 480 |
 | 240p (NTSC line timing, progressive) | Observed | Same as 480i: `v_format = 4`, `v_ip_format = 0`, 720 × 480 |
-| 576i (PAL) | Driver | `v_format = 5`, `v_ip_format = 0`, 720 × 576 |
+| 576i (PAL) | Observed | `v_format = 5`, `v_ip_format = 0`, 720 × 576 |
 | 288p (PAL line timing, progressive) | Observed | Same as 576i: `v_format = 5`, `v_ip_format = 0`, 720 × 576 |
 
 All analog formats are encoded with `v_in_source_type = 3`.
@@ -17,17 +17,18 @@ All analog formats are encoded with `v_in_source_type = 3`.
 A 240p or 288p source is encoded as an interlaced stream (720 × 480 at 60
 fields per second, or 720 × 576 at 50 fields per second): each field carries
 one complete picture. The analog decoder
-reports the format in register `0x88:CA` and is reconfigured when the source
-switches between 480i and 240p (§4).
+reports the format in register `0x88:CA`. A change between 480i and 240p
+restarts the encoder (§4); a change between 576i and 288p reconfigures only
+the decoder (§8).
 
 ## 2. Status registers
 
 | Read | Meaning |
 |---|---|
-| `0x88:CA` | Lock and format: `FE` unlocked, `7E` 480i, 576i or 288p locked, `66` 240p locked, `76` first value after a change to 480i, `6E` first value after a change to 240p, `EE`/`E6` transitional. |
+| `0x88:CA` | Lock and format, the same codes for both families: `FE` unlocked, `7E` interlaced (480i, 576i) locked, `66` progressive (240p, 288p) locked, `76` first value after a change to interlaced, `6E` first value after a change to progressive, `EE`/`E6` transitional. |
 | `0x88:FA` | Low nibble `6` = NTSC (60 Hz) family, `7` = PAL (50 Hz) family once a signal is present. Reads `1F`/`3E` immediately after the input is selected. Polled while no signal is present. |
-| `0x88:E7` | `69` when stable; `09` right after a 240p change; `E9` during a mode change. |
-| `0x88:F1` | `7E` when stable (NTSC). |
+| `0x88:E7` | `69` when stable (NTSC), `79` (PAL); `09` right after a 240p change; `E9` during a mode change. |
+| `0x88:F1` | `7E` when stable (NTSC); `63` (PAL). |
 | `0x88:CB` | `6E` when stable; `44` right after a 240p change. |
 | `0x88:FD`, `0x88:F8` | `6E`, `C9`. Unknown. |
 
@@ -122,13 +123,42 @@ continues with §3 step 3.
 
 ## 8. PAL (Observed)
 
-For a 50 Hz source (`0x88:FA` low nibble `7`) the back-end step of §3 step 5
-uses a different per-mode table; all other writes are identical:
+### 8.1 Capture start with a 576i source
+
+The sequence of §3 with these differences: no decoder apply block (step 3
+has only the status reads), and the back-end step uses the PAL table:
 
 `0x98:70 = D0`, `0F = 88`, `90 = D8`, `91 = BF`, `95 = 9D`, `96 = 1B`,
 `97 = 88`, `A0 = 8A`, `A1 = D8`, `A2 = B2`, `A3 = 59`.
 
-Status values with a 288p source: `0x88:CA = 7E`, `E7 = 79`, `F1 = 63`.
+Status values with a locked 576i source: `0x88:FA = 07`/`17`,
+`CA = 7E`, `E7 = 79`, `F1 = 63`.
+
+### 8.2 576i ↔ 288p while capturing
+
+No SCMD and no encoder writes are issued; the stream continues. The PAL
+apply block uses different values from NTSC:
+
+```
+to 576i:  read 0x88:CA -> 76
+          0x88:07 = 9A  08 = 90  09 = A8  28 = 88
+          read 0x88:FD  0x88:06 = 08
+          about 0.43 s later: retrigger (15)
+          steady state: CA 7E
+to 288p:  read 0x88:CA -> 6E
+          retrigger (15)
+          about 0.7 s later: read 0x88:CA -> 66
+          0x88:07 = 9A  08 = 90  09 = A8  28 = 8A
+          read 0x88:FD  0x88:06 = 08
+          about 0.43 s later: read 0x88:E7, F1; retrigger (15)
+          steady state: CA 66
+```
+
+A retrigger is also issued when `0x98:F5` shows bit 7 set (`E2`) while
+capturing, followed by a second retrigger.
+
+The encoder programming is the same for 576i and 288p (`v_format = 5`,
+`v_ip_format = 0`, `v_in_source_type = 3`, 720 × 576).
 
 ## 9. Decoder apply block
 
@@ -138,3 +168,22 @@ was selected without a source (Observed). With a progressive source the block
 is written twice: first with `28 = 88`, then with `28 = 8A`, followed by
 `0x88:0A = 98` (NTSC 240p) or `0x88:0A = 8F` (PAL 288p). When the source is
 already locked at input selection, the block is not written.
+
+## 10. Encoder settings for analog sources (Observed)
+
+Settings of the capture application and the encoder fields they change,
+recorded with a PAL 288p source (720 × 576 input). Each change stops and
+restarts the encoder (§4 steps 5–8) unless noted.
+
+| Setting | Encoder fields |
+|---|---|
+| Standard (default) | 720 × 576, `v_ip_format = 0`, `v_gop_size = 12`, `v_rate_mode = 0`, `v_max_cpb_delay = 3`, `v_bitrate = 11250`, max `10125`, average `5625`, min `2812`, `system_rate = 12531`, level 31, transport output 1 |
+| Standard, lower bitrate | `v_rate_mode = 1`, `v_max_cpb_delay = 10`; for example `v_bitrate = 6000`, max `5400`, average `3000`, min `600`, `system_rate = 6898`; or `14040` / `12636` / `7020` / `3510`, `system_rate = 15524` |
+| Standard, 640 × 480 | 640 × 480, `v_ip_format = 2`, `v_gop_size = 6`, level 30, transport output 2 |
+| Mobile | 480 × 360, `v_ip_format = 2`, `v_gop_size = 6`, `v_rate_mode = 1`, `v_max_cpb_delay = 10`, level 22, transport output 2; bitrate from `4000` / `3600` / `2000` / `0` (`system_rate = 4753`) to `15000` / `13500` / `7500` / `3750` (`system_rate = 16554`) |
+| Stretch standard-definition input | `v_in_source_type = 2` instead of `3` |
+| Cropping (overscan) | no control transfers; bulk OUT (`0x02`) not recorded |
+| HD output sizes (1280 × 720, 1920 × 1080) | no control transfers, the encoder stays at 720 × 576; bulk OUT (`0x02`) not recorded |
+
+The same fields are written for the `_bl` variants. Transport output 1 and 2
+are defined in [hdmi.md §4](hdmi.md#4-capture-with-a-1080p60-source-output-size-changes-observed).
