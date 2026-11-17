@@ -136,16 +136,18 @@ the mode in question can be tested; change one at a time (RULES D5).
 
 | Item | Driver (from the C++ port) | Recorded traces |
 |---|---|---|
-| 240p encoder programming | `v_format 8`, `v_ip_format 2`, full restart on 480i ↔ 240p | `v_format 4`, `v_ip_format 0`; 480i → 240p decoder-only |
+| 240p encoder programming | `v_format 8`, `v_ip_format 2`, full restart on 480i ↔ 240p | `v_format 4`, `v_ip_format 0`; 480i → 240p decoder-only — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
 | Composite selector `0x9C:51` | `CC` | `44` (from HDMI), `EC` (from analog) |
-| Decoder tuning `0x88:10` | single pass, `10 = 88` | three passes, `10 = 6F` |
-| Composite NTSC back-end table `0x98:90–A3` | sparse (`90=68, 91=BF, 95=AB, 96=17, 97=88, A0=8C, A1=F8, A2=82, A3=59`) | all 20 registers (`01 BD 9A … 81 49`) |
-| `0x98:C0` in the B1 block | `89` | `88` |
-| `0x98:0E` retrigger base | `65`/`64` | `05`/`04` and `15`/`14` |
-| `0x94:4A`, `0x94:4B` | `AF` | `B7` (also `BB`) |
-| `v_in_source_type` for NTSC | `0` | `3` (240p composite) |
+| Decoder tuning `0x88:10` | single pass, `10 = 88` | three passes, `10 = 6F` — **already matched in the analog prepare path** |
+| Composite NTSC back-end table `0x98:90–A3` | sparse (`90=68, 91=BF, 95=AB, 96=17, 97=88, A0=8C, A1=F8, A2=82, A3=59`) | all 20 registers (`01 BD 9A … 81 49`) — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
+| `0x98:C0` in the B1 block | `89` | `88` — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
+| `0x98:0E` retrigger base | `65`/`64` | `05`/`04` and `15`/`14` — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
+| `0x94:4A`, `0x94:4B` | `AF` | `B7` (also `BB`) — **already matched in the analog prepare path** |
+| `v_in_source_type` for NTSC | `0` | `3` (240p composite) — **fixed for composite/S-video on `fix/analog-start-per-traces`** (HDMI/component still use the C++ blocks) |
 | `0900:0018` for HDMI | `00 0A` (bit 9 clear) | `02 0A` |
 | `0x1004` "stout_mode" | bit 0 written | not yet checked (T-004) |
+| 480i → 240p live change | full encoder restart (`gchd_mode_workfn`) | decoder registers only (`0x88:07/08/09/28/0A`), no SCMD |
+| 288p detection | not detected (PAL always treated as 576i) | `0x88:CA = 7E`; apply block with `28=8A`, `0A=8F` in the noinput trace |
 | Bulk IN `0x84` | required (`-ENODEV` if absent) | queued (8 URBs) during start |
 | START completion | timed out with state already `0x02` (`2da03ea` log) | loop until target state |
 

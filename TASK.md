@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** waiting for the trace recordings on the `traces` branch
+- **Status:** first upload analysed; driver changes on `fix/analog-start-per-traces` (not merged, awaiting the hardware test)
 - **Type:** offline analysis + docs ("docs-only" for RULES F2)
 - **Branches:** analysis output on `traces`; documentation changes on
   `docs/<topic>` from `dev`
@@ -46,7 +46,45 @@ with composite 480i, decide what the driver must send.
 
 ## Findings
 
-_(filled in during the task)_
+Full notes: `traces` branch, `traces/ANALYSIS-2026-11-17.md`; decoded
+listings `traces/*.ops.txt` (decoder: `tools/gchd-pcap-ops.py`).
+
+Driver changes made (branch `fix/analog-start-per-traces`, builds with W=1):
+
+1. Analog inputs are encoded interlaced (`v_format` 4/5, `v_ip_format 0`,
+   `v_in_source_type 3`), also for 240p/288p.
+2. The back end after analog lock follows the recorded sequence
+   (`gchd_analog_backend()`), replacing the C++ blocks A/B1/B2/B3/C.
+
+Docs: `composite.md` (PAL observed, 288p status values, apply block),
+`s-video.md` (PAL 288p).
+
+## Where to resume
+
+1. Compare `filtered_init_switch_to_component.ops.txt` with the driver's
+   `gchd_hw_init()` and component switch; compare
+   `filtered_novideo_input_switching.ops.txt` with `gchd_set_input()`.
+2. 480i → 240p live change: replace the full restart in
+   `gchd_mode_workfn()` with the decoder-only transition (TODO T-041).
+3. 288p detection (TODO "Known differences").
+4. Analyse the 480i recordings once they can be uploaded (split the pcapng,
+   for example `editcap -c 200000 big.pcapng part.pcapng`, or filter out the
+   bulk-IN data: `tshark -r big.pcapng -Y "usb.transfer_type != 0x03" -w small.pcapng`).
+
+## Hardware test (maintainer)
+
+```sh
+git fetch origin && git checkout fix/analog-start-per-traces
+cd dkms && make -C /lib/modules/$(uname -r)/build M=$PWD modules
+sudo rmmod elgato_gchd 2>/dev/null; sudo insmod elgato_gchd.ko
+v4l2-ctl -d /dev/videoN -i 2          # composite
+ffmpeg -f h264 -i /dev/videoN -t 20 -c copy test480i.h264
+sudo dmesg > test480i-dmesg.txt
+```
+
+Send back `test480i-dmesg.txt`, and whether `ffplay test480i.h264` shows a
+picture (the H.264 delivery path is still lossy, TODO T-020, so some
+corruption is expected even if the device side is correct).
 
 ---
 
