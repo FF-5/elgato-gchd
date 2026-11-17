@@ -12,6 +12,7 @@ ships with the driver.
 | `traces/hdmi/` | HDMI input recordings |
 | `traces/input-switching/` | Initialization and input switching, no source |
 | `traces/ANALYSIS-*.md` | Analysis notes per upload |
+| `logs/hardware-test-log.md` | Results of the hardware tests of the driver |
 
 Each recording `<name>.pcapng` has a decoded listing `<name>.ops.txt`
 (`tools/gchd-pcap-ops.py` on the `tools` branch). Recordings named
