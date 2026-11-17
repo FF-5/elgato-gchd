@@ -1,56 +1,71 @@
-# TASK T-052 — S-video 480i and 240p
+# TASK T-053 — PAL 576i and 288p (composite, S-video)
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** hardware test first (no driver change yet)
-- **Type:** hardware test, then fixes as needed
-- **Branch:** `feat/svideo` (from `dev`)
-- **TODO items:** T-052
+- **Status:** hardware test of the current driver, and Windows recordings
+- **Type:** hardware test, then implementation
+- **Branch:** `feat/pal` (from `dev`)
+- **TODO items:** T-053
 
 ## Why
 
-Composite is done on `dev` (0.3.0): 480i and 240p from a fresh start,
-480i ↔ 240p changes while capturing, close and reopen. Next in the bring-up
-order is S-video with the same resolutions. S-video shares the analog path
-with composite; the recorded differences are `0x88:02 = DC` (composite `C9`)
-and `0x88:14 = D2` (`docs/s-video.md`). The driver already sets both for
-input 3, so S-video may work as it is. This test shows what is missing.
+Composite and S-video work for NTSC (480i, 240p, changes while capturing;
+S-video accepted on `feat/svideo`, which had no code change). Next are the PAL
+modes.
 
-## Acceptance criteria
+What the driver does today with a 50 Hz source (`0x88:FA` low nibble `7`):
+720 × 576, always configured as **576i**, PAL back-end table, encoder
+`v_format = 5`. The check for mode changes while capturing only runs for
+480-line sources, so a 576i ↔ 288p change is not handled.
 
-1. S-video (input 3), fresh start in 480i (menu) and in 240p (demo): picture.
-2. 480i ↔ 240p changes while capturing: picture returns, as on composite.
-3. Close and reopen works.
-4. Switching between composite (2) and S-video (3) with `v4l2-ctl -i` while
-   ffplay is closed: the next start uses the selected input.
+What is recorded (`traces/composite/filtered_288p_pal_*`,
+`traces/s-video/filtered_288p_pal_*`): **288p only**. With a 288p source the
+decoder reads `CA = 7E` (the same value as 480i), `E7 = 79`, `F1 = 63`.
+When the source is already locked at input selection, Windows writes no
+decoder apply block and no `0x88:0A`; it loads the PAL table and starts.
+There is no recording of 576i, so it is unknown how 576i and 288p differ in
+the status registers. That is needed for switching between them.
+
+## Acceptance criteria (this test)
+
+1. PAL 576i and PAL 288p, each on composite and S-video, fresh start: does
+   a picture appear with the current driver?
+2. Windows recordings (control traffic is enough): composite PAL **576i**
+   start, and a **576i ↔ 288p** change while capturing, if the source does
+   that.
 
 ## Hardware test (maintainer)
 
-VirtualBox with the USB 3.0 (xHCI) controller; the N64 connected by S-video.
+Please first say which PAL source(s) you use and which mode each outputs
+(576i, 288p, or switching).
+
+Test with the current driver (VirtualBox xHCI):
 
 ```sh
-git fetch origin && git checkout feat/svideo && git pull
+git fetch origin && git checkout feat/pal && git pull
 cd dkms && make -C /lib/modules/$(uname -r)/build M=$PWD clean modules
 sudo rmmod elgato_gchd 2>/dev/null; sudo dmesg -C
 sudo modprobe -a videodev videobuf2-v4l2 videobuf2-vmalloc
 # unplug and replug the device, then:
 sudo insmod elgato_gchd.ko
-v4l2-ctl -d /dev/video0 -i 3
+v4l2-ctl -d /dev/video0 -i 2      # 3 for S-video
 ffplay -f v4l2 -input_format h264 -i /dev/video0
-# let the game switch menu <-> demo twice; close ffplay; wait until the
-# ffplay process has exited (about 2 s); start ffplay again
 sudo dmesg | grep -vE "bulk-IN data|START poll=|firmware chunk|open requested|SCMD write succeeded|SCMD interrupt|bulk-IN stats"
 ```
 
-If an S-video cable is not available, say so in the comments; the next
-task is then PAL (needs a PAL source) or component.
+For each source/input: note whether a picture appears, close ffplay, wait
+2 s, next. A switching source: note when it switched (expect no recovery
+yet).
 
-Paste the output into the maintainer comments below and note when the game
-switched.
+Windows recordings: upload to `traces/composite/` (and `traces/s-video/` if
+recorded), reduced to control traffic as before.
+
+Paste the outputs into the maintainer comments below.
 
 ## Findings
 
-_(filled in during the task)_
+- S-video (T-052): works like composite with the existing code (sixteenth
+  test, `logs/hardware-test-log.md`).
 
 ---
 

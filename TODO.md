@@ -13,8 +13,9 @@ on the `traces` branch.
 
 ## Current state
 
-- Works on `dev` (0.3.0): composite 480i and 240p from a fresh start,
-  480i ↔ 240p changes while capturing (~1.4 s), close and reopen. ffplay,
+- Works on `dev` (0.3.0): composite and S-video, 480i and 240p from a fresh
+  start, 480i ↔ 240p changes while capturing (~1.5 s), source off/on, close
+  and reopen. ffplay,
   H.264 stream. No audio. guvcview cannot display the stream. Source used:
   N64 *Star Wars Episode I: Racer* (menu 480i, demo 240p, switches by
   itself).
@@ -24,10 +25,12 @@ on the `traces` branch.
 
 ## Next
 
-- [ ] **T-052 [HW] (M)** S-video 480i and 240p, including mode changes
-      (`docs/s-video.md`: `0x88:02 = DC`, `0x88:14 = D2`).
-- [ ] **T-053 [WIN+HW] (S)** PAL 576i/288p (composite, S-video); 288p
-      detection (`CA = 7E`, apply block `28=8A`, `0A=8F`). Needs a PAL source.
+- [ ] **T-053 [WIN+HW] (M)** PAL 576i and 288p on composite and S-video,
+      including 576i ↔ 288p changes. The driver treats every PAL source as
+      576i and checks for mode changes only on 480-line sources. Recorded:
+      288p only (`CA = 7E`, `E7 = 79`, `F1 = 63`; no apply block when the
+      source is locked at selection). 576i and a 576i ↔ 288p change are not
+      recorded, so 576i and 288p cannot be told apart yet.
 - [ ] **T-044 [HW] (S)** Reopening right after closing failed once while the
       old ffplay process was still exiting; the stop on close takes ~1 s.
       Make a new open wait for the running stop.
