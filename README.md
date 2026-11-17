@@ -1,15 +1,22 @@
 # traces (analysis branch, never merged)
 
-Raw USB traces and analysis material for the Elgato Game Capture HD. This is
-an orphan branch: it shares no history with `dev`/`master` and is never
-merged. Nothing here ships with the driver.
+USB trace recordings of the Elgato Game Capture HD and their analysis. Orphan
+branch: shares no history with `dev`/`master`, never merged, nothing here
+ships with the driver.
 
-| Path | Contents |
+| Folder | Contents |
 |---|---|
-| `traces/` | New trace recordings (pcapng/usbmon) go directly here, one file per session. |
-| `traces/previous-analysis/` | Material collected before this branch existed: decoded trace analyses, usbmon logs of the userspace and kernel drivers, kernel logs, reference-TS analysis. See `INDEX.md` there. |
+| `traces/composite/` | Composite input recordings |
+| `traces/s-video/` | S-video input recordings |
+| `traces/component/` | Component input recordings |
+| `traces/hdmi/` | HDMI input recordings (create when needed) |
+| `traces/input-switching/` | Initialization and input switching, no source |
+| `traces/ANALYSIS-*.md` | Analysis notes per upload |
 
-Naming suggestion for new recordings:
-`<input>_<mode>_<scenario>.pcapng`, for example
-`composite_480i_plug-in-to-capture.pcapng`, with an optional `.txt` next to it
-describing source device, timing of events, and anything notable.
+Each recording `<name>.pcapng` has a decoded listing `<name>.ops.txt`
+(`tools/gchd-pcap-ops.py` on the `tools` branch). Recordings named
+`*_noinput_*` start without a source; the source is switched on later and
+capture starts. Most recordings end shortly after the first stream data.
+
+Recordings that are too large can be reduced to control traffic only:
+`tshark -r big.pcapng -Y "usb.transfer_type != 0x03" -w small.pcapng`.
