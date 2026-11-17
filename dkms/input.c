@@ -1453,16 +1453,16 @@ static int gchd_input_configure_mode(struct gchd *d)
   r = gchd_configure_component_exact(d);
  if (r) {
   if (r == -ENOLINK) {
-   /* Keep the prepared receiver in IDLE; the worker now polls timing only. */
+   /* Keep the prepared receiver stopped; the worker now polls timing only. */
    d->input_prepared = true;
    return r;
   }
   /*
    * Connector setup failed after the encoder firmware was already running.
-   * Return to IDLE, but do not tear down the encoder: input changes reuse the
+   * Return to the stopped state, but do not tear down the encoder: input changes reuse the
    * initialized encoder and retry only the connector-specific configuration.
    */
-  gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+  gchd_return_to_stop(d);
   d->input_prepared = false;
   dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\n", r);
   return r;

@@ -807,19 +807,18 @@ static void gchd_detection_worker(struct work_struct *work)
   WRITE_ONCE(d->capture_active, false);
 
   /*
-   * Stop transport and return to IDLE without re-running hardware init.
-   * hw_init() issues RESET from every nonzero state; on HDNew that RESET
-   * transition times out when the device is already IDLE (state 0x11).
+   * Stop transport and return to the stopped state without re-running
+   * hardware init.
    * Keep the encoder firmware running: restarting it after an input change
    * fails with -EINVAL.
    */
   gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
   d->ts_partial_len = 0;
-  r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+  r = gchd_return_to_stop(d);
   if (r) {
    WRITE_ONCE(d->signal_present, false);
    dev_warn(&d->intf->dev,
-            "redetection: transition to IDLE failed: %d\n", r);
+            "redetection: stop failed: %d\n", r);
    goto retry;
   }
   d->input_configured = false;
@@ -829,14 +828,14 @@ static void gchd_detection_worker(struct work_struct *work)
  if (d->input_configured && !READ_ONCE(d->signal_present)) {
   /*
    * Signal-loss notification can race with detector work. Invalidate the old
-   * timing and return to IDLE without resetting/reloading the device. Keep
-   * the configured marker until IDLE succeeds so a failed transition is
+   * timing and return to the stopped state without resetting/reloading the device. Keep
+   * the configured marker until the stop succeeds so a failed transition is
    * retried before any new source probe.
    */
-  r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+  r = gchd_return_to_stop(d);
   if (r) {
    dev_warn(&d->intf->dev,
-            "redetection: transition to IDLE after signal loss failed: %d\n", r);
+            "redetection: stop after signal loss failed: %d\n", r);
    goto retry;
   }
   d->input_configured = false;
@@ -845,7 +844,7 @@ static void gchd_detection_worker(struct work_struct *work)
  if (!d->input_configured) {
   /*
    * Run connector preparation only after any previous capture has been
-   * stopped and the device is back in IDLE. The setup helper is idempotent
+   * stopped and the device is back in the stopped state. The setup helper is idempotent
    * for the current input and stays complete across no-source retries.
    */
   if (!d->input_detect_prepared) {
@@ -890,9 +889,8 @@ static void gchd_detection_worker(struct work_struct *work)
     dev_warn(&d->intf->dev,
              "redetection: input configuration failed: %d\n", r);
     /*
-     * Configuration began from IDLE and has not issued START. Do not send
-     * another IDLE state-change command here: HDNew can time out when asked
-     * to transition to the state it is already in. Re-probe and retry setup.
+     * Configuration began from the stopped state and has not issued START.
+     * Re-probe and retry setup.
      */
     d->input_configured = false;
     d->input_prepared = false;
@@ -956,15 +954,15 @@ static void gchd_detection_worker(struct work_struct *work)
     /*
      * A failed START must not leave the cached "configured + signal present"
      * flags set: that would make the next detection pass skip configuration
-     * and never attempt capture again. Recover to IDLE before allowing the
+     * and never attempt capture again. Return to the stopped state before allowing the
      * detector to probe or configure the input again.
      */
-    idle_error = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+    idle_error = gchd_return_to_stop(d);
     WRITE_ONCE(d->capture_active, false);
     if (idle_error) {
      gchd_set_lifecycle(d, GCHD_ERROR);
      dev_err(&d->intf->dev,
-             "capture start failed: %d; recovery to IDLE failed: %d\n",
+             "capture start failed: %d; recovery to stopped state failed: %d\n",
              start_error, idle_error);
      goto out;
     }
@@ -974,7 +972,7 @@ static void gchd_detection_worker(struct work_struct *work)
     WRITE_ONCE(d->signal_present, false);
     gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
     dev_warn(&d->intf->dev,
-             "capture start failed: %d; recovered to IDLE, retrying detection\n",
+             "capture start failed: %d; stopped, retrying detection\n",
              start_error);
     /* Avoid hammering START if the state transition timed out. */
     schedule_delayed_work(&d->detect_work, msecs_to_jiffies(1000));
@@ -1039,9 +1037,6 @@ static void gchd_mode_workfn(struct work_struct *work)
   d->rx_thread = NULL;
  }
  r = gchd_stream_stop(d);
- if (r)
-  goto restart_failed;
- r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
  if (r)
   goto restart_failed;
 
@@ -1329,13 +1324,12 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 
   /*
    * Keep encoder firmware initialized; do not run full hardware shutdown or
-   * input-specific teardown. gchd_state_cmd skips an already-completed IDLE
-   * transition, which matters when switching between no-signal inputs.
+   * input-specific teardown; a running stream is stopped (NULL -> STOP).
    */
-  r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+  r = gchd_return_to_stop(d);
   if (r) {
    dev_err(&d->intf->dev,
-           "input switch: transition to IDLE failed: %d\n", r);
+           "input switch: stop failed: %d\n", r);
    WRITE_ONCE(d->signal_present, false);
    WRITE_ONCE(d->streaming, false);
    WRITE_ONCE(d->detect_requested, true);
@@ -1348,7 +1342,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   WRITE_ONCE(d->capture_active, false);
  }
 
- /* Clear connector-specific cached state only after reaching IDLE. */
+ /* Clear connector-specific cached state only after the stream is stopped. */
  d->input_configured = false;
  d->input_routed = false;
  d->input_detect_prepared = false;

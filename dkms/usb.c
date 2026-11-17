@@ -655,9 +655,10 @@ static int gchd_drain_stream(struct gchd *d, unsigned int count)
  for (i = 0; i < count; ++i) {
   actual = 0;
   r = usb_bulk_msg(d->udev, usb_rcvbulkpipe(d->udev, GCHD_EP_TS_IN),
-                   d->usb_buf, GCHD_USB_BUFSIZE, &actual, 1000);
+                   d->usb_buf, GCHD_USB_BUFSIZE, &actual, 50);
+  /* Nothing pending: the queued data has been drained. */
   if (r == -ETIMEDOUT || r == -EAGAIN)
-   continue;
+   break;
   if (r)
    return r;
  }
@@ -741,6 +742,25 @@ int gchd_stream_stop(struct gchd *d)
  r = gchd_drain_stream(d, 5);
  /* Successful STOP keeps input configuration for the next STREAMON. */
  return r;
+}
+
+/*
+ * Bring the encoder to the stopped state (0x01) without leaving it
+ * initialized: a running stream is stopped (NULL -> STOP); the stopped state
+ * is kept. IDLE (0x11) is not used, because INIT mode 0xa0 does not leave it.
+ */
+int gchd_return_to_stop(struct gchd *d)
+{
+ u16 state;
+ int r;
+
+ r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
+ if (r)
+  return r;
+ state &= GCHD_STATE_MASK;
+ if (state == GCHD_STATE_START || state == GCHD_STATE_NULL)
+  return gchd_stream_stop(d);
+ return 0;
 }
 
 int gchd_do_enable(struct gchd *d, u16 mask, u16 values)
