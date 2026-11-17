@@ -20,8 +20,8 @@
 
 /* Driver configuration (not protocol). */
 #define GCHD_RX_URBS_EP_IN 32	/* URBs queued on GCHD_EP_TS_IN */
-#define GCHD_RX_URBS_AUX_IN 8	/* URBs queued on GCHD_EP_AUX_IN (Windows does this) */
-#define GCHD_USB_BUFSIZE 0x10000	/* bulk-IN URB size, as Windows */
+#define GCHD_RX_URBS_AUX_IN 8	/* URBs queued on GCHD_EP_AUX_IN */
+#define GCHD_USB_BUFSIZE 0x10000	/* bulk-IN URB size */
 #define GCHD_RING_FRAMES 32
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)

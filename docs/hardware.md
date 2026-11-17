@@ -1,264 +1,235 @@
-# Hardware, transport and shared lifecycle
+# Hardware, transport and device lifecycle
 
-Notation and confidence markers are defined in [README.md](README.md).
-Function names in **C++** references are from `../src/gchd/*.cpp` and
-`../src/gchd_hardware.hpp`.
+Notation and status labels are defined in [README.md](README.md).
 
-## 1. Device families
+## 1. Device models
 
-| Family | USB PIDs | Firmware (idle / encode) | Encoder SoC |
+| Model | USB product IDs | Firmware files (idle / encoder) | Encoder |
 |---|---|---|---|
-| Original GCHD ("HD") | `0044`, `004e`, `0051` | `mb86h57_h58_idle.bin` / `mb86h57_h58_enc_h.bin` | Fujitsu MB86H57/H58 |
-| HD-New | `005d` | `mb86m01_assp_nsec_idle.bin` / `mb86m01_assp_nsec_enc_h.bin` | Fujitsu MB86M01 |
-| HD60 / HD60 S | `005c` / `004f` | — | Not supported (different hardware) |
+| Game Capture HD | `0044`, `004e`, `0051` | `gchd/MB86H57_H58_IDLE` / `gchd/MB86H57_H58_ENC_H` | Fujitsu MB86H57/H58 |
+| Game Capture HD (HD-New) | `005d` | `gchd/MB86M01_ASSP_NSEC_IDLE` / `gchd/MB86M01_ASSP_NSEC_ENC_H` | Fujitsu MB86M01 |
 
-All evidence in this repository (Windows traces, usbmon logs, kernel logs) was
-captured on an **HD-New** (`005d`, version string `V130…`). Original-HD
-behaviour is known only from the C++ code.
+The observed sequences in this documentation were recorded on the `005d`
+model. The other models differ in the SCMD payload length and the mailbox
+transport (see §2); these paths are **Driver** only.
 
-## 2. USB transport primitives
+## 2. USB transport
 
-| Operation | USB transfer | Payload | Source |
-|---|---|---|---|
-| Register read | Control IN, `bmRequestType 0xC0`, `bRequest 0xBC`, `wValue=bank`, `wIndex=reg` | 2 or 4 bytes, big-endian | C++ `read_config` |
-| Register write | Control OUT, `0x40`, `0xBC`, `wValue=bank`, `wIndex=reg` | 2 bytes, big-endian | C++ `write_config` |
-| Transcoder word write (`slsi`) | Control OUT `0x40`, `0xBC`, `wValue=0x0000`, `wIndex=addr` | 16-bit BE value; `addr` 2-byte aligned | C++ `slsi` |
-| Transcoder bit-field write (`sparam`) | Control OUT `0x40`, `0xBC`, `wValue=0x0001`, `wIndex=addr & ~3` | `VALUE32_BE MASK32_BE` (8 bytes) | C++ `sparam` |
-| SCMD | Control OUT `0x40`, `bRequest 0xB8`, `wValue=0`, `wIndex=0` | HD: `00 00 CMD MODE DH DL`; HD-New: `CMD MODE DH DL` | C++ `scmd` |
-| Original-HD mailbox write/read | Control OUT/IN, `bRequest 0xBD`, `wValue=0`, `wIndex=PORT<<8` | Raw bytes, no padding | C++ `mailWrite`/`mailRead` |
-| HD-New mailbox data write | Control OUT `0xBC`, `0800:00C0` | Payload padded to even length with `00` | C++ `mailWrite` |
-| HD-New mailbox commit | Control OUT `bRequest 0xB9`, `wValue=0`, `wIndex=0` | Write `09 00 PORT<<1 LEN`; read request `09 01 PORT<<1 LEN` | C++ `mailWrite`/`mailRead` |
-| HD-New mailbox read data | Control IN `0xBC`, `0800:23BE` | `LEN + 2 + (LEN & 1)` bytes; drop 2 leading bytes and the odd pad byte | C++ `mailRead` |
-| Interrupt wait | Interrupt IN `0x83`, 3-byte buffer (`10 00 00` observed) | Status only checked for transfer success | C++ `interruptPend` |
-| Firmware download | Bulk OUT `0x02` | Chunks of 16 384 B (HD) or 32 768 B (HD-New) | C++ `dlfirm` |
-| Video stream | Bulk IN `0x81` | MPEG transport stream, see [video-output.md](video-output.md) | C++ `GCHD::stream` |
+| Operation | USB transfer | Payload |
+|---|---|---|
+| Register read | Control IN, `bmRequestType 0xC0`, `bRequest 0xBC`, `wValue = bank`, `wIndex = register` | 2 or 4 bytes, big-endian |
+| Register write | Control OUT, `0x40`, `0xBC`, `wValue = bank`, `wIndex = register` | 2 bytes, big-endian |
+| Encoder word write | Control OUT `0x40`, `0xBC`, `wValue = 0x0000`, `wIndex = address` | 16-bit big-endian value |
+| Encoder field write | Control OUT `0x40`, `0xBC`, `wValue = 0x0001`, `wIndex = address & ~3` | `VALUE32_BE MASK32_BE` (8 bytes) |
+| SCMD | Control OUT `0x40`, `bRequest 0xB8`, `wValue = 0`, `wIndex = 0` | `005d`: `CMD MODE DATA_H DATA_L`; other models: `00 00 CMD MODE DATA_H DATA_L` |
+| Mailbox data (`005d`) | Control OUT `0xBC`, `0800:00C0` | Payload padded to an even length with `00` |
+| Mailbox command (`005d`) | Control OUT `bRequest 0xB9`, `wValue = 0`, `wIndex = 0` | Write `09 00 PORT<<1 LEN`; read request `09 01 PORT<<1 LEN` |
+| Mailbox read data (`005d`) | Control IN `0xBC`, `0800:23BE` | `LEN + 2 + (LEN & 1)` bytes: 2 header bytes, data, pad byte for odd lengths |
+| Mailbox (other models) | Control OUT/IN, `bRequest 0xBD`, `wValue = 0`, `wIndex = PORT << 8` | Raw bytes, no padding |
+| Interrupt | Interrupt IN `0x83`, 3 bytes (`10 00 00` observed) | Notification only |
+| Firmware download | Bulk OUT `0x02` | 32 768-byte chunks (`005d`), 16 384-byte chunks (other models) |
+| Video stream | Bulk IN `0x81` | MPEG transport stream, see [video-output.md](video-output.md) |
 
-Bulk IN `0x84` exists on HD-New and Windows queues 8 URBs on it during capture
-start (**WIN**). The C++ driver never touches `0x84` and still streams
-(**C++**), so queueing `0x84` is **not required** for video.
+Bulk IN endpoint `0x84` is present on the `005d` model. Receive transfers are
+queued on it during capture start (**Observed**); its payload is not
+documented.
 
-### 2.1 Mailbox handshake (HD-New), exact C++ order
+### 2.1 Mailbox handshake (`005d`, Observed)
 
-Write (`mailWrite`):
+Write:
 
-1. `0800:00C0` ← payload (padded to even length)
-2. `0xB9` ← `09 00 PORT<<1 LEN` (`LEN` is the unpadded length)
+1. `0800:00C0` ← payload, padded to an even length
+2. `0xB9` ← `09 00 PORT<<1 LEN` (`LEN` = unpadded length)
 3. Interrupt IN `0x83`
-4. Read `0800:0016` (2 bytes; always `09 00` so far)
-5. Poll `0900:001C` until bit 0 is set (`mailReadyWait`)
-6. Read `0800:23BE` (2 bytes, discarded)
-7. Write `0900:0014` ← saved enable-state shadow
-8. Poll `0900:001C` bit 0 again
+4. Read `0800:0016` (`09 00`)
+5. Poll `0900:001C` until bit 0 is set
+6. Read `0800:23BE`, 2 bytes, value not used
+7. Write `0900:0014` ← current enable shadow
+8. Poll `0900:001C` until bit 0 is set
 
-Read (`mailRead`):
+Read:
 
 1. `0xB9` ← `09 01 PORT<<1 LEN`
 2. Interrupt IN `0x83`
 3. Read `0800:0016`
-4. Poll `0900:001C` bit 0
-5. Read `0800:23BE`, `LEN+2+(LEN&1)` bytes, then strip
+4. Poll `0900:001C` until bit 0 is set
+5. Read `0800:23BE`, `LEN + 2 + (LEN & 1)` bytes; drop the 2 header bytes and
+   the pad byte
 
-Windows performs the same steps (**WIN**, "HS"/"HSR" primitives in
-`evidence/windows-traces/gchd_composite_240p_full_bringup.txt`). The 3-byte
-"CMD" form on port `0x33` (`94 RR VV`) gets only the write handshake.
+The 3-byte auxiliary write `94 RR VV` on port `0x33` uses the write handshake
+only.
 
-### 2.2 Mailbox handshake (Original HD)
+### 2.2 Mailbox handshake (other models, Driver)
 
-`0xBD` write to `wIndex=PORT<<8`, then write the shadow to `0900:0014` and poll
-`0900:001C` bit 0 (`sendEnableState`). Reads are a single `0xBD` IN transfer
-that blocks until data is ready (**C++** only).
+Write: `0xBD` OUT with `wIndex = PORT << 8`, then write the enable shadow to
+`0900:0014` and poll `0900:001C` bit 0. Read: a single `0xBD` IN transfer.
 
-### 2.3 Side information in `0900:001C`
+### 2.3 Cable detection bits in `0900:001C`
 
-Every poll of `0900:001C` (`MAIL_REQUEST_READY`) also carries cable detection
-(**C++** `mailReadyWait`, `sendEnableState`):
-
-| Bits | Meaning (C++) |
+| Bits | Meaning |
 |---|---|
 | 0 | Mailbox ready |
 | 8–9 | Cable type: `00` HDMI, `10` component, `11` composite |
-| 10–11 | Cable presence; either bit set means something is connected |
+| 10–11 | Cable presence (non-zero if a cable is detected) |
 
-The C++ AND-accumulates these bits into `specialDetectMask_` during early init
-and uses them for input autodetection (see §5 step 11). S-video is not
-distinguished.
+The driver accumulates these bits during initialization
+(`GCHD_MAIL_READY_DETECT`). S-video is not distinguished from composite.
 
-## 3. Enable register and its shadow
+## 3. Enable register and shadow
 
-| Register | Name (C++) | Role |
+| Register | Driver name | Role |
 |---|---|---|
-| `0900:0018` | `ENABLE_REGISTER` | GPIO-like enable bits. |
-| `0900:0014` | `MAIL_SEND_ENABLE_REGISTER_STATE` | Shadow / "configured" mask. Rewritten after every mailbox write. Value is session-specific (`D3 9E`, `03 1E` seen on HD-New). |
+| `0900:0018` | `GCHD_REG_ENABLE` | Enable bits. |
+| `0900:0014` | `GCHD_REG_ENABLE_SHADOW` | Shadow of the enable state; written after every mailbox write. Session-specific value. |
 
-Enable bits (masks into both registers; **C++** names, meanings are educated
-guesses from the original author):
+Enable bits (provisional names):
 
-| Bit | Mask | Name | Interpretation |
+| Bit | Mask | Driver name | Use |
 |---|---|---|---|
-| 1 | `0x0002` | `EB_FIRMWARE_PROCESSOR` | Powers the processor the firmware is loaded into. |
-| 2 | `0x0004` | `EB_ANALOG_INPUT` | Set for analog inputs, clear for HDMI. |
-| 3 | `0x0008` | `EB_ENCODER_ENABLE` | Set after the encode firmware is running. |
-| 4 | `0x0010` | `EB_ENCODER_TRIGGER` | Pulsed once during init (see §5 step 18). |
-| 8 | `0x0100` | `EB_COMPOSITE_MUX` | Composite (and, in Windows, S-video). |
-| 9 | `0x0200` | `EB_ANALOG_MUX` | C++: set for composite and component. |
+| 1 | `0x0002` | `GCHD_EB_FIRMWARE_PROCESSOR` | Set while the bridge processor runs. |
+| 2 | `0x0004` | `GCHD_EB_ANALOG_INPUT` | Set for analog inputs. |
+| 3 | `0x0008` | `GCHD_EB_ENCODER_ENABLE` | Set once the encoder firmware runs. |
+| 4 | `0x0010` | `GCHD_EB_ENCODER_TRIGGER` | Pulsed once during initialization. |
+| 8 | `0x0100` | `GCHD_EB_COMPOSITE_MUX` | Set for composite and S-video. |
+| 9 | `0x0200` | `GCHD_EB_ANALOG_MUX` | See observed values below. |
 
-`doEnable(setMask, valueMask)` writes the shadow first (with `setMask` OR-ed
-in), then `ENABLE_REGISTER`, then reads both back.
+Observed full values of `0900:0018` after input selection: HDMI `02 0A`,
+component `02 0E`, composite and S-video `03 0E`.
 
-Observed full words in `0900:0018` (**WIN**): HDMI `02 0A`, component `02 0E`,
-composite and S-video `03 0E`. **DISCREPANCY:** the C++ clears
-`EB_ANALOG_MUX` (bit 9) for HDMI, which gives `00 0A` (`configure_hdmi.cpp`
-comments "enable 000a"), but Windows writes `02 0A` for HDMI. Bit 9 is
-therefore not simply "analog mux".
+To change bits, the shadow is written first (with the changed bits added),
+then the enable register; both are read back.
 
-## 4. SCMD state machine
+## 4. System commands (SCMD)
 
-### 4.1 Commands (**C++** `scmd`, `stateConfirmedScmd`)
+### 4.1 Commands
 
-| CMD | Name | MODE / DATA | Expected state afterwards |
+| CMD | Name | MODE / DATA | State afterwards |
 |---|---|---|---|
-| `01` | `SCMD_IDLE` | `00` / `0000` | `0x11` |
-| `02` | `SCMD_RESET` | mode `00` (warm start, firmware already loaded) | `0x10` |
-| `02` | `SCMD_RESET` | mode `01` (final step of shutdown) | `0x12` |
-| `04` | `SCMD_INIT` | mode `00`: leave idle **and** start encode-firmware load (raises interrupt) | `0x01`, not state-confirmed in C++ |
-| `04` | `SCMD_INIT` | mode `A0`: leave idle without firmware load (no interrupt) | `0x01`, not state-confirmed in C++ |
-| `05` | `SCMD_STATE_CHANGE` | data `0001` = STOP | `0x01` |
-| `05` | `SCMD_STATE_CHANGE` | data `0002` = START (encoding, TS output) | `0x02` |
-| `05` | `SCMD_STATE_CHANGE` | data `0004` = NULL (device outputs an empty/null stream) | `0x04` |
+| `01` | IDLE | `00` / `0000` | `0x11` |
+| `02` | RESET | mode `00`: firmware already loaded | `0x10` |
+| `02` | RESET | mode `01`: last step of shutdown | `0x12` |
+| `04` | INIT | mode `00`: leave idle and accept the encoder firmware download | `0x01` |
+| `04` | INIT | mode `A0`: leave idle without firmware download | `0x01` |
+| `05` | STATE_CHANGE | data `0001` = STOP | `0x01` |
+| `05` | STATE_CHANGE | data `0002` = START (encoding, stream output) | `0x02` |
+| `05` | STATE_CHANGE | data `0004` = NULL (empty stream) | `0x04` |
 
-On HD-New, after writing SCMD the C++ waits for interrupt `0x83` and polls
-`0800:0014` until its high byte equals `CMD`. It does this **only** for CMD
-`01`, `04` and `05`, and only when `(MODE & 0xA0) != 0xA0`. This confirms
-receipt, not completion.
+On the `005d` model, IDLE, INIT and STATE_CHANGE with a mode other than `A0`
+are followed by an interrupt on `0x83` and a read of `0800:0014` until its
+high byte equals `CMD`. This confirms receipt of the command; completion is
+confirmed separately (§4.3). INIT mode `A0` is followed by neither
+(**Observed**).
 
-### 4.2 State readback `0800:2008` (low 5 bits)
+### 4.2 State register `0800:2008` (low 5 bits)
 
-| Value | Meaning (**C++** `gchd_hardware.hpp`) |
+| Value | State |
 |---|---|
-| `0x00` | Power-on, nothing loaded |
+| `0x00` | Power-on, no firmware |
 | `0x10` | Idle firmware loaded, IDLE not yet sent |
-| `0x11` | IDLE (bit 4 = idling, low nibble = STOP) |
-| `0x01` | Not idling, stopped (after `SCMD_INIT`) |
-| `0x02` | Encoding / streaming |
+| `0x11` | Idle |
+| `0x01` | Initialized, stopped |
+| `0x02` | Encoding |
 | `0x04` | Null stream |
-| `0x12` | After `SCMD_RESET` mode 1 (shutdown) |
+| `0x12` | After RESET mode `01` |
 
-### 4.3 Completion handshake (**C++** `completeStateChange`)
+### 4.3 Completion handshake (Observed)
 
-```
-loop {
-    loop {
-        state = read 0800:2008 & 0x1F
-        if state not in {current, next}:
-            if first iteration: return state      # e.g. reset already happened
-            else: error "unexpected state"
-        (stopStream only) drain bulk IN 0x81
-        done = read 0900:0074 & 0x0004
-        read 0900:01B0                            # value unused, purpose UNKNOWN
-    } until done
-    read 0800:2008; state = read 0800:2008 & 0x1F   # double read, as in C++
-    write 0900:0074 = 00 04                         # ack sticky completion bit
-    write 0900:01B0 = 00 00                         # purpose UNKNOWN
-} until state == next
-```
+Each round:
 
-Windows performs the same per-round order (**WIN**: read `2008`, `0074`,
-`01B0`, `2008`, `2008`, write `0074=0004`, `01B0=0000`). On analog 240p START
-it took two rounds: `2008 = 01`, then `2008 = 02`.
+1. Read `0800:2008`
+2. Read `0900:0074`; bit 2 indicates a completed state change
+3. Read `0900:01B0` (value not used)
+4. Repeat 1–3 until bit 2 of `0900:0074` is set
+5. Read `0800:2008` twice; the second value (low 5 bits) is the new state
+6. Write `0900:0074 = 00 04` (acknowledge)
+7. Write `0900:01B0 = 00 00`
 
-**Kernel lesson (KERNEL, `evidence/kernel-logs/2da03ea-480i-data-flowing.txt`).**
-The completion bit was already set (`0074 = 011E`) before START was sent. The
-driver acknowledged it, then timed out waiting for it again, and declared START
-failed while the device was in fact at state `0x02` and delivering about
-2.9 MB/s. A port must follow the C++ loop exactly: the loop exit condition is
-`state == next`, and a stale sticky bit only costs one extra round.
+Rounds repeat until the state equals the target state. START from the stopped
+state was observed to take two rounds: `0x01`, then `0x02`.
 
-## 5. Common initialization (**C++** `configureDevice`, verified against WIN)
+The completion bit can already be set before a command is sent. It then
+completes a round immediately with the previous state, and the next round
+reports the new state. The loop condition is therefore the target state, not
+the completion bit alone.
 
-The device starts on HDMI. Input-specific configuration follows at step 25.
+## 5. Initialization
 
-| # | Operation | Notes |
+The device starts with the HDMI input. The input-specific sequence follows
+step 24.
+
+| # | Operation | Status |
 |---:|---|---|
-| 1 | Read version: `0800:0094` and `0800:0098` (4 bytes each); if both zero, use Original-HD registers `0800:0010/14/18` | HD-New reads `"V130"`… |
-| 2 | Write `BANKSEL 0900:0000 = 00 00` | Name from scripts; effect UNKNOWN. |
-| 3 | Read shadow `0900:0014` | Save as the shadow value. |
-| 4 | Read state `0800:2008 & 0x1F`. HD-New with state `00`: wait interrupt `0x83`, poll `0900:0074` bit 2, write `0900:0074 = 00 04`. Original HD: `completeStateChange(0,0)`. | Reading the state at power-on triggers a state change. |
-| 5a | **State `00` (cold):** load idle firmware; write `0900:0070 = 00 04` (UNKNOWN); re-read `0900:0014` and `0900:0018`; read `0000:0010 … 001E` (8 × 2 bytes, values unused) | HD-New idle image = 331 696 B (10 × 32 768 + 4 016). |
-| 5b | **State ≠ `00` (warm):** `stateConfirmedScmd(RESET, 00)` → expects `0x10` | Not present in any trace. |
-| 6 | `stateConfirmedScmd(IDLE)` → expects `0x11` | |
-| 7 | Bridge probe: port `0x33` write `AB A9 0F A4 55`, read 3 bytes (`33 44 55`) | |
-| 8 | Loop: repeat the probe. On `33 44 55`: `sendEnableState`, `enableAnalogInput`, `doEnable(FIRMWARE_PROCESSOR)`. On `27 F9 7B` (first time): go to step 9. | |
-| 9 | Input autodetect from `specialDetectMask_` (§2.3) unless the user forced an input; no signal → HDMI | **C++** only. |
-| 10 | `enableAnalogInput()` | |
-| 11 | `transcoderDefaultsInitialize()`: about 170 `sparam`/`slsi` writes, including PAT/PMT/SIT tables | See [commands.md §5](commands.md#5-transcoder-encoder-registers). |
-| 12 | `SCMD INIT 04 00 00 00` (interrupt + `0800:0014` receipt on HD-New) | |
-| 13 | Load encode firmware | HD-New image = 1 500 784 B (45 × 32 768 + 26 224). |
-| 14 | Read `0000:0010/12/14/16` | The bridge may briefly fall back to `33 44 55`; the loop in step 8 continues until `27 F9 7B` is seen again. |
-| 15 | Up to 5×: write `AB A9 0F A4 5B`, read 3, `enableAnalogInput`; stop when `(reply & 0xF8F0F0) == 0x78E040` | `78 E0 45` seen; `7B EC 47` reported on another unit. |
-| 16 | `doEnable(ENCODER_ENABLE)`; poll `AB A9 0F A4 55` until `27 F9 7B` | |
-| 17 | `0x33`: write `28 28`; write `29 89 5B` → read 1 (`91`); write `DD CE 3F B2` → read 2 (`DA 67`) | |
-| 18 | `doEnable(ENCODER_TRIGGER)`; poll `43 23 84` until reply `F7`; `doEnable(ENCODER_TRIGGER, 0)` | |
-| 19 | `0x33`: `89 89 FB` → read 1 (`6E`) | Read of device `0x88` register `FB`. |
-| 20 | Common register blocks on devices `0x88`, `0x94`, `0x9C`, `0x98`, interleaved with reads | See `configure.cpp` lines 260–480. Contains the composite discriminator `0x88:02 = C9` (always, regardless of input) and analog/HDMI-dependent `0x88:08/09`. HD-New-only: `0x33` `21 01 72` → read `F4`, then `20 02 … 20 0F`. Then `0x33` `AA 8F 3B`. |
-| 21 | 70 × `0x33` `AB 92 3E B4 XX YY` + 56-byte read; final `AB A2 3E B4 FB 79` + 8-byte read; `AA 8D 35` | UNKNOWN; keep exactly. |
-| 22 | Repeat step 15 (5× `AB A9 0F A4 5B`) | |
-| 23 | `transcoderSetup()`; `transcoderOutputEnable(true)` (`amck_mode = 1`) | |
-| 24 | `SCMD INIT 04 A0 00 00`. Non-composite: `0x88:06 = 86`. Composite: read `89 89 FD`. Then read `89 89 F8`. `0x88:03 = 2F` (non-composite) or `28` (composite). `0x9C` bank `CC`, `0x9C:B3 = CC` / `33`; bank `CE`, `0x9C:27 = CC` / `33`; composite only: bank `CC`, read `9D CD 6E`, `0x9C:51 = CC`. Then `doEnable` for `COMPOSITE_MUX`, `ANALOG_INPUT`, `ANALOG_MUX`. | This is the input "prefix" that the Windows traces show before every input switch. |
-| 25 | `configureHDMI()` / `configureComponent()` / `configureComposite()` | See input pages. |
+| 1 | Read version: `0800:0094`, `0800:0098` (4 bytes each); if both are zero, read `0800:0010/14/18` (other models) | Observed (`005d` returns `"V130"`) |
+| 2 | Write `0900:0000 = 00 00` | Observed; Unknown effect |
+| 3 | Read `0900:0014` (enable shadow) | Observed |
+| 4 | Read `0800:2008`. If `0x00`: wait for interrupt `0x83`, poll `0900:0074` bit 2, write `0900:0074 = 00 04` | Observed |
+| 5a | State `0x00`: download the idle firmware (331 696 bytes = 10 × 32 768 + 4 016 on `005d`); write `0900:0070 = 00 04`; read `0900:0014`, `0900:0018`; read `0000:0010` … `0000:001E` | Observed; `0900:0070` and `0000:00xx` Unknown |
+| 5b | State ≠ `0x00`: SCMD RESET mode `00`, wait for `0x10` | Driver |
+| 6 | SCMD IDLE, wait for `0x11` | Observed |
+| 7 | Bridge status: write `AB A9 0F A4 55` to port `0x33`, read 3 bytes (`33 44 55`) | Observed |
+| 8 | Repeat 7. While `33 44 55`: write the enable shadow, set `GCHD_EB_ANALOG_INPUT` as required, set `GCHD_EB_FIRMWARE_PROCESSOR`. On `27 F9 7B`: continue | Observed |
+| 9 | Encoder register defaults (about 170 field and word writes, including PAT, PMT and SIT tables) | Observed |
+| 10 | SCMD INIT mode `00` | Observed |
+| 11 | Download the encoder firmware (1 500 784 bytes = 45 × 32 768 + 26 224 on `005d`) | Observed |
+| 12 | Read `0000:0010/12/14/16` (the bridge status can return to `33 44 55` briefly) | Observed |
+| 13 | Up to five times: write `AB A9 0F A4 5B`, read 3 bytes; stop when `(reply & F8F0F0) == 78E040` | Observed |
+| 14 | Set `GCHD_EB_ENCODER_ENABLE`; repeat step 7 until `27 F9 7B` | Observed |
+| 15 | Port `0x33`: `28 28`; `29 89 5B` → 1 byte (`91`); `DD CE 3F B2` → 2 bytes (`DA 67`) | Observed; Unknown |
+| 16 | Set `GCHD_EB_ENCODER_TRIGGER`; poll `43 23 84` until the reply is `F7`; clear `GCHD_EB_ENCODER_TRIGGER` | Observed |
+| 17 | Read `0x88:FB` | Observed |
+| 18 | Register blocks on devices `0x88`, `0x94`, `0x9C`, `0x98`, interleaved with reads; `005d` only: `21 01 72` → 1 byte, then `20 02 …` to `20 0F …` on port `0x33`; then `AA 8F 3B` | Observed; Unknown |
+| 19 | 70 block reads: `AB 92 3E B4 XX YY` + 56-byte read; final `AB A2 3E B4 FB 79` + 8-byte read; `AA 8D 35` | Observed; Unknown |
+| 20 | Repeat step 13 | Observed |
+| 21 | Encoder setup for the selected mode; enable audio clock (`amck_mode = 1`) | Observed |
+| 22 | SCMD INIT mode `A0` | Observed |
+| 23 | Input prefix (see the input pages): devices `0x88` (registers `06`, `03`) and `0x9C` (registers `B3`, `27`) | Observed |
+| 24 | Update `GCHD_EB_COMPOSITE_MUX`, `GCHD_EB_ANALOG_INPUT`, `GCHD_EB_ANALOG_MUX` | Observed |
+| 25 | Input-specific configuration: [hdmi.md](hdmi.md), [component.md](component.md), [composite.md](composite.md), [s-video.md](s-video.md) | |
 
-**DISCREPANCY (step 24, composite):** the C++ writes selector `0x9C:51 = CC`.
-Windows writes `0x9C:51 = 44` (direct switch from HDMI) or `EC` (switch from
-another analog input). See [composite.md](composite.md).
+## 6. Capture start (Observed)
 
-## 6. Capture start
+1. Encoder setup for the detected mode (about 120 field writes).
+2. Receive transfers are queued on bulk IN `0x81` (36 × 65 536 bytes) and
+   `0x84` (8 transfers) during the encoder writes.
+3. SCMD INIT mode `A0`.
+4. Read `0800:2008` (`0x01`).
+5. SCMD STATE_CHANGE START (`05 00 00 02`); receipt confirmed by interrupt
+   and `0800:0014 = 05 00`.
+6. Completion handshake (§4.3) until state `0x02`.
+7. MPEG-TS data on `0x81`; the first transfer completed about 0.5 s after
+   START.
 
-Every input path ends the same way (**C++**):
+## 7. Capture stop (Observed)
 
-1. `transcoderFinalConfigure()` then `transcoderSetup()` with the detected mode.
-2. `SCMD INIT 04 A0 00 00` (no interrupt).
-3. Read `0800:2008` (expect `0x01`).
-4. `SCMD 05 00 00 02` (START). HD-New: interrupt plus `0800:0014` receipt.
-5. `completeStateChange(state, START)`.
-6. Read bulk IN `0x81` continuously. The C++ uses synchronous 16 KiB
-   (`DATA_BUF = 0x4000`) reads. Windows uses 65 536-byte URBs and queues 36 on
-   `0x81` and 8 on `0x84` in the middle of the transcoder burst, before INIT
-   (**WIN**).
+1. SCMD STATE_CHANGE NULL (`05 00 00 04`); bulk IN data keeps arriving and is
+   read.
+2. Completion handshake until state `0x04`.
+3. SCMD STATE_CHANGE STOP (`05 00 00 01`); completion handshake until `0x01`.
 
-## 7. Stream stop (**C++** `stopStream`)
+## 8. Shutdown (Driver)
 
-1. `SCMD 05 00 00 04` (NULL); keep draining `0x81`.
-2. `completeStateChange(START, NULL)`.
-3. `SCMD 05 00 00 01` (STOP); `completeStateChange(NULL, STOP)`.
+1. If the state is START or NULL: capture stop (§7).
+2. If the state is not `0x00`, `0x10` or `0x12`:
+   1. `0x88:06 = 86`; read `0x88:F8`; `0x88:03 = 2F`
+   2. Write `0900:0000 = 00 00`; read the enable shadow; read `0800:2008`
+   3. Disable the audio clock (`amck_mode = 0`)
+   4. SCMD INIT mode `A0`
+   5. Clear `GCHD_EB_ENCODER_ENABLE`, `GCHD_EB_ENCODER_TRIGGER`,
+      `GCHD_EB_COMPOSITE_MUX`, `GCHD_EB_ANALOG_MUX` in the shadow; bridge status
+      (step 7 of §5); clear `GCHD_EB_FIRMWARE_PROCESSOR`; repeat the bridge
+      status until `33 44 55`
+   6. SCMD IDLE (`0x11`), then SCMD RESET mode `01` (`0x12`)
 
-Windows performs the same `05…04` then `05…01` pair before reconfiguring for a
-240p → 480i change (**WIN**, `trace_analysis.txt`, t ≈ 57.985 s / 58.646 s).
+## 9. No-signal loops (Observed)
 
-## 8. Shutdown (**C++** `uninitDevice`)
+After an input has been selected and no source is present, the device is
+polled with the following sequences:
 
-1. If state is START or NULL: `stopStream`.
-2. If state is not `0x00`, `0x10` or `0x12`:
-   1. `0x88:06 = 86`; read `89 89 F8`; `0x88:03 = 2F`
-   2. `BANKSEL = 0000`; re-read shadow `0900:0014`; read `0800:2008`
-   3. `transcoderOutputEnable(false)`
-   4. `SCMD INIT 04 A0 00 00`
-   5. `clearEnableState()`: clear shadow bits `ENCODER_ENABLE`,
-      `ENCODER_TRIGGER`, `COMPOSITE_MUX`, `ANALOG_MUX`; probe `AB A9 0F A4 55`;
-      `doEnable(FIRMWARE_PROCESSOR, 0)`; poll the probe until `33 44 55`
-   6. `doEnable(FIRMWARE_PROCESSOR, 0)` again
-   7. `stateConfirmedScmd(IDLE)` → `0x11`; `stateConfirmedScmd(RESET, 01)` → `0x12`
-
-## 9. Idle / keep-alive loops after input selection (**WIN**, no signal)
-
-These loops are what the Windows driver runs while it waits for a source. The
-C++ has no keep-alive loop: it detects once and either starts or fails.
-
-| Input | Loop body (mailbox payloads) |
+| Input | Loop |
 |---|---|
-| HDMI | `0x9C:AB = 4C`; read `9D CD 6A`; read `99 89 F5`; read `9D CD 94` |
-| Component | `0x9C:AB = 4C`; read `9D CD 2B`, `2A`, `60`; read `99 89 F5`; read `9D CD 94` |
-| Composite / S-video | read `89 89 FA`; read `99 89 F5` (about 50 ms per cycle) |
+| HDMI | `0x9C:AB = 4C`; read `0x9C:6A`; read `0x98:F5`; read `0x9C:94` |
+| Component | `0x9C:AB = 4C`; read `0x9C:2B`, `2A`, `60`; read `0x98:F5`; read `0x9C:94` |
+| Composite, S-video | read `0x88:FA`; read `0x98:F5` (about every 50 ms) |
 
-Component reads `9D CD 2B/2A/60`, while the C++ component detection reads
-`9D CD 66/65` and `68/67`. HDMI detection in C++ reads `66/65`, `64/63` and
-`34`. For analog inputs, decoder register `0x88:CA` is the lock/format status
-(see [composite.md](composite.md#2-status-registers)).
+For analog inputs, register `0x88:CA` reports lock and format; see
+[composite.md](composite.md#2-status-registers).

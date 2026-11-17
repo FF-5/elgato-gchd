@@ -2,12 +2,12 @@
 /*
  * Transcoder (Fujitsu MB86H57/H58/M01 encoder) register fields.
  *
- * GENERATED from src/gchd_hardware.hpp (namespace Transcoder) by
- * tools/gen-transcoder-fields.py. Do not edit by hand.
+ * Field names follow the encoder register naming; addresses, least
+ * significant bit and width are given for each field.
  *
  * Each GCHD_TC_<name> expands to "address, lsb, bits" for gchd_sparam():
  *     GCHD_TC_SET(d, GCHD_TC_V_HSIZE_OUT, 720);
- * Names are the Fujitsu script names; meanings are in docs/commands.md §5.
+ * Field descriptions: docs/commands.md §5.
  */
 #ifndef GCHD_TRANSCODER_FIELDS_H
 #define GCHD_TRANSCODER_FIELDS_H

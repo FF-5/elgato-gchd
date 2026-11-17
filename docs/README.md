@@ -1,93 +1,69 @@
-# Elgato Game Capture HD — protocol and driver documentation
+# Elgato Game Capture HD — protocol documentation
 
-This folder documents the USB protocol of the Elgato Game Capture HD (original
-`0fd9:0044/004e/0051` and "HD-New" `0fd9:005d`) and the design of the Linux
-DKMS/V4L2 driver in [`../dkms`](../dkms).
+This folder describes the USB protocol of the Elgato Game Capture HD
+(`0fd9:0044`, `0fd9:004e`, `0fd9:0051` and `0fd9:005d`) as used by the
+`elgato_gchd` kernel driver in [`../dkms`](../dkms).
 
 ## Pages
 
 | Page | Contents |
 |---|---|
-| [hardware.md](hardware.md) | USB transport, mailbox, SCMD state machine, firmware load, common initialization, capture start/stop, shutdown. |
-| [commands.md](commands.md) | Register and mailbox catalog: addressing model, device addresses, status registers, transcoder (encoder) register map, unknowns. |
-| [composite.md](composite.md) | Composite input: Windows 480i/240p sequences and transitions, C++ starting point (480i/576i), Windows 240p sequence, 480i↔240p transitions. |
-| [s-video.md](s-video.md) | S-video input (Windows traces only; not implemented in the C++ code). |
-| [component.md](component.md) | Component input: Windows switch traces, C++ starting point. |
-| [hdmi.md](hdmi.md) | HDMI input: Windows switch traces, C++ starting point. |
-| [video-output.md](video-output.md) | What the device emits (MPEG-TS) and how the Linux driver should expose it. |
-| [branch-history.md](branch-history.md) | What each historical git branch contains and why `dev` is now the base. |
-| [evidence/](evidence/) | Raw evidence: decoded Windows USB traces, usbmon logs of the C++ driver, kernel logs, reference TS analysis. |
+| [hardware.md](hardware.md) | USB transport, mailbox, system commands (SCMD), firmware loading, initialization, capture start and stop, shutdown. |
+| [commands.md](commands.md) | Register and mailbox command reference, device registers, encoder register fields. |
+| [composite.md](composite.md) | Composite input: 480i and 240p sequences, mode transitions. |
+| [s-video.md](s-video.md) | S-video input. |
+| [component.md](component.md) | Component input. |
+| [hdmi.md](hdmi.md) | HDMI input. |
+| [video-output.md](video-output.md) | Format of the stream produced by the device. |
 
-## Sources of truth, in order
+## Conventions
 
-1. **Our own Windows USB traces** (`evidence/windows-traces/`): what the
-   official Windows driver actually sends to the device. **This is the
-   reference.** Each trace covers only the scenario that was captured, so
-   anything not yet traced is open until a new trace covers it.
-2. **The C++ userspace implementation** (`../src`, from the original
-   `tolga9009/elgato-gchd` project). It is a **starting point, not a
-   reference**. Much of it worked in 2016 (HDMI, component, composite
-   480i/576i), and its register names (`src/gchd_hardware.hpp`, taken from
-   Fujitsu script files) are the best names available. It detects the input
-   and mode once at start-up and handles **neither input changes nor
-   resolution changes** while running. The C++ code is **read-only** for this
-   project; we never modify it.
-3. **usbmon logs of the C++ driver** (`evidence/userspace-usbmon/`): the C++
-   protocol as it appears on the wire. They are useful for byte-level
-   comparison, with the same caveat as 2.
-4. **The DKMS driver** (`../dkms`): the product we are writing. It is not a
-   protocol reference. Input switching is implemented there (not in C++);
-   resolution switching still needs hardware testing.
+### Status of the information
 
-When a Windows trace and the C++ code disagree, the trace wins. The
-difference is still recorded as **DISCREPANCY**, because the C++ value is
-sometimes the only one known to have produced video.
+Each sequence is labelled with how it is known:
 
-## Notation used in every page
+- **Observed**: recorded in USB traces of the device in operation. Ordering
+  and values are as recorded.
+- **Driver**: implemented in `dkms/`, not yet confirmed by a trace for that
+  scenario.
+- **Unknown**: the operation is part of the sequence but its effect is not
+  documented. Unknown operations are kept in the sequence.
 
 ### Register addresses
 
-`bank:register` such as `0900:0018` means a 16-bit big-endian register accessed
-by vendor control request `0xBC` with `wValue = bank` and `wIndex = register`.
+`bank:register`, for example `0900:0018`, denotes a 16-bit big-endian register
+accessed with vendor control request `0xBC`, `wValue = bank`,
+`wIndex = register`.
 
 ### Mailbox ports and device addresses
 
-The C++ code writes to *mailbox ports* `0x33`, `0x44`, `0x4C`, `0x4E`. On the
-wire (HD-New commit word `09 00 PORT<<1 LEN`) the port appears doubled. The
-Windows trace analyses name the target by that doubled, 8-bit value, which
-looks like an I²C write address:
+The mailbox addresses four destinations. On the wire the port number appears
+shifted left by one bit (commit word `09 00 PORT<<1 LEN`); this document names
+devices by that 8-bit value.
 
-| C++ mailbox port | Wire / trace name | Role (best current interpretation) |
+| Mailbox port | Device | Role |
 |---|---|---|
-| `0x33` | `0x66` | On-board controller ("bridge"). Executes its own commands (`AB A9 …`, `28 28`, …) and relays reads/writes to the devices below. |
-| `0x44` | `0x88` | Analog video decoder (composite / S-video front end, status registers `CA`, `E7`, `F1`, `FA`, …). |
-| `0x4C` | `0x98` | Video back end / scaler (coefficient tables `90–A3`, retrigger `0D/0E`). |
-| `0x4E` | `0x9C` | HDMI receiver / input front end (input selector register `51`, bank register `00`). |
-| — (via `0x33`) | `0x94` | Auxiliary device written with the 3-byte form `94 RR VV` on port `0x33`. |
+| `0x33` | `0x66` | On-board controller ("bridge"). Executes its own commands and relays register reads to the devices below. |
+| `0x44` | `0x88` | Analog video decoder (composite, S-video). |
+| `0x4C` | `0x98` | Video back end. |
+| `0x4E` | `0x9C` | Input front end and HDMI receiver; holds the input selector. |
+| via `0x33` | `0x94` | Auxiliary device, written with the 3-byte command `94 RR VV`. |
 
-In these pages `0x88:28 = 8A` means "write value `8A` to register `28` of device
-`0x88`", which in C++ is `mailWrite(0x44, {0x28, 0x8A})`.
+`0x88:28 = 8A` means "write value `8A` to register `28` of device `0x88`"; in
+the driver this is `GCHD_DEC_W(d, 0x28, 0x8a)`.
 
-Reads go through the bridge on port `0x33` with a 3-byte request whose first
-byte selects the device:
+Register reads go through the bridge with a 3-byte request followed by a
+1-byte read:
 
-| Read request on port `0x33` | Reads from | C++ helper |
+| Request on port `0x33` | Reads | Driver macro |
 |---|---|---|
-| `89 89 RR` | device `0x88` register `RR` | inline `mailWrite(0x33,{0x89,0x89,RR}); mailRead(0x33,1)` |
-| `99 89 RR` | device `0x98` register `RR` | inline, `pollOn0x9989ED()`, `readFrom0x9989EC()` |
-| `9D CD RR` | device `0x9C` register `RR` | `readDevice0x9DCD(RR)` |
+| `89 89 RR` | device `0x88`, register `RR` | `GCHD_DEC_R` |
+| `99 89 RR` | device `0x98`, register `RR` | `GCHD_BE_R` |
+| `9D CD RR` | device `0x9C`, register `RR` | `GCHD_FE_R` |
 
-This mapping comes from the decoded Windows traces (`9D→9C`, `89→88`,
-`99→98`). Treat the role column as an interpretation. Treat the address mapping
-as established.
+### Session-specific values
 
-### Confidence markers
-
-- **C++**: implemented in the C++ starting point; worked on real hardware in 2016, but not confirmed by a Windows trace.
-- **WIN**: observed in a Windows USB trace (name the trace).
-- **KERNEL**: observed only from the DKMS driver; lower confidence.
-- **UNKNOWN**: the effect is not established. Keep the operation, do not guess.
-- **DISCREPANCY**: sources disagree; both values are listed.
-
-Values such as the `0900:0014` shadow (`D3 9E`, `03 1E`) and `0900:001C` ready
-words (`2E6B`, `6EEB`, …) are **session-specific**. Never hard-code them.
+Some registers hold values that differ between sessions, for example the
+enable shadow `0900:0014` (`D3 9E`, `03 1E`) and the mailbox status
+`0900:001C` (`2E6B`, `6EEB`, …). These are read and restored, never written
+as constants.
