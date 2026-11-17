@@ -175,6 +175,11 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
       (`docs/hdmi.md §4`). Needs a V4L2 interface for the output size
       (S_FMT) and support for transport output 2 (which endpoint carries it
       is unknown).
+      Maintainer report (unverified by trace): the capture application
+      offers 480×360 and 640×480 for composite/S-video (higher settings stay
+      at 640×480) and all sizes for component/HDMI. The composite recording
+      `gchd_240p-480i_composite` was encoded at 720×480 (`v_hsize_out = 720`),
+      so the analog output sizes still need a recording per setting.
 - [ ] **T-051 [WIN+HW] (M)** Component, the same.
 - [ ] **T-052 [HW] (M)** S-video 480i then 240p (`0x88:02=DC`, `14=D2`).
 - [ ] **T-053 [WIN+HW] (S)** PAL: composite 576i/288p traces and support.
@@ -223,4 +228,9 @@ the mode in question can be tested; change one at a time (RULES D5).
   PAL 576i/288p, a session that starts directly in 240p.
 - Windows, **with bulk data** (not reduced to control traffic): one composite
   240p ↔ 480i change, a few seconds around it. Shows whether the stream is
-  read between NULL, STOP, the pipe abort and the next START.
+  read between NULL, STOP, the pipe abort and the next START. To keep the
+  size down, keep all control traffic plus bulk data only in a time window
+  around the change:
+  `tshark -r big.pcapng -Y "usb.transfer_type != 0x03 || (frame.time_relative >= T1 && frame.time_relative <= T2)" -w small.pcapng`.
+- Windows: composite 480i with the output set to 480×360 and to 640×480
+  (control traffic is enough), to see what the encoder receives (T-055).
