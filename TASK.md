@@ -67,6 +67,9 @@ Docs: `composite.md` (PAL observed, 288p status values, apply block),
 2. 480i → 240p live change: replace the full restart in
    `gchd_mode_workfn()` with the decoder-only transition (TODO T-041).
 3. 288p detection (TODO "Known differences").
+5. `gchd_configure_composite_exact()` repeats `0x88:02`, `0x88:3C` and the
+   three `0x94` writes after detection; the traces do not. Check against the
+   noinput traces before removing.
 4. Analyse the 480i recordings once they can be uploaded (split the pcapng,
    for example `editcap -c 200000 big.pcapng part.pcapng`, or filter out the
    bulk-IN data: `tshark -r big.pcapng -Y "usb.transfer_type != 0x03" -w small.pcapng`).
@@ -78,7 +81,7 @@ git fetch origin && git checkout fix/analog-start-per-traces
 cd dkms && make -C /lib/modules/$(uname -r)/build M=$PWD modules
 sudo rmmod elgato_gchd 2>/dev/null; sudo insmod elgato_gchd.ko
 v4l2-ctl -d /dev/videoN -i 2          # composite
-ffmpeg -f h264 -i /dev/videoN -t 20 -c copy test480i.h264
+ffmpeg -f v4l2 -input_format h264 -i /dev/videoN -t 20 -c copy test480i.h264
 sudo dmesg > test480i-dmesg.txt
 ```
 
