@@ -189,8 +189,9 @@ step 24.
 ## 6. Capture start (Observed)
 
 1. Encoder setup for the detected mode (about 120 field writes).
-2. Receive transfers are queued on bulk IN `0x81` (36 × 65 536 bytes) and
-   `0x84` (8 transfers) during the encoder writes.
+2. Receive transfers are queued on bulk IN `0x81` (32–36 × 65 536 bytes)
+   and `0x84` (8 transfers) right before or during the encoder writes.
+   No data is received on `0x84`.
 3. SCMD INIT mode `A0`.
 4. Read `0800:2008` (`0x01`).
 5. SCMD STATE_CHANGE START (`05 00 00 02`); receipt confirmed by interrupt
@@ -201,10 +202,16 @@ step 24.
 
 ## 7. Capture stop (Observed)
 
-1. SCMD STATE_CHANGE NULL (`05 00 00 04`); bulk IN data keeps arriving and is
-   read.
-2. Completion handshake until state `0x04`.
-3. SCMD STATE_CHANGE STOP (`05 00 00 01`); completion handshake until `0x01`.
+1. SCMD STATE_CHANGE NULL (`05 00 00 04`). The receive transfers stay
+   queued; data keeps arriving at the normal rate for about 0.4 s.
+2. Completion handshake until state `0x04` (about 0.7 s after NULL).
+3. SCMD STATE_CHANGE STOP (`05 00 00 01`); completion handshake until `0x01`
+   (about 0.3 s). The last data (35 328 and 64 000 bytes in two recordings, a
+   multiple of 512 bytes, so the transfer is not terminated) stays in a
+   pending transfer.
+4. Right after the completion is acknowledged, all pending transfers are
+   cancelled: `0x81` first, then `0x84`. The partly filled transfer is
+   discarded. No further reads take place until the next capture start.
 
 ## 8. Shutdown (Driver)
 

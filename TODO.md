@@ -206,7 +206,8 @@ the mode in question can be tested; change one at a time (RULES D5).
 | 288p detection | not detected (PAL always treated as 576i) | `0x88:CA = 7E`; apply block with `28=8A`, `0A=8F` in the noinput trace |
 | `system_rate` | driver formula: 12693 kbit/s at 720 wide | 12539 (NTSC), 12531 (PAL) |
 | HDMI encoder fields | `v_vinpelclk = 0`, `time_scale_l = 0`, `num_units_in_tick = 0`, `v_gop_size = 14`, bitrate 15625 kbit/s per 1000 px of width | `v_vinpelclk = 1`, `time_scale_l = 60`, `num_units_in_tick = 1`, `v_gop_size = 8`, bitrate per output size (`gchd_output_switch_hdmi`) |
-| Pipe handling at STOP | receive URBs killed when the RX thread is joined, then the stream is read until empty | `ABORT_PIPE` on `0x81` and `0x84` right after STOP completes; whether data is read in between is not visible (recordings have no bulk data) |
+| Pipe handling at STOP | matches: receive URBs kept through NULL/STOP, killed when the RX thread is joined, nothing read afterwards | same (`gchd_240p-480i_composite_input_part_*`: abort 0x81 then 0x84 right after STOP, tail discarded) |
+| Receive queue at restart | URBs submitted after encoder setup and INIT A0, right before START | 32 + 8 transfers queued before the first encoder write (~30 ms before START) |
 | Bulk IN `0x84` (`-ENODEV` if absent) | queued (8 URBs) during start |
 | START completion | timed out with state already `0x02` (`2da03ea` log) | loop until target state |
 
@@ -226,11 +227,7 @@ the mode in question can be tested; change one at a time (RULES D5).
 
 - Windows: composite 480i (T-011), HDMI with signal, component with signal,
   PAL 576i/288p, a session that starts directly in 240p.
-- Windows, **with bulk data** (not reduced to control traffic): one composite
-  240p ↔ 480i change, a few seconds around it. Shows whether the stream is
-  read between NULL, STOP, the pipe abort and the next START. To keep the
-  size down, keep all control traffic plus bulk data only in a time window
-  around the change:
-  `tshark -r big.pcapng -Y "usb.transfer_type != 0x03 || (frame.time_relative >= T1 && frame.time_relative <= T2)" -w small.pcapng`.
+- ~~Windows with bulk data, composite 240p ↔ 480i~~ — recorded
+  (`gchd_240p-480i_composite_input_part_*`).
 - Windows: composite 480i with the output set to 480×360 and to 640×480
   (control traffic is enough), to see what the encoder receives (T-055).

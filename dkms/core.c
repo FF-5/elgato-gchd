@@ -793,8 +793,6 @@ static int gchd_capture_stop(struct gchd *d)
  if (d->rx_thread) {
   kthread_stop(d->rx_thread);
   d->rx_thread = NULL;
-  if (!r)
-   r = gchd_drain_after_stop(d);
  }
  WRITE_ONCE(d->stop_pending, false);
  return r;

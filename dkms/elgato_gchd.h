@@ -169,7 +169,6 @@ int gchd_setup_subblock_exact(struct gchd *);
 void gchd_input_stop(struct gchd *);
 int gchd_stream_stop(struct gchd *);
 int gchd_return_to_stop(struct gchd *);
-int gchd_drain_after_stop(struct gchd *);
 
 int gchd_ring_push(struct gchd_ring *, const u8 *, size_t, u64);
 struct gchd_frame *gchd_ring_pop(struct gchd_ring *);

@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** diagnostics + post-STOP drain; waiting for the hardware test
+- **Status:** diagnostics; waiting for the hardware test
 - **Type:** driver fix + hardware test
 - **Branch:** `fix/mode-change-restart` (from `dev`)
 - **TODO items:** Phase 5 T-041, T-043; Phase 3 T-023 (audio, not in this task)
@@ -22,14 +22,21 @@ reads the stream after STOP. The recordings show `ABORT_PIPE` on `0x81`/`0x84`
 right after STOP, but they contain no bulk data, so they cannot show whether
 Windows reads remaining data first (TODO "Evidence wanted").
 
-This round:
+The recording with bulk data (`gchd_240p-480i_composite_input_part_*`)
+shows that Windows handles the stream exactly like the driver already does:
+the receive transfers stay queued through NULL and STOP, data keeps coming
+for ~0.4 s after NULL, the pending transfers are cancelled right after STOP,
+and **nothing is read after STOP**. New transfers are queued just before the
+encoder writes, and data resumes ~0.5 s after START. So the stall is not
+caused by data left in the device, and the post-STOP drain from 9eee2e0 was
+removed again (not in the recording).
 
-1. After STOP (and after the receive thread has been joined), the driver
-   reads `0x81` until a read returns nothing within 200 ms (at most 100
-   reads) and logs `post-stop drain: reads=… bytes=…`.
-2. Diagnostics: the stats line shows failed receive transfers
-   (`urb_errors`, `last_status`); the first five reads after each START are
-   logged as `bulk-IN first reads`.
+This round therefore only adds diagnostics:
+
+- the stats line shows failed receive transfers (`urb_errors`,
+  `last_status`);
+- the first five reads after each START are logged as `bulk-IN first reads`
+  (dmesg timestamps show when data arrives relative to START).
 
 Audio is not delivered yet (TODO T-023).
 
@@ -57,8 +64,8 @@ sudo dmesg | grep -vE "bulk-IN data|START poll=|firmware chunk|open requested"
 ```
 
 Note for each step whether a picture appeared. Paste the output into the
-maintainer comments below. The `bulk-IN first reads` and `post-stop drain`
-lines are the important ones.
+maintainer comments below. The `bulk-IN first reads` and `async bulk-IN
+stats` lines after each START are the important ones.
 
 ## Findings
 
@@ -68,6 +75,8 @@ lines are the important ones.
   neutral back-end table; 480i → 240p is not decoder-only.
 - 9382bcb test: the mode-change sequence completes, but every START after
   the first one in a power cycle streams only ~0.4 MB.
+- `gchd_240p-480i_composite_input_part_*` (bulk data): the driver's receive
+  queue handling during stop matches; no reads after STOP.
 - `gchd_output_switch_hdmi`: output size changes with a fixed 1080p60 source
   (`docs/hdmi.md §4`, TODO T-055).
 
