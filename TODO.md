@@ -13,34 +13,34 @@ on the `traces` branch.
 
 ## Current state
 
-- Works on `dev`: composite 480i and 240p from a fresh start (ffplay, H.264
-  stream, clean decode). No audio. guvcview cannot display the stream.
-- On `fix/mode-change-restart` (T-041): stop and restart work (close and
-  reopen, stable 240p, 39f63f2). Open: mode switches while capturing. Source
-  used: N64 *Star Wars Episode I: Racer* (switches 480i ↔ 240p by itself).
-- ffplay prints "VIDIOC_QBUF: Bad file descriptor" on close (this branch
-  only; "Some buffers are still owned by the caller" also on `dev`).
-- Test setup: VirtualBox with the USB 3.0 (xHCI) controller is 5–8× faster
-  than EHCI (firmware load 0.8 s instead of 6 s).
+- Works on `dev` (0.3.0): composite 480i and 240p from a fresh start,
+  480i ↔ 240p changes while capturing (~1.4 s), close and reopen. ffplay,
+  H.264 stream. No audio. guvcview cannot display the stream. Source used:
+  N64 *Star Wars Episode I: Racer* (menu 480i, demo 240p, switches by
+  itself).
+- Test setup: VirtualBox with the USB 3.0 (xHCI) controller (5–8× faster
+  than EHCI). Performance to be judged on non-virtualised hardware.
 - Bring-up order: composite and S-video (all resolutions), component, HDMI.
 
 ## Next
 
-- [ ] **T-041 [HW] (M)** Restart after STOP (prerequisite for mode changes,
-      redetection and reopening). Then the 480i ↔ 240p change as recorded
-      (`docs/composite.md §4`), implemented on `fix/mode-change-restart`.
-- [ ] **T-043 [HW] (S)** Milestone: live 480i ↔ 240p switching keeps
-      streaming; `-vf separatefields` gives a stable 240p picture.
-- [ ] **T-042 [OFF] (S)** Report 240p/480i to userspace;
-      `V4L2_EVENT_SOURCE_CHANGE` on change.
-- [ ] **T-031 [HW] (S)** STREAMOFF → STREAMON without closing (close →
-      reopen works since 39f63f2).
+- [ ] **T-052 [HW] (M)** S-video 480i and 240p, including mode changes
+      (`docs/s-video.md`: `0x88:02 = DC`, `0x88:14 = D2`).
+- [ ] **T-053 [WIN+HW] (S)** PAL 576i/288p (composite, S-video); 288p
+      detection (`CA = 7E`, apply block `28=8A`, `0A=8F`). Needs a PAL source.
+- [ ] **T-044 [HW] (S)** Reopening right after closing failed once while the
+      old ffplay process was still exiting; the stop on close takes ~1 s.
+      Make a new open wait for the running stop.
+- [ ] **T-045 [OFF] (S)** ffplay on close: "VIDIOC_QBUF: Bad file
+      descriptor" (since the close-path change) and "Some buffers are still
+      owned by the caller" (also before). Check buffer return on
+      STREAMOFF/close.
+- [ ] **T-042 [OFF] (S)** Report 240p/480i to userspace (the
+      `V4L2_EVENT_SOURCE_CHANGE` on change is sent).
+- [ ] **T-031 [HW] (S)** STREAMOFF → STREAMON without closing.
 
 ## Inputs and modes
 
-- [ ] **T-052 [HW] (M)** S-video 480i and 240p (`0x88:02=DC`, `14=D2`).
-- [ ] **T-053 [WIN+HW] (S)** PAL 576i/288p (composite, S-video); 288p
-      detection (`CA = 7E`, apply block `28=8A`, `0A=8F`).
 - [ ] **T-051 [WIN+HW] (M)** Component, all modes.
 - [ ] **T-050 [WIN+HW] (M)** HDMI with a signal, all modes, mode changes.
 - [ ] **T-055 [OFF→HW] (M)** Encoder output size independent of the input
@@ -79,6 +79,7 @@ on the `traces` branch.
 - [ ] **T-012 [OFF] (S)** debugfs raw bulk-IN dump behind a module parameter.
 - [ ] Remote branches to delete on GitHub (not possible from the session):
       `claude/inspiring-bardeen-xjao9v`, `fix/analog-start-per-traces`,
+      `fix/mode-change-restart`,
       `fix/buffer-timestamps`, `fix/composite-240p-start`,
       `fix/v4l2-format-negotiation`, `refactor/t001-names-and-macros`.
       Historical branches: once composite, S-video and component work on
@@ -92,7 +93,7 @@ Change one at a time (RULES D5), when the mode can be tested.
 |---|---|---|
 | `system_rate` | `1.075 × (bitrate + 320) + 256` (12693 at 720 wide) | `1.0728 × bitrate + 470` (12539 NTSC, 12531 PAL) |
 | HDMI/component encoder and back end | C++ blocks (`65`/`64` pulses, `0900:0018 = 00 0A`, `v_vinpelclk = 0`, `time_scale_l = 0`, `num_units_in_tick = 0`, GOP 14, bitrate formula) | `05`/`15` pulses, `02 0A`, `v_vinpelclk = 1`, `time_scale_l = 60`, `num_units_in_tick = 1`, GOP 8, bitrate per output size |
-| Initial analog detection | mode from one `0x88:CA` read | unknown (no recording of a 480i start) |
+| Initial analog detection | waits until `0x88:CA` reads `7E` or `66` | unknown (no recording of a 480i start) |
 | Receive queue at restart | URBs queued after INIT A0, before START | queued before the first encoder write |
 | Bulk IN `0x84` | required (`-ENODEV` if absent) | queued (8 URBs), never carries data |
 | Repeated `0x88:02/3C`, `0x94` writes after detection | written | not written (T-011) |
