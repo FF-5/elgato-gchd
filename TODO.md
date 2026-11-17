@@ -20,6 +20,8 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
   configuration (the driver programs 240p as 480p, which Windows does not do;
   see `docs/composite.md`).
 - Next hardware session: composite **480i first**, then 240p.
+- Input order (maintainer, 2026-11-17): composite and S-video with all their
+  resolutions first, then component with all its resolutions, HDMI last.
 
 ## Phase 0 — Repository consolidation
 

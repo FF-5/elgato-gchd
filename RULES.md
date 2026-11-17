@@ -99,10 +99,12 @@ documentation.
    a before/after capture.
 6. Session-specific values (`0900:0014` shadow, `0900:001C` ready word,
    `0900:01B0`) are read and restored, never hard-coded.
-7. Bring up modes in this order: **480i composite → 240p composite → 576i →
-   HDMI/component SD → HD modes → S-video**. Do not debug a mode until the
+7. Bring up inputs in this order: **composite and S-video first** (480i,
+   240p, 576i, 288p), **then component** (all its resolutions), **HDMI
+   last**. Within an input, start with 480i. Do not debug a mode until the
    previous simpler mode works end to end. Resolution changes (480i ↔ 240p,
-   HDMI mode changes) are tested as soon as the mode on each side works.
+   576i ↔ 288p, HDMI mode changes) are tested as soon as the modes on both
+   sides work.
 8. **Refactors do not change behaviour.** Verify mechanically with the
    `tools` branch: `compare-objs.sh` (identical machine code) or, when an idiom
    change makes machine code differ, `compare-mailbox-ops.py` (identical USB

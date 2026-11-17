@@ -109,3 +109,5 @@ Comments here override the task text above._
   material goes to the `traces` branch.
 - Never modify `udev-rules/`, `CMakeLists.txt`, `CREDITS.md`, `LICENSE`, the
   top-level `README.md` or `src/`.
+- Input order: composite and S-video (all resolutions) first, then component
+  (all resolutions), HDMI last.
