@@ -38,7 +38,6 @@ and re-check them before every commit.
    | feature branches | One per task, from `dev`. | `dev` (`--no-ff`) |
    | `traces` (orphan) | USB trace recordings and all analysis material. | never |
    | `tools` (orphan) | Development scripts (comparison tools, generators). | never |
-   | historical (`state-machine`, `async-bulk-in-queue`, `diagnostic-input-baseline`, `debug*`, `v4l2-*`, `video-output-lazy-init`, `cherry3`) | Frozen. Cherry-pick deliberately, naming the source commit. | never |
 
 2. **Development-only files never reach `master`:** `CLAUDE.md`, `TODO.md`,
    `TASK.md`, `RULES.md`. When the maintainer merges `dev` into `master`, the merge

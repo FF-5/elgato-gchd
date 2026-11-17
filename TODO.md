@@ -86,14 +86,16 @@ on the `traces` branch.
 - [ ] **T-011 [OFF] (M)** Remaining recording analysis: initialization
       (`filtered_init_switch_to_component`), input switching, repeated
       `0x88:02/3C` and `0x94` writes after detection.
-- [ ] **T-012 [OFF] (S)** debugfs raw bulk-IN dump behind a module parameter.
-- [ ] Remote branches to delete on GitHub (not possible from the session):
-      `claude/inspiring-bardeen-xjao9v`, `fix/analog-start-per-traces`,
+- [ ] **T-012 [OFF] (S)** debugfs raw bulk-IN dump behind a module parameter
+      (reference: `tools/archive/debug-trace.c` on the `tools` branch).
+- [ ] Branches to delete on GitHub (deletion is refused from the
+      development session). Composite and S-video are done, so all of them
+      can go; the recording and logs on them were copied to the `traces`
+      branch, `debug`'s `trace.c` to `tools/archive/`:
       `fix/mode-change-restart`, `feat/svideo`, `feat/pal`,
-      `fix/buffer-timestamps`, `fix/composite-240p-start`,
-      `fix/v4l2-format-negotiation`, `refactor/t001-names-and-macros`.
-      Historical branches: once composite, S-video and component work on
-      `dev`.
+      `async-bulk-in-queue`, `cherry3`, `debug`, `debug-saved-enable-state`,
+      `diagnostic-input-baseline`, `state-machine`, `v4l2-dkms-driver`,
+      `v4l2-h264-access-units`, `video-output-lazy-init`.
 
 ## Known differences between the driver and the recordings
 
