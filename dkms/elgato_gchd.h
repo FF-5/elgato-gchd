@@ -153,6 +153,7 @@ int gchd_raw_read16(struct gchd *, u16, u16, u16 *);
 int gchd_load_encoder_firmware(struct gchd *);
 int gchd_input_configure(struct gchd *);
 int gchd_input_start(struct gchd *);
+int gchd_input_check_mode(struct gchd *);
 int gchd_input_configure_idle(struct gchd *);
 int gchd_prepare_input_detection(struct gchd *);
 int gchd_probe_video_source(struct gchd *);

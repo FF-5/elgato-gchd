@@ -1686,6 +1686,26 @@ int gchd_input_configure_idle(struct gchd *d)
  return gchd_input_configure_mode(d);
 }
 
+/*
+ * Analog sources can change between 480i and 240p while the input is being
+ * configured. START does not complete while the back end is set up for the
+ * other mode; returns -EAGAIN so that the caller configures again.
+ */
+int gchd_input_check_mode(struct gchd *d)
+{
+ bool interlaced;
+
+ if (d->input < 2 || d->input_height != 480)
+  return 0;
+ if (gchd_input_read_analog_mode(d, &interlaced) ||
+     interlaced == d->input_interlaced)
+  return 0;
+ dev_info(&d->intf->dev,
+          "source changed to %s during setup; configuring again\n",
+          interlaced ? "480i" : "240p");
+ return -EAGAIN;
+}
+
 int gchd_input_start(struct gchd *d)
 {
  int r;
@@ -1704,23 +1724,6 @@ int gchd_input_start(struct gchd *d)
            "gchd-diag refusing START: no signal; input=%u mode=%ux%u interlaced=%u\n",
            d->input, d->input_width, d->input_height, d->input_interlaced);
   return -ENOLINK;
- }
-
- /*
-  * Analog sources can change between 480i and 240p while the input is being
-  * configured. START does not complete while the back end is set up for the
-  * other mode, so configure again instead.
-  */
- if (d->input >= 2 && d->input_height == 480) {
-  bool interlaced;
-
-  r = gchd_input_read_analog_mode(d, &interlaced);
-  if (!r && interlaced != d->input_interlaced) {
-   dev_info(&d->intf->dev,
-            "source changed to %s during setup; configuring again\n",
-            interlaced ? "480i" : "240p");
-   return -EAGAIN;
-  }
  }
 
  dev_info(&d->intf->dev,

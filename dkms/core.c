@@ -951,6 +951,15 @@ static void gchd_detection_worker(struct work_struct *work)
     * Capture starts automatically once a source is configured. V4L2
     * STREAMON only controls delivery into queued buffers.
     */
+   r = gchd_input_check_mode(d);
+   if (r) {
+    d->input_configured = false;
+    d->input_prepared = false;
+    WRITE_ONCE(d->signal_present, false);
+    gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
+    schedule_delayed_work(&d->detect_work, msecs_to_jiffies(50));
+    goto out;
+   }
    gchd_set_lifecycle(d, GCHD_CAPTURE_START);
    d->last_video_jiffies = jiffies;
    WRITE_ONCE(d->start_pending, true);
