@@ -1,0 +1,154 @@
+18.3020 SUBM ep=81 tr=3 st=00000000 len=0 irp=6c60 
+18.3410 CMPL ep=81 tr=3 st=00000000 len=65536 irp=4c60 50fd882b85acae87
+18.3540 SUBM ep=81 tr=3 st=00000000 len=0 irp=66d0 
+18.3841 CMPL ep=81 tr=3 st=00000000 len=65536 irp=f010 81c1ad0b47101110
+18.3841 SUBM ep=81 tr=3 st=00000000 len=0 irp=f010 
+18.4281 CMPL ep=81 tr=3 st=00000000 len=65536 irp=4a40 f1ac2d91b78b421c
+18.4511 SUBM ep=81 tr=3 st=00000000 len=0 irp=4a40 
+18.4721 CMPL ep=81 tr=3 st=00000000 len=65536 irp=9010 db37376c3525132f
+18.4821 SUBM ep=81 tr=3 st=00000000 len=0 irp=e8b0 
+18.5161 CMPL ep=81 tr=3 st=00000000 len=65536 irp=6c60 05a6255b0629acd6
+18.5171 SUBM ep=81 tr=3 st=00000000 len=0 irp=1c60 
+18.5591 CMPL ep=81 tr=3 st=00000000 len=65536 irp=6010 21dbaad7be38d1f9
+18.5661 SUBM ep=81 tr=3 st=00000000 len=0 irp=6010 
+18.6021 CMPL ep=81 tr=3 st=00000000 len=65536 irp=16f0 ffffffffffffffff
+18.6081 SUBM ep=81 tr=3 st=00000000 len=0 irp=16f0 
+18.6461 CMPL ep=81 tr=3 st=00000000 len=65536 irp=10 ffffffffffffffff
+18.6471 SUBM ep=81 tr=3 st=00000000 len=0 irp=10 
+18.6891 CMPL ep=81 tr=3 st=00000000 len=65536 irp=7010 ffffffffffffffff
+18.6921 SUBM ep=81 tr=3 st=00000000 len=0 irp=7010 
+18.7331 CMPL ep=81 tr=3 st=00000000 len=65536 irp=e010 ffffffffffffffff
+18.7381 SUBM ep=81 tr=3 st=00000000 len=0 irp=e010 
+18.7771 CMPL ep=81 tr=3 st=00000000 len=65536 irp=ec60 ffffffffffffffff
+18.7801 SUBM ep=81 tr=3 st=00000000 len=0 irp=4c60 
+18.8211 CMPL ep=81 tr=3 st=00000000 len=65536 irp=6870 45b7864b241cd4e0
+18.8211 SUBM ep=81 tr=3 st=00000000 len=0 irp=ec60 
+18.8651 CMPL ep=81 tr=3 st=00000000 len=65536 irp=1c60 ffffffffffffffff
+18.8701 SUBM ep=81 tr=3 st=00000000 len=0 irp=7c60 
+18.9081 CMPL ep=81 tr=3 st=00000000 len=65536 irp=c60 ffffffffffffffff
+18.9091 SUBM ep=81 tr=3 st=00000000 len=0 irp=c60 
+18.9521 CMPL ep=81 tr=3 st=00000000 len=65536 irp=bc60 ffffffffffffffff
+18.9531 SUBM ep=81 tr=3 st=00000000 len=0 irp=bc60 
+18.9961 CMPL ep=81 tr=3 st=00000000 len=65536 irp=bc60 ffffffffffffffff
+18.9991 SUBM ep=81 tr=3 st=00000000 len=0 irp=bc60 
+19.0391 CMPL ep=81 tr=3 st=00000000 len=65536 irp=4010 ffffffffffffffff
+19.0401 SUBM ep=81 tr=3 st=00000000 len=0 irp=4010 
+19.0831 CMPL ep=81 tr=3 st=00000000 len=65536 irp=e930 ffffffffffffffff
+19.0841 SUBM ep=81 tr=3 st=00000000 len=0 irp=e930 
+19.1271 CMPL ep=81 tr=3 st=00000000 len=65536 irp=b010 ffffffffffffffff
+19.1271 SUBM ep=81 tr=3 st=00000000 len=0 irp=b010 
+19.1701 CMPL ep=81 tr=3 st=00000000 len=65536 irp=10 ffffffffffffffff
+19.1711 SUBM ep=81 tr=3 st=00000000 len=0 irp=10 
+19.2141 CMPL ep=81 tr=3 st=00000000 len=65536 irp=3310 ffffffffffffffff
+19.2141 SUBM ep=81 tr=3 st=00000000 len=0 irp=3310 
+19.2581 CMPL ep=81 tr=3 st=00000000 len=65536 irp=dc60 ffffffffffffffff
+19.2581 SUBM ep=81 tr=3 st=00000000 len=0 irp=dc60 
+19.3011 CMPL ep=81 tr=3 st=00000000 len=65536 irp=d6f0 ffffffffffffffff
+19.3201 SUBM ep=81 tr=3 st=00000000 len=0 irp=3c60 
+19.3451 CMPL ep=81 tr=3 st=00000000 len=65536 irp=23f0 ffffffffffffffff
+19.3461 SUBM ep=81 tr=3 st=00000000 len=0 irp=23f0 
+19.3881 CMPL ep=81 tr=3 st=00000000 len=65536 irp=9010 ffffffffffffffff
+19.3981 SUBM ep=81 tr=3 st=00000000 len=0 irp=9010 
+19.4321 CMPL ep=81 tr=3 st=00000000 len=65536 irp=4c60 ffffffffffffffff
+19.4331 SUBM ep=81 tr=3 st=00000000 len=0 irp=4c60 
+19.7311 CMPL ep=81 tr=3 st=00000000 len=65536 irp=7870 ffffffffffffffff
+19.7501 SUBM ep=81 tr=3 st=00000000 len=0 irp=7870 
+20.0551 SUBM ep=81 tr=254 st=00000000 len=0 irp=4720 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=4880 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=dc60 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=6c60 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=66d0 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=f010 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=4a40 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=e8b0 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=1c60 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=6010 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=16f0 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=10 
+20.0551 CMPL ep=81 tr=3 st=c0010000 len=0 irp=7010 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=e010 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=4c60 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=ec60 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=7c60 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=c60 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=bc60 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=bc60 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=4010 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=e930 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=b010 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=10 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=3310 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=dc60 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=3c60 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=23f0 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=9010 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=4c60 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=7870 
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=35328 irp=5c60 ffffffffffffffff
+20.0561 CMPL ep=81 tr=3 st=c0010000 len=0 irp=7c60 
+20.0561 CMPL ep=81 tr=254 st=00000000 len=0 irp=4720 
+20.0571 SUBM ep=84 tr=254 st=00000000 len=0 irp=4880 
+20.0571 CMPL ep=84 tr=3 st=c0010000 len=0 irp=2c60 
+20.0571 CMPL ep=84 tr=3 st=c0010000 len=0 irp=bc60 
+20.0571 CMPL ep=84 tr=3 st=c0010000 len=0 irp=5010 
+20.0571 CMPL ep=84 tr=3 st=c0010000 len=0 irp=4260 
+20.0581 CMPL ep=84 tr=3 st=c0010000 len=0 irp=46c0 
+20.0581 CMPL ep=84 tr=3 st=c0010000 len=0 irp=420 
+20.0581 CMPL ep=84 tr=3 st=c0010000 len=0 irp=ec60 
+20.0581 CMPL ep=84 tr=3 st=c0010000 len=0 irp=6c60 
+20.0581 CMPL ep=84 tr=254 st=00000000 len=0 irp=4880 
+20.7502 SUBM ep=81 tr=3 st=00000000 len=0 irp=4c60 
+20.7502 SUBM ep=81 tr=3 st=00000000 len=0 irp=2c60 
+20.7502 SUBM ep=81 tr=3 st=00000000 len=0 irp=d010 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=2470 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=1c60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=6c60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=6870 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=c010 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=bc60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=4880 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=dc60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=ec60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=6c60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=5010 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=5010 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=4260 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=46c0 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=420 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=9010 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=7c60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=4720 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=7010 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=e010 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=4c60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=ec60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=7c60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=bc60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=bc60 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=4a40 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=6010 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=d870 
+20.7512 SUBM ep=81 tr=3 st=00000000 len=0 irp=ec60 
+20.7522 SUBM ep=84 tr=3 st=00000000 len=0 irp=1c60 
+20.7522 SUBM ep=84 tr=3 st=00000000 len=0 irp=6c60 
+20.7522 SUBM ep=84 tr=3 st=00000000 len=0 irp=8930 
+20.7522 SUBM ep=84 tr=3 st=00000000 len=0 irp=2230 
+20.7522 SUBM ep=84 tr=3 st=00000000 len=0 irp=9830 
+20.7522 SUBM ep=84 tr=3 st=00000000 len=0 irp=7870 
+20.7522 SUBM ep=84 tr=3 st=00000000 len=0 irp=4010 
+20.7522 SUBM ep=84 tr=3 st=00000000 len=0 irp=f010 
+21.2752 CMPL ep=81 tr=3 st=00000000 len=65536 irp=4c60 474000100000b011
+21.2982 SUBM ep=81 tr=3 st=00000000 len=0 irp=b010 
+21.3212 CMPL ep=81 tr=3 st=00000000 len=65536 irp=2c60 26e311a304fbbc3d
+21.3652 CMPL ep=81 tr=3 st=00000000 len=65536 irp=d010 bdf50926cfa69dc5
+21.3922 SUBM ep=81 tr=3 st=00000000 len=0 irp=6300 
+21.3922 SUBM ep=81 tr=3 st=00000000 len=0 irp=9010 
+21.4102 CMPL ep=81 tr=3 st=00000000 len=65536 irp=2470 0e6c4d9965d0d96e
+21.4112 SUBM ep=81 tr=3 st=00000000 len=0 irp=86f0 
+21.4562 CMPL ep=81 tr=3 st=00000000 len=65536 irp=1c60 4e5db63e9214e0c2
+21.4582 SUBM ep=81 tr=3 st=00000000 len=0 irp=1c60 
+21.5012 CMPL ep=81 tr=3 st=00000000 len=65536 irp=6c60 a5cdfe3047101117
+21.5072 SUBM ep=81 tr=3 st=00000000 len=0 irp=7320 
+21.5442 CMPL ep=81 tr=3 st=00000000 len=65536 irp=6870 66ee760c24a9926c
+21.5452 SUBM ep=81 tr=3 st=00000000 len=0 irp=4850 
+21.5882 CMPL ep=81 tr=3 st=00000000 len=65536 irp=c010 09732d5975046cf8
