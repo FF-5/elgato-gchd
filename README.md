@@ -15,6 +15,7 @@ or keep a worktree: `git worktree add ../gchd-tools tools`.
 |---|---|
 | `tools/compare-objs.sh [--relaxed] [--alias old=new] OLD NEW` | Build `dkms/` at two revisions and compare machine code and string data. Proves a refactor is code-identical. |
 | `tools/compare-mailbox-ops.py [--alias old=new] OLD NEW` | Compare the mailbox/USB operation stream of every function from preprocessed source. For idiom changes where machine code differs. |
+| `tools/gchd-pcap-ops.py capture.pcapng [dkms/gchd_transcoder_fields.h] [--raw]` | Decode a USBPcap pcapng into protocol operations (register R/W, device writes/reads, SCMD, encoder fields, firmware and bulk summaries). |
 | `tools/gen-transcoder-fields.py` | Regenerate `dkms/gchd_transcoder_fields.h` from `src/gchd_hardware.hpp` (read only). Run from a `dev` checkout. |
 
 Scripts must be run from the root of a checkout that contains `dkms/`.
