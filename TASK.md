@@ -27,7 +27,8 @@ Analysis of the new recordings (details: `traces` branch,
    the "288p PAL noinput" ones are NTSC 240p (one is a copy of the 240p file).
 5. Application settings (bitrate, Mobile 480×360, 640×480, stretch,
    cropping, HD sizes): documented in `docs/composite.md §10`; cropping and
-   the HD sizes are done by the application on the PC. Implementing these
+   the HD sizes cause no control transfers (whether anything goes to bulk
+   OUT `0x02` is not visible in the reduced recordings). Implementing these
    as V4L2 controls is a separate task (TODO T-055, T-061).
 
 The second ffplay start that did not always work is most likely TODO T-044

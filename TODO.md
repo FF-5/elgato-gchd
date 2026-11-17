@@ -52,7 +52,8 @@ on the `traces` branch.
       480×360 and 640×480 in the Windows application. Recorded for analog
       sources (`docs/composite.md §10`): 640×480 and 480×360 use
       `v_ip_format 2`, GOP 6 and transport output 2; HD sizes and cropping
-      are done by the application (no device access); bitrate slider and
+      cause no control transfers (bulk OUT `0x02` not in the reduced
+      recordings; check with the filter below); bitrate slider and
       "stretch" (`v_in_source_type 2`) are encoder fields.
 - [ ] **T-054 [HW] (S)** Source loss and return.
 
@@ -105,6 +106,13 @@ Change one at a time (RULES D5), when the mode can be tested.
 | Repeated `0x88:02/3C`, `0x94` writes after detection | written | not written (T-011) |
 
 ## Evidence wanted (maintainer, opportunistic)
+
+Reduce recordings with a filter that keeps bulk OUT (only the incoming
+stream on `0x81`/`0x84` is large):
+`tshark -r big.pcapng -Y "usb.transfer_type != 0x03 || usb.endpoint_address.direction == 0" -w small.pcapng`
+
+- Cropping on/off and an HD output size with this filter, to confirm that
+  nothing is sent on bulk OUT `0x02`.
 
 - Windows: composite 480i start, PAL 576i/288p, S-video, component and HDMI
   with a signal.

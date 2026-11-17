@@ -182,8 +182,8 @@ restarts the encoder (§4 steps 5–8) unless noted.
 | Standard, 640 × 480 | 640 × 480, `v_ip_format = 2`, `v_gop_size = 6`, level 30, transport output 2 |
 | Mobile | 480 × 360, `v_ip_format = 2`, `v_gop_size = 6`, `v_rate_mode = 1`, `v_max_cpb_delay = 10`, level 22, transport output 2; bitrate from `4000` / `3600` / `2000` / `0` (`system_rate = 4753`) to `15000` / `13500` / `7500` / `3750` (`system_rate = 16554`) |
 | Stretch standard-definition input | `v_in_source_type = 2` instead of `3` |
-| Cropping (overscan) | no device access |
-| HD output sizes (1280 × 720, 1920 × 1080) | no device access; the encoder stays at 720 × 576 |
+| Cropping (overscan) | no control transfers; bulk OUT (`0x02`) not recorded |
+| HD output sizes (1280 × 720, 1920 × 1080) | no control transfers, the encoder stays at 720 × 576; bulk OUT (`0x02`) not recorded |
 
 The same fields are written for the `_bl` variants. Transport output 1 and 2
 are defined in [hdmi.md §4](hdmi.md#4-capture-with-a-1080p60-source-output-size-changes-observed).
