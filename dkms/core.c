@@ -52,6 +52,31 @@ static const struct gchd_mode gchd_modes[] = {
  {720, 480, 60, 1, true},
 };
 
+/*
+ * Negotiated format seen by applications (G_FMT). It changes only while no
+ * buffers are allocated; a source change during capture is reported with
+ * V4L2_EVENT_SOURCE_CHANGE and takes effect at the next negotiation.
+ */
+static void gchd_set_negotiated(struct gchd *d, u32 width, u32 height)
+{
+ if (!width || !height || vb2_is_busy(&d->vbq))
+  return;
+ d->width = width;
+ d->height = height;
+}
+
+/* Nominal format of an input before a signal has been measured. */
+static void gchd_nominal_format(const struct gchd *d, u32 *width, u32 *height)
+{
+ if (d->input >= 2) {
+  *width = 720;
+  *height = d->input_height == 576 ? 576 : 480;
+ } else {
+  *width = 1280;
+  *height = 720;
+ }
+}
+
 /* Input-selection state owns the HDMI default and remembered selection. */
 static DEFINE_MUTEX(gchd_last_input_lock);
 static unsigned int gchd_last_input;
@@ -780,8 +805,7 @@ static void gchd_detection_worker(struct work_struct *work)
  if (READ_ONCE(d->signal_present)) {
   struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
 
-  d->width = d->input_width;
-  d->height = d->input_height;
+  gchd_set_negotiated(d, d->input_width, d->input_height);
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
@@ -967,8 +991,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  }
 
  gchd_set_lifecycle(d, GCHD_STREAMING);
- d->width = d->input_width;
- d->height = d->input_height;
+ gchd_set_negotiated(d, d->input_width, d->input_height);
  ev.id = d->input;
  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
  v4l2_event_queue(&d->vdev, &ev);
@@ -1245,6 +1268,12 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->input_fps_num = 0;
  d->input_fps_den = 0;
  d->input_interlaced = false;
+ {
+  u32 w, h;
+
+  gchd_nominal_format(d, &w, &h);
+  gchd_set_negotiated(d, w, h);
+ }
 
  /*
   * Before first open, only remember the selection; hardware remains
@@ -1433,58 +1462,111 @@ static int gchd_gfmt(struct file*f,void*p,struct v4l2_format*x)
  struct gchd*d=video_drvdata(f);
  x->fmt.pix.width=d->width;x->fmt.pix.height=d->height;
  x->fmt.pix.pixelformat=V4L2_PIX_FMT_H264;
- x->fmt.pix.field=d->input_interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+ /* Analog inputs are always encoded interlaced (also 240p/288p). */
+ x->fmt.pix.field=(d->input >= 2 || d->input_interlaced) ?
+                  V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
  x->fmt.pix.sizeimage=d->sizeimage;
  x->fmt.pix.colorspace=V4L2_COLORSPACE_REC709;
  return 0;
+}
+
+/*
+ * Adjust a requested format to one the current input can deliver.
+ * Composite and S-video always deliver interlaced 720x480 or 720x576.
+ * For HDMI and component the closest allowed mode is chosen; an unknown
+ * size falls back to the negotiated one. Returns the mode for digital
+ * inputs, or NULL for analog inputs.
+ */
+static const struct gchd_mode *gchd_adjust_fmt(struct gchd *d,
+                                               struct v4l2_pix_format *pix)
+{
+ const struct gchd_mode *m = NULL;
+ bool interlaced = pix->field == V4L2_FIELD_INTERLACED;
+
+ pix->pixelformat = V4L2_PIX_FMT_H264;
+ if (d->input >= 2) {
+  pix->width = 720;
+  pix->height = pix->height == 576 ? 576 :
+                (pix->height == 480 ? 480 : d->height == 576 ? 576 : 480);
+  pix->field = V4L2_FIELD_INTERLACED;
+ } else {
+  m = gchd_find_mode(pix->width, pix->height, interlaced);
+  if (!m || !gchd_mode_allowed(d, m))
+   m = gchd_find_mode(pix->width, pix->height, !interlaced);
+  if (!m || !gchd_mode_allowed(d, m))
+   m = gchd_find_mode(d->width, d->height, d->input_interlaced);
+  if (m && !gchd_mode_allowed(d, m))
+   m = NULL;
+  if (m) {
+   pix->width = m->width;
+   pix->height = m->height;
+   pix->field = m->interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+  } else {
+   pix->width = d->width;
+   pix->height = d->height;
+   pix->field = d->input_interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+  }
+ }
+ pix->bytesperline = 0;
+ pix->sizeimage = GCHD_MAX_FRAME;
+ pix->colorspace = V4L2_COLORSPACE_REC709;
+ return m;
 }
 
 static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
 {
  struct gchd*d=video_drvdata(f);
  const struct gchd_mode *m;
- bool interlaced = x->fmt.pix.field == V4L2_FIELD_INTERLACED;
 
- if (vb2_is_busy(&d->vbq) || x->fmt.pix.pixelformat!=V4L2_PIX_FMT_H264)
-  return-EINVAL;
+ if (vb2_is_busy(&d->vbq))
+  return -EBUSY;
 
- m = gchd_find_mode(x->fmt.pix.width, x->fmt.pix.height, interlaced);
- if (!m || !gchd_mode_allowed(d, m))
-  return -EINVAL;
-
- d->width=m->width;
- d->height=m->height;
- d->input_width=m->width;
- d->input_height=m->height;
- d->input_fps_num=m->fps_num;
- d->input_fps_den=m->fps_den;
- d->input_interlaced=m->interlaced;
- d->mode_forced=true;
- d->input_configured=false;
- d->sizeimage=GCHD_MAX_FRAME;
-
+ m = gchd_adjust_fmt(d, &x->fmt.pix);
+ d->width = x->fmt.pix.width;
+ d->height = x->fmt.pix.height;
+ d->sizeimage = GCHD_MAX_FRAME;
+ if (m) {
+  /* Digital inputs: the requested mode is programmed as given. */
+  d->input_width=m->width;
+  d->input_height=m->height;
+  d->input_fps_num=m->fps_num;
+  d->input_fps_den=m->fps_den;
+  d->input_interlaced=m->interlaced;
+  d->mode_forced=true;
+  d->input_configured=false;
+ }
  return gchd_gfmt(f,p,x);
 }
 
 static int gchd_tryfmt(struct file*f,void*p,struct v4l2_format*x)
 {
- struct gchd*d=video_drvdata(f);
- const struct gchd_mode *m;
- bool interlaced = x->fmt.pix.field == V4L2_FIELD_INTERLACED;
-
- if (x->fmt.pix.pixelformat != V4L2_PIX_FMT_H264)
-  return -EINVAL;
-
- m = gchd_find_mode(x->fmt.pix.width, x->fmt.pix.height, interlaced);
- if (!m || !gchd_mode_allowed(d, m))
-  return -EINVAL;
-
- x->fmt.pix.width=m->width;
- x->fmt.pix.height=m->height;
- x->fmt.pix.field=m->interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
- x->fmt.pix.sizeimage=GCHD_MAX_FRAME;
- x->fmt.pix.colorspace=V4L2_COLORSPACE_REC709;
+ gchd_adjust_fmt(video_drvdata(f), &x->fmt.pix);
  return 0;
+}
+
+static int gchd_g_parm(struct file *f, void *p, struct v4l2_streamparm *a)
+{
+ struct gchd *d = video_drvdata(f);
+ struct v4l2_fract *t = &a->parm.capture.timeperframe;
+
+ if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+  return -EINVAL;
+ memset(&a->parm.capture, 0, sizeof(a->parm.capture));
+ a->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
+ if (d->input_fps_num && d->input_fps_den) {
+  t->numerator = d->input_fps_den;
+  t->denominator = d->input_fps_num;
+ } else {
+  t->numerator = 1;
+  t->denominator = d->height == 576 ? 50 : 60;
+ }
+ return 0;
+}
+
+/* The frame rate follows the source; S_PARM reports the current rate. */
+static int gchd_s_parm(struct file *f, void *p, struct v4l2_streamparm *a)
+{
+ return gchd_g_parm(f, p, a);
 }
 
 static int gchd_subscribe_event(struct v4l2_fh *fh,
@@ -1507,6 +1589,7 @@ static const struct v4l2_ioctl_ops gchd_ioctl={
  .vidioc_g_input=gchd_ginput,.vidioc_s_input=gchd_sinput,
  .vidioc_g_fmt_vid_cap=gchd_gfmt,.vidioc_s_fmt_vid_cap=gchd_sfmt,
 .vidioc_try_fmt_vid_cap=gchd_tryfmt,
+ .vidioc_g_parm=gchd_g_parm,.vidioc_s_parm=gchd_s_parm,
  .vidioc_query_dv_timings=gchd_query_dv_timings,
  .vidioc_enum_dv_timings=gchd_enum_dv_timings,
  .vidioc_reqbufs=vb2_ioctl_reqbufs,.vidioc_querybuf=vb2_ioctl_querybuf,
