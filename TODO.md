@@ -23,6 +23,13 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 - Input order (maintainer, 2026-11-17): composite and S-video with all their
   resolutions first, then component with all its resolutions, HDMI last.
 
+## Hardware test log
+
+| Date | Branch / commit | Input, source | Result |
+|---|---|---|---|
+| 2026-11-17 | `fix/analog-start-per-traces` | composite 480i (switched from HDMI while streaming) | START completes in ~0.1 s (10 completion polls), 65 KB bulk transfers flow. guvcview crashed: format changed from 1280×720 to 720×480 underneath it. |
+| 2026-11-17 | `fix/v4l2-format-negotiation` 42aebdb | composite 480i (selected before guvcview) | G_FMT 720×480 interlaced, START ~0.1 s, data flows. guvcview showed a picture briefly, then crashed ~0.3 s after the first data. Led to the delivery fix 374fc83. |
+
 ## Phase 0 — Repository consolidation
 
 - [x] Assess all branches .
@@ -73,7 +80,16 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 - [ ] **T-011 [OFF] (M)** Analyse the trace recordings uploaded to the
       `traces` branch (composite 480i first). Produce decoded listings next to
       the recordings and update `docs/` with the observed sequences.
-      → current `TASK.md`
+      First upload analysed (`traces/ANALYSIS-2026-11-17.md`). Open:
+      - compare `input-switching/filtered_init_switch_to_component` with
+        `gchd_hw_init()` and the component switch, and
+        `input-switching/filtered_novideo_input_switching` with
+        `gchd_set_input()`;
+      - `gchd_configure_composite_exact()` repeats `0x88:02`, `0x88:3C` and
+        the three `0x94` writes after detection; the traces do not (check
+        against the noinput traces before removing);
+      - analyse the 480i recordings once uploaded (control traffic only:
+        `tshark -r big.pcapng -Y "usb.transfer_type != 0x03" -w small.pcapng`).
 - [ ] **T-012 [OFF] (S)** Port the `debug` branch's debugfs raw bulk-IN dump
       (`debug` branch, `drivers/elgato_gchd/trace.c`) behind a module parameter,
       so the exact device output can be saved from the kernel driver.
