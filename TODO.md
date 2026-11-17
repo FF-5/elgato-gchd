@@ -25,12 +25,14 @@ on the `traces` branch.
 
 ## Next
 
-- [ ] **T-053 [HW] (M)** PAL 576i and 288p on composite and S-video,
-      including 576i ↔ 288p changes (decoder only, `docs/composite.md §8`).
-      Implemented on `feat/pal`; hardware test pending. Not yet done: the
-      retrigger on `0x98:F5` bit 7 while capturing (recorded at the start of
-      a 576i → 288p change). 288p capture start is not recorded (driver uses
-      the apply block of the change).
+- [ ] **T-053 [HW] (M)** PAL on `feat/pal`: composite 576i/288p and the
+      decoder-only 576i ↔ 288p change accepted (PS1). Open: S-video PAL
+      (no signal seen with the PS1: `0x88:FA = ED/FD`; source/cable to be
+      checked); the retrigger on `0x98:F5` bit 7 while capturing; 288p
+      capture start not recorded.
+- [ ] **T-046 [OFF] (S)** The frame rate reported before the source is
+      detected is the NTSC default: ffplay showed 60 fps for a PAL stream on
+      the first open after loading the module (50 fps on the second).
 - [ ] **T-044 [HW] (S)** Reopening right after closing failed once while the
       old ffplay process was still exiting; the stop on close takes ~1 s.
       Make a new open wait for the running stop.
