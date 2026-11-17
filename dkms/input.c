@@ -1706,6 +1706,23 @@ int gchd_input_start(struct gchd *d)
   return -ENOLINK;
  }
 
+ /*
+  * Analog sources can change between 480i and 240p while the input is being
+  * configured. START does not complete while the back end is set up for the
+  * other mode, so configure again instead.
+  */
+ if (d->input >= 2 && d->input_height == 480) {
+  bool interlaced;
+
+  r = gchd_input_read_analog_mode(d, &interlaced);
+  if (!r && interlaced != d->input_interlaced) {
+   dev_info(&d->intf->dev,
+            "source changed to %s during setup; configuring again\n",
+            interlaced ? "480i" : "240p");
+   return -EAGAIN;
+  }
+ }
+
  dev_info(&d->intf->dev,
           "gchd-diag issuing START: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
           d->input, d->input_width, d->input_height, d->input_fps_num,

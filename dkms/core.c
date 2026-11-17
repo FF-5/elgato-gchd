@@ -815,6 +815,22 @@ static void gchd_detection_worker(struct work_struct *work)
 
  /* Only the RX thread may own bulk-IN while START is active. */
  if (d->rx_thread || READ_ONCE(d->capture_active)) {
+  /*
+   * When the analog source changed mode, the encoder gets no pictures and
+   * NULL does not complete; prepare the new mode first, as on a mode change.
+   */
+  if (READ_ONCE(d->capture_active) && d->input >= 2 &&
+      d->input_height == 480 && d->input_configured) {
+   bool interlaced;
+
+   if (!gchd_input_read_analog_mode(d, &interlaced) &&
+       interlaced != d->input_interlaced) {
+    dev_info(&d->intf->dev,
+             "redetection: source is now %s; preparing before stop\n",
+             interlaced ? "480i" : "240p");
+    gchd_analog_mode_pre_stop(d, interlaced);
+   }
+  }
   r = gchd_capture_stop(d);
   if (r) {
    /*
