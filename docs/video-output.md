@@ -45,8 +45,8 @@ HDMI (0), Component (1), Composite (2) and S-Video (3).
 | Item | Current behaviour |
 |---|---|
 | Pixel format | `V4L2_PIX_FMT_H264` |
-| Buffer content | Payload of one video PES packet (PID `0x1011`) per buffer; audio is not delivered |
-| Timestamps | Host time at delivery |
+| Buffer content | Payload of one video PES packet (PID `0x1011`) per buffer, starting with the first packet that contains an SPS; audio is not delivered |
+| Timestamps | Decoding timestamp of the PES packet (DTS, or PTS if no DTS), converted to the monotonic clock and anchored at the first buffer of a stream |
 | Hardware start | `VIDIOC_STREAMON`; firmware is loaded and the input configured at this point |
 | Source changes | `V4L2_EVENT_SOURCE_CHANGE` is queued when the signal appears or is lost |
 
