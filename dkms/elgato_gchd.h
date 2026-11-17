@@ -27,7 +27,8 @@
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
 
 struct gchd_rx_urb;
-struct gchd_frame { u8 *data; size_t len; u64 sequence; };
+#define GCHD_TS_NONE U64_MAX
+struct gchd_frame { u8 *data; size_t len; u64 sequence; u64 ts90; };
 struct gchd_ring {
  struct gchd_frame frames[GCHD_RING_FRAMES];
  unsigned int head, count;
@@ -88,6 +89,9 @@ struct gchd {
  struct gchd_ring ring;
  struct mutex deliver_lock; /* serializes gchd_deliver() */
  bool wait_sps; /* drop video until the first SPS after a (re)start */
+ u64 pes_ts90; /* timestamp of the PES being assembled */
+ bool ts_base_valid; /* buffer timestamp anchor set */
+ u64 ts_base_ns, ts_base90;
  u8 *usb_buf;
  u8 ts_partial[GCHD_TS_PACKET];
  u16 ts_partial_len;
@@ -158,7 +162,7 @@ int gchd_setup_subblock_exact(struct gchd *);
 void gchd_input_stop(struct gchd *);
 int gchd_stream_stop(struct gchd *);
 
-int gchd_ring_push(struct gchd_ring *, const u8 *, size_t);
+int gchd_ring_push(struct gchd_ring *, const u8 *, size_t, u64);
 struct gchd_frame *gchd_ring_pop(struct gchd_ring *);
 void gchd_ring_free(struct gchd_ring *);
 int gchd_v4l2_register(struct gchd *);

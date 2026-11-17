@@ -155,7 +155,7 @@ static bool gchd_mode_allowed(const struct gchd *d,
  }
 }
 
-int gchd_ring_push(struct gchd_ring *r, const u8 *data, size_t len)
+int gchd_ring_push(struct gchd_ring *r, const u8 *data, size_t len, u64 ts90)
 {
  unsigned long flags; u8 *copy; struct gchd_frame *f; unsigned int tail;
  if (!len || len > GCHD_MAX_FRAME) return -EMSGSIZE;
@@ -166,7 +166,7 @@ int gchd_ring_push(struct gchd_ring *r, const u8 *data, size_t len)
   kvfree(r->frames[tail].data); r->bytes-=r->frames[tail].len;
   r->frames[tail].data=NULL; r->frames[tail].len=0; r->count--;
  }
- f=&r->frames[r->head]; f->data=copy; f->len=len; f->sequence=++r->sequence;
+ f=&r->frames[r->head]; f->data=copy; f->len=len; f->ts90=ts90; f->sequence=++r->sequence;
  r->bytes+=len; r->head=(r->head+1)%GCHD_RING_FRAMES; r->count++;
  spin_unlock_irqrestore(&r->lock, flags); return 0;
 }
@@ -189,6 +189,45 @@ void gchd_ring_free(struct gchd_ring *r)
  spin_lock_irqsave(&r->lock,flags);
  for(i=0;i<GCHD_RING_FRAMES;i++){ kvfree(r->frames[i].data); r->frames[i].data=NULL; r->frames[i].len=0; }
  r->count=0; r->bytes=0; spin_unlock_irqrestore(&r->lock,flags);
+}
+
+/*
+ * Decoding timestamp of a PES packet in 90 kHz units: DTS when present,
+ * otherwise PTS; GCHD_TS_NONE if the header carries neither.
+ */
+static u64 gchd_pes_timestamp(const u8 *h, unsigned int header_len)
+{
+ unsigned int flags = h[7] >> 6;
+ const u8 *t;
+
+ if (flags == 3 && header_len >= 19)
+  t = h + 14;
+ else if (flags == 2 && header_len >= 14)
+  t = h + 9;
+ else
+  return GCHD_TS_NONE;
+ return ((u64)(t[0] & 0x0e) << 29) | ((u64)t[1] << 22) |
+        ((u64)(t[2] & 0xfe) << 14) | ((u64)t[3] << 7) | (t[4] >> 1);
+}
+
+/*
+ * Buffer timestamp: the stream's 90 kHz timestamp converted to nanoseconds
+ * and anchored to the monotonic clock at the first delivered frame of a
+ * stream. Frames without a timestamp get the delivery time.
+ */
+static u64 gchd_buffer_timestamp(struct gchd *d, u64 ts90)
+{
+ u64 delta;
+
+ if (ts90 == GCHD_TS_NONE)
+  return ktime_get_ns();
+ if (!d->ts_base_valid) {
+  d->ts_base_ns = ktime_get_ns();
+  d->ts_base90 = ts90;
+  d->ts_base_valid = true;
+ }
+ delta = (ts90 - d->ts_base90) & ((1ULL << 33) - 1);
+ return d->ts_base_ns + div_u64(delta * 100000ULL, 9);
 }
 
 /* True if the H.264 byte stream contains a sequence parameter set. */
@@ -214,7 +253,7 @@ static int gchd_queue_pes(struct gchd *d, const u8 *pes, size_t n)
    return 0;
   WRITE_ONCE(d->wait_sps, false);
  }
- return gchd_ring_push(&d->ring, pes, n);
+ return gchd_ring_push(&d->ring, pes, n, d->pes_ts90);
 }
 
 /*
@@ -333,6 +372,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
 
    if (header_len > GCHD_TS_PACKET - off)
     return;
+   d->pes_ts90 = gchd_pes_timestamp(p + off, header_len);
    off += header_len;
   }
   *pes_active = true;
@@ -439,7 +479,7 @@ static void gchd_deliver(struct gchd *d)
    vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_ERROR);
   } else {
    memcpy(dst,f->data,f->len);vb2_set_plane_payload(&b->vb.vb2_buf,0,f->len);
-   b->vb.sequence=f->sequence;b->vb.vb2_buf.timestamp=ktime_get_ns();
+   b->vb.sequence=f->sequence;b->vb.vb2_buf.timestamp=gchd_buffer_timestamp(d, f->ts90);
    b->vb.field=(d->input >= 2 || d->input_interlaced) ?
                V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
    dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%llu bytes=%zu sizeimage=%u\n",
@@ -769,7 +809,7 @@ static void gchd_detection_worker(struct work_struct *work)
    * Keep the encoder firmware running: restarting it after an input change
    * fails with -EINVAL.
    */
-  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
+  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
   d->ts_partial_len = 0;
   r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) {
@@ -1001,7 +1041,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  if (r)
   goto restart_failed;
 
- gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
  d->ts_partial_len = 0;
  d->input_configured = false;
  d->input_interlaced = target_interlaced;
@@ -1122,7 +1162,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   goto err;
  }
  /* Deliver only from the first SPS of this stream onwards. */
- WRITE_ONCE(d->wait_sps, true);
+ WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
 
  /*
   * A file open is not proof that an application intends to capture:
@@ -1310,7 +1350,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->input_detect_prepared = false;
  d->input_prepared = false;
  WRITE_ONCE(d->signal_present, false);
- gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
  d->ts_partial_len = 0;
  d->previous_input = d->input;
  d->input = i;
@@ -1799,7 +1839,7 @@ static int gchd_fop_release(struct file *file)
   d->input_prepared = false;
   d->encoder_started = false;
   d->signal_present = false;
-  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
+  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
   d->ts_partial_len = 0;
   mutex_unlock(&d->lifecycle_lock);
  }
@@ -1952,7 +1992,7 @@ static void gchd_disconnect(struct usb_interface *i)
 
  /* The interface may already be gone: never issue USB commands here. */
  gchd_v4l2_unregister(d);
- gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true);
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
  kref_put(&d->refcount, gchd_release_ref);
 }
 
