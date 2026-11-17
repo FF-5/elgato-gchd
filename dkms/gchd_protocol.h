@@ -24,7 +24,7 @@
 #define GCHD_EP_FW_OUT			0x02	/* bulk OUT: firmware download */
 #define GCHD_EP_TS_IN			0x81	/* bulk IN: MPEG transport stream */
 #define GCHD_EP_INT_IN			0x83	/* interrupt IN: mailbox/SCMD notify */
-#define GCHD_EP_AUX_IN			0x84	/* bulk IN: queued by Windows, unused by C++ */
+#define GCHD_EP_AUX_IN			0x84	/* bulk IN: payload not documented */
 
 #define GCHD_FW_CHUNK_HD		16384	/* firmware chunk size, original HD */
 #define GCHD_FW_CHUNK_HDNEW		32768	/* firmware chunk size, HD-New */
@@ -82,7 +82,7 @@
 
 #define GCHD_MAIL_READY_BIT		0x0001
 /* GCHD_REG_MAIL_READY bits 8-9: cable type (00 HDMI, 10 component,
- * 11 composite); bits 10-11: cable presence. C++ folds them into a
+ * 11 composite); bits 10-11: cable presence. The driver folds them into a
  * detection mask: cable type in bits 0-1, "anything present" in bit 3. */
 #define GCHD_MAIL_READY_DETECT(status) \
 	((((status) >> 8) & 3) | ((((status) >> 10) & 3) != 0 ? BIT(3) : 0))
@@ -187,8 +187,7 @@
 
 #define GCHD_TS_PACKET			188
 #define GCHD_TS_SYNC			0x47
-/* PIDs and stream ids programmed into the encoder by transcoder.c
- * (same choices as the C++ starting point). */
+/* PIDs and stream ids programmed into the encoder by transcoder.c */
 #define GCHD_TS_PID_VIDEO		0x1011
 #define GCHD_TS_PID_AUDIO		0x010f
 #define GCHD_TS_PID_PMT			0x0110

@@ -19,7 +19,7 @@
  *                             itself is part of the recorded sequence)
  *
  * Every macro in this file RETURNS FROM THE CALLING FUNCTION with the error
- * code when the USB operation fails (RULES.md D10). The calling function
+ * code when the USB operation fails. The calling function
  * must return int. Reads store the byte in the lvalue `var`.
  *
  * Long fixed sequences are written as data tables of struct gchd_mail_cmd

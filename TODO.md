@@ -23,15 +23,23 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 
 ## Phase 0 — Repository consolidation
 
-- [x] Assess all branches (`docs/branch-history.md`).
+- [x] Assess all branches (notes: `traces` branch, `traces/previous-analysis/branch-history.md`).
 - [x] Merge `master` into `dev`; `dev` is the integration branch.
 - [x] Copy the latest driver (`state-machine` tip) to `dkms/`; it builds with
       `W=1` against 6.8 headers.
-- [x] Restore deleted evidence to `docs/evidence/`.
+- [x] Restore deleted analysis material (now on the `traces` branch,
+      `traces/previous-analysis/`).
 - [x] Rewrite `docs/`; Windows traces are the reference.
 - [x] Firmware extract script writes directly to `/lib/firmware/gchd`
       (maintainer commit `9ddf703`, cherry-picked).
-- [x] `tools/compare-objs.sh`: proves that a refactor generates identical code.
+- [x] Comparison tools (`compare-objs.sh`, `compare-mailbox-ops.py`) — on the
+      orphan `tools` branch.
+- [x] Development-only files (`TODO.md`, `TASK.md`, `RULES.md`) excluded from
+      `master` (RULES B2); protected files listed (RULES B4); top-level
+      `README.md` restored to the `master` version.
+- [x] Documentation rewritten to neutral product documentation (RULES C);
+      analysis material and branch history moved out of `docs/`.
+- [x] Orphan `traces` branch for trace recordings and analysis material.
 - [ ] Decide what to do with the historical branches (archive tags, then
       delete?). Maintainer's decision.
 
@@ -46,22 +54,27 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
       Expected USB-traffic effect: none.
 - [ ] **T-003 [OFF] (S)** Make `vb2_fops` in `fops.c` static (currently a
       global `EXPORT_SYMBOL_GPL`).
+- [ ] **T-005 [OFF] (S)** Code comments in `dkms/*.c` still refer to C++
+      function names, "userspace" and "original driver" (about 40 lines). Rewrite
+      them neutrally (RULES E10); comments only, verify code-identical.
 - [ ] **T-004 [WIN] (S)** `0x1004` "stout_mode" write: the kernel writes bit 0,
       C++ `stout_mode` is bit 15. Check the Windows trace's `SOC 1004` writes and
       fix (behaviour change, own branch).
 
 ## Phase 2 — Tooling and evidence
 
-- [ ] **T-010 [OFF] (M)** `tools/usbmon2ops.py`: decode usbmon text (Linux)
+- [ ] **T-010 [OFF] (M)** `usbmon2ops.py` on the `tools` branch: decode usbmon text (Linux)
       and USBPcap/pcapng (Windows, via `tshark`) into protocol operations
       (register R/W, mailbox write/read with device address, SCMD, firmware,
       sparam field names, bulk). Same output format for both so that DKMS
       traffic can be diffed against Windows traffic.
-- [ ] **T-011 [WIN] (S)** Maintainer: Windows trace of composite **480i**
-      from plug-in through 20 s of capture, with the TS saved by the Elgato
-      software if possible. This becomes the reference for Phase 4.
+- [ ] **T-011 [OFF] (M)** Analyse the trace recordings uploaded to the
+      `traces` branch (composite 480i first). Produce decoded listings next to
+      the recordings and update `docs/` with the observed sequences.
+      → current `TASK.md`
 - [ ] **T-012 [OFF] (S)** Port the `debug` branch's debugfs raw bulk-IN dump
-      (`docs/evidence/debug-branch-trace/trace.c`) behind a module parameter,
+      (`traces` branch: `traces/previous-analysis/debug-branch-trace/trace.c`)
+      behind a module parameter,
       so the exact device output can be saved from the kernel driver.
 
 ## Phase 3 — Kernel data path (make the output verifiable)
@@ -116,6 +129,26 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 - [ ] **T-053 [WIN+HW] (S)** PAL: composite 576i/288p traces and support.
 - [ ] **T-054 [HW] (S)** Source loss/return using the Windows no-signal loops.
 
+## Known differences between the driver and recorded traces
+
+Development notes (moved out of `docs/`). Each needs its own fix task once
+the mode in question can be tested; change one at a time (RULES D5).
+
+| Item | Driver (from the C++ port) | Recorded traces |
+|---|---|---|
+| 240p encoder programming | `v_format 8`, `v_ip_format 2`, full restart on 480i ↔ 240p | `v_format 4`, `v_ip_format 0`; 480i → 240p decoder-only |
+| Composite selector `0x9C:51` | `CC` | `44` (from HDMI), `EC` (from analog) |
+| Decoder tuning `0x88:10` | single pass, `10 = 88` | three passes, `10 = 6F` |
+| Composite NTSC back-end table `0x98:90–A3` | sparse (`90=68, 91=BF, 95=AB, 96=17, 97=88, A0=8C, A1=F8, A2=82, A3=59`) | all 20 registers (`01 BD 9A … 81 49`) |
+| `0x98:C0` in the B1 block | `89` | `88` |
+| `0x98:0E` retrigger base | `65`/`64` | `05`/`04` and `15`/`14` |
+| `0x94:4A`, `0x94:4B` | `AF` | `B7` (also `BB`) |
+| `v_in_source_type` for NTSC | `0` | `3` (240p composite) |
+| `0900:0018` for HDMI | `00 0A` (bit 9 clear) | `02 0A` |
+| `0x1004` "stout_mode" | bit 0 written | not yet checked (T-004) |
+| Bulk IN `0x84` | required (`-ENODEV` if absent) | queued (8 URBs) during start |
+| START completion | timed out with state already `0x02` (`2da03ea` log) | loop until target state |
+
 ## Phase 7 — Usability
 
 - [ ] **T-060 (M)** Userspace bridge: ffmpeg → v4l2loopback raw node,
@@ -131,4 +164,4 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 
 - Windows: composite 480i (T-011), HDMI with signal, component with signal,
   PAL 576i/288p, a session that starts directly in 240p.
-- The raw `.ts` files behind `docs/evidence/reference-ts/`.
+- The raw `.ts` files behind `traces/previous-analysis/reference-ts/`.
