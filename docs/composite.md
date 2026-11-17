@@ -117,9 +117,11 @@ Composite and S-video are distinguished by `0x88:02` (`C9` / `DC`) and
 
 ## 7. No-signal polling
 
-Read `0x88:FA`, read `0x98:F5`, about every 50 ms. When a source is
-connected, `0x88:CA` changes from `FE`, polling ends, and the sequence
-continues with §3 step 3.
+Read `0x88:FA`, read `0x98:F5`, about every 50 ms. When `0x98:F5` has bit 7
+set (`F2`, `E2`), the back end is retriggered (Observed: PAL S-video, after
+the routing writes; with an NTSC source `F5` reads `62` and no retrigger
+follows). When a source is connected, `0x88:CA` changes from `FE`, polling
+ends, and the sequence continues with §3 step 3.
 
 ## 8. PAL (Observed)
 

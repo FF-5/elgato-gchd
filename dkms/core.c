@@ -1064,6 +1064,13 @@ static void gchd_mode_workfn(struct work_struct *work)
      !d->input_configured || !READ_ONCE(d->signal_present))
   goto out;
 
+ /* 50 Hz sources: retrigger the back end when its status flag is set. */
+ if (d->input_height == 576) {
+  r = gchd_analog_poll_backend(d);
+  if (r)
+   dev_dbg(&d->intf->dev, "back-end poll failed: %d\n", r);
+ }
+
  r = gchd_input_read_analog_mode(d, &target_interlaced);
  if (r == -EAGAIN)
   goto reschedule;

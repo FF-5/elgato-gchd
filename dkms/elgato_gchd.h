@@ -161,6 +161,7 @@ int gchd_input_read_analog_mode(struct gchd *, bool *);
 int gchd_analog_mode_pre_stop(struct gchd *, bool);
 int gchd_analog_mode_reconfigure(struct gchd *);
 int gchd_analog_pal_mode_change(struct gchd *, bool);
+int gchd_analog_poll_backend(struct gchd *);
 int gchd_common_block_a(struct gchd *);
 int gchd_common_block_b1(struct gchd *, bool);
 int gchd_common_block_b2(struct gchd *);

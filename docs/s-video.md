@@ -47,4 +47,8 @@ When the previous input was component or composite, the selector value is
 PAL sources use the PAL back-end table, encoder programming and the
 decoder-only 576i ↔ 288p change described in
 [composite.md §8](composite.md#8-pal-observed) (Observed: S-video 576i start,
-576i → 288p change with the same register writes as composite).
+576i → 288p change with the same register writes as composite). With a PAL
+source, `0x98:F5` reads `F2`/`E2` right after the routing writes; the back
+end is retriggered (`0E = 05`, `04`), after which `0x88:FA` reads `17` (PAL
+locked). Without that retrigger the decoder does not lock (Driver: observed
+`0x88:FA = ED`/`FD` indefinitely).

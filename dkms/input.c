@@ -592,6 +592,22 @@ static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
  * never repeats the long encoder-start sequence or timing-dependent setup.
  */
 static int gchd_prepare_analog_detection(struct gchd *d);
+static int gchd_be_retrigger(struct gchd *d);
+
+/*
+ * Status poll of the back end while waiting for an analog source: when
+ * GCHD_BE_STATUS_FLAG is set, the back end is retriggered.
+ */
+static int gchd_be_poll_status(struct gchd *d)
+{
+ u8 v;
+
+ GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
+ if (!(v & GCHD_BE_STATUS_FLAG))
+  return 0;
+ dev_dbg(&d->intf->dev, "back-end status 0x%02x; retrigger\n", v);
+ return gchd_be_retrigger(d);
+}
 
 /*
  * General input setup runs after INPUT_SELECTION and before SOURCE_DETECTION.
@@ -682,7 +698,9 @@ static int gchd_prepare_analog_detection(struct gchd *d)
   int cycle;
   for (cycle = 0; cycle < 2; ++cycle) {
    GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, reply);
-   GCHD_BE_R(d, 0xf5, reply);
+   r = gchd_be_poll_status(d);
+   if (r)
+    return r;
    if (cycle == 0)
     usleep_range(50000, 70000);
   }
@@ -799,6 +817,9 @@ int gchd_probe_video_source(struct gchd *d)
    * deadlocks the 240p path; CA/E7 polling follows family detection.
    */
   GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
+  r = gchd_be_poll_status(d);
+  if (r)
+   return r;
   dev_info(&d->intf->dev,
            "gchd-diag detect %s: pre-config raw_status=0x%02x mode=0x%x\n",
            d->input == 2 ? "composite" : "s-video", v, v & 0x0f);
@@ -1206,6 +1227,11 @@ static int gchd_pal_apply(struct gchd *d, bool interlaced)
  * 576i <-> 288p while capturing: decoder apply block, then one back-end
  * retrigger. The encoder keeps running.
  */
+int gchd_analog_poll_backend(struct gchd *d)
+{
+ return gchd_be_poll_status(d);
+}
+
 int gchd_analog_pal_mode_change(struct gchd *d, bool interlaced)
 {
  u8 v;
