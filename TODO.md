@@ -28,11 +28,14 @@ on the `traces` branch.
 - [ ] **T-051 [WIN+HW] (M)** Component, all modes (480i, 480p, 576i, 576p,
       720p, 1080i; mode changes). The driver uses the C++ blocks; no
       recording of component with a signal yet.
-- [ ] **T-053b [HW] (S)** PAL S-video (PS1): the decoder never locked
-      because the driver ignored `0x98:F5` bit 7 while polling; Windows
-      retriggers the back end then (`s-video/filtered_288p_pal_svideo`
-      4.098-4.123). Fix on `fix/pal-svideo`; hardware test pending. 288p
-      capture start is still not recorded.
+- [ ] **T-053b [HW] (S)** PAL S-video: works since b17d75e (`0x98:F5`
+      bit 7 retrigger). Open on `fix/pal-svideo`: composite after S-video
+      without replugging (decoder kept `0x88:02 = DC`; fixed, test pending).
+      288p capture start is still not recorded.
+- [ ] **T-047 [HW] (S)** `hardware shutdown on last close failed: -5` when
+      ffplay is closed after a session in which no source was detected.
+- [ ] **T-005b [OFF] (S)** Code comments still name `configureDevice()`
+      (`input.c`, `usb.c`, RULES E10); comments only, verify code-identical.
 - [ ] **T-046 [OFF] (S)** The frame rate reported before the source is
       detected is the NTSC default: ffplay showed 60 fps for a PAL stream on
       the first open after loading the module (50 fps on the second).

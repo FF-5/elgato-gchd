@@ -243,8 +243,9 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  u8 v;
 
 
- /* Exact continuation of configureDevice() after 0x89 0x89 0xfb. */
+ /* Continuation after the 0x88:FB read. */
  GCHD_DEC_W(d, 0x02, 0xc9);
+ d->dec_svideo = false;
  GCHD_DEC_W(d, 0x14, 0xd2);
  GCHD_DEC_W(d, 0x3c, 0x6b);
  GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
@@ -275,6 +276,7 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  GCHD_DEC_W(d, 0x06, 0x08);
 
  GCHD_DEC_W(d, 0x02, 0xc9);
+ d->dec_svideo = false;
  GCHD_DEC_W(d, 0x14, 0xd2);
  GCHD_DEC_W(d, 0x3c, 0x6b);
  GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
@@ -648,16 +650,19 @@ static int gchd_prepare_analog_detection(struct gchd *d)
   * initial FD poll directly to 0x06=08 and the F8 read.
   * The discriminator is applied in late configuration after detection.
   *
-  * S-video needs its distinct decoder mode before detection. When switching
-  * from S-video back to composite, C9 + D2 are written as an
-  * analog-to-analog transition prefix.
+  * S-video needs its distinct decoder mode before detection. When the
+  * decoder is still set for S-video (it keeps the setting until the device
+  * is unplugged, also across closing and reopening), composite first gets
+  * C9 + D2 as the S-video-to-composite transition prefix.
   */
  if (d->input == 3) {
   GCHD_DEC_W(d, 0x02, 0xdc);
+  d->dec_svideo = true;
   GCHD_DEC_W(d, 0x14, 0xd2);
   GCHD_DEC_W(d, 0x28, 0x88);
- } else if (d->input == 2 && d->previous_input == 3) {
+ } else if (d->input == 2 && d->dec_svideo) {
   GCHD_DEC_W(d, 0x02, 0xc9);
+  d->dec_svideo = false;
   GCHD_DEC_W(d, 0x14, 0xd2);
  }
  GCHD_DEC_W(d, 0x06, 0x08);
@@ -1256,6 +1261,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
  /* Composite and S-Video share the assumed 0x4E:0x51=0xEC route.
   * Select the decoder's distinct luma/chroma input mode separately. */
  GCHD_DEC_W(d, 0x02, d->input == 3 ? 0xdc : 0xc9);
+ d->dec_svideo = d->input == 3;
  GCHD_DEC_W(d, 0x3c, 0x6b);
 
  GCHD_AUX_W(d, 0x41, 0x37); GCHD_AUX_W(d, 0x4a, 0xb7); GCHD_AUX_W(d, 0x4b, 0xb7);
@@ -1771,9 +1777,18 @@ int gchd_input_configure_idle(struct gchd *d)
 int gchd_input_check_mode(struct gchd *d)
 {
  bool interlaced;
+ u8 family;
 
  if (d->input < 2 || (d->input_height != 480 && d->input_height != 576))
   return 0;
+ GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, family);
+ family &= 0x0f;
+ if ((family == 6 && d->input_height == 576) ||
+     (family == 7 && d->input_height == 480)) {
+  dev_info(&d->intf->dev, "source changed to %s during setup; configuring again\n",
+           family == 7 ? "50 Hz" : "60 Hz");
+  return -EAGAIN;
+ }
  if (gchd_input_read_analog_mode(d, &interlaced) ||
      interlaced == d->input_interlaced)
   return 0;
