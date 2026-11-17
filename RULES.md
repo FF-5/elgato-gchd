@@ -64,6 +64,9 @@ and re-check them before every commit.
 6. One feature branch per task. Merge into `dev` only when the task's
    acceptance criteria are met (rule F). Before merging, re-read the diff of
    the whole branch against `dev`.
+7. A feature branch is deleted (locally and on GitHub) once it is merged into
+   `dev` or abandoned. If the session cannot delete remote branches, list
+   them in `TODO.md` Phase 0 for the maintainer.
 
 ## C. Documentation (`docs/`, `dkms/README.md`)
 

@@ -32,6 +32,7 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 | 2026-11-17 | `fix/v4l2-format-negotiation` 6e8841a | composite 480i | guvcview: briefly a black-and-white picture with the bottom quarter garbled, then crash (read fault in `memcpy`). ffmpeg recorded 10 s without errors: H.264 High 720×480, `field_order tt`, 22.9 Mbit/s (driver bitrate twice the recorded value; fixed in 81bc5ec). The guvcview symptoms match copying a decoded 720-wide picture without its 768-byte line stride. |
 | 2026-11-17 | `fix/v4l2-format-negotiation` 2748f45 (merged to `dev`) | composite 480i | **Accepted.** ffplay shows the picture, occasional stutter (buffer timestamps; fix 6aaf465 on `fix/buffer-timestamps`). 10 s recording: H.264 High, level 31, 720×480, `field_order tt`, 9.7 Mbit/s, decodes without errors. 23 bulk transfers/s, no errors. START ~0.12 s. guvcview not retried. |
 | 2026-11-17 | `fix/buffer-timestamps` a242815 | composite 480i / 240p | 480i: plays in ffplay, still occasional stutter; guvcview still crashes. 240p (CA=66 at detection): configured as 480i, START never completed. Source switching 240p→480i before capture: never detected (FA stayed ED/FD). Fixes on `fix/composite-240p-start` e30ebeb. Maintainer note: ffplay working does not show that OBS works. |
+| 2026-11-17 | `fix/composite-240p-start` ba57bb9 (merged to `dev`) | composite 240p / 240p→480i | **240p accepted:** "configuring 240p", START ~0.1 s, picture in ffplay (start takes a while). Stutter remains with `ring_dropped=0` — not caused by driver frame drops; to be re-checked outside the VM. 240p→480i while capturing: stop took ~70 s, then IDLE (0x11) and START timed out. Fix 8a4b2af on `fix/mode-change-restart`. |
 
 ## Phase 0 — Repository consolidation
 
@@ -54,6 +55,11 @@ Windows trace from the maintainer, **[OFF]** can be done offline,
 - [x] Orphan `traces` branch for trace recordings and analysis material.
 - [ ] Delete all historical branches once composite, S-video and component
       480i/576i work on `dev` (maintainer decision, 2026-11-17).
+- [ ] Remote branches merged into `dev` and no longer needed (deletion is not
+      permitted from the development session; delete on GitHub):
+      `claude/inspiring-bardeen-xjao9v`, `fix/analog-start-per-traces`,
+      `fix/buffer-timestamps`, `fix/composite-240p-start`,
+      `fix/v4l2-format-negotiation`, `refactor/t001-names-and-macros`.
 
 ## Phase 1 — Code cleanup (no behaviour change)
 
