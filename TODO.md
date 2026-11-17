@@ -13,23 +13,25 @@ on the `traces` branch.
 
 ## Current state
 
-- Works on `dev` (0.3.0): composite and S-video, 480i and 240p from a fresh
-  start, 480i ↔ 240p changes while capturing (~1.5 s), source off/on, close
-  and reopen. ffplay,
-  H.264 stream. No audio. guvcview cannot display the stream. Source used:
-  N64 *Star Wars Episode I: Racer* (menu 480i, demo 240p, switches by
-  itself).
+- Works on `dev` (0.4.0): composite NTSC 480i/240p and PAL 576i/288p,
+  S-video NTSC 480i/240p, from a fresh start and with mode changes while
+  capturing (NTSC ~1.5 s with encoder restart, PAL ~0.5 s decoder-only),
+  source off/on, close and reopen. ffplay, H.264 stream. No audio. guvcview
+  cannot display the stream. Sources used: N64 (NTSC, menu 480i / demo
+  240p), PS1 (PAL, intro 576i / 288p).
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller (5–8× faster
   than EHCI). Performance to be judged on non-virtualised hardware.
 - Bring-up order: composite and S-video (all resolutions), component, HDMI.
 
 ## Next
 
-- [ ] **T-053 [HW] (M)** PAL on `feat/pal`: composite 576i/288p and the
-      decoder-only 576i ↔ 288p change accepted (PS1). Open: S-video PAL
-      (no signal seen with the PS1: `0x88:FA = ED/FD`; source/cable to be
-      checked); the retrigger on `0x98:F5` bit 7 while capturing; 288p
-      capture start not recorded.
+- [ ] **T-051 [WIN+HW] (M)** Component, all modes (480i, 480p, 576i, 576p,
+      720p, 1080i; mode changes). The driver uses the C++ blocks; no
+      recording of component with a signal yet.
+- [ ] **T-053b [HW] (S)** PAL S-video: no signal with the PS1
+      (`0x88:FA = ED/FD`), needs another PAL S-video source or a check with
+      the Windows software. Also open for PAL: the retrigger on `0x98:F5`
+      bit 7 while capturing; 288p capture start not recorded.
 - [ ] **T-046 [OFF] (S)** The frame rate reported before the source is
       detected is the NTSC default: ffplay showed 60 fps for a PAL stream on
       the first open after loading the module (50 fps on the second).
@@ -46,7 +48,6 @@ on the `traces` branch.
 
 ## Inputs and modes
 
-- [ ] **T-051 [WIN+HW] (M)** Component, all modes.
 - [ ] **T-050 [WIN+HW] (M)** HDMI with a signal, all modes, mode changes.
 - [ ] **T-055 [OFF→HW] (M)** Encoder output size independent of the input
       (`docs/hdmi.md §4`: 1920×1080 … 480×360, per-size bitrate/level,
@@ -88,7 +89,7 @@ on the `traces` branch.
 - [ ] **T-012 [OFF] (S)** debugfs raw bulk-IN dump behind a module parameter.
 - [ ] Remote branches to delete on GitHub (not possible from the session):
       `claude/inspiring-bardeen-xjao9v`, `fix/analog-start-per-traces`,
-      `fix/mode-change-restart`, `feat/svideo`,
+      `fix/mode-change-restart`, `feat/svideo`, `feat/pal`,
       `fix/buffer-timestamps`, `fix/composite-240p-start`,
       `fix/v4l2-format-negotiation`, `refactor/t001-names-and-macros`.
       Historical branches: once composite, S-video and component work on
