@@ -15,11 +15,11 @@ on the `traces` branch.
 
 - Works on `dev`: composite 480i and 240p from a fresh start (ffplay, H.264
   stream, clean decode). No audio. guvcview cannot display the stream.
-- Open on `fix/mode-change-restart` (T-041): a second START after a stop
-  fails. Found so far: the close path stopped the stream after joining the
-  receive thread (NULL then never completes and the device stays stuck);
-  detection accepted transitional `0x88:CA` values. Source used: N64
-  *Star Wars Episode I: Racer* (switches 480i ↔ 240p by itself).
+- On `fix/mode-change-restart` (T-041): stop and restart work (close and
+  reopen, stable 240p, 39f63f2). Open: mode switches while capturing. Source
+  used: N64 *Star Wars Episode I: Racer* (switches 480i ↔ 240p by itself).
+- ffplay prints "VIDIOC_QBUF: Bad file descriptor" on close (this branch
+  only; "Some buffers are still owned by the caller" also on `dev`).
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller is 5–8× faster
   than EHCI (firmware load 0.8 s instead of 6 s).
 - Bring-up order: composite and S-video (all resolutions), component, HDMI.
@@ -33,8 +33,8 @@ on the `traces` branch.
       streaming; `-vf separatefields` gives a stable 240p picture.
 - [ ] **T-042 [OFF] (S)** Report 240p/480i to userspace;
       `V4L2_EVENT_SOURCE_CHANGE` on change.
-- [ ] **T-031 [HW] (S)** STREAMOFF → STREAMON and close → reopen without
-      replugging (same root cause as T-041).
+- [ ] **T-031 [HW] (S)** STREAMOFF → STREAMON without closing (close →
+      reopen works since 39f63f2).
 
 ## Inputs and modes
 
