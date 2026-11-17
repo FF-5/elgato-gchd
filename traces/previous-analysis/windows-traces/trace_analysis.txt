@@ -1,0 +1,260 @@
+GCHD composite format-change sequences (trace: gchd_240p-480i_switch_to_composite.pcapng)
+=====================================================================================
+Notation: "READ aa bb rr -> v"  = mailbox read request (wire form: aa bb rr 00, 4 bytes) and result byte v
+          "WRITE [ADDR] reg=val" = 2-byte write on 0x0800:0x00C0 followed by B9 09 00 ADDR 02
+          "B8 xx xx xx xx"       = SCMD (40 B8 ... wLength 4)
+Format status as seen by the host (reads of device 0x88):
+   89 89 CA : FE = unlocked/480i, 7E = 480i locked, 66 = 240p locked (bits 4:3 -> 00)
+   89 89 FA, E7, F1, CB are polled alongside; FA flickers 06/16, E7 shows a transient at each change
+
+
+--- INITIAL composite lock, 480i, then capture setup/start  (t=8.8..10.4s) ---
+   8.827  WRITE [88] 06=08
+   8.829  READ  89 89 reg f8 -> c9
+   8.832  WRITE [88] 03=28
+   8.835  WRITE [9c] b3=33
+   8.837  READ  9d cd reg 3f -> b2
+   8.840  WRITE [9c] 00=ce
+   8.843  WRITE [9c] 27=33
+   8.845  READ  9d cd reg 3f -> b0
+   8.848  WRITE [9c] 00=cc
+   8.851  READ  9d cd reg 6e -> 3b
+   8.854  WRITE [9c] 51=44
+   8.859  READ  89 89 reg fa -> 3f
+   8.939  WRITE [88] 10=6f
+   8.973  WRITE [88] 11=d4
+   8.975  WRITE [88] 12=d0
+   8.977  WRITE [88] 13=08
+   8.979  WRITE [88] 14=08
+   8.981  WRITE [88] 15=88
+   9.035  WRITE [88] 10=6f
+   9.037  WRITE [88] 11=ea
+   9.039  WRITE [88] 12=d0
+   9.041  WRITE [88] 13=08
+   9.043  WRITE [88] 14=08
+   9.045  WRITE [88] 15=88
+   9.085  WRITE [88] 10=6f
+   9.087  WRITE [88] 11=ea
+   9.089  WRITE [88] 12=d0
+   9.091  WRITE [88] 13=1b
+   9.093  WRITE [88] 14=1b
+   9.095  WRITE [88] 15=88
+   9.191  READ  89 89 reg fa -> 06
+   9.195  READ  89 89 reg ca -> fe
+   9.198  WRITE [88] 07=8a
+   9.201  WRITE [88] 08=9b
+   9.203  WRITE [88] 09=7a
+   9.205  WRITE [88] 28=88
+   9.207  READ  89 89 reg fd -> 6e
+   9.210  WRITE [88] 06=08
+   9.635  READ  89 89 reg e7 -> 69
+   9.638  READ  89 89 reg f1 -> 7e
+   9.643  READ  89 89 reg cb -> 6e
+   9.646  READ  89 89 reg ca -> fe
+   9.650  WRITE [98] 04=95
+   9.653  READ  99 89 reg 8b -> 2e
+   9.656  WRITE [98] 70=d0
+   9.659  WRITE [98] 0f=88
+   9.661  WRITE [98] 90=01
+   9.663  WRITE [98] 91=bd
+   9.665  WRITE [98] 92=9a
+   9.667  WRITE [98] 93=3a
+   9.669  WRITE [98] 94=e9
+   9.671  WRITE [98] 95=ab
+   9.673  WRITE [98] 96=17
+   9.675  WRITE [98] 97=88
+   9.677  WRITE [98] 98=84
+   9.679  WRITE [98] 99=8a
+   9.681  WRITE [98] 9a=9c
+   9.683  WRITE [98] 9b=8c
+   9.685  WRITE [98] 9c=98
+   9.687  WRITE [98] 9d=93
+   9.689  WRITE [98] 9e=83
+   9.691  WRITE [98] 9f=a9
+   9.693  WRITE [98] a0=8b
+   9.695  WRITE [98] a1=e8
+   9.697  WRITE [98] a2=81
+   9.699  WRITE [98] a3=49
+   9.701  READ  99 89 reg 89 -> 6e
+   9.705  WRITE [98] 72=88
+   9.707  WRITE [98] c0=88
+   9.709  WRITE [98] 61=98
+   9.711  WRITE [98] 63=89
+   9.713  WRITE [98] 64=96
+   9.715  WRITE [98] 65=88
+   9.717  READ  99 89 reg ff -> 73
+   9.721  WRITE [98] 04=8d
+   9.723  WRITE [98] 62=91
+   9.729  READ  99 89 reg fd -> 6e
+   9.732  READ  99 89 reg fc -> 6e
+   9.737  READ  99 89 reg f3 -> 7e
+   9.744  WRITE [98] 0d=c8
+   9.750  WRITE [98] 0e=05
+   9.753  WRITE [98] 0e=04
+   9.834  READ  99 89 reg fd -> 6e
+   9.838  READ  99 89 reg fc -> 6e
+   9.842  READ  99 89 reg f3 -> 7e
+   9.851  WRITE [98] 0d=c8
+   9.856  WRITE [98] 0e=15
+   9.859  WRITE [98] 0e=14
+  10.315  B8    04 a0 00 00
+  10.316  B8    05 00 00 02
+
+--- 480i -> 240p (no SCMD, no SoC writes, capture keeps running)  (t=25.0..28.5s) ---
+  25.140  READ  89 89 reg fa -> 06
+  25.153  READ  89 89 reg ca -> 7e
+  25.157  READ  89 89 reg e7 -> 69
+  25.163  READ  89 89 reg f1 -> 7e
+  25.884  READ  89 89 reg fa -> 06
+  25.888  READ  89 89 reg ca -> 66
+  25.892  WRITE [88] 07=8a
+  25.895  WRITE [88] 08=9b
+  25.898  WRITE [88] 09=7a
+  25.918  WRITE [88] 28=8a
+  25.921  READ  89 89 reg fd -> 6e
+  25.925  WRITE [88] 06=08
+  26.342  READ  89 89 reg e7 -> 09
+  26.350  READ  89 89 reg f1 -> 7e
+  26.354  WRITE [88] 0a=8f
+  26.357  READ  89 89 reg cb -> 44
+  26.361  READ  89 89 reg ca -> ee
+  26.385  READ  99 89 reg fd -> 6e
+  26.389  READ  99 89 reg fc -> 6e
+  26.393  READ  99 89 reg f3 -> 7e
+  26.402  WRITE [98] 0d=c8
+  26.415  WRITE [98] 0e=15
+  26.418  WRITE [98] 0e=14
+  27.236  READ  89 89 reg fa -> 16
+  27.240  READ  89 89 reg ca -> 66
+  27.253  READ  89 89 reg e7 -> 69
+  27.257  READ  89 89 reg f1 -> 69
+  27.272  WRITE [88] 0a=98
+  28.085  READ  89 89 reg fa -> 06
+  28.089  READ  89 89 reg ca -> 66
+  28.093  READ  89 89 reg e7 -> 69
+  28.108  READ  89 89 reg f1 -> 7e
+
+--- 240p -> 480i (stop, reprogram, SCMD stop/..., setup, start)  (t=56.4..60.5s) ---
+  56.403  READ  89 89 reg ca -> 66
+  56.407  READ  89 89 reg e7 -> 69
+  56.411  READ  89 89 reg f1 -> 7e
+  56.647  READ  99 89 reg fd -> 6e
+  56.651  READ  99 89 reg fc -> 6e
+  56.655  READ  99 89 reg f3 -> 7e
+  56.664  WRITE [98] 0d=c8
+  56.672  WRITE [98] 0e=15
+  56.676  WRITE [98] 0e=14
+  56.707  READ  99 89 reg fd -> 6e
+  56.711  READ  99 89 reg fc -> 6e
+  56.715  READ  99 89 reg f3 -> 7e
+  56.738  WRITE [98] 0d=c8
+  56.747  WRITE [98] 0e=15
+  56.750  WRITE [98] 0e=14
+  57.235  READ  89 89 reg fa -> 16
+  57.250  READ  89 89 reg ca -> 7e
+  57.257  WRITE [88] 07=8a
+  57.267  WRITE [88] 08=9b
+  57.270  WRITE [88] 09=7a
+  57.273  WRITE [88] 28=88
+  57.276  READ  89 89 reg fd -> 6e
+  57.280  WRITE [88] 06=08
+  57.685  READ  89 89 reg e7 -> 89
+  57.691  WRITE [98] 04=95
+  57.694  READ  99 89 reg 8b -> 36
+  57.709  WRITE [98] 70=c8
+  57.712  WRITE [98] 90=88
+  57.715  WRITE [98] 91=77
+  57.718  WRITE [98] 92=77
+  57.721  WRITE [98] 93=77
+  57.725  WRITE [98] 94=77
+  57.728  WRITE [98] 95=77
+  57.753  WRITE [98] 96=77
+  57.756  WRITE [98] 97=77
+  57.759  WRITE [98] 98=77
+  57.762  WRITE [98] 99=77
+  57.771  WRITE [98] 9a=77
+  57.776  WRITE [98] 9b=77
+  57.778  WRITE [98] 9c=77
+  57.781  WRITE [98] 9d=77
+  57.784  WRITE [98] 9e=77
+  57.797  WRITE [98] 9f=77
+  57.806  WRITE [98] a0=77
+  57.809  WRITE [98] a1=77
+  57.812  WRITE [98] a2=77
+  57.815  WRITE [98] a3=77
+  57.820  READ  99 89 reg 6b -> 6e
+  57.827  WRITE [98] c0=80
+  57.845  WRITE [98] a2=77
+  57.848  READ  99 89 reg 58 -> 91
+  57.852  WRITE [98] c0=77
+  57.855  READ  99 89 reg 89 -> 6e
+  57.861  WRITE [98] 72=88
+  57.863  WRITE [98] c0=88
+  57.866  WRITE [98] 61=98
+  57.869  WRITE [98] 63=89
+  57.872  WRITE [98] 64=96
+  57.877  WRITE [98] 65=88
+  57.880  READ  99 89 reg ff -> 73
+  57.916  WRITE [98] 04=8d
+  57.918  WRITE [98] 62=91
+  57.928  READ  99 89 reg fd -> 6e
+  57.941  READ  99 89 reg fc -> 6e
+  57.945  READ  99 89 reg f3 -> 7e
+  57.953  WRITE [98] 0d=c8
+  57.975  WRITE [98] 0e=05
+  57.980  WRITE [98] 0e=04
+  57.985  B8    05 00 00 04
+  58.646  B8    05 00 00 01
+  58.985  READ  89 89 reg fa -> 06
+  58.988  READ  89 89 reg ca -> 7e
+  58.992  READ  89 89 reg e7 -> 69
+  58.996  READ  89 89 reg f1 -> 7e
+  59.000  WRITE [98] 04=95
+  59.003  READ  99 89 reg 8b -> 2e
+  59.006  WRITE [98] 70=d0
+  59.009  WRITE [98] 0f=88
+  59.011  WRITE [98] 90=01
+  59.013  WRITE [98] 91=bd
+  59.015  WRITE [98] 92=9a
+  59.017  WRITE [98] 93=3a
+  59.019  WRITE [98] 94=e9
+  59.021  WRITE [98] 95=ab
+  59.022  WRITE [98] 96=17
+  59.025  WRITE [98] 97=88
+  59.027  WRITE [98] 98=84
+  59.029  WRITE [98] 99=8a
+  59.031  WRITE [98] 9a=9c
+  59.033  WRITE [98] 9b=8c
+  59.035  WRITE [98] 9c=98
+  59.037  WRITE [98] 9d=93
+  59.039  WRITE [98] 9e=83
+  59.041  WRITE [98] 9f=a9
+  59.043  WRITE [98] a0=8b
+  59.045  WRITE [98] a1=e8
+  59.047  WRITE [98] a2=81
+  59.049  WRITE [98] a3=49
+  59.051  READ  99 89 reg 89 -> 6e
+  59.068  WRITE [98] 72=88
+  59.094  WRITE [98] c0=88
+  59.097  WRITE [98] 61=98
+  59.099  WRITE [98] 63=89
+  59.101  WRITE [98] 64=96
+  59.103  WRITE [98] 65=88
+  59.105  READ  99 89 reg ff -> 73
+  59.108  WRITE [98] 04=8d
+  59.111  WRITE [98] 62=91
+  59.117  READ  99 89 reg fd -> 6e
+  59.120  READ  99 89 reg fc -> 6e
+  59.124  READ  99 89 reg f3 -> 7e
+  59.132  WRITE [98] 0d=c8
+  59.138  WRITE [98] 0e=05
+  59.141  WRITE [98] 0e=04
+  59.206  READ  99 89 reg fd -> 6e
+  59.210  READ  99 89 reg fc -> 6e
+  59.214  READ  99 89 reg f3 -> 7e
+  59.222  WRITE [98] 0d=c8
+  59.228  WRITE [98] 0e=15
+  59.231  WRITE [98] 0e=14
+  59.853  B8    04 a0 00 00
+  59.853  B8    05 00 00 02
+  60.397  READ  89 89 reg fa -> 06

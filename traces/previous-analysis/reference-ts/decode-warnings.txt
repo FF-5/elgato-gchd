@@ -1,0 +1,26 @@
+===== low.ts =====
+[mpegts @ 0x58359cf04700] DTS 259409 < 263915 out of order
+[mpegts @ 0x58359cf04700] Stream #1: not enough frames to estimate rate; consider increasing probesize
+[mpegts @ 0x58359cf04700] start time for stream 1 is not set in estimate_timings_from_pts
+[mpegts @ 0x58359cf04700] stream 1 : no TS found at start of file, duration not set
+[mpegts @ 0x58359cf04700] Could not find codec parameters for stream 1 (Video: mpeg2video ([2][0][0][0] / 0x0002), none(tv)): unspecified size
+Consider increasing the value for the 'analyzeduration' (0) and 'probesize' (5000000) options
+===== medium.ts =====
+[mpegts @ 0x5af4aa6e3700] DTS 269341 < 273846 out of order
+[mpegts @ 0x5af4aa6e3700] start time for stream 1 is not set in estimate_timings_from_pts
+[mpegts @ 0x5af4aa6e3700] stream 1 : no TS found at start of file, duration not set
+[mpegts @ 0x5af4aa6e3700] Could not find codec parameters for stream 1 (Video: mpeg2video ([2][0][0][0] / 0x0002), none(tv)): unspecified size
+Consider increasing the value for the 'analyzeduration' (0) and 'probesize' (5000000) options
+[null @ 0x5af4aa732a80] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 62 >= 23
+[null @ 0x5af4aa732a80] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 63 >= 24
+[null @ 0x5af4aa732a80] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 64 >= 25
+[null @ 0x5af4aa732a80] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 65 >= 26
+[null @ 0x5af4aa732a80] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 78 >= 77
+[null @ 0x5af4aa732a80] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 78 >= 78
+===== high.ts =====
+[mpegts @ 0x613a3be67700] DTS 215426 < 219932 out of order
+[mpegts @ 0x613a3be67700] Stream #1: not enough frames to estimate rate; consider increasing probesize
+[mpegts @ 0x613a3be67700] start time for stream 1 is not set in estimate_timings_from_pts
+[mpegts @ 0x613a3be67700] stream 1 : no TS found at start of file, duration not set
+[mpegts @ 0x613a3be67700] Could not find codec parameters for stream 1 (Video: mpeg2video ([2][0][0][0] / 0x0002), none(tv)): unspecified size
+Consider increasing the value for the 'analyzeduration' (0) and 'probesize' (5000000) options
