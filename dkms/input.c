@@ -16,9 +16,7 @@ MODULE_PARM_DESC(signal_active_retries, "Signal measurement retries when timing 
 module_param(signal_inactive_retries, uint, 0644);
 MODULE_PARM_DESC(signal_inactive_retries, "Signal measurement retries when timing is not detected");
 module_param(signal_poll_delay_ms, uint, 0644);
-static bool dec_dump;
-module_param(dec_dump, bool, 0644);
-MODULE_PARM_DESC(dec_dump, "Diagnostic: log decoder registers 0x88:00-7F before analog detection");
+
 MODULE_PARM_DESC(signal_poll_delay_ms, "Delay in milliseconds between signal measurement batches");
 
 static bool gchd_hdmi_timing_valid(u32 value)
@@ -600,15 +598,15 @@ static int gchd_prepare_analog_detection(struct gchd *d);
 static int gchd_be_retrigger(struct gchd *d);
 
 /*
- * Status poll of the back end while waiting for an analog source: when
- * GCHD_BE_STATUS_FLAG is set, the back end is retriggered.
+ * Status poll of the back end while waiting for an analog source. On
+ * S-video, the back end is retriggered when GCHD_BE_STATUS_FLAG is set.
  */
 static int gchd_be_poll_status(struct gchd *d)
 {
  u8 v;
 
  GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
- if (!(v & GCHD_BE_STATUS_FLAG))
+ if (d->input != 3 || !(v & GCHD_BE_STATUS_FLAG))
   return 0;
  dev_dbg(&d->intf->dev, "back-end status 0x%02x; retrigger\n", v);
  return gchd_be_retrigger(d);
@@ -654,10 +652,9 @@ static int gchd_prepare_analog_detection(struct gchd *d)
   * The discriminator is applied in late configuration after detection.
   *
   * S-video needs its distinct decoder mode before detection. The decoder
-  * keeps its setting until the device loses power (also across closing,
-  * reopening and reloading the module). When it may still be set for
-  * S-video, composite gets the S-video-to-composite sequence instead:
-  * 02 = C9, 14 = D2, 3C = 6B, a pause, 28 = 88, then 03 = 28.
+  * keeps its setting until the device loses power (also across closing and
+  * reopening). After S-video, composite gets the S-video-to-composite
+  * sequence instead: 02 = C9, 14 = D2, 3C = 6B, a pause, 28 = 88, 03 = 28.
   */
  if (d->input == 3) {
   GCHD_DEC_W(d, 0x02, 0xdc);
@@ -752,17 +749,6 @@ route:
  GCHD_AUX_W(d, 0x41, 0x37);
  GCHD_AUX_W(d, 0x4a, 0xb7);
  GCHD_AUX_W(d, 0x4b, 0xb7);
-
- if (dec_dump) {
-  u8 regs[16];
-  int base, k;
-
-  for (base = 0; base < 0x80; base += 16) {
-   for (k = 0; k < 16; ++k)
-    GCHD_DEC_R(d, base + k, regs[k]);
-   dev_info(&d->intf->dev, "dec %02x: %16ph\n", base, regs);
-  }
- }
 
  d->input_detect_prepared = true;
  return 0;
@@ -1254,7 +1240,12 @@ static int gchd_pal_apply(struct gchd *d, bool interlaced)
  */
 int gchd_analog_poll_backend(struct gchd *d)
 {
- return gchd_be_poll_status(d);
+ u8 v;
+
+ GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
+ if (!(v & GCHD_BE_STATUS_FLAG))
+  return 0;
+ return gchd_be_retrigger(d);
 }
 
 int gchd_analog_pal_mode_change(struct gchd *d, bool interlaced)

@@ -9,7 +9,8 @@ reference (`traces` branch); `src/` is read-only. Each open item becomes one
 
 **Order (maintainer, 2026-11-18):** finish composite and S-video completely
 (all modes, mode and input changes, output sizes, bitrate and the other
-settings), then component the same way, then HDMI.
+settings); then the repository layout and installation scripts; then
+guvcview/OBS support; then component the same way; then HDMI.
 
 Legend: **[HW]** maintainer's hardware, **[WIN]** new Windows recording,
 **[OFF]** offline, **(S/M/L)** size. Test results: `logs/hardware-test-log.md`
@@ -30,11 +31,12 @@ on the `traces` branch.
 
 Video modes and switching:
 
-- [ ] **T-053b [HW] (S)** Composite after S-video without unplugging: the
-      decoder reports the 60 Hz family for the PAL source although the
-      recorded S-video → composite sequence is written (`fix/pal-svideo`).
-      Find the decoder state that S-video leaves behind (`dec_dump`
-      parameter) and the Windows sequence with a signal (recording wanted).
+- [ ] **T-053b [HW] (S)** Composite broke on `fix/pal-svideo` (also after a
+      fresh plug-in): the `0x98:F5` bit-7 retrigger had been enabled for
+      composite polling too (recorded only for S-video; composite polling
+      always reads `F5 = 62` in the recordings). Now S-video only, and the
+      S-video → composite sequence only after S-video in the same session.
+      Test pending: fresh composite PAL, S-video, composite after S-video.
 - [ ] **T-044 [HW] (S)** Reopening while the previous stop is still
       running failed once; make a new open wait for it.
 - [ ] **T-047 [HW] (S)** `hardware shutdown on last close failed: -5` after
@@ -74,21 +76,42 @@ Output and settings (`docs/composite.md §10`):
       reloads and reboots (today only while the module stays loaded). Plan:
       uevent on input change, a new udev rule of ours stores it, module
       parameter `default_input` set from it at load time.
-- [ ] **T-060 (M)** Userspace bridge for applications that cannot use the
-      H.264/TS node (guvcview, OBS): ffmpeg → v4l2loopback.
 
 Stage 1 is done when composite and S-video, NTSC and PAL, all modes and
 settings above work on `dev`.
 
-## Repository layout (after stage 1)
+## Repository layout and installation (after stage 1)
 
-- [ ] **T-070 (M)** Maintainer request: all code under `src/`, kernel and
-      userspace separated. Proposal: `src/kernel/` (today's `dkms/`),
-      `src/userspace/` (today's `src/*.cpp`, `src/gchd/`, `src/gui/`,
-      `src/CMakeLists.txt`); top-level `CMakeLists.txt` points to
-      `src/userspace` (one line, needs the maintainer's consent, RULES B4);
-      DKMS paths and docs updated. One move-only branch, checked with
-      `compare-objs.sh` (identical module).
+- [ ] **T-070 (M)** All code under `src/` (agreed 2026-11-18):
+      `src/kernel/` (today's `dkms/`), `src/userspace/` (today's
+      `src/*.cpp`, `src/gchd/`, `src/gui/`, `src/CMakeLists.txt`). The
+      maintainer allows changing the source paths in the top-level
+      `CMakeLists.txt` (paths only). DKMS paths and docs updated. One
+      move-only branch, module checked identical with `compare-objs.sh`.
+- [ ] **T-071 (M)** Scripts for non-technical users, runnable from a file
+      manager (executable, with a terminal window; `pkexec` for root):
+      - `firmware/` (renamed from `firmware_extract/`), bash: extracts the
+        four firmware files from the official installer
+        (`GameCaptureSetup*.msi`). Optionally downloads the installer from
+        Elgato's own server after the user confirms (the firmware itself is
+        not redistributed by the project; to be decided by the maintainer).
+      - `install-driver.sh` at the top: installs the DKMS module (and the
+        firmware step if missing), with an uninstall option.
+      - `build-program.sh` at the top: builds the userspace program.
+
+## Stage 1b — Applications (guvcview, OBS) (after T-070/T-071)
+
+- [ ] **T-060 (L)** Make the device usable in guvcview, OBS and similar
+      applications. A USB device cannot be turned into a UVC device by a
+      driver: UVC is a property of the device's own USB protocol. What
+      these applications need is a V4L2 device with uncompressed frames
+      (YUYV/NV12) and a normal audio source. Decoding H.264 is not allowed
+      in the kernel (RULES E2), so the plan is a small userspace service:
+      it reads the H.264/TS node, decodes (ffmpeg/GStreamer), deinterlaces
+      480i/576i and line-doubles 240p/288p, and feeds a `v4l2loopback`
+      device named "Elgato Game Capture HD" plus a PipeWire/PulseAudio
+      audio source; started automatically when an application opens it.
+      Needs T-020/T-023 (TS with audio) first.
 
 ## Stage 2 — Component
 
