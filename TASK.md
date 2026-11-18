@@ -78,3 +78,9 @@ Written with the implementation.
 
 ## Maintainer comments
 
+1. I want to aim for performance so ultimately I would want what is fastest. As long as it's modular enough that can be replaced by something else, I'm fine with your suggestion for now.
+2. Yes, having the device for too long (specially when nothing is being captured) makes it quite hot, so only when it's needed.
+3. Ideally I would like it to be the same as the source. Can't this be restarted and reconfigured on every input/output-res change?
+4. Yes, I'm fine with this name.
+
+Can you also check for obsolete items in TODO.md? Besides the already deleted branches, there are some thing under tooling that seems to be obsolete and traces that are no longer needed that are just making the TODO unnecessary long.
