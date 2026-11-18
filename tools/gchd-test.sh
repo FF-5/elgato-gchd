@@ -131,7 +131,7 @@ load_module() {
 # ---------------------------------------------------------------- steps
 
 DMESG_NOISE='bulk-IN data|START poll=|firmware chunk|SCMD write succeeded|SCMD interrupt|callbacks suppressed|bulk-IN first reads|no analog family|pre-config raw_status|retrying detection|open requested by pid'
-DMESG_BAD='START failed|state-change timeout|SCMD timeout|completed 10 times|failed:|failed at step|ring_dropped=[1-9]|urb_errors=[1-9]|BUG|Oops|WARNING'
+DMESG_BAD='signal lost|START failed|state-change timeout|SCMD timeout|completed 10 times|failed:|failed at step|ring_dropped=[1-9]|urb_errors=[1-9]|BUG|Oops|WARNING'
 
 # step NAME: start a step (clears dmesg).
 step() {
@@ -204,7 +204,7 @@ capture() {
 		echo "$info" | grep -q "height=$2 " || ok=0
 		echo "$info" | grep -q "r_frame_rate=$3 " || ok=0
 		[ "$4" = - ] || echo "$info" | grep -q "field_order=$4" || ok=0
-		if [ $ok = 1 ]; then result PASS "stream $1x$2 $3 $4"
+		if [ $ok = 1 ]; then result PASS "stream $1x$2 $3 $4, ~$kbps kbit/s"
 		else result FAIL "stream expected $1x$2 $3 $4, got: $info"; fi
 	fi
 	[ "$errs" -gt 20 ] && result WARN "capture: $errs decode errors"
