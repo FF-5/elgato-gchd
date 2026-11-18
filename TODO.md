@@ -18,7 +18,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.5): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.6): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -32,7 +32,9 @@ on the `traces` branch.
   (2-15 Mbit/s, CBR/VBR) and stretch as V4L2 controls, changeable while
   capturing (encoder restart). All settings remembered across replug,
   module reload and reboot (module parameters, udev rule of ours writing
-  modprobe.d).
+  modprobe.d). Console swaps, source off/on and capture start in every
+  mode (incl. 288p) checked; encoder values match the PAL and NTSC
+  recordings.
   Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
   `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; the decoder
   reports 60 Hz for a few seconds after power-on and reset, also with the
@@ -41,35 +43,8 @@ on the `traces` branch.
 
 ## Stage 1 — Composite and S-video complete
 
-Video modes and switching:
-
-- [ ] **T-054 [HW] (S)** Source loss and return while capturing (worked by
-      report; check the logs once).
-- [ ] **T-065 [HW] (S)** Console swap without a detected signal drop
-      (N64 → running PS1: `0x88:FA` stayed `6`): on S-video one restart of
-      ~7 s, on composite two restarts (240p, then 576i). Treat `E7` bit 7
-      with an unlocked `CA` like a drop (wait for 50 Hz).
-- [ ] **T-067 [HW] (S)** Firmware start-up failed twice in the T-055
-      tests (`state-change timeout: current=0x10 expected=0x11 state=0x0011
-      completion=0x0008`, IDLE completes without the completion flag), each
-      after a session that ended with a failed START. Check whether it also
-      happens after normal sessions; treat state 0x11 without the flag as
-      IDLE reached.
-- [ ] 288p capture start: recorded (R1), driver adjusted; hardware check in
-      the T-065 test (the driver uses the apply block
-      of the 576i → 288p change).
-
-Output and settings (`docs/composite.md §10`):
-
-- [ ] **T-066 [OFF→HW] (M)** v4l2-compliance 1.26.1 failures left after
-      4c326eb: HDMI/component `G_DV_TIMINGS` fails without a signal although
-      `V4L2_IN_CAP_DV_TIMINGS` is set, `VIDIOC_DV_TIMINGS_CAP` missing
-      (also breaks the buffer tests via `g_dv_timings`); a menu control
-      rejects item 0 ("could not set valid menu item 0", all inputs);
-      `V4L2_CID_DV_RX_POWER_PRESENT` missing (warning). The input menu
-      control still switches inputs for any process while another one
-      captures (S_INPUT returns EBUSY since fd8426b). Needed for
-      guvcview/OBS robustness (T-060).
+All planned composite and S-video items are done (0.5.6). The v4l2
+compliance items (T-066) moved to stage 1b, where they matter.
 
 Stage 1 is done when composite and S-video, NTSC and PAL, all modes and
 settings above work on `dev`.
@@ -101,6 +76,16 @@ settings above work on `dev`.
       - `build-program.sh` at the top: builds the userspace program.
 
 ## Stage 1b — Applications (guvcview, OBS) (after T-070/T-071)
+
+- [ ] **T-066 [OFF→HW] (M)** v4l2-compliance 1.26.1 failures left after
+      4c326eb: HDMI/component `G_DV_TIMINGS` fails without a signal although
+      `V4L2_IN_CAP_DV_TIMINGS` is set, `VIDIOC_DV_TIMINGS_CAP` missing
+      (also breaks the buffer tests via `g_dv_timings`); a menu control
+      rejects item 0 ("could not set valid menu item 0", all inputs);
+      `V4L2_CID_DV_RX_POWER_PRESENT` missing (warning). The input menu
+      control still switches inputs for any process while another one
+      captures (S_INPUT returns EBUSY since fd8426b). Needed for
+      guvcview/OBS robustness (T-060).
 
 - [ ] **T-060 (L)** Make the device usable in guvcview, OBS and similar
       applications. A USB device cannot be turned into a UVC device by a
