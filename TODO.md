@@ -192,6 +192,7 @@ Change one at a time (RULES D5), when the mode can be tested.
 | Receive queue at restart | URBs queued after INIT A0, before START | queued before the first encoder write |
 | Bulk IN `0x84` | required (`-ENODEV` if absent); parsed while transport output 2 runs | queued (8 URBs); carries transport output 2 (scaled outputs) |
 | Repeated `0x88:02/3C`, `0x94` writes after detection | written | not written (T-011) |
+| 480i / 576i capture start with a locked source | no decoder apply block | apply block written (NTSC after INIT A0; PAL before, then `0x88:0A = 85`, `0x88:14 = 1B`) (`composite/gchd_*_composite_*bitrate_audio_small` start) |
 
 ## Evidence wanted (maintainer)
 
@@ -204,15 +205,15 @@ a short note what was done and when (seconds) helps.
 
 | # | Recording | For | Status |
 |---|---|---|---|
-| R1 | Composite PAL: PS1 started while the game already shows 288p (capture start straight into 288p) | stage 1, "288p capture start" | **needed** (only open stage-1 start case) |
-| R2 | Bitrate slider with an NTSC source (N64): standard and mobile, a few positions incl. min and max | T-061 | **needed** if the PAL recordings leave the NTSC values open (decided in T-061) |
+| R1 | Composite PAL: capture started while the source already shows **288p** (the 2026-11-18 PAL recording started in 576i: the PS1 showed an interlaced screen). Start the Windows capture while the game shows a 240p/288p screen (most in-game screens, not the PS1 logo or menus) | stage 1, "288p capture start" | **needed** (only open stage-1 start case) |
+| R2 | Bitrate slider with an NTSC source | T-061 | done (`composite/gchd_NTSC_composite_output_bitrate_audio_small`) |
 | R3 | Windows application closed while capturing, and closed without a source | close sequence (T-047 was fixed without a recording) | optional (close works) |
-| R4 | Composite NTSC 480i capture start (N64 menu) | initial detection (known differences table) | optional (480i starts work) |
+| R4 | Composite NTSC 480i capture start | initial detection | done (PS2, same NTSC recording) |
 | R5 | PS1 on S-video, switch to composite while capturing (T-053b) | composite ↔ S-video | not needed (works; the switch sequence is in `input-switching/gchd_PAL_composite_svideo_small` 96 s) |
 | R6 | Output 640×480 / 480×360 with an NTSC source | T-055 | not needed (works, NTSC tested) |
 | R7 | Component with a signal: every mode (480i, 480p, 576i, 576p, 720p, 1080i), mode changes, output sizes, bitrate | stage 2, T-051 | **needed** at stage 2 |
 | R8 | HDMI with a signal: every mode, mode changes, output sizes, bitrate | stage 3, T-050 | **needed** at stage 3 (1080p60 output sizes exist) |
-| R9 | One recording per picture/audio setting changed while capturing | stage 4, T-080 | needed after the release |
+| R9 | One recording per picture/audio setting changed while capturing; for the audio gain: single steps with the displayed dB noted (e.g. −12, −6, 0, +6, +12 dB, pause between them) | stage 4, T-080 | needed after the release (gain registers known: `composite.md` §11) |
 | R10 | Windows initialization with composite selected from the start (application start, no other input before) | initialization (driver uses the component recording) | optional |
 
 ## Testing (maintainer request, 2026-11-18)
