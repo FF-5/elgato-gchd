@@ -28,9 +28,14 @@ expect "settings remembered (modprobe.d)" "output=1.*bitrate=[78][0-9]{3}.*bitra
 prompt "In the window set them back: Source size, Bitrate 11250, Constant (CBR), High, Stretch off. Leave the window open."
 
 step "window while OBS captures"
-prompt "Start OBS with the source 'Elgato Game Capture HD' showing the picture. In the settings window choose Input 'S-Video'."
-confirm "the window refused it (Input back on Composite) and explained that a program is capturing?"
+prompt "Close OBS completely if it is open. Then start OBS; the scene with the source 'Elgato Game Capture HD' must show the PS1/N64 picture. Wait until the picture moves."
+expect "OBS captures (capture device started)" "starting hardware boot" sudo dmesg
+run sh -c "grep -h '\\[gchd\\]' $HOME/.config/obs-studio/logs/\$(ls -t $HOME/.config/obs-studio/logs | head -1) | tail -5"
+prompt "In the settings window choose Input 'S-Video'."
+confirm "a message box said 'Input not changed' (a program is capturing), and after OK the Input shows Composite again?"
+expect "input still composite" "Video input : 2" v4l2-ctl -d /dev/elgato-gchd -I
 prompt "In the settings window move the Bitrate slider to about 6000; wait 5 s."
 expect "bitrate changed while capturing" "video_bitrate: [56][0-9]{6}" v4l2-ctl -d /dev/elgato-gchd -C video_bitrate
-confirm "OBS kept showing the picture (a short pause is normal)?"
+confirm "OBS kept showing the moving picture (a short pause is normal)?"
 prompt "Set the Bitrate back to 11250 in the window; close the window and OBS."
+run sh -c "grep -h '\\[gchd\\]' $HOME/.config/obs-studio/logs/\$(ls -t $HOME/.config/obs-studio/logs | head -1) | tail -20"
