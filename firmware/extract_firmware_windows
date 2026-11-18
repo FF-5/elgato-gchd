@@ -6,9 +6,9 @@
 #
 #   extract_firmware_windows [PATH/TO/GameCaptureSetup.msi]
 #
-# Without an argument the installer is looked for in this directory, the
-# current directory and ~/Downloads. Needs 7z (p7zip). Exits with status 0
-# when all firmware files are in place, 1 otherwise.
+# Without an argument the installer is taken from this directory
+# (firmware/). Needs 7z (p7zip). Exits with status 0 when all firmware
+# files are in place, 1 otherwise.
 
 FIRMWARE_DIR=/lib/firmware/gchd
 FILES="MB86H57_H58_IDLE MB86H57_H58_ENC_H MB86M01_ASSP_NSEC_IDLE MB86M01_ASSP_NSEC_ENC_H"
@@ -20,15 +20,11 @@ type 7z >/dev/null 2>&1 || fail "7z is needed (package p7zip-full, p7zip or 7zip
 
 msi=${1:-}
 if [ -z "$msi" ]; then
-	user_home=$HOME
-	[ -n "${SUDO_USER:-}" ] && user_home=$(getent passwd "$SUDO_USER" | cut -d: -f6)
-	for dir in "$HERE" "$PWD" "$user_home/Downloads"; do
-		for f in "$dir"/GameCaptureSetup*.msi; do
-			[ -f "$f" ] && { msi=$f; break 2; }
-		done
+	for f in "$HERE"/GameCaptureSetup*.msi; do
+		[ -f "$f" ] && { msi=$f; break; }
 	done
 fi
-[ -n "$msi" ] && [ -f "$msi" ] || fail "no GameCaptureSetup*.msi found. Download Elgato's \"Game Capture\" software for Windows and put the .msi file into $HERE or ~/Downloads, or give its path as argument."
+[ -n "$msi" ] && [ -f "$msi" ] || fail "no GameCaptureSetup*.msi found. Download Elgato's \"Game Capture\" software for Windows and put the .msi file into $HERE, or give its path as argument."
 
 if [ "$(id -u)" != 0 ]; then
 	exec sudo "$0" "$msi"

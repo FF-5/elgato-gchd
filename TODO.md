@@ -68,7 +68,10 @@ settings above work on `dev`.
       mirroring, checksum check, URL in one place). **Maintainer: e-mail
       Elgato (Corsair) and ask whether the script may download the
       official installer from their server.** Until the answer the script
-      only uses an installer the user downloaded.
+      only uses an installer the user downloaded. The script looks for the
+      installer only in `firmware/` (maintainer 2026-11-18), so a download
+      goes there too; the installer only calls the script and checks its
+      result.
 
 ## Stage 1b — Applications (guvcview, OBS) (after T-071)
 

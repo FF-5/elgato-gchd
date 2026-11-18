@@ -29,9 +29,9 @@ tested. Not supported: Game Capture HD60, HD60 S, HD60 Pro.
 ## Install
 
 1. Download Elgato's "Game Capture" software for Windows
-   (`GameCaptureSetup*.msi`) and put the file into `firmware/` or
-   `~/Downloads`. The driver needs firmware from it that cannot be
-   distributed with the driver.
+   (`GameCaptureSetup*.msi`) and put the file into the `firmware/`
+   folder. The driver needs firmware from it that cannot be distributed
+   with the driver.
 2. Run the installer (double-click `install-driver.sh` in the file
    manager, or in a terminal):
 
