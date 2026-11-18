@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** analysis
+- **Status:** implemented (4d1a342); hardware test with the test script
 - **Type:** driver feature
 - **Branch:** `feat/bitrate` (from `dev` 0.5.3)
 - **TODO items:** T-061 (stage 1)
@@ -23,25 +23,32 @@ encodes the default bitrate and never stretches. Recorded
 | Mobile | VBR, 4000 … 15000 |
 | Stretch | `v_in_source_type 2` instead of 3 |
 
-## Implementation (plan)
+## Implementation
 
-1. Analysis of the three recordings: the bitrate fields as a function of
-   the slider value (bitrate, maximum, average, minimum, `system_rate`),
-   the switch between CBR and VBR, the ranges per output size, and the
-   restart sequence.
-2. V4L2 controls: `V4L2_CID_MPEG_VIDEO_BITRATE` (and `_BITRATE_MODE`
-   CBR/VBR if the recordings tie it to the value), ranges per output size;
-   a private control (or `V4L2_CID_...` if one fits) for stretch. Changing
-   them while capturing restarts the encoder like the recordings (NULL,
-   STOP, encoder block, START).
-3. The existing driver controls (bitrate, H.264 level/profile) checked
-   against the recordings; the menu-control failure of v4l2-compliance
-   (T-066) looked at along the way.
-4. Docs: `video-output.md`, `composite.md §10`.
+Recorded values (`docs/composite.md §10`): maximum 0.9·B, average B/2,
+minimum 0 / B/10 / B/4; `system_rate` ⌊1.07285·B + 461.7⌋ (+8 at 60 Hz);
+CBR only at the default 11250, VBR otherwise; stretch = `v_in_source_type`
+2. Controls `video_bitrate`, `video_bitrate_mode`, `stretch_sd_input`;
+on composite/S-video a change while capturing restarts the encoder.
 
 ## Hardware test (maintainer)
 
-Follows with the implementation.
+First run of the test script (`tools/gchd-test.sh`, `TODO.md` "Testing").
+It builds the branch, loads the module, runs everything and asks you for
+the console and for two visual checks. Needs `v4l-utils` and `ffmpeg`
+(already installed). In your home directory:
+
+```sh
+cd ~ && git -C elgato-gchd fetch origin
+git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-061.sh > tests/T-061.sh
+bash gchd-test.sh T-061 --branch feat/bitrate
+```
+
+Paste the summary block it prints at the end. If any line says FAIL or
+WARN, paste the whole log file too (path printed at the end, in
+`~/gchd-test-logs/`). If the script itself misbehaves (wrong prompt,
+hangs), say where; Ctrl+C stops it.
 
 ## Findings
 - Maintainer requests (2026-11-18, before T-061): all wanted Windows
