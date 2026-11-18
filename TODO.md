@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-Goal: a DKMS/V4L2 driver (C, `src/`) that behaves like the Windows driver for
+Goal: a DKMS/V4L2 driver (C, `src/driver/`) that behaves like the Windows driver for
 every input and mode the hardware supports. Our own USB recordings are the
 reference (`traces` branch). The project is the kernel driver only
 (maintainer decision 2026-11-18, T-070). Each open item becomes one
@@ -52,25 +52,17 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
 
 ## Stage 1b — Applications (guvcview, OBS)
 
-- [ ] **T-060 (L)** Make the device usable in guvcview, OBS and similar
-      applications: they need uncompressed frames and a separate audio
-      source; decoding is not allowed in the kernel (RULES E2). The driver
-      registers an application device ("Elgato Game Capture HD", YUYV) at
-      module load, independent of the USB device, in the source size and
-      rate only (no scaling; format follows the source while idle); it is
-      fed through a frame input device by `service/gchd-bridge` (ffmpeg:
-      decode, deinterlace one frame per field, 1:1), which runs only
-      while an application streams (black picture without a device).
-      Audio as a PipeWire/PulseAudio source. Decisions (maintainer
-      2026-11-18): shell + ffmpeg first, modular, replaceable by something
-      faster; folder `service/`; tests without OBS for now; no
-      re-registration (v4l2loopback cannot remove an open device; the
-      persistent device replaced the driver's own re-registration).
-      Open: systemd user service, installer, remembered application
-      format, input selection from the desktop.
-      OBS: stand-alone plugin `obs-plugin/` (maintainer 2026-11-18),
-      source "Elgato Game Capture HD" with the device settings as
-      properties; open: hardware test, installer integration.
+- [ ] **T-060 (L)** Use in OBS and other programs (maintainer decisions
+      2026-11-18): (1) OBS plugin `src/obs-plugin/`, source "Elgato Game
+      Capture HD" with the device settings as properties, finds the
+      device itself; (2) fixed device name `/dev/elgato-gchd` (udev rule)
+      for OBS's Media Source (input format mpegts) and ffmpeg/ffplay;
+      (3) a settings tool (TUI) for input, output size and encoder
+      settings. The driver stays a single H.264/MPEG device: the
+      application device with uncompressed frames and the userspace
+      bridge were tried and removed (they remain in the history of
+      `feat/app-bridge`). Open: hardware test, installer integration
+      (udev rule, plugin, tool).
 
 ## Stage 2 — Component
 
@@ -129,7 +121,7 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
 
 ## Code and tooling
 
-- [ ] **T-002 [OFF] (M)** File split ("Planned layout" in `src/README.md`),
+- [ ] **T-002 [OFF] (M)** File split ("Planned layout" in `src/driver/README.md`),
       fold the `*_exact` wrappers; each move checked with
       `compare-mailbox-ops.py`.
 - [ ] **T-003 [OFF] (S)** Make `vb2_fops` static.

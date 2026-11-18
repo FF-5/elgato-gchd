@@ -2,9 +2,9 @@
 /*
  * OBS source "Elgato Game Capture HD".
  *
- * Reads the MPEG transport stream of the elgato_gchd driver's H.264 device,
+ * Reads the MPEG transport stream of the elgato_gchd driver's video device,
  * decodes video and audio with FFmpeg and passes them to OBS. The device is
- * found by its name; the input, output size and encoder settings are
+ * found by its driver in sysfs; the input, output size and encoder settings are
  * properties of the source and are applied to the device with V4L2 ioctls.
  * The capture device runs while the source is shown. Deinterlacing is OBS's
  * own (Yadif 2x, top field first, set once when the source is created).
@@ -32,7 +32,6 @@
 
 OBS_DECLARE_MODULE()
 
-#define GCHD_NAME_H264 "Elgato Game Capture HD (H.264)"
 /* Private control of the driver: "Stretch SD Input". */
 #define GCHD_CID_STRETCH (V4L2_CID_USER_BASE + 0x10f1)
 #define GCHD_IO_SIZE 65424 /* 348 transport-stream packets */
@@ -60,7 +59,7 @@ struct gchd_src {
 
 /* ------------------------------------------------------------ device */
 
-/* First H.264 device of the driver, as /dev/videoN; false if none. */
+/* First video device of the elgato_gchd driver, as /dev/videoN; false if none. */
 static bool gchd_find(char *path, size_t size)
 {
 	DIR *dir = opendir("/sys/class/video4linux");
@@ -71,22 +70,22 @@ static bool gchd_find(char *path, size_t size)
 	if (!dir)
 		return false;
 	while ((e = readdir(dir))) {
-		char p[512], name[64] = "";
-		FILE *f;
+		char p[512], target[512];
+		const char *drv;
+		ssize_t len;
 		int n;
 
 		if (strncmp(e->d_name, "video", 5))
 			continue;
-		snprintf(p, sizeof(p), "/sys/class/video4linux/%s/name",
+		snprintf(p, sizeof(p), "/sys/class/video4linux/%s/device/driver",
 			 e->d_name);
-		f = fopen(p, "r");
-		if (!f)
+		len = readlink(p, target, sizeof(target) - 1);
+		if (len <= 0)
 			continue;
-		if (!fgets(name, sizeof(name), f))
-			name[0] = 0;
-		fclose(f);
-		name[strcspn(name, "\n")] = 0;
-		if (strcmp(name, GCHD_NAME_H264))
+		target[len] = 0;
+		drv = strrchr(target, '/');
+		drv = drv ? drv + 1 : target;
+		if (strcmp(drv, "elgato_gchd"))
 			continue;
 		n = atoi(e->d_name + 5);
 		if (best < 0 || n < best) {

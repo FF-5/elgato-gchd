@@ -2,13 +2,13 @@
 
 An OBS Studio source for the Elgato Game Capture HD with the `elgato_gchd`
 driver. It finds the device by itself, captures video and audio from the
-driver's H.264 device ("Elgato Game Capture HD (H.264)") and offers the
-device settings in the source properties.
+driver's video device and offers the device settings in the source
+properties.
 
 ## Behaviour
 
-- **Device:** the first "Elgato Game Capture HD (H.264)" device; found again
-  after unplugging and plugging in.
+- **Device:** the first video device of the `elgato_gchd` driver; found
+  again after unplugging and plugging in.
 - **Video and audio:** the MPEG transport stream of the device is decoded
   with FFmpeg (H.264 video, MPEG audio) and passed to OBS with common
   timestamps. Size changes of the source (for example between NTSC and
@@ -22,7 +22,7 @@ device settings in the source properties.
 - **Capture device on/off:** the device captures while the source is shown
   in OBS (program or preview).
 
-The source uses the H.264 device exclusively while it captures; other
+The source uses the video device exclusively while it captures; other
 programs cannot capture from the device at the same time.
 
 ## Build and install
@@ -31,7 +31,7 @@ Packages (Ubuntu): `libobs-dev`, `libavformat-dev`, `libavcodec-dev`,
 `libavutil-dev`, `cmake`, `pkg-config`.
 
 ```sh
-cmake -S obs-plugin -B build/obs-plugin -DCMAKE_BUILD_TYPE=Release
+cmake -S src/obs-plugin -B build/obs-plugin -DCMAKE_BUILD_TYPE=Release
 cmake --build build/obs-plugin
 cmake --install build/obs-plugin
 ```

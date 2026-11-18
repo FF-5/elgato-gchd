@@ -17,10 +17,11 @@ set -u
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 NAME=elgato-gchd
 MODULE=elgato_gchd
-VERSION=$(sed -n 's/^PACKAGE_VERSION="\(.*\)"/\1/p' "$HERE/src/dkms.conf")
+VERSION=$(sed -n 's/^PACKAGE_VERSION="\(.*\)"/\1/p' "$HERE/src/driver/dkms.conf")
 FIRMWARE_DIR=/lib/firmware/gchd
 FIRMWARE_FILES="MB86M01_ASSP_NSEC_IDLE MB86M01_ASSP_NSEC_ENC_H MB86H57_H58_IDLE MB86H57_H58_ENC_H"
 UDEV_RULE=56-elgato-gchd-settings.rules
+UDEV_DEVICE_RULE=55-elgato-gchd-device.rules
 SETTINGS=/etc/modprobe.d/elgato-gchd-settings.conf
 BUILD=$HERE/build
 OBJ=$BUILD/objects/kernel
@@ -108,7 +109,7 @@ uninstall() {
 	fi
 	sudo rm -f "/lib/modules/$(uname -r)/updates/$MODULE.ko"
 	sudo depmod -a
-	sudo rm -f "/etc/udev/rules.d/$UDEV_RULE" "$SETTINGS"
+	sudo rm -f "/etc/udev/rules.d/$UDEV_RULE" "/etc/udev/rules.d/$UDEV_DEVICE_RULE" "$SETTINGS"
 	sudo udevadm control --reload 2>/dev/null
 	ok "Driver removed. The firmware in $FIRMWARE_DIR was kept."
 }
@@ -142,7 +143,7 @@ install() {
 	need headers test -d "$KDIR"
 	rm -rf "$OBJ"
 	mkdir -p "$OBJ" || die "cannot create $OBJ"
-	cp -r "$HERE/src/." "$OBJ/"
+	cp -r "$HERE/src/driver/." "$OBJ/"
 	make -C "$KDIR" M="$OBJ" clean >/dev/null 2>&1
 	make -C "$KDIR" M="$OBJ" modules > "$BUILD/build.log" 2>&1 ||
 		die "build failed; see $BUILD/build.log"
@@ -175,11 +176,12 @@ install() {
 		ok "Installed without DKMS: run this installer again after a kernel update."
 	fi
 	sudo install -D -m 0644 "$HERE/udev-rules/$UDEV_RULE" "/etc/udev/rules.d/$UDEV_RULE"
+	sudo install -D -m 0644 "$HERE/udev-rules/$UDEV_DEVICE_RULE" "/etc/udev/rules.d/$UDEV_DEVICE_RULE"
 	sudo udevadm control --reload
-	ok "udev rule installed (settings are remembered)."
+	ok "udev rules installed (settings are remembered; device name /dev/elgato-gchd)."
 	sudo modprobe "$MODULE" || die "the driver could not be loaded (see: sudo dmesg)."
 	ok "Driver loaded. Plug in the Game Capture HD; it appears as a /dev/video device."
-	echo "Watch: v4l2-ctl -d /dev/video0 -v pixelformat=MPEG && ffplay -f mpegts /dev/video0"
+	echo "Watch: v4l2-ctl -d /dev/elgato-gchd -v pixelformat=MPEG && ffplay -f mpegts /dev/elgato-gchd"
 }
 
 case $ACTION in

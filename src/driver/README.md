@@ -2,7 +2,7 @@
 
 Linux kernel driver for the Elgato Game Capture HD (`0fd9:0044`,
 `0fd9:004e`, `0fd9:0051`, `0fd9:005d`). The USB protocol is described in
-[`../docs`](../docs).
+[`../../docs`](../../docs).
 
 > **Status:** composite and S-video are supported (NTSC and PAL, all modes,
 > output sizes, bitrate); component and HDMI are in development.
@@ -32,7 +32,7 @@ sudo insmod elgato_gchd.ko
 DKMS:
 
 ```sh
-sudo dkms add ./src
+sudo dkms add ./src/driver
 sudo dkms install elgato-gchd/0.5.8
 ```
 
@@ -61,13 +61,13 @@ sudo dkms install elgato-gchd/0.5.8
 The parameters from `input` to `std_svideo` hold the settings in use. When
 an application changes one of them (or a new standard is detected), the
 driver updates the parameters and sends a `change` uevent with all values. The udev rule
-[`../udev-rules/56-elgato-gchd-settings.rules`](../udev-rules/56-elgato-gchd-settings.rules)
+[`../../udev-rules/56-elgato-gchd-settings.rules`](../../udev-rules/56-elgato-gchd-settings.rules)
 writes them to `/etc/modprobe.d/elgato-gchd-settings.conf`, so the next load
 (unplug and replug, module reload, reboot) starts with the same settings.
 Without settings (first use) the driver starts with HDMI and the defaults.
 
 ```sh
-sudo cp ../udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
+sudo cp ../../udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
 ```
 
@@ -75,19 +75,11 @@ Delete `/etc/modprobe.d/elgato-gchd-settings.conf` to return to the
 defaults. `modprobe` applies the file; with `insmod` pass the options by
 hand.
 
-## Video devices
+## Video device
 
-- "Elgato Game Capture HD (H.264)", per connected device: the compressed
-  stream; inputs HDMI (0), Component (1), Composite (2), S-Video (3). The
-  hardware is initialized on `VIDIOC_STREAMON`.
-- "Elgato Game Capture HD", while the module is loaded: uncompressed YUYV
-  frames for applications in one of the encoder's output sizes of the
-  current input (unscaled),
-  written into "Elgato Game Capture HD (frame input)" by a userspace
-  program (`service/gchd-bridge`); state in the sysfs attribute
-  `gchd_state` of the device.
-
-The formats are described in [`../docs/video-output.md`](../docs/video-output.md).
+Inputs: HDMI (0), Component (1), Composite (2), S-Video (3). The hardware is
+initialized on `VIDIOC_STREAMON`. The output format is described in
+[`../../docs/video-output.md`](../../docs/video-output.md).
 
 ## Source layout
 
@@ -103,7 +95,6 @@ The formats are described in [`../docs/video-output.md`](../docs/video-output.md
 | `transcoder.c` | Encoder defaults and per-mode configuration. |
 | `core.c` | V4L2 device, buffer queue, device lifecycle, bulk-IN reception, USB probe and disconnect. |
 | `fops.c` | V4L2 file operations. |
-| `app.c` | Application device and frame input device (registered at module load), sysfs attribute `gchd_state`. |
 
 Example of the access macros:
 

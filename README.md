@@ -61,30 +61,48 @@ sudo firmware/extract_firmware_windows path/to/GameCaptureSetup.msi
 Driver with DKMS, and the udev rule:
 
 ```sh
-sudo dkms add ./src
+sudo dkms add ./src/driver
 sudo dkms install elgato-gchd/0.5.8
 sudo modprobe elgato_gchd
 sudo cp udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
 ```
 
-Firmware files and a build without DKMS: see [`src/README.md`](src/README.md).
+Firmware files and a build without DKMS: see [`src/driver/README.md`](src/driver/README.md).
 
 ## Use
+
+### OBS Studio
+
+The OBS source "Elgato Game Capture HD" ([`src/obs-plugin`](src/obs-plugin))
+finds the device by itself and offers the input, output size and encoder
+settings in its properties; video and audio are decoded in OBS. Without
+the plugin, OBS's *Media Source* can be used: untick *Local File*, input
+`/dev/elgato-gchd` (with the udev rule
+[`udev-rules/55-elgato-gchd-device.rules`](udev-rules/55-elgato-gchd-device.rules)),
+input format `mpegts`; deinterlacing in the source's context menu.
+
+### Settings
+
+[`src/settings/gchd-settings`](src/settings/gchd-settings) changes the
+input, output size and encoder settings in a text menu; the driver
+remembers them. They can also be set with `v4l2-ctl`.
+
+### Command line
 
 Select the input (0 HDMI, 1 component, 2 composite, 3 S-video) and watch
 the transport stream with audio:
 
 ```sh
-v4l2-ctl -d /dev/video0 -i 2
-v4l2-ctl -d /dev/video0 -v pixelformat=MPEG
-ffplay -f mpegts /dev/video0
+v4l2-ctl -d /dev/elgato-gchd -i 2
+v4l2-ctl -d /dev/elgato-gchd -v pixelformat=MPEG
+ffplay -f mpegts /dev/elgato-gchd
 ```
 
 Record it:
 
 ```sh
-ffmpeg -f mpegts -i /dev/video0 -c copy capture.ts
+ffmpeg -f mpegts -i /dev/elgato-gchd -c copy capture.ts
 ```
 
 The output size (720 × 480/576, 640 × 480, 480 × 360), bitrate and other
@@ -93,7 +111,7 @@ see [`docs/video-output.md`](docs/video-output.md).
 
 ## Documentation
 
-- [`src/README.md`](src/README.md): build, module parameters, remembered
+- [`src/driver/README.md`](src/driver/README.md): build, module parameters, remembered
   settings
 - [`docs/`](docs/): video output, the device protocol per input
 

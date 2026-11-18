@@ -4,7 +4,7 @@
 never reach `master` (rule B2).
 
 These rules apply to anyone, human or AI, working on the kernel driver
-(`src/`) and the documentation (`docs/`). Read them before starting a task
+(`src/driver/`), the OBS plugin (`src/obs-plugin/`) and the documentation (`docs/`). Read them before starting a task
 and re-check them before every commit.
 
 ## A. Before starting a task
@@ -52,7 +52,7 @@ and re-check them before every commit.
    ```
 
    The last command must print nothing. Nothing that refers to these files
-   may be shipped (code, `docs/`, `src/README.md`).
+   may be shipped (code, `docs/`, `src/*/README.md`).
 3. **Tools and analysis material never enter `dev` or `master`.** New scripts
    are written on the `tools` branch (or a feature branch made from it) and
    used from a worktree or with `git show origin/tools:tools/<script>`. Traces,
@@ -73,7 +73,7 @@ and re-check them before every commit.
    `dev` or abandoned. If the session cannot delete remote branches, list
    them in `TODO.md` Phase 0 for the maintainer.
 
-## C. Documentation (`docs/`, `src/README.md`)
+## C. Documentation (`docs/`, `src/*/README.md`)
 
 The documentation ships with the driver and must read as product
 documentation.
@@ -130,7 +130,7 @@ documentation.
 1. The module builds **without warnings** with `W=1` against Linux 6.8
    headers (Ubuntu 24.04, 6.8.0-x), and against the current distribution
    kernel when available:
-   `make -C /usr/src/linux-headers-6.8.0-*-generic M=$PWD/src modules W=1`.
+   `make -C /usr/src/linux-headers-6.8.0-*-generic M=$PWD/src/driver modules W=1`.
 2. No H.264 decoding, scaling or deinterlacing in the kernel.
 3. No `msleep()` or blocking USB calls in URB completion handlers or while
    holding spinlocks. Control transfers only from process context.
@@ -148,7 +148,7 @@ documentation.
    (`GCHD_*_W`, `GCHD_*_R`, `GCHD_*_RX`, `GCHD_BRIDGE_*`, `GCHD_TC_SET`,
    `GCHD_TRY`). No local helper macros in `.c` files.
 8. Diagnostics stay behind module parameters or `dev_dbg`.
-9. Keep `src/dkms.conf` `PACKAGE_VERSION` in sync with user-visible
+9. Keep `src/driver/dkms.conf` `PACKAGE_VERSION` in sync with user-visible
    behaviour changes.
 10. **Code comments describe only the code itself and what it does.** No
     references to traces, trace files, the Windows driver, the C++ code,

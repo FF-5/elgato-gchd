@@ -2,7 +2,7 @@
 
 Notation, device addresses and status labels are defined in
 [README.md](README.md). Transport and SCMD are described in
-[hardware.md](hardware.md). Driver names refer to `src/gchd_protocol.h`.
+[hardware.md](hardware.md). Driver names refer to `src/driver/gchd_protocol.h`.
 
 ## 1. Control registers
 
@@ -107,7 +107,7 @@ Repeated reads used by the driver:
 
 The encoder is programmed with field writes (address, least significant bit,
 width, value) and 16-bit word writes. Field names are defined in
-`src/gchd_transcoder_fields.h` as `GCHD_TC_<FIELD>`. A field whose address
+`src/driver/gchd_transcoder_fields.h` as `GCHD_TC_<FIELD>`. A field whose address
 has bit 1 clear lives in the upper 16 bits of the 32-bit word at
 `address & ~3`.
 

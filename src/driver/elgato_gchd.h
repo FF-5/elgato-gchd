@@ -164,7 +164,6 @@ struct gchd {
  u32 bitrate;
  u8 h264_profile;
  u8 h264_level;
-
 };
 
 int gchd_enable_analog(struct gchd *);
@@ -220,22 +219,6 @@ void gchd_ring_free(struct gchd_ring *);
 int gchd_v4l2_register(struct gchd *);
 void gchd_v4l2_unregister(struct gchd *);
 extern const struct v4l2_file_operations vb2_fops;
-
-void gchd_put(struct gchd *);
-int gchd_select_input(struct gchd *, unsigned int);
-#define GCHD_APP_SIZES 4
-struct gchd_app_size {
- u32 width, height;
- struct v4l2_fract rate; /* frames per second */
-};
-unsigned int gchd_app_sizes(struct gchd *, struct gchd_app_size *);
-unsigned int gchd_app_size_selected(struct gchd *);
-bool gchd_app_output(struct gchd *, u32 *, u32 *);
 void gchd_remember_std(struct gchd *);
-int gchd_app_register(void);
-void gchd_app_unregister(void);
-void gchd_app_attach(struct gchd *);
-void gchd_app_detach(struct gchd *);
-void gchd_app_update(struct gchd *);
 
 #endif
