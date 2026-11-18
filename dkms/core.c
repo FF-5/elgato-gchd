@@ -10,10 +10,11 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.5.3");
+MODULE_VERSION("0.5.4");
 
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
+#define V4L2_CID_GCHD_STRETCH (V4L2_CID_USER_BASE + 0x10f1)
 static const char * const gchd_input_menu[] = {
  "HDMI", "Component", "Composite", "S-Video", NULL,
 };
@@ -527,6 +528,13 @@ static void gchd_signal_check(struct gchd *d)
 {
  /* START and STOP can take longer than the signal-loss debounce. */
  if (READ_ONCE(d->start_pending) || READ_ONCE(d->stop_pending))
+  return;
+ /*
+  * After START the first video can take longer than the debounce (0.6 s
+  * with 480x360 at 4000 kbit/s): no signal loss before GCHD_START_GRACE_MS.
+  */
+ if (time_before(jiffies, READ_ONCE(d->start_jiffies) +
+                 msecs_to_jiffies(GCHD_START_GRACE_MS)))
   return;
 
  if (!READ_ONCE(d->signal_present) &&
@@ -1213,10 +1221,14 @@ static void gchd_mode_workfn(struct work_struct *work)
      !d->input_configured || !READ_ONCE(d->signal_present))
   goto out;
 
- /* Selected output size differs from the running one: switch to it. */
- if (d->out_active != d->analog_out) {
-  dev_info(&d->intf->dev, "switching output size: %u -> %u\n",
-           d->out_active, d->analog_out);
+ /*
+  * Selected output size differs from the running one, or encoder settings
+  * changed: restart with the new encoder block.
+  */
+ if (d->out_active != d->analog_out || READ_ONCE(d->enc_dirty)) {
+  dev_info(&d->intf->dev, "encoder restart: output %u -> %u%s\n",
+           d->out_active, d->analog_out,
+           READ_ONCE(d->enc_dirty) ? ", settings changed" : "");
   output_change = true;
   goto stop_and_restart;
  }
@@ -2117,10 +2129,20 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
   return gchd_set_input(d, c->val);
  }
 
- if (d->streaming)
+ /*
+  * Encoder settings: on composite and S-video a change while capturing
+  * restarts the encoder (mode worker); other inputs only while stopped.
+  */
+ if (d->streaming && d->input < 2)
   return -EBUSY;
 
  switch (c->id) {
+ case V4L2_CID_MPEG_VIDEO_BITRATE_MODE:
+  d->bitrate_mode = c->val;
+  break;
+ case V4L2_CID_GCHD_STRETCH:
+  d->stretch = c->val;
+  break;
  case V4L2_CID_MPEG_VIDEO_BITRATE:
   d->bitrate = c->val / 1000;
   d->bitrate_forced = true;
@@ -2149,6 +2171,10 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
   break;
  default:
   return -EINVAL;
+ }
+ if (d->streaming) {
+  WRITE_ONCE(d->enc_dirty, true);
+  mod_delayed_work(system_wq, &d->mode_work, 0);
  }
  return 0;
 }
@@ -2269,8 +2295,20 @@ static int gchd_fop_release(struct file *file)
 int gchd_v4l2_register(struct gchd*d)
 {
  int r=v4l2_device_register(&d->intf->dev,&d->v4l2_dev);if(r)return r;
- v4l2_ctrl_handler_init(&d->ctrls,4);
- v4l2_ctrl_new_std(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_BITRATE,32000,40000000,1000,16000000);
+ v4l2_ctrl_handler_init(&d->ctrls,6);
+ v4l2_ctrl_new_std(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_BITRATE,32000,40000000,1000,11250000);
+ v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
+  V4L2_MPEG_VIDEO_BITRATE_MODE_CBR,0,V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
+ {
+  static const struct v4l2_ctrl_config stretch_cfg = {
+   .ops = &gchd_ctrl_ops,
+   .id = V4L2_CID_GCHD_STRETCH,
+   .name = "Stretch SD Input",
+   .type = V4L2_CTRL_TYPE_BOOLEAN,
+   .min = 0, .max = 1, .step = 1, .def = 0,
+  };
+  v4l2_ctrl_new_custom(&d->ctrls, &stretch_cfg, NULL);
+ }
  v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_PROFILE,V4L2_MPEG_VIDEO_H264_PROFILE_HIGH,
   ~(BIT(V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)),V4L2_MPEG_VIDEO_H264_PROFILE_MAIN);
  v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_LEVEL,V4L2_MPEG_VIDEO_H264_LEVEL_5_1,0,V4L2_MPEG_VIDEO_H264_LEVEL_4_1);
@@ -2367,6 +2405,7 @@ static int gchd_probe(struct usb_interface *i,
  d->input_fps_num = 0;
  d->input_fps_den = 0;
  d->bitrate = 40000;
+ d->bitrate_mode = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR;
  d->h264_profile = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
  d->h264_level = 41;
  d->usb_buf = kmalloc(GCHD_USB_BUFSIZE, GFP_KERNEL);

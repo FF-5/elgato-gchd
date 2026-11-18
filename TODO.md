@@ -18,7 +18,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.3): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.4): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -28,7 +28,9 @@ on the `traces` branch.
   PAL, QUERYSTD/G_STD), 720×480/576 by source, 29.97 / 25 fps,
   interlaced top field first; input changes from other processes refused
   while one captures. Output sizes 720×480/576 (interlaced), 640×480 and
-  480×360 (progressive, transport output 2 on endpoint 0x84).
+  480×360 (progressive, transport output 2 on endpoint 0x84). Bitrate
+  (2-15 Mbit/s, CBR/VBR) and stretch as V4L2 controls, changeable while
+  capturing (encoder restart).
   Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
   `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; the decoder
   reports 60 Hz for a few seconds after power-on and reset, also with the
@@ -51,16 +53,11 @@ Video modes and switching:
       after a session that ended with a failed START. Check whether it also
       happens after normal sessions; treat state 0x11 without the flag as
       IDLE reached.
-- [ ] 288p capture start (recording wanted; the driver uses the apply block
+- [ ] 288p capture start (recording R1 wanted; the driver uses the apply block
       of the 576i → 288p change).
 
 Output and settings (`docs/composite.md §10`):
 
-- [ ] **T-061 [OFF→HW] (M)** Bitrate control as recorded (CBR at the
-      maximum, VBR with `v_ave_bitrate` = displayed value below it; ranges
-      per output size), "stretch" (`v_in_source_type 2`), H.264
-      profile/level/GOP if exposed. V4L2 controls; each change restarts the
-      encoder like the recordings.
 - [ ] **T-066 [OFF→HW] (M)** v4l2-compliance 1.26.1 failures left after
       4c326eb: HDMI/component `G_DV_TIMINGS` fails without a signal although
       `V4L2_IN_CAP_DV_TIMINGS` is set, `VIDIOC_DV_TIMINGS_CAP` missing
@@ -184,7 +181,7 @@ Change one at a time (RULES D5), when the mode can be tested.
 
 | Item | Driver | Recordings |
 |---|---|---|
-| `system_rate` | `1.075 × (bitrate + 320) + 256` (12693 at 720 wide) | `1.0728 × (bitrate + 320) + 118` (PAL; NTSC +8) |
+| `system_rate` | composite/S-video as recorded (T-061); HDMI/component `1.075 × (bitrate + 320) + 256` | `⌊1.07285 × bitrate + 461.7⌋` (PAL; NTSC +8) |
 | HDMI/component encoder and back end | C++ blocks (`65`/`64` pulses, `0900:0018 = 00 0A`, `v_vinpelclk = 0`, `time_scale_l = 0`, `num_units_in_tick = 0`, GOP 14, bitrate formula) | `05`/`15` pulses, `02 0A`, `v_vinpelclk = 1`, `time_scale_l = 60`, `num_units_in_tick = 1`, GOP 8, bitrate per output size |
 | Composite prefix | `02 = C9 … 28 = 88` written on the first composite start after loading the module | written only after S-video (HDMI → composite writes none of them) |
 | Initial analog detection | waits until `0x88:CA` reads `7E` or `66`; family re-checked before START | unknown (no recording of a 480i start) |
@@ -194,12 +191,38 @@ Change one at a time (RULES D5), when the mode can be tested.
 
 ## Evidence wanted (maintainer)
 
-Reduce with a filter that keeps bulk OUT:
+All Windows recordings still useful, in the order they are needed. Record
+with USBPcap, reduce with the filter that keeps bulk OUT, upload to the
+top of the `traces` branch; I sort and decode them. One recording per line,
+a short note what was done and when (seconds) helps.
+
 `tshark -r big.pcapng -Y "usb.transfer_type != 0x03 || usb.endpoint_address.direction == 0" -w small.pcapng`
 
-- **Windows, PS1 on S-video, then switch to composite while it runs**
-  (T-053b).
-- Windows: PAL 288p capture start (PS1 started while the game shows 288p).
-- Windows: composite NTSC 480i start (N64 menu).
-- Windows: output 480×360 / 640×480 / bitrate changes with an NTSC source.
-- Later: component and HDMI with a signal, all modes.
+| # | Recording | For | Status |
+|---|---|---|---|
+| R1 | Composite PAL: PS1 started while the game already shows 288p (capture start straight into 288p) | stage 1, "288p capture start" | **needed** (only open stage-1 start case) |
+| R2 | Bitrate slider with an NTSC source (N64): standard and mobile, a few positions incl. min and max | T-061 | **needed** if the PAL recordings leave the NTSC values open (decided in T-061) |
+| R3 | Windows application closed while capturing, and closed without a source | close sequence (T-047 was fixed without a recording) | optional (close works) |
+| R4 | Composite NTSC 480i capture start (N64 menu) | initial detection (known differences table) | optional (480i starts work) |
+| R5 | PS1 on S-video, switch to composite while capturing (T-053b) | composite ↔ S-video | not needed (works; the switch sequence is in `input-switching/gchd_PAL_composite_svideo_small` 96 s) |
+| R6 | Output 640×480 / 480×360 with an NTSC source | T-055 | not needed (works, NTSC tested) |
+| R7 | Component with a signal: every mode (480i, 480p, 576i, 576p, 720p, 1080i), mode changes, output sizes, bitrate | stage 2, T-051 | **needed** at stage 2 |
+| R8 | HDMI with a signal: every mode, mode changes, output sizes, bitrate | stage 3, T-050 | **needed** at stage 3 (1080p60 output sizes exist) |
+| R9 | One recording per picture/audio setting changed while capturing | stage 4, T-080 | needed after the release |
+| R10 | Windows initialization with composite selected from the start (application start, no other input before) | initialization (driver uses the component recording) | optional |
+
+## Testing (maintainer request, 2026-11-18)
+
+Hardware tests run through an interactive script instead of copied
+commands: `tools/gchd-test.sh` on the `tools` branch with one test file
+per task (`tools/tests/T-xxx.sh`). The script builds and loads the module,
+runs every command, checks the stream automatically (ffprobe: size, field
+order, frame rate, decode errors; dmesg: failures) and writes one log
+file. It prompts only for physical actions (cables, consoles) and visual
+checks. The maintainer pastes the log (or its summary) into `TASK.md`.
+
+- [ ] **T-090 (M)** Pre-release test before the first `master` merge
+      (after HDMI): one test file covering every accepted feature (inputs,
+      standards, modes, mode and family changes, output sizes, bitrate,
+      formats, close/reopen, input persistence, compliance), less detailed
+      than the per-task tests.

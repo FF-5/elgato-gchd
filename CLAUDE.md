@@ -59,11 +59,25 @@ material.
 
 ## Hardware testing
 
-Only the maintainer has the device. Testing: build and load the module,
-select the input with `v4l2-ctl -i N`, start the viewer (`guvcview`, or
-`ffplay` for the H.264 stream), check the picture,
-paste `dmesg` and application output into the maintainer comments of
-`TASK.md`. Write exact commands in `TASK.md` "Hardware test".
+Only the maintainer has the device. Tests run through the interactive
+runner on the `tools` branch: `tools/gchd-test.sh` with one test file per
+task in `tools/tests/` (helpers listed in the `tools` README). Write the
+test file for each task: every command, automatic checks (`capture` with
+the expected size, frame rate and field order; dmesg failures are flagged
+automatically), `prompt` for cable/console actions and `confirm` only for
+what needs eyes. In `TASK.md` "Hardware test" give the commands to fetch
+and run it:
+
+```sh
+cd ~ && git -C elgato-gchd fetch origin
+git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-xxx.sh > tests/T-xxx.sh
+bash gchd-test.sh T-xxx --branch <feature-branch>
+```
+
+The maintainer pastes the summary (and the log when something fails) into
+the maintainer comments. Read the whole comment section, including lines
+that start with `[` (dmesg).
 
 ## Bring-up order
 

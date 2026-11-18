@@ -24,6 +24,7 @@
 #define GCHD_USB_BUFSIZE 0x10000	/* bulk-IN URB size */
 #define GCHD_PAL60_HOLD_MS 5000
 #define GCHD_REBOOT_GAP_MS 1500
+#define GCHD_START_GRACE_MS 2000
 
 /* Output sizes of composite and S-video (analog_out). */
 #define GCHD_OUT_STANDARD 0 /* source size, 720 x 480 / 576 */
@@ -127,6 +128,10 @@ struct gchd {
  v4l2_std_id analog_std[2]; /* last standard detected on composite, S-video; 0 = none */
  u8 analog_out; /* GCHD_OUT_*, kept while the device stays connected */
  u8 out_active; /* output programmed in the encoder (GCHD_OUT_*) */
+ bool stretch; /* composite/S-video: v_in_source_type 2 */
+ int bitrate_mode; /* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
+ bool enc_dirty; /* encoder settings changed while capturing */
+ unsigned long start_jiffies; /* last completed START */
  u16 dec_applied; /* family << 8 | 0x88:28 of the last family apply block; 0 = unknown */
  bool detect_requested;
  bool disconnected;

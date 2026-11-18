@@ -1,43 +1,35 @@
-# TASK T-061 — Bitrate and stretch for analog sources
+# TASK T-064 — Input persistence
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** analysis
-- **Type:** driver feature
-- **Branch:** `feat/bitrate` (from `dev` 0.5.3)
-- **TODO items:** T-061 (stage 1)
+- **Status:** design
+- **Type:** driver feature + udev rule of our own
+- **Branch:** `feat/input-persistence` (from `dev` 0.5.4)
+- **TODO items:** T-064 (stage 1)
 
 ## Why
 
-The capture application sets the video bitrate (a slider per output size)
-and offers "stretch" for standard-definition input; the driver always
-encodes the default bitrate and never stretches. Recorded
-(`docs/composite.md §10`, `traces/composite/`):
-`gchd_288p_standard_bitrate_change_small`,
-`gchd_288p_mobile_bitrate_change_small`, `gchd_288p_stretch_input_small`.
-
-| Setting | Encoder fields |
-|---|---|
-| Standard, maximum (default) | CBR (`v_rate_mode 0`), `v_max_cpb_delay 3`, 11250 / 10125 / 5625 / 2812 |
-| Standard, lower | VBR (`v_rate_mode 1`), `v_max_cpb_delay 10`, e.g. 6000 / 5400 / 3000 / 600 |
-| Mobile | VBR, 4000 … 15000 |
-| Stretch | `v_in_source_type 2` instead of 3 |
+Maintainer requirement: HDMI on the first use after installation;
+afterwards the input last selected, also after unplugging, module reload
+and reboot. Today the driver remembers the input only while the module
+stays loaded (`gchd_last_input`).
 
 ## Implementation (plan)
 
-1. Analysis of the three recordings: the bitrate fields as a function of
-   the slider value (bitrate, maximum, average, minimum, `system_rate`),
-   the switch between CBR and VBR, the ranges per output size, and the
-   restart sequence.
-2. V4L2 controls: `V4L2_CID_MPEG_VIDEO_BITRATE` (and `_BITRATE_MODE`
-   CBR/VBR if the recordings tie it to the value), ranges per output size;
-   a private control (or `V4L2_CID_...` if one fits) for stretch. Changing
-   them while capturing restarts the encoder like the recordings (NULL,
-   STOP, encoder block, START).
-3. The existing driver controls (bitrate, H.264 level/profile) checked
-   against the recordings; the menu-control failure of v4l2-compliance
-   (T-066) looked at along the way.
-4. Docs: `video-output.md`, `composite.md §10`.
+1. Module parameter `default_input` (0-3, default 0 = HDMI), read when the
+   device is probed.
+2. On every input change the driver sends a `change` uevent with
+   `GCHD_INPUT=<n>` on the USB interface.
+3. A new udev rule of ours in `udev-rules/` (the original file stays
+   untouched, RULES B4) runs a small helper that writes
+   `options elgato_gchd default_input=<n>` to
+   `/etc/modprobe.d/elgato-gchd-input.conf`; modprobe applies it at the
+   next load. The install step (T-071) installs the rule and helper.
+4. Optional, to decide with the maintainer: the same for the output size,
+   pixel format and bitrate (they are kept only while the device stays
+   connected).
+5. Test file `tools/tests/T-064.sh`: select an input, reload the module,
+   unplug/replug, check `--get-input`; the reboot check by prompt.
 
 ## Hardware test (maintainer)
 
