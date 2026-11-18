@@ -73,6 +73,16 @@ userspace service turns the driver's stream into such a device.
    program panic and close is a no-no").
 9. (Maintainer, 2026-11-18) No periodic work while no application uses
    the device; a "Please connect" picture without a Game Capture HD.
+10. (Maintainer, 2026-11-18) One video device for programs: "Elgato
+    Game Capture HD". The frame input becomes a private non-video device
+    of the bridge; the bridge gets the compressed stream through a private
+    device too; the H.264 V4L2 device only with a module parameter (for
+    recording the original stream without a second encode); the encoder
+    controls (bitrate, mode, profile, level, stretch) move to the main
+    device. Quality: the program gets the decoded device stream
+    (decoding exact, 4:2:0 → 4:2:2 without loss, no scaling);
+    deinterlacing is the only change to the picture (filter selectable,
+    line doubling to be compared with bwdif for 240p/288p).
 
 ## Implementation
 
@@ -155,8 +165,8 @@ at the end of it).
   "analog mode change failed: -67": the console swap (decoder not locked
   during the family change), detected again 1 s later (240p).
 - Maintainer question (2026-11-18): "Does the driver really need to
-  expose that many video devices? Don't we only need one?" (answered in
-  the session; decision pending).
+  expose that many video devices? Don't we only need one?" Decision:
+  Decisions 10.
 - Maintainer (2026-11-18) clarified the resolutions (Decisions 8): the
   application gets the device's own output sizes for the input, not a
   free list; the earlier list (1920×1080 … 640×480 for every input) and
