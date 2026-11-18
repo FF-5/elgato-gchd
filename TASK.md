@@ -67,3 +67,16 @@ whether the terminal window opened.
 
 ## Maintainer comments
 
+=== summary (T-071, 36127c1 TASK: T-071 implementation and test)
+PASS | step 1 clean start: uninstall | no driver installed
+PASS | step 2 install with the firmware missing (extraction from the .msi) | extracted firmware equals the previous one
+PASS | step 3 installed parts | module built in build/
+PASS | step 3 installed parts | objects in build/objects/kernel
+PASS | step 3 installed parts | DKMS: installed
+PASS | step 3 installed parts | module loaded
+PASS | step 3 installed parts | udev rule installed
+PASS | step 4 capture with the installed driver | stream 720x576 50/1 tt, ~8581 kbit/s
+PASS | step 5 uninstall | driver removed
+PASS | step 5 uninstall | udev rule removed
+
+FAIL: 0  WARN: 0
