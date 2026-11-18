@@ -1,8 +1,8 @@
 # T-060: application device "Elgato Game Capture HD" (registered while the
-# module is loaded, YUYV, size chosen by the application) fed by
+# module is loaded, YUYV, the source size and rate only, no scaling) fed by
 # service/gchd-bridge: capture device only on while an application streams,
-# format follows the source while idle, scaling to a chosen size, input
-# change, unplug/replug while reading (black picture), audio, guvcview.
+# format follows the source while idle, input change, unplug/replug while
+# reading ("Please connect" picture), audio, idle CPU, guvcview.
 # Needs: pactl (PipeWire or PulseAudio), guvcview. PS1 (PAL) and N64 (NTSC).
 
 BRIDGE="$REPO/service/gchd-bridge"
@@ -42,7 +42,7 @@ load_module replug
 run v4l2-ctl --list-devices
 expect "H.264 device found by name" "Card type *: Elgato Game Capture HD \(H.264\)" v4l2-ctl -d "$DEV" -D
 expect "application device idle, Game Capture HD attached" "^idle [0-9]+ [0-9]+ [0-9]+ [0-9]+ video[0-9]+ $(basename "$DEV")$" app_state
-expect "sizes 1920x1080 ... 640x480 offered" "1920x1080(.|\n)*720x576(.|\n)*640x480" sh -c "v4l2-ctl -d $(app_dev) --list-formats-ext | tr '\n' ' '"
+expect "one size offered (the source size)" "^1$" sh -c "v4l2-ctl -d $(app_dev) --list-formats-ext | grep -c 'Size: Discrete'"
 
 step "bridge idle: capture device off"
 prompt "PS1 on composite, game running."
@@ -76,10 +76,10 @@ expect "stream YUYV 720x576" "yuyv422.*720x576" cat "$WORK/read2.txt"
 expect "frame count >= 450 in 15 s" "frame= *(4[5-9][0-9]|[5-9][0-9]{2}|[0-9]{4})" cat "$WORK/read2.txt"
 expect "capture device started" "starting hardware boot" sudo dmesg
 
-step "application chooses 1280x720: scaled"
+step "application asks for 1280x720: gets the source size (no scaling)"
 app_read 10 1280x720 > "$WORK/read3.txt"
 run cat "$WORK/read3.txt"
-expect "stream YUYV 1280x720" "yuyv422.*1280x720" cat "$WORK/read3.txt"
+expect "stream YUYV 720x576" "yuyv422.*720x576" cat "$WORK/read3.txt"
 expect "frames delivered (>= 250 in 10 s)" "frame= *([2-9][5-9][0-9]|[3-9][0-9]{2}|[0-9]{4})" cat "$WORK/read3.txt"
 
 step "application closed: capture device off"
@@ -130,7 +130,7 @@ prompt "Start in a second terminal: guvcview -d $(app_dev)   (leave it open)"
 confirm "guvcview shows the PS1 picture, smooth, without interlacing lines?"
 prompt "Swap the PS1 for the N64 (NTSC) while guvcview stays open; wait about 15 s."
 run app_state
-confirm "guvcview shows the N64 picture (in the PAL size, scaled) without reopening?"
+confirm "guvcview shows the N64 picture without reopening (unscaled, black bars at top and bottom)?"
 prompt "Unplug the Elgato while guvcview stays open; wait about 5 s."
 confirm "guvcview shows 'Please connect the Elgato Game Capture HD'?"
 prompt "Plug the Elgato in again; wait about 15 s."
