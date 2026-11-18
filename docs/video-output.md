@@ -39,13 +39,13 @@ A 480i source is displayed with a regular deinterlacer, for example
 
 ## 3. Driver interface
 
-The driver registers three V4L2 devices per Game Capture HD:
+The driver registers these V4L2 devices:
 
-| Device (card name) | Direction | Content |
-|---|---|---|
-| "Elgato Game Capture HD (H.264)" | capture | The compressed stream of the device (this section) |
-| "Elgato Game Capture HD" | capture | Uncompressed frames for applications (§4) |
-| "Elgato Game Capture HD (frame input)" | output | Frames for the application device, written by a userspace program (§4) |
+| Device (card name) | Direction | Registered | Content |
+|---|---|---|---|
+| "Elgato Game Capture HD (H.264)" | capture | per connected Game Capture HD | The compressed stream of the device (this section) |
+| "Elgato Game Capture HD" | capture | while the module is loaded | Uncompressed frames for applications (§4) |
+| "Elgato Game Capture HD (frame input)" | output | while the module is loaded | Frames for the application device, written by a userspace program (§4) |
 
 The H.264 device has the inputs HDMI (0), Component (1), Composite (2) and
 S-Video (3).
@@ -71,19 +71,22 @@ The interface is experimental and expected to change.
 
 ## 4. Application device (Driver)
 
-The application device delivers uncompressed frames. The driver does not
-decode the stream: a userspace program reads the transport stream of the
-H.264 device, decodes it and writes the frames into the frame input
-device; the driver copies each written frame into the next queued buffer
-of the application device. Frames written while no buffer is queued are
-dropped.
+The application device delivers uncompressed frames. It is registered when
+the module is loaded and stays registered while the module is loaded,
+whether a Game Capture HD is connected or not; the first connected Game
+Capture HD is attached to it. The driver does not decode the stream: a
+userspace program reads the transport stream of the attached device,
+decodes it, scales it to the format of the application device and writes
+the frames into the frame input device; the driver copies each written
+frame into the next queued buffer of the application device. Frames
+written while no buffer is queued are dropped.
 
 | Item | Behaviour |
 |---|---|
-| Format | `V4L2_PIX_FMT_YUYV`, `V4L2_FIELD_NONE`, the size of the source: the detected mode (720 × 480 also for 240p, 720 × 576 also for 288p; the HDMI/component mode size), else the nominal size of the input (720 × 480 / 576 by the last detected standard, 1280 × 720). One size and frame rate (`VIDIOC_ENUM_FRAMESIZES`, `VIDIOC_ENUM_FRAMEINTERVALS`); `VIDIOC_S_FMT` and `VIDIOC_S_PARM` return the current values |
-| Frame rate | Composite and S-video: 50/1 (576 lines) or 60000/1001 (480 lines), one frame per field. HDMI and component: the rate of the detected mode |
-| Inputs | HDMI (0), Component (1), Composite (2), S-Video (3); `VIDIOC_S_INPUT` selects the input of the device (also while the H.264 device captures) |
-| Format change | While no buffers are allocated the format follows the source. While an application has buffers allocated and the source size or frame rate changes (another standard, another HDMI/component mode, another input), the device is unregistered (open handles get `ENODEV`) and registered again with the new format once it is closed, at the latest after 2 s, with the same device number when it is free. A capture start or a lost signal keeps the format |
+| Format | `V4L2_PIX_FMT_YUYV`, `V4L2_FIELD_NONE`; sizes (`VIDIOC_ENUM_FRAMESIZES`) 1920 × 1080, 1280 × 720, 720 × 576, 720 × 480, 640 × 480; frame rates (`VIDIOC_ENUM_FRAMEINTERVALS`, `VIDIOC_S_PARM`) 60, 59.94, 50, 29.97 and 25 per second. `VIDIOC_S_FMT` selects the nearest listed size; `EBUSY` for another size while buffers are allocated |
+| Format before a selection | While no buffers are allocated, the format follows the detected source of the attached device: the source size (720 × 480 also for 240p, 720 × 576 also for 288p, the HDMI/component mode size) and rate (composite and S-video: 50 or 59.94, one frame per field). After loading: 720 × 480 at 59.94 |
+| Source changes while streaming | The format does not change (the frames are scaled to it); `V4L2_EVENT_SOURCE_CHANGE` is queued |
+| Inputs | HDMI (0), Component (1), Composite (2), S-Video (3) of the attached device; `VIDIOC_S_INPUT` selects the input (also while capturing). Without an attached device the inputs report `V4L2_IN_ST_NO_POWER` |
 | I/O | Streaming (mmap, userptr) and `read()`; timestamps: monotonic clock at the copy |
-| Frame input device | Output device, `V4L2_PIX_FMT_YUYV` of the application format (`VIDIOC_S_FMT` sets it; `EBUSY` for another size while buffers exist), streaming and `write()`; one buffer or `write()` of one frame size per frame |
-| State | sysfs attribute `app` of the USB interface (`/sys/bus/usb/drivers/elgato_gchd/<interface>/app`): `STATE APP-NODE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE`, `STATE` `streaming` while an application streams from the application device, else `idle`; `-` for a device that is not registered; `STREAM-NODE` is the H.264 device. The attribute is notified (`poll()`) on changes |
+| Frame input device | Output device, `V4L2_PIX_FMT_YUYV` of the application format (`VIDIOC_S_FMT` sets it; `EBUSY` for another size while buffers exist), streaming and `write()`; one buffer or `write()` of one frame size per frame (a buffer queued with 0 bytes counts as a whole frame) |
+| State | sysfs attribute `gchd_state` of the application device (`/sys/class/video4linux/videoN/gchd_state`): `STATE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE`; `STATE` is `streaming` while an application streams from the application device, else `idle`; `STREAM-NODE` is the H.264 device of the attached Game Capture HD, `-` when none is attached. The attribute is notified (`poll()`) on changes |

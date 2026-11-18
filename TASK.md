@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** application device in the driver + bridge; first hardware test
+- **Status:** application device registered at module load (sizes chosen by the application) + bridge; hardware test
 - **Type:** new userspace component (service) next to the driver
 - **Branch:** `feat/app-bridge` (from `dev` 0.5.8)
 - **TODO items:** T-060 (stage 1b)
@@ -56,55 +56,53 @@ userspace service turns the driver's stream into such a device.
    driver also tells the bridge when an application opens the node (no
    polling), and v4l2loopback is no longer needed.
 6. Tests without OBS for now (the VM cannot run it); guvcview only.
+7. (Maintainer, after two runs with re-registration) Instead of
+   re-registering: the application device is registered while the module
+   is loaded (independent of the USB device), and behaves like a usual
+   capture device: the application chooses the size from a list, the
+   bridge scales to it; source changes do not change the format.
 
 ## Implementation
 
 Driver (`src/app.c`, hooks in `core.c`; no protocol change):
 
-- Three devices per Game Capture HD: "Elgato Game Capture HD (H.264)"
-  (the existing device, renamed), "Elgato Game Capture HD" (application
-  device: YUYV, capture) and "Elgato Game Capture HD (frame input)"
-  (output device the bridge writes decoded frames into; the driver copies
-  each frame into the next buffer of the application device).
-- Application format = source: detected mode, else the nominal size of
-  the input; 50/1 or 60000/1001 frames/s for analog (one frame per
-  field), the mode rate for HDMI/component. 480i/240p and 576i/288p keep
-  the size. A capture start or a lost signal keeps the format.
-- Format change while an application has buffers: the device is
-  unregistered (handles get ENODEV, like an unplugged camera) and
-  registered again once it is closed, at the latest after 2 s, with the
-  same number when free. Without buffers the format changes in place.
-- `VIDIOC_S_INPUT` on the application device (also while capturing).
-- sysfs `/sys/bus/usb/drivers/elgato_gchd/<interface>/app`:
-  `STATE APP-NODE WIDTH HEIGHT NUM DEN FEED-NODE STREAM-NODE`, notified
-  on changes.
-- Lifetime: the driver data lives as long as the `v4l2_device`, which
-  every registered node (also re-registered application devices still
-  open) holds.
+- "Elgato Game Capture HD (H.264)": the compressed stream, per connected
+  device (the former device, renamed; one name for all models).
+- "Elgato Game Capture HD" (YUYV capture) and "Elgato Game Capture HD
+  (frame input)" (output) are registered at module load and stay while
+  the module is loaded; the first connected Game Capture HD is attached
+  (detached on unplug, the next one attached at plug-in).
+- Sizes 1920×1080, 1280×720, 720×576, 720×480, 640×480; rates 60,
+  59.94, 50, 29.97, 25. While no application has buffers the format
+  follows the detected source (720×480 at 59.94 after loading); while
+  streaming it stays, a source change queues V4L2_EVENT_SOURCE_CHANGE.
+- `VIDIOC_S_INPUT` on the application device switches the attached
+  device's input (also while capturing).
+- sysfs `/sys/class/video4linux/videoN/gchd_state` of the application
+  device: `STATE W H NUM DEN FEED-NODE STREAM-NODE` (`-` without device).
+- The frame input treats a buffer with 0 bytes as a whole frame
+  (`write()`).
+- Driver data lives as long as its `v4l2_device`.
 
-Bridge (`service/gchd-bridge`): reads the sysfs state every 0.5 s; while
-an application streams, ffmpeg reads the H.264 device's transport
-stream, deinterlaces (`bwdif`, one frame per field), scales to the
-application format, `fps` to its rate, writes YUYV into the frame input
-device and the audio to the audio source; stops when the application
-stops (capture device off); restarts on a format change. v4l2loopback,
-`fuser` and the black picture are gone.
+Bridge (`service/gchd-bridge`): while an application streams, ffmpeg
+decodes the attached device's stream, deinterlaces one frame per field,
+scales to the chosen size, `fps` to the chosen rate, writes YUYV into the
+frame input and the audio to the audio source; a black picture while no
+Game Capture HD is attached; stops when the application stops (capture
+device off); restarts on a format or device change.
 
-Offline: build W=1 clean; shellcheck clean; the filter chain gives 150
-frames for 3 s of 576i25 at 50/1. Not run on hardware yet.
+Test runner: finds the H.264 device by name (the application device now
+gets the first number).
 
 Next steps after the test: systemd user service (start at login),
-`install-driver.sh` integration, input selection from the desktop,
-remembered standard per input (a PAL source then starts at 720×576
-without a first re-registration).
+`install-driver.sh` integration, remembered application format.
 
 ## Hardware test (maintainer)
 
-PS1 (PAL) on composite, the N64 (NTSC) for the swap with guvcview open.
-Needs guvcview and pactl. The test stops a bridge left from earlier runs
-and unloads v4l2loopback (no longer used). The first read is expected to
-end early: after loading, the device starts with the NTSC size and is
-registered again when the PAL source is detected.
+PS1 (PAL) on composite, the N64 (NTSC) for the swap with guvcview open;
+one unplug/replug of the Elgato while a read runs. Needs guvcview and
+pactl. The test stops a bridge left from earlier runs and unloads
+v4l2loopback (no longer used).
 
 ```sh
 cd ~ && git -C elgato-gchd fetch origin
@@ -118,6 +116,10 @@ at the end of it).
 
 ## Findings
 
+- Design change (maintainer, 2026-11-18): the re-registration on format
+  changes is replaced by an application device registered while the
+  module is loaded, with sizes chosen by the application (see Decisions
+  7).
 - Second application-device run (15634d8): 13 PASS. Working: names,
   sysfs state, capture device off while idle, start on the first read,
   re-registration at the PAL detection (480 → 576; the first reader gets

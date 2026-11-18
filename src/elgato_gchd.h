@@ -165,22 +165,6 @@ struct gchd {
  u8 h264_profile;
  u8 h264_level;
 
- /* Application device and feed device (app.c). */
- struct gchd_app *app;       /* registered application device, or NULL */
- struct mutex app_lock;      /* app, app_* format */
- struct delayed_work app_work;
- atomic_t app_alive;         /* application devices not yet released */
- unsigned long app_wait_until; /* re-registration waits for the old device until then */
- int app_nr;                 /* device number of the application device */
- u32 app_width, app_height;
- u32 app_input;              /* input the application format belongs to */
- struct v4l2_fract app_rate; /* frames per second */
- bool app_ready;
- struct video_device feed_vdev;
- struct vb2_queue feed_q;
- struct mutex feed_lock;
- struct list_head feed_pending;
- u32 feed_width, feed_height;
 };
 
 int gchd_enable_analog(struct gchd *);
@@ -240,9 +224,10 @@ extern const struct v4l2_file_operations vb2_fops;
 void gchd_put(struct gchd *);
 int gchd_select_input(struct gchd *, unsigned int);
 bool gchd_source_format(struct gchd *, u32 *, u32 *, struct v4l2_fract *);
-int gchd_app_init(struct gchd *);
-void gchd_app_cleanup(struct gchd *);
+int gchd_app_register(void);
+void gchd_app_unregister(void);
+void gchd_app_attach(struct gchd *);
+void gchd_app_detach(struct gchd *);
 void gchd_app_update(struct gchd *);
-extern const struct attribute_group *gchd_groups[];
 
 #endif

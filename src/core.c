@@ -2634,13 +2634,7 @@ static int gchd_probe(struct usb_interface *i,
   usb_set_intfdata(i, NULL);
   goto err;
  }
- r = gchd_app_init(d);
- if (r) {
-  dev_err(&i->dev, "application device: setup failed: %d\n", r);
-  gchd_v4l2_unregister(d);
-  usb_set_intfdata(i, NULL);
-  goto err;
- }
+ gchd_app_attach(d);
  gchd_set_lifecycle(d, GCHD_ONLINE);
  dev_info(&i->dev,
           "GCHD lifecycle: USB present; V4L2 registered; hardware stays powered off until STREAMON\n");
@@ -2672,7 +2666,7 @@ static void gchd_disconnect(struct usb_interface *i)
  mutex_unlock(&d->lifecycle_lock);
 
  /* The interface may already be gone: never issue USB commands here. */
- gchd_app_cleanup(d);
+ gchd_app_detach(d);
  gchd_v4l2_unregister(d);
  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_out_len = 0; WRITE_ONCE(d->wait_pat, true); d->ts_base_valid = false;
  kref_put(&d->refcount, gchd_release_ref);
@@ -2715,9 +2709,31 @@ static struct usb_driver gchd_usb = {
  .id_table = gchd_ids,
  .probe = gchd_probe,
  .disconnect = gchd_disconnect,
- .dev_groups = gchd_groups,
  .driver = {
   .shutdown = gchd_shutdown,
  },
 };
-module_usb_driver(gchd_usb);
+/*
+ * The application device is registered at module load, independently of
+ * connected devices (app.c).
+ */
+static int __init gchd_init(void)
+{
+ int r = gchd_app_register();
+
+ if (r)
+  return r;
+ r = usb_register(&gchd_usb);
+ if (r)
+  gchd_app_unregister();
+ return r;
+}
+
+static void __exit gchd_exit(void)
+{
+ usb_deregister(&gchd_usb);
+ gchd_app_unregister();
+}
+
+module_init(gchd_init);
+module_exit(gchd_exit);

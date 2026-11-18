@@ -75,13 +75,14 @@ hand.
 
 ## Video devices
 
-- "Elgato Game Capture HD (H.264)": the compressed stream; inputs HDMI (0),
-  Component (1), Composite (2), S-Video (3). The hardware is initialized
-  on `VIDIOC_STREAMON`.
-- "Elgato Game Capture HD": uncompressed YUYV frames for applications,
+- "Elgato Game Capture HD (H.264)", per connected device: the compressed
+  stream; inputs HDMI (0), Component (1), Composite (2), S-Video (3). The
+  hardware is initialized on `VIDIOC_STREAMON`.
+- "Elgato Game Capture HD", while the module is loaded: uncompressed YUYV
+  frames for applications in the size and rate the application selects,
   written into "Elgato Game Capture HD (frame input)" by a userspace
-  program (`service/gchd-bridge`); state in the sysfs attribute `app` of
-  the USB interface.
+  program (`service/gchd-bridge`); state in the sysfs attribute
+  `gchd_state` of the device.
 
 The formats are described in [`../docs/video-output.md`](../docs/video-output.md).
 
@@ -99,7 +100,7 @@ The formats are described in [`../docs/video-output.md`](../docs/video-output.md
 | `transcoder.c` | Encoder defaults and per-mode configuration. |
 | `core.c` | V4L2 device, buffer queue, device lifecycle, bulk-IN reception, USB probe and disconnect. |
 | `fops.c` | V4L2 file operations. |
-| `app.c` | Application device, frame input device, sysfs attribute `app`. |
+| `app.c` | Application device and frame input device (registered at module load), sysfs attribute `gchd_state`. |
 
 Example of the access macros:
 

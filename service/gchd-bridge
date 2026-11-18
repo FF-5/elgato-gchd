@@ -2,26 +2,26 @@
 # SPDX-License-Identifier: GPL-2.0
 #
 # gchd-bridge: feeds the application device of the elgato_gchd driver
-# ("Elgato Game Capture HD", uncompressed YUYV) for applications such as
-# guvcview, OBS, browsers and video calls, and offers the audio as a
-# PipeWire/PulseAudio source "Elgato Game Capture HD".
+# ("Elgato Game Capture HD", uncompressed YUYV, registered while the module
+# is loaded) for applications such as guvcview, OBS, browsers and video
+# calls, and offers the audio as a PipeWire/PulseAudio source "Elgato Game
+# Capture HD".
 #
 #   gchd-bridge run                 run the service (foreground)
 #   gchd-bridge input INPUT         select the input: hdmi, component,
 #                                   composite, svideo (or 0-3)
 #   gchd-bridge status              show the devices and the state
 #
-# The driver publishes the state of its application device in the sysfs
-# attribute "app" of the USB interface:
-#   STATE APP-NODE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE
+# The driver publishes the state in the sysfs attribute "gchd_state" of the
+# application device:
+#   STATE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE
 # While STATE is "streaming" (an application streams from the application
-# device), the service reads the transport stream of the driver's H.264
-# device, decodes and deinterlaces it (one frame per field) with ffmpeg,
-# and writes YUYV frames of the application format into the feed device;
-# the audio goes to the audio source. When the application stops, the
-# service stops ffmpeg and the capture device switches off. When the
-# format changes (the driver registers the application device again), the
-# service restarts ffmpeg with the new format.
+# device), the service writes YUYV frames of the format the application
+# chose into the frame input device: from the H.264 device STREAM-NODE of
+# the attached Game Capture HD (decoded, deinterlaced one frame per field,
+# scaled, with the audio to the audio source), or a black picture while no
+# Game Capture HD is attached. When the application stops, ffmpeg stops and
+# the capture device switches off.
 #
 # Needs: ffmpeg, v4l2-ctl, pactl (optional, for the audio).
 # Environment: GCHD_DEINTERLACE (ffmpeg filter, default
@@ -42,19 +42,19 @@ die() { msg "$*"; exit 1; }
 
 # ------------------------------------------------------------ devices
 
-# sysfs directory of the driver's USB interface (first device).
-intf_dir() {
+# sysfs directory of the application device.
+app_dir() {
 	local f
-	for f in /sys/bus/usb/drivers/elgato_gchd/*/app; do
+	for f in /sys/class/video4linux/video*/gchd_state; do
 		[ -e "$f" ] && { dirname "$f"; return 0; }
 	done
 	return 1
 }
 
 # Driver state:
-# STATE APP-NODE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE.
+# STATE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE.
 app_state() {
-	cat "$1/app" 2>/dev/null
+	cat "$1/gchd_state" 2>/dev/null
 }
 
 input_number() {
@@ -92,7 +92,7 @@ audio_cleanup() {
 # ------------------------------------------------------------ pipeline
 
 PID=        # running ffmpeg
-FORMAT=     # "WIDTH HEIGHT NUM DEN" ffmpeg was started with
+FORMAT=     # "WIDTH HEIGHT NUM DEN STREAM-NODE" ffmpeg was started with
 
 # Stop ffmpeg: TERM, then KILL after 3 s (an ffmpeg that waits for data
 # from an input without signal may not react to TERM).
@@ -129,8 +129,16 @@ start_pipeline() {	# start_pipeline TS FEED W H NUM DEN
 		-map 0:v:0 -vf "$DEINTERLACE,scale=$3:$4,setsar=1,fps=$5/$6,format=yuyv422" \
 		-f v4l2 "$2" "${audio[@]}" &
 	PID=$!
-	FORMAT="$3 $4 $5 $6"
 	msg "capture: $1 -> $2 ($3x$4, $5/$6 frames/s)"
+}
+
+# Black picture while no Game Capture HD is attached.
+start_black() {	# start_black FEED W H NUM DEN
+	ffmpeg -hide_banner -loglevel error -nostdin \
+		-re -f lavfi -i "color=c=black:s=$2x$3:r=$4/$5" \
+		-vf format=yuyv422 -f v4l2 "$1" &
+	PID=$!
+	msg "no Game Capture HD: black $2x$3 -> $1"
 }
 
 # ------------------------------------------------------------ service
@@ -143,7 +151,7 @@ cleanup() {
 }
 
 run() {
-	local dir ts state w h num den feed
+	local dir state w h num den feed ts
 	mkdir -p "$STATE_DIR"
 	echo $$ > "$PIDFILE"
 	trap cleanup INT TERM
@@ -151,18 +159,23 @@ run() {
 
 	while :; do
 		state=
-		dir=$(intf_dir) && state=$(app_state "$dir")
+		dir=$(app_dir) && state=$(app_state "$dir")
 		# shellcheck disable=SC2086
 		set -- $state
-		state=${1:-none} w=${3:-} h=${4:-} num=${5:-} den=${6:-} feed=${7:--} ts=${8:--}
+		state=${1:-none} w=${2:-} h=${3:-} num=${4:-} den=${5:-} feed=${6:--} ts=${7:--}
 
-		if [ "$state" = streaming ]; then
-			if [ -n "$PID" ] && [ "$FORMAT" != "$w $h $num $den" ]; then
-				msg "format now ${w}x$h, $num/$den"
+		if [ "$state" = streaming ] && [ "$feed" != - ]; then
+			if [ -n "$PID" ] && [ "$FORMAT" != "$w $h $num $den $ts" ]; then
+				msg "now ${w}x$h, $num/$den, stream device $ts"
 				stop_pipeline
 			fi
-			if [ -z "$PID" ] && [ "$ts" != - ] && [ "$feed" != - ]; then
-				start_pipeline "/dev/$ts" "/dev/$feed" "$w" "$h" "$num" "$den"
+			if [ -z "$PID" ]; then
+				if [ "$ts" != - ]; then
+					start_pipeline "/dev/$ts" "/dev/$feed" "$w" "$h" "$num" "$den"
+				else
+					start_black "/dev/$feed" "$w" "$h" "$num" "$den"
+				fi
+				FORMAT="$w $h $num $den $ts"
 			fi
 		elif [ -n "$PID" ]; then
 			stop_pipeline
@@ -184,22 +197,19 @@ run() {
 }
 
 select_input() {
-	local n dir node
+	local n dir
 	n=$(input_number "${1:-}") || die "unknown input: ${1:-} (hdmi, component, composite, svideo)"
-	dir=$(intf_dir) || die "Elgato Game Capture HD not found"
-	# shellcheck disable=SC2046
-	set -- $(app_state "$dir")
-	node=${2:--}
-	[ "$node" != - ] || die "application device not registered (format change in progress)"
-	v4l2-ctl -d "/dev/$node" -i "$n"
+	dir=$(app_dir) || die "application device not found (module not loaded?)"
+	v4l2-ctl -d "/dev/$(basename "$dir")" -i "$n"
 }
 
 status() {
 	local dir pid
-	if dir=$(intf_dir); then
+	if dir=$(app_dir); then
+		echo "application:    /dev/$(basename "$dir")"
 		echo "driver state:   $(app_state "$dir")"
 	else
-		echo "driver state:   no device"
+		echo "driver state:   module not loaded"
 	fi
 	pid=$(cat "$PIDFILE" 2>/dev/null)
 	if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
