@@ -24,6 +24,11 @@ app_read() {
 	grep '^frame=' "$WORK/ffmpeg-read.txt" | tail -1
 }
 
+# cpu_ticks PID: CPU time of a process and its finished children (ticks).
+cpu_ticks() {
+	awk '{ print $14 + $15 + $16 + $17 }' "/proc/$1/stat"
+}
+
 # sink_streams: streams playing into the bridge's sink "elgato_gchd".
 sink_streams() {
 	local i
@@ -48,6 +53,11 @@ sleep 3
 run bash "$BRIDGE" status
 expect "bridge running" "service: *running" bash "$BRIDGE" status
 expect "capture device off while no application streams" "^0$" sh -c "sudo dmesg | grep -c 'starting hardware boot'"
+T0=$(cpu_ticks "$BRIDGE_PID")
+sleep 20
+T1=$(cpu_ticks "$BRIDGE_PID")
+log "bridge CPU while idle: $((T1 - T0)) ticks in 20 s"
+expect "bridge sleeps while idle (< 5 ticks = 0.05 s CPU in 20 s)" "^[0-4]$" echo $((T1 - T0))
 
 step "first read (format before detection), then the format follows the source"
 app_read 12 > "$WORK/read1.txt"
@@ -121,6 +131,10 @@ confirm "guvcview shows the PS1 picture, smooth, without interlacing lines?"
 prompt "Swap the PS1 for the N64 (NTSC) while guvcview stays open; wait about 15 s."
 run app_state
 confirm "guvcview shows the N64 picture (in the PAL size, scaled) without reopening?"
+prompt "Unplug the Elgato while guvcview stays open; wait about 5 s."
+confirm "guvcview shows 'Please connect the Elgato Game Capture HD'?"
+prompt "Plug the Elgato in again; wait about 15 s."
+confirm "guvcview shows the N64 picture again?"
 prompt "Close guvcview."
 sleep 3
 expect "idle format follows the NTSC source after closing" "^idle 720 480 60000 1001 " app_state
