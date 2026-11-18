@@ -106,6 +106,8 @@ static void gchd_input_selection_enter(struct gchd *d)
 
  /* A new open starts from the common HDMI/default route. */
  d->previous_input = 0;
+ d->pal60_since = 0;
+ d->pal60_logged = false;
 
  /*
   * The control value is already kept in sync by gchd_set_input(). Do not
@@ -1215,6 +1217,10 @@ stop_and_restart:
   d->input_interlaced = target_interlaced;
   r = gchd_analog_mode_reconfigure(d);
  }
+ if (r)
+  goto restart_failed;
+ /* The source can change again during the setup: detect again. */
+ r = gchd_input_check_mode(d);
  if (r)
   goto restart_failed;
 

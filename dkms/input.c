@@ -826,7 +826,7 @@ int gchd_probe_video_source(struct gchd *d)
   }
   d->input_fps_den=1;
  } else {
-  u8 v, be_status = 0;
+  u8 v, std, be_status = 0;
 
   /*
    * After pre-detection tuning and the 0x94 prime, FA reports the analog
@@ -844,6 +844,9 @@ int gchd_probe_video_source(struct gchd *d)
   if (v != 6 && v != 7) {
    u8 lock;
 
+   d->pal60_since = 0;
+   d->pal60_logged = false;
+
    /* Diagnostic only: decoder lock status while no family is reported. */
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, lock);
    dev_info_ratelimited(&d->intf->dev,
@@ -856,7 +859,7 @@ int gchd_probe_video_source(struct gchd *d)
    * Family recognized: query decoder status/ready/height in sequence.
    */
   GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
-  GCHD_DEC_R(d, 0xe7, v);
+  GCHD_DEC_R(d, 0xe7, std);
   GCHD_DEC_R(d, 0xf1, v);
 
   /* The 0x94 prime already ran before SOURCE_DETECTION. */
@@ -878,6 +881,10 @@ int gchd_probe_video_source(struct gchd *d)
              "analog format status 0x%02x not locked yet\n", mode);
     return -ENOLINK;
    }
+   if (!d->pal60_since)
+    d->pal60_since = jiffies | 1;
+   if (gchd_analog_pal60_hold(d, std, d->pal60_since, &d->pal60_logged))
+    return -ENOLINK;
    d->input_interlaced = mode != GCHD_DEC_LOCK_240P;
    dev_info(&d->intf->dev,
             "analog format initial status=0x%02x; configuring %s\n",
@@ -885,6 +892,8 @@ int gchd_probe_video_source(struct gchd *d)
   } else if (v == 7) {
    u8 mode;
 
+   d->pal60_since = 0;
+   d->pal60_logged = false;
    d->input_width=720; d->input_height=576;
    d->input_interlaced=true; d->input_fps_num=50;
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, mode);
@@ -1515,6 +1524,28 @@ int gchd_analog_mode_pre_stop(struct gchd *d, bool interlaced)
 }
 
 /*
+ * A 60 Hz signal with PAL colour (0x88:E7 = 59) or a standard still being
+ * evaluated (bit 7) is what PAL consoles send for a few seconds after
+ * power-on and reset before they switch to 50 Hz. Returns true while such a
+ * signal should be waited out: at most GCHD_PAL60_HOLD_MS after since; a
+ * source that stays at 60 Hz is used after that.
+ */
+bool gchd_analog_pal60_hold(struct gchd *d, u8 e7, unsigned long since,
+                            bool *logged)
+{
+ if (e7 != 0x59 && !(e7 & 0x80))
+  return false;
+ if (time_after(jiffies, since + msecs_to_jiffies(GCHD_PAL60_HOLD_MS)))
+  return false;
+ if (!*logged)
+  dev_info(&d->intf->dev,
+           "60 Hz signal with PAL colour (0x88:E7=%02x); waiting up to %u ms for 50 Hz\n",
+           e7, GCHD_PAL60_HOLD_MS);
+ *logged = true;
+ return true;
+}
+
+/*
  * Family change while capturing, first part (encoder still in START).
  * family/lock are the 0x88:FA low nibble and 0x88:CA just read. When the
  * decoder reports the other family, load its apply block and retrigger the
@@ -1547,15 +1578,29 @@ int gchd_analog_family_pre_stop(struct gchd *d, u8 family, u8 lock)
  */
 int gchd_analog_family_reconfigure(struct gchd *d)
 {
+ unsigned long start = jiffies;
+ bool held = false;
  u8 fa, ca, family = 0, v;
- int i, r;
+ int r;
 
- for (i = 0; i < 8; ++i) {
+ for (;;) {
   GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, fa);
   GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, ca);
   family = fa & 0x0f;
-  if ((family == 6 || family == 7) && (ca == 0x7e || ca == 0x66))
-   break;
+  if ((family == 6 || family == 7) && (ca == 0x7e || ca == 0x66)) {
+   if (family != 6)
+    break;
+   GCHD_DEC_R(d, 0xe7, v);
+   if (!gchd_analog_pal60_hold(d, v, start, &held))
+    break;
+   msleep(250);
+   continue;
+  }
+  if (time_after(jiffies, start + msecs_to_jiffies(4000))) {
+   dev_info(&d->intf->dev,
+            "family change: decoder not locked (FA=%02x CA=%02x)\n", fa, ca);
+   return -ENOLINK;
+  }
   if (family == 6 || family == 7) {
    r = gchd_dec_apply_family(d, family, ca);
    if (r)
@@ -1568,11 +1613,6 @@ int gchd_analog_family_reconfigure(struct gchd *d)
   } else {
    msleep(500);
   }
- }
- if (i == 8) {
-  dev_info(&d->intf->dev,
-           "family change: decoder not locked (FA=%02x CA=%02x)\n", fa, ca);
-  return -ENOLINK;
  }
 
  d->input_width = 720;

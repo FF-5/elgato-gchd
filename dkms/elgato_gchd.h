@@ -22,6 +22,7 @@
 #define GCHD_RX_URBS_EP_IN 32	/* URBs queued on GCHD_EP_TS_IN */
 #define GCHD_RX_URBS_AUX_IN 8	/* URBs queued on GCHD_EP_AUX_IN */
 #define GCHD_USB_BUFSIZE 0x10000	/* bulk-IN URB size */
+#define GCHD_PAL60_HOLD_MS 5000
 #define GCHD_RING_FRAMES 512
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
@@ -114,6 +115,8 @@ struct gchd {
  bool mode_retriggered;
  u8 family_mismatch;  /* consecutive polls with the other analog family */
  unsigned long std_hold_until; /* ignore 0x88:E7 bit 7 until then */
+ unsigned long pal60_since; /* first 60 Hz lock seen by detection; 0 = none */
+ bool pal60_logged;
  bool detect_requested;
  bool disconnected;
  bool hw_initialized;
@@ -177,6 +180,7 @@ int gchd_analog_mode_pre_stop(struct gchd *, bool);
 int gchd_analog_mode_reconfigure(struct gchd *);
 int gchd_analog_family_pre_stop(struct gchd *, u8, u8);
 int gchd_analog_family_reconfigure(struct gchd *);
+bool gchd_analog_pal60_hold(struct gchd *, u8, unsigned long, bool *);
 int gchd_analog_pal_mode_change(struct gchd *, bool);
 int gchd_analog_poll_backend(struct gchd *);
 int gchd_common_block_a(struct gchd *);
