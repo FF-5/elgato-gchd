@@ -1797,6 +1797,26 @@ int gchd_input_read_family(struct gchd *d, u8 *family)
  return 0;
 }
 
+/* Log the analog decoder status registers. */
+static int gchd_input_read_status(struct gchd *d, u8 *v)
+{
+ GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v[0]);
+ GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v[1]);
+ GCHD_DEC_R(d, 0xe7, v[2]);
+ GCHD_DEC_R(d, 0xf1, v[3]);
+ return 0;
+}
+
+void gchd_input_log_status(struct gchd *d, const char *why)
+{
+ u8 v[4];
+
+ if (gchd_input_read_status(d, v))
+  return;
+ dev_info(&d->intf->dev, "%s: 0x88:FA=%02x CA=%02x E7=%02x F1=%02x\n",
+          why, v[0], v[1], v[2], v[3]);
+}
+
 int gchd_input_check_mode(struct gchd *d)
 {
  bool interlaced;

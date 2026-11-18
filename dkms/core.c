@@ -1115,7 +1115,8 @@ static void gchd_mode_workfn(struct work_struct *work)
 
  /*
   * The decoder can report the other family (60/50 Hz) only some time after
-  * the start. Two consecutive polls with it: configure again.
+  * the start. When it does so continuously for about 2 s (8 polls),
+  * configure again; shorter readings are ignored.
   */
  {
   u8 family;
@@ -1123,11 +1124,12 @@ static void gchd_mode_workfn(struct work_struct *work)
   if (!gchd_input_read_family(d, &family) &&
       ((family == 6 && d->input_height == 576) ||
        (family == 7 && d->input_height == 480))) {
-   if (++d->family_mismatch >= 2) {
+   if (++d->family_mismatch >= 8) {
     d->family_mismatch = 0;
     dev_info(&d->intf->dev,
              "source is %s while capturing; configuring again\n",
              family == 7 ? "50 Hz" : "60 Hz");
+    gchd_input_log_status(d, "decoder status");
     WRITE_ONCE(d->signal_present, false);
     WRITE_ONCE(d->detect_requested, true);
     schedule_delayed_work(&d->detect_work, 0);

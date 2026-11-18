@@ -166,6 +166,7 @@ int gchd_input_configure(struct gchd *);
 int gchd_input_start(struct gchd *);
 int gchd_input_check_mode(struct gchd *);
 int gchd_input_read_family(struct gchd *, u8 *);
+void gchd_input_log_status(struct gchd *, const char *);
 int gchd_input_configure_idle(struct gchd *);
 int gchd_prepare_input_detection(struct gchd *);
 int gchd_probe_video_source(struct gchd *);
