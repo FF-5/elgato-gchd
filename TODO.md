@@ -18,7 +18,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.3): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.4): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -28,7 +28,9 @@ on the `traces` branch.
   PAL, QUERYSTD/G_STD), 720×480/576 by source, 29.97 / 25 fps,
   interlaced top field first; input changes from other processes refused
   while one captures. Output sizes 720×480/576 (interlaced), 640×480 and
-  480×360 (progressive, transport output 2 on endpoint 0x84).
+  480×360 (progressive, transport output 2 on endpoint 0x84). Bitrate
+  (2-15 Mbit/s, CBR/VBR) and stretch as V4L2 controls, changeable while
+  capturing (encoder restart).
   Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
   `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; the decoder
   reports 60 Hz for a few seconds after power-on and reset, also with the
@@ -56,11 +58,6 @@ Video modes and switching:
 
 Output and settings (`docs/composite.md §10`):
 
-- [ ] **T-061 [OFF→HW] (M)** Bitrate control as recorded (CBR at the
-      maximum, VBR with `v_ave_bitrate` = displayed value below it; ranges
-      per output size), "stretch" (`v_in_source_type 2`), H.264
-      profile/level/GOP if exposed. V4L2 controls; each change restarts the
-      encoder like the recordings.
 - [ ] **T-066 [OFF→HW] (M)** v4l2-compliance 1.26.1 failures left after
       4c326eb: HDMI/component `G_DV_TIMINGS` fails without a signal although
       `V4L2_IN_CAP_DV_TIMINGS` is set, `VIDIOC_DV_TIMINGS_CAP` missing

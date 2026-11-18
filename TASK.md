@@ -1,83 +1,41 @@
-# TASK T-061 — Bitrate and stretch for analog sources
+# TASK T-064 — Input persistence
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** implemented; start grace fix e2071ac; hardware test with the test script
-- **Type:** driver feature
-- **Branch:** `feat/bitrate` (from `dev` 0.5.3)
-- **TODO items:** T-061 (stage 1)
+- **Status:** design
+- **Type:** driver feature + udev rule of our own
+- **Branch:** `feat/input-persistence` (from `dev` 0.5.4)
+- **TODO items:** T-064 (stage 1)
 
 ## Why
 
-The capture application sets the video bitrate (a slider per output size)
-and offers "stretch" for standard-definition input; the driver always
-encodes the default bitrate and never stretches. Recorded
-(`docs/composite.md §10`, `traces/composite/`):
-`gchd_288p_standard_bitrate_change_small`,
-`gchd_288p_mobile_bitrate_change_small`, `gchd_288p_stretch_input_small`.
+Maintainer requirement: HDMI on the first use after installation;
+afterwards the input last selected, also after unplugging, module reload
+and reboot. Today the driver remembers the input only while the module
+stays loaded (`gchd_last_input`).
 
-| Setting | Encoder fields |
-|---|---|
-| Standard, maximum (default) | CBR (`v_rate_mode 0`), `v_max_cpb_delay 3`, 11250 / 10125 / 5625 / 2812 |
-| Standard, lower | VBR (`v_rate_mode 1`), `v_max_cpb_delay 10`, e.g. 6000 / 5400 / 3000 / 600 |
-| Mobile | VBR, 4000 … 15000 |
-| Stretch | `v_in_source_type 2` instead of 3 |
+## Implementation (plan)
 
-## Implementation
-
-Recorded values (`docs/composite.md §10`): maximum 0.9·B, average B/2,
-minimum 0 / B/10 / B/4; `system_rate` ⌊1.07285·B + 461.7⌋ (+8 at 60 Hz);
-CBR only at the default 11250, VBR otherwise; stretch = `v_in_source_type`
-2. Controls `video_bitrate`, `video_bitrate_mode`, `stretch_sd_input`;
-on composite/S-video a change while capturing restarts the encoder.
+1. Module parameter `default_input` (0-3, default 0 = HDMI), read when the
+   device is probed.
+2. On every input change the driver sends a `change` uevent with
+   `GCHD_INPUT=<n>` on the USB interface.
+3. A new udev rule of ours in `udev-rules/` (the original file stays
+   untouched, RULES B4) runs a small helper that writes
+   `options elgato_gchd default_input=<n>` to
+   `/etc/modprobe.d/elgato-gchd-input.conf`; modprobe applies it at the
+   next load. The install step (T-071) installs the rule and helper.
+4. Optional, to decide with the maintainer: the same for the output size,
+   pixel format and bitrate (they are kept only while the device stays
+   connected).
+5. Test file `tools/tests/T-064.sh`: select an input, reload the module,
+   unplug/replug, check `--get-input`; the reboot check by prompt.
 
 ## Hardware test (maintainer)
 
-First run of the test script (`tools/gchd-test.sh`, `TODO.md` "Testing").
-It builds the branch, loads the module, runs everything and asks you for
-the console and for two visual checks. Needs `v4l-utils` and `ffmpeg`
-(already installed). In your home directory:
-
-```sh
-cd ~ && git -C elgato-gchd fetch origin
-git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
-mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-061.sh > tests/T-061.sh
-bash gchd-test.sh T-061 --branch feat/bitrate
-```
-
-Fetch the script and test file again each time (both changed). Paste the
-summary block it prints at the end. If any line says FAIL or
-WARN, paste the whole log file too (path printed at the end, in
-`~/gchd-test-logs/`). If the script itself misbehaves (wrong prompt,
-hangs), say where; Ctrl+C stops it.
+Follows with the implementation.
 
 ## Findings
-- Maintainer requests (2026-11-18, before T-061): all wanted Windows
-  recordings listed in `TODO.md` "Evidence wanted" (R1-R10, marked
-  needed / optional / not needed); hardware tests through a script
-  (`TODO.md` "Testing", `tools/gchd-test.sh` with `tools/tests/smoke.sh`
-  on the `tools` branch, CLAUDE.md "Hardware testing"); pre-release test
-  T-090.
-- 3768423 test (first gchd-test.sh run): bitrate 11250 CBR, 6000 VBR,
-  14040 VBR and back to 11250 CBR while capturing (encoder restarts, stream
-  continues), stretch (horizontally stretched), 480×360 at 15000, final
-  picture: fine. The 4 FAILs were my test's expected frame rate: ffprobe's
-  `r_frame_rate` is the field rate for interlaced streams (50/1); fixed in
-  the test files. 480×360 at 4000: the first data came 0.62 s after START,
-  after the 500 ms signal-loss debounce, so the driver redetected and
-  switched again three times in 10 s; e2071ac waits 2 s after every START
-  before declaring a signal loss.
 
 ## Maintainer comments
 
-=== summary (T-061, 4aa0117 TASK: findings of the first script run; retest)
-PASS | step 2 default: 11250 kbit/s CBR | stream 720x576 50/1 tt
-PASS | step 3 6000 kbit/s VBR (set while stopped) | stream 720x576 50/1 tt
-PASS | step 4 14040 kbit/s VBR, changed while capturing | stream 720x576 50/1 tt
-PASS | step 5 back to 11250 CBR while capturing | stream 720x576 50/1 tt
-PASS | step 6 stretch | Is the picture different from normal (stretched)? Describe in the note how. -- horizontally stretched
-PASS | step 7 mobile 480x360 at 4000 kbit/s | stream 480x360 25/1 progressive
-PASS | step 8 mobile 480x360 at 15000 kbit/s | stream 480x360 25/1 progressive
-PASS | step 9 picture check at the end | Normal PS1 picture with sound?
-
-FAIL: 0  WARN: 0
