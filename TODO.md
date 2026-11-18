@@ -56,9 +56,14 @@ settings above work on `dev`.
       userspace program, `CMakeLists.txt` and the original udev rule
       removed (git history and the original repository keep them),
       `firmware_extract/` → `firmware/`, top-level README rewritten for the
-      driver with origin and credits. Licence files (GPL-2.0 `LICENSE`,
-      original MIT notice kept as `LICENSE.MIT`) and SPDX lines in every
-      source file: waiting for the maintainer's explicit go-ahead.
+      driver with origin and credits.
+- [ ] **T-094 (S, maintainer)** Licence files: `LICENSE` → `LICENSE.MIT`
+      (original notice unchanged), new `LICENSE` with the GPL-2.0 text,
+      README licence section and SPDX lines in the driver sources
+      accordingly. Approved by the maintainer (2026-11-18), but the
+      development session's permission check blocks licence-file changes;
+      the maintainer makes them (commands in the T-070 findings) or allows
+      them in the session settings.
 - [ ] **T-071 (M)** Scripts for non-technical users, runnable from a file
       manager (executable, with a terminal window; `pkexec` for root):
       - `firmware/` (renamed from `firmware_extract/`), bash: extracts the
