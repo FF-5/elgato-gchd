@@ -21,7 +21,9 @@
 #
 # Environment: GCHD_LOOP_LABEL (card label of the loopback device, default
 # "Elgato Game Capture HD"), GCHD_DEINTERLACE (ffmpeg filter, default
-# "bwdif=mode=send_field:deint=interlaced").
+# "bwdif=mode=send_field:deint=interlaced"), GCHD_IGNORE (process names
+# whose opens of the loopback device do not start the capture, default
+# "pipewire wireplumber": they open video devices briefly to list them).
 
 set -u
 
@@ -33,6 +35,7 @@ AUDIO_DESC="Elgato Game Capture HD"
 POLL=1             # seconds between checks
 OPEN_POLLS=2       # consecutive checks with a reader before the capture starts
 IDLE_FPS=5
+IGNORE=${GCHD_IGNORE:-pipewire wireplumber}
 STATE_DIR=${XDG_RUNTIME_DIR:-/tmp}/gchd-bridge-$(id -u)
 PIDFILE=$STATE_DIR/pid
 REQUEST=$STATE_DIR/input
@@ -89,15 +92,20 @@ input_number() {
 	esac
 }
 
-# Processes other than ours that have the loopback device open.
+# Processes other than ours and the ignored ones that have the loopback
+# device open, as "PID:NAME".
 readers() {	# readers LOOP OWN-PID...
-	local loop=$1 p own
+	local loop=$1 p own comm
 	shift
 	for p in $(fuser "$loop" 2>/dev/null); do
 		for own in "$$" "$@"; do
 			[ "$p" = "$own" ] && continue 2
 		done
-		echo "$p"
+		comm=$(cat "/proc/$p/comm" 2>/dev/null)
+		for own in $IGNORE; do
+			[ "$comm" = "$own" ] && continue 2
+		done
+		echo "$p:$comm"
 	done
 }
 
@@ -129,9 +137,20 @@ PID=          # running ffmpeg (black picture or capture)
 MODE=none     # none | idle | capture
 SIZE=
 
+# Stop the running ffmpeg: TERM, then KILL after 3 s (an ffmpeg that waits
+# for data from an input without signal may not react to TERM).
 stop_pipeline() {
+	local _
 	[ -n "$PID" ] || return 0
 	kill "$PID" 2>/dev/null
+	for _ in 1 2 3 4 5 6; do
+		kill -0 "$PID" 2>/dev/null || break
+		sleep 0.5
+	done
+	if kill -0 "$PID" 2>/dev/null; then
+		msg "ffmpeg $PID did not stop; killing it"
+		kill -KILL "$PID" 2>/dev/null
+	fi
 	wait "$PID" 2>/dev/null
 	PID=
 }
@@ -178,7 +197,7 @@ cleanup() {
 }
 
 run() {
-	local cap loop size seen=0 hup=0 n idle_check=0
+	local cap loop size seen=0 hup=0 n idle_check=0 r
 	mkdir -p "$STATE_DIR"
 	echo $$ > "$PIDFILE"
 	trap cleanup INT TERM
@@ -208,8 +227,10 @@ run() {
 			fi
 		fi
 
-		if [ -n "$(readers "$loop" "${PID:-0}")" ]; then
+		r=$(readers "$loop" "${PID:-0}")
+		if [ -n "$r" ]; then
 			seen=$((seen + 1))
+			[ "$seen" = $OPEN_POLLS ] && msg "readers: ${r//$'\n'/ }"
 		else
 			seen=0
 		fi
