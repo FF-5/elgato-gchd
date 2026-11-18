@@ -44,9 +44,12 @@ encodes the default bitrate and never stretches. Recorded
 Follows with the implementation.
 
 ## Findings
+- Maintainer requests (2026-11-18, before T-061): all wanted Windows
+  recordings listed in `TODO.md` "Evidence wanted" (R1-R10, marked
+  needed / optional / not needed); hardware tests through a script
+  (`TODO.md` "Testing", `tools/gchd-test.sh` with `tools/tests/smoke.sh`
+  on the `tools` branch, CLAUDE.md "Hardware testing"); pre-release test
+  T-090.
 
 ## Maintainer comments
 
-Before starting this task I want you to annotate somethings that have occurred to me that might make the whole development process somewhat faster:
-- I already saw that you wrote on TODO.md traces that you want from me to verify somethings. Please write there all traces that we need to verify things. Mark any that we might not need because the feature we already have it working.
-- We need a better way to test changes. I was already thinking that before doing the first merge to master (after HDMI), I want to make sure everything works and thought that this process can be easily automated. Instead of me inputting commands every time and copying log outputs all of this can be done with a script. So for the last test we are going to need a way to test everything that we have planned for before the master merge. I was thinking you can just write a script with all the commands needed and log the precise info you need to verify if the element we're testing is wrong. I'll do the visual testing and on every step that you need me to confirm output or switch physical connections, you prompt me with what to do and to confirm when I'm ready. I also thought that maybe we can already start doing this for all the small tests we are running now, only the last test is going to be longer but maybe not as detailed as these smaller tests.
