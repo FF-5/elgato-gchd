@@ -57,12 +57,13 @@ and re-check them before every commit.
    are written on the `tools` branch (or a feature branch made from it) and
    used from a worktree or with `git show origin/tools:tools/<script>`. Traces,
    decoded trace listings, logs and analysis notes go to the `traces` branch.
-4. **Credits and licence:** the project is the kernel driver only
-   (maintainer decision 2026-11-18; the original userspace program was
-   removed in T-070 and stays in the git history and in the original
-   repository). `CREDITS.md` and the original MIT licence notice are kept
-   unchanged; licence files are changed only with the maintainer's
-   explicit consent. The top-level `README.md` is ours.
+4. **Files of the original project:** the project is the kernel driver
+   only (maintainer decision 2026-11-18; the original userspace program
+   was removed in T-070 and stays in the git history and in the original
+   repository). Any file that came from the original project may be edited
+   (maintainer 2026-11-18). Keep the credits to the original authors
+   (`CREDITS.md`, README) and the original MIT copyright and permission
+   notice: they are required by the MIT licence.
 5. Never commit directly to `master`. Never force-push `dev` or `master`.
    Never rewrite published history.
 6. One feature branch per task. Merge into `dev` only when the task's
