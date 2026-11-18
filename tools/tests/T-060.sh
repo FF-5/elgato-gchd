@@ -31,8 +31,8 @@ step "driver with three devices"
 run sh -c "pkill -f 'gchd-bridge run'; sudo modprobe -r v4l2loopback; true"
 load_module replug
 run v4l2-ctl --list-devices
-expect "H.264 device" "Elgato Game Capture HD \(H.264\)" v4l2-ctl --list-devices
-expect "application device registered, idle" "^idle video[0-9]+ 720 (480|576) " app_attr
+expect "H.264 device name" "Card type *: Elgato Game Capture HD \(H.264\)" v4l2-ctl -d "$DEV" -D
+expect "application device registered, idle, H.264 device named" "^idle video[0-9]+ [0-9]+ [0-9]+ [0-9]+ [0-9]+ video[0-9]+ $(basename "$DEV")$" app_attr
 expect "application device offers YUYV" "YUYV" v4l2-ctl -d "$(app_dev)" --list-formats-ext
 
 step "bridge idle: capture device off"
@@ -43,6 +43,7 @@ BRIDGE_PID=$!
 sleep 3
 run bash "$BRIDGE" status
 expect "bridge running" "service: *running" bash "$BRIDGE" status
+expect "application device on composite: 720x480 or 720x576" " 720 (480|576) " app_attr
 expect "capture device off while no application streams" "^0$" sh -c "sudo dmesg | grep -c 'starting hardware boot'"
 
 step "first read: source detected (PAL), device registered again with 720x576"
