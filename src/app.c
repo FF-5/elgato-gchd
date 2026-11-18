@@ -515,11 +515,22 @@ static int gchd_feed_queue_setup(struct vb2_queue *q, unsigned int *nb,
 	return 0;
 }
 
+/*
+ * One frame per buffer. A payload of 0 means the whole buffer: write()
+ * queues its buffers with 0 (the write emulation does not pass its byte
+ * count to the driver).
+ */
 static int gchd_feed_buf_prepare(struct vb2_buffer *vb)
 {
 	struct gchd *d = vb2_get_drv_priv(vb->vb2_queue);
+	unsigned long size = d->feed_width * d->feed_height * 2;
+	unsigned long used = vb2_get_plane_payload(vb, 0);
 
-	if (vb2_get_plane_payload(vb, 0) != d->feed_width * d->feed_height * 2)
+	if (!used) {
+		used = size;
+		vb2_set_plane_payload(vb, 0, size);
+	}
+	if (used != size)
 		return -EINVAL;
 	return 0;
 }
