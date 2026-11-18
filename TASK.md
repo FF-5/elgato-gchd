@@ -366,3 +366,139 @@ Paste the summary; on FAILs the log.
 
 ## Maintainer comments
 
+Notes:
+- during the first FAIL I had the external setting program, OBS and the OBS setting window open. This might have induced the FAIL.
+- I also forgot to mention that we need to keep installation scripts either distro agnostic or distro all-encompassing. Because although I'm developing on an Ubuntu flavored distro, I expect most people will not.
+
+gchd-test T-060-settings 20261118-221710 host 6.8.0-146-generic
+log: /home/ff5/gchd-test-logs/T-060-settings-20261118-221710.log
+== build
+$ git fetch -q origin
+$ git checkout -q feat/app-bridge
+$ git pull -q --ff-only
+commit: 0d5409b settings: window 'Elgato Game Capture HD Settings' (GTK), installed with the driver part (T-060)
+commit: 0d5409b settings: window 'Elgato Game Capture HD Settings' (GTK), installed with the driver part (T-060)
+build rc=0 warnings=0
+
+=== step 1: install the driver part (window, menu entry)
+$ sudo rmmod elgato_gchd
+$ bash /home/ff5/elgato-gchd/install-driver.sh --driver --yes --in-terminal
+[1mElgato Game Capture HD driver 0.5.8[0m
+
+[1m==> 1/3 Firmware[0m
+[32mFirmware found in /lib/firmware/gchd.[0m
+
+[1m==> 2/3 Building the driver[0m
+[32mBuilt /home/ff5/elgato-gchd/build/elgato_gchd.ko.[0m
+
+[1m==> 3/3 Installing[0m
+Sign command: /usr/bin/kmodsign
+Signing key: /var/lib/shim-signed/mok/MOK.priv
+Public certificate (MOK): /var/lib/shim-signed/mok/MOK.der
+
+Building module:
+Cleaning build area...
+make -j4 KERNELRELEASE=6.8.0-146-generic KDIR=/lib/modules/6.8.0-146-generic/build...
+Signing module /var/lib/dkms/elgato-gchd/0.5.8/build/elgato_gchd.ko
+Cleaning build area...
+
+elgato_gchd.ko.zst:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/6.8.0-146-generic/updates/dkms/
+depmod...
+[32mInstalled with DKMS (rebuilt automatically after kernel updates).[0m
+[32mudev rules installed (settings are remembered; device name /dev/elgato-gchd).[0m
+[32mSettings installed: 'Elgato Game Capture HD Settings' in the application menu (gchd-settings-gui); text menu: gchd-settings[0m
+[32mDriver loaded. Plug in the Game Capture HD; it appears as a /dev/video device.[0m
+Watch: v4l2-ctl -d /dev/elgato-gchd -v pixelformat=MPEG && ffplay -f mpegts /dev/elgato-gchd
+
+$ ls /usr/local/bin/gchd-settings-gui
+/usr/local/bin/gchd-settings-gui
+[PASS] settings window installed
+$ ls /usr/local/share/applications/elgato-gchd-settings.desktop
+/usr/local/share/applications/elgato-gchd-settings.desktop
+[PASS] menu entry installed
+PROMPT: Unplug the Elgato and plug it in again; wait 5 s.
+$ v4l2-ctl -d /dev/elgato-gchd -i 2 -v width=720,height=480 -c video_bitrate=11250000,video_bitrate_mode=1,h264_profile=4,stretch_sd_input=0
+Video input set to 2 (Composite: Camera, no signal)
+--- dmesg step 1
+[101193.186445] usbcore: deregistering interface driver elgato_gchd
+[101203.562256] elgato_gchd 1-2:1.0: GCHD lifecycle: USB probe; registering V4L2 only\n
+[101203.566398] elgato_gchd 1-2:1.0: GCHD lifecycle: USB present; V4L2 registered; hardware stays powered off until STREAMON
+[101203.566418] usbcore: registered new interface driver elgato_gchd
+[101212.348949] usb 1-2: USB disconnect, device number 110
+[101218.098147] usb 1-2: new high-speed USB device number 111 using xhci_hcd
+[101218.476872] usb 1-2: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
+[101218.476878] usb 1-2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[101218.476880] usb 1-2: Product: GameCapture HD
+[101218.476881] usb 1-2: Manufacturer: Elgato
+[101218.476882] usb 1-2: SerialNumber: 04107F1267
+[101218.481940] elgato_gchd 1-2:1.0: GCHD lifecycle: USB probe; registering V4L2 only\n
+[101218.482877] elgato_gchd 1-2:1.0: GCHD lifecycle: USB present; V4L2 registered; hardware stays powered off until STREAMON
+[101221.071067] elgato_gchd 1-2:1.0: input switch requested: old=2 new=2 hw_initialized=0 streaming=0
+
+=== step 2: window: show and change the settings
+PROMPT: Open 'Elgato Game Capture HD Settings' from the application menu (or run gchd-settings-gui).
+[PASS] the window shows Device /dev/elgato-gchd, Input Composite, Output size Source size, Bitrate 11250, Constant (CBR), High, Stretch off?
+PROMPT: In the window: Output size 640x480, Bitrate slider to about 8000, Bitrate mode Variable (VBR), H.264 profile Main, Stretch on.
+$ v4l2-ctl -d /dev/elgato-gchd -V
+Format Video Capture:
+	Width/Height      : 640/480
+	Pixel Format      : 'MPEG' (MPEG-1/2/4)
+	Field             : None
+	Bytes per Line    : 0
+	Size Image        : 65424
+	Colorspace        : Rec. 709
+	Transfer Function : Default (maps to Rec. 709)
+	YCbCr/HSV Encoding: Default (maps to Rec. 709)
+	Quantization      : Default (maps to Full Range)
+	Flags             : 
+[PASS] output size 640x480
+$ v4l2-ctl -d /dev/elgato-gchd -C video_bitrate
+video_bitrate: 8003000
+[PASS] bitrate about 8000 kbit/s
+$ v4l2-ctl -d /dev/elgato-gchd -C video_bitrate_mode
+video_bitrate_mode: 0 (Variable Bitrate)
+[PASS] bitrate mode VBR
+$ v4l2-ctl -d /dev/elgato-gchd -C h264_profile
+h264_profile: 2 (Main)
+[PASS] profile Main
+$ v4l2-ctl -d /dev/elgato-gchd -C stretch_sd_input
+stretch_sd_input: 1
+[PASS] stretch on
+$ cat /etc/modprobe.d/elgato-gchd-settings.conf
+options elgato_gchd input=2 output=1 format=1 bitrate=8003 bitrate_mode=0 stretch=1 h264_profile=2 h264_level=0 std_composite=1 std_svideo=0
+[PASS] settings remembered (modprobe.d)
+PROMPT: In the window set them back: Source size, Bitrate 11250, Constant (CBR), High, Stretch off. Leave the window open.
+--- dmesg step 2
+
+
+=== step 3: window while OBS captures
+PROMPT: Start OBS with the source 'Elgato Game Capture HD' showing the picture. In the settings window choose Input 'S-Video'.
+[FAIL] the window refused it (Input back on Composite) and explained that a program is capturing? -- output window froze but nowhere did I see any message box
+PROMPT: In the settings window move the Bitrate slider to about 6000; wait 5 s.
+$ v4l2-ctl -d /dev/elgato-gchd -C video_bitrate
+video_bitrate: 6017000
+[PASS] bitrate changed while capturing
+[FAIL] OBS kept showing the picture (a short pause is normal)? -- image is still frozen from before
+PROMPT: Set the Bitrate back to 11250 in the window; close the window and OBS.
+--- dmesg step 3
+[101700.220789] elgato_gchd 1-2:1.0: shutdown: device in STOP after RESET; IDLE and RESET again
+[101700.236903] elgato_gchd 1-2:1.0: hardware shutdown done (state 0x0011 before, 0x0012 now)
+
+=== summary (T-060-settings, 0d5409b settings: window 'Elgato Game Capture HD Settings' (GTK), installed with the driver part (T-060))
+PASS | step 1 install the driver part (window, menu entry) | settings window installed
+PASS | step 1 install the driver part (window, menu entry) | menu entry installed
+PASS | step 2 window: show and change the settings | the window shows Device /dev/elgato-gchd, Input Composite, Output size Source size, Bitrate 11250, Constant (CBR), High, Stretch off?
+PASS | step 2 window: show and change the settings | output size 640x480
+PASS | step 2 window: show and change the settings | bitrate about 8000 kbit/s
+PASS | step 2 window: show and change the settings | bitrate mode VBR
+PASS | step 2 window: show and change the settings | profile Main
+PASS | step 2 window: show and change the settings | stretch on
+PASS | step 2 window: show and change the settings | settings remembered (modprobe.d)
+FAIL | step 3 window while OBS captures | the window refused it (Input back on Composite) and explained that a program is capturing? -- output window froze but nowhere did I see any message box
+PASS | step 3 window while OBS captures | bitrate changed while capturing
+FAIL | step 3 window while OBS captures | OBS kept showing the picture (a short pause is normal)? -- image is still frozen from before
