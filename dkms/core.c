@@ -67,11 +67,11 @@ static void gchd_set_negotiated(struct gchd *d, u32 width, u32 height)
 }
 
 /* Analog standards reported for composite and S-video. */
-#define GCHD_ANALOG_STDS (V4L2_STD_NTSC_M | V4L2_STD_PAL | V4L2_STD_PAL_60)
+#define GCHD_ANALOG_STDS (V4L2_STD_NTSC_M | V4L2_STD_PAL)
 
 static bool gchd_std_is_50hz(v4l2_std_id std)
 {
- return (std & V4L2_STD_PAL) && !(std & V4L2_STD_PAL_60);
+ return !!(std & V4L2_STD_PAL);
 }
 
 /*
@@ -1664,6 +1664,10 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  struct gchd *d = video_drvdata(f);
  struct v4l2_ctrl *ctrl;
  int r;
+
+ /* Only the file handle that owns the capture buffers may switch inputs. */
+ if (i != d->input && vb2_queue_is_busy(&d->vbq, f))
+  return -EBUSY;
 
  r = gchd_set_input(d, i);
  if (r)
