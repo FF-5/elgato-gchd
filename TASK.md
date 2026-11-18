@@ -41,3 +41,6 @@ Follows with the implementation.
 
 ## Maintainer comments
 
+I've uploaded 2 traces:
+- The composite PAL you requested. Starts with the PAL source on and then I open the Windows program. Then I put the output to 640x480. Then I move the bitrate from max (11.3Mbps according to the software) to min (3.0Mbps) , then somewhere around the middle of the slider (7.0Mbps), then back again to max bitrate. At the end I adjusted the analog audio gain from where it was (-12dB) to 0dB, then +12dB and finally back to -12dB.
+- 2 NTSC traces you wanted to have in 1. It's a PS2 (480i) that starts with the source on as I start the Windows program. I first change the output and I change the bitrate setting to min/(around)center/max for each output. Then I change the analog audio setting from -12dB to 0dB, then +12dB and then back to -12dB.
