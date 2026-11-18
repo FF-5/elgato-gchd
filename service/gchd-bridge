@@ -20,8 +20,12 @@
 # chose into the frame input device: from the H.264 device STREAM-NODE of
 # the attached Game Capture HD (decoded, deinterlaced one frame per field,
 # scaled, with the audio to the audio source), or a black picture while no
-# Game Capture HD is attached. When the application stops, ffmpeg stops and
-# the capture device switches off.
+# "Please connect" picture while no Game Capture HD is attached. When the
+# application stops, ffmpeg stops and the capture device switches off.
+#
+# The service sleeps until the driver reports a change (a "change" uevent of
+# the application device, through udevadm monitor); without udevadm it
+# checks every 0.5 s.
 #
 # Needs: ffmpeg, v4l2-ctl, pactl (optional, for the audio).
 # Environment: GCHD_DEINTERLACE (ffmpeg filter, default
@@ -33,7 +37,10 @@ DEINTERLACE=${GCHD_DEINTERLACE:-bwdif=mode=send_field:deint=interlaced}
 SINK=elgato_gchd
 SOURCE=elgato_gchd_audio
 AUDIO_DESC="Elgato Game Capture HD"
-POLL=0.5           # seconds between checks of the driver state
+POLL=0.5           # seconds between checks without udevadm
+IDLE_WAIT=30       # longest sleep while no application streams
+BUSY_WAIT=1        # longest sleep while ffmpeg runs (to notice its end)
+CONNECT_TEXT="Please connect the Elgato Game Capture HD"
 STATE_DIR=${XDG_RUNTIME_DIR:-/tmp}/gchd-bridge-$(id -u)
 PIDFILE=$STATE_DIR/pid
 
@@ -132,18 +139,47 @@ start_pipeline() {	# start_pipeline TS FEED W H NUM DEN
 	msg "capture: $1 -> $2 ($3x$4, $5/$6 frames/s)"
 }
 
-# Black picture while no Game Capture HD is attached.
+# "Please connect" picture while no Game Capture HD is attached (black
+# without the drawtext filter).
 start_black() {	# start_black FEED W H NUM DEN
+	local vf=format=yuyv422
+	if ffmpeg -hide_banner -filters 2>/dev/null | grep -qw drawtext; then
+		vf="drawtext=text='$CONNECT_TEXT':font=Sans:fontcolor=white:fontsize='min(h/18\,w/26)':x=(w-text_w)/2:y=(h-text_h)/2,$vf"
+	fi
 	ffmpeg -hide_banner -loglevel error -nostdin \
 		-re -f lavfi -i "color=c=black:s=$2x$3:r=$4/$5" \
-		-vf format=yuyv422 -f v4l2 "$1" &
+		-vf "$vf" -f v4l2 "$1" &
 	PID=$!
-	msg "no Game Capture HD: black $2x$3 -> $1"
+	msg "no Game Capture HD: picture $2x$3 -> $1"
+}
+
+# ------------------------------------------------------------ waiting
+
+MON_PID=
+MON_FD=
+# Kernel uevents of video devices (the driver's state changes, plug-in,
+# unplug) through udevadm monitor.
+monitor_start() {
+	command -v udevadm >/dev/null || { msg "udevadm missing: checking every $POLL s"; return; }
+	coproc MON { exec udevadm monitor --kernel --subsystem-match=video4linux 2>/dev/null; }
+	MON_FD=${MON[0]}
+}
+
+# Sleep until a uevent arrives (at most SECONDS), then read the ones queued.
+wait_change() {	# wait_change SECONDS
+	if [ -n "$MON_PID" ] && kill -0 "$MON_PID" 2>/dev/null; then
+		read -r -t "$1" -u "$MON_FD" _ || return 0
+		while read -r -t 0.05 -u "$MON_FD" _; do :; done
+	else
+		sleep "$POLL" &
+		wait $! 2>/dev/null
+	fi
 }
 
 # ------------------------------------------------------------ service
 
 cleanup() {
+	[ -n "$MON_PID" ] && kill "$MON_PID" 2>/dev/null
 	stop_pipeline
 	audio_cleanup
 	rm -f "$PIDFILE"
@@ -156,6 +192,7 @@ run() {
 	echo $$ > "$PIDFILE"
 	trap cleanup INT TERM
 	audio_setup
+	monitor_start
 
 	while :; do
 		state=
@@ -191,8 +228,11 @@ run() {
 			sleep 1
 		fi
 
-		sleep "$POLL" &
-		wait $! 2>/dev/null
+		if [ -n "$PID" ]; then
+			wait_change $BUSY_WAIT
+		else
+			wait_change $IDLE_WAIT
+		fi
 	done
 }
 

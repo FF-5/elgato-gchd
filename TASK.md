@@ -116,6 +116,18 @@ at the end of it).
 
 ## Findings
 
+- Persistent application device, second run (0ca508b): 27/27 PASS (the
+  format follows the source again after guvcview closes).
+- Maintainer (2026-11-18): (1) only the device should be claimed while
+  idle; work only when a program opens it. The driver already does
+  nothing while idle (no timer, thread or USB traffic); the bridge polled
+  a sysfs file every 0.5 s. Now the driver sends a "change" uevent with
+  each state change and the bridge sleeps on `udevadm monitor` (at most
+  30 s idle, 1 s while ffmpeg runs to notice its end). (2) a picture
+  "Please connect the Elgato Game Capture HD" while no device is
+  attached: drawn by the bridge (ffmpeg drawtext; plain black without
+  it). Both in the test (idle CPU of the bridge over 20 s; guvcview with
+  the Elgato unplugged).
 - First run of the persistent application device (f7c1e21): 26/27 PASS.
   Device registered at load (video0, frame input video1, H.264 video2),
   capture device off while idle, frames from the first read (772 in
@@ -220,38 +232,3 @@ at the end of it).
 
 ## Maintainer comments
 
-Concerns:
-- I know it mostly takes up memory, but I was wondering if CPU usage could be reduced to only query for the device. Since the only thing we need the driver to do initially is to claim a software device for the hardware. Only once a program opens the software device the driver and bridge need to do work.
-- I was also wondering, since in this configuration a user can open the device with no HW connected, can the bridge display an image that says something like "Please connect Game Capture HD" or something like that?
-
-Now everything passed:
-=== summary (T-060, 0ca508b dkms: application format follows the source also after REQBUFS(0) and the last close)
-PASS | step 1 driver: application device registered at module load | H.264 device found by name
-PASS | step 1 driver: application device registered at module load | application device idle, Game Capture HD attached
-PASS | step 1 driver: application device registered at module load | sizes 1920x1080 ... 640x480 offered
-PASS | step 2 bridge idle: capture device off | bridge running
-PASS | step 2 bridge idle: capture device off | capture device off while no application streams
-PASS | step 3 first read (format before detection), then the format follows the source | frames delivered (>= 200 in 12 s)
-PASS | step 3 first read (format before detection), then the format follows the source | reader not cut off (no 'No such device')
-PASS | step 3 first read (format before detection), then the format follows the source | idle format now the PAL source: 720x576, 50 frames/s
-PASS | step 4 read the source format: 720x576 YUYV, about 50 frames/s | stream YUYV 720x576
-PASS | step 4 read the source format: 720x576 YUYV, about 50 frames/s | frame count >= 450 in 15 s
-PASS | step 4 read the source format: 720x576 YUYV, about 50 frames/s | capture device started
-PASS | step 5 application chooses 1280x720: scaled | stream YUYV 1280x720
-PASS | step 5 application chooses 1280x720: scaled | frames delivered (>= 250 in 10 s)
-PASS | step 6 application closed: capture device off | hardware shut down after the application stopped
-PASS | step 6 application closed: capture device off | state idle
-PASS | step 7 audio while capturing | the bridge plays into the audio sink
-PASS | step 7 audio while capturing | audio source delivers samples
-PASS | step 8 input change on the application device while reading | reader kept the device (no 'No such device')
-PASS | step 8 input change on the application device while reading | reader got frames (>= 600 in 30 s)
-PASS | step 8 input change on the application device while reading | input composite on the H.264 device too
-PASS | step 9 unplug and replug while reading | reader kept the device through unplug/replug
-PASS | step 9 unplug and replug while reading | frames throughout (>= 900 in 45 s)
-PASS | step 9 unplug and replug while reading | Game Capture HD attached again
-PASS | step 10 guvcview | guvcview shows the PS1 picture, smooth, without interlacing lines?
-PASS | step 10 guvcview | guvcview shows the N64 picture (in the PAL size, scaled) without reopening?
-PASS | step 10 guvcview | idle format follows the NTSC source after closing
-PASS | step 11 bridge stopped | audio source removed
-
-FAIL: 0  WARN: 0

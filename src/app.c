@@ -25,7 +25,8 @@
  *   STATE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE
  * STATE is "streaming" while an application streams from the application
  * device, "idle" otherwise; STREAM-NODE is the H.264 device of the attached
- * Game Capture HD, "-" when none is attached.
+ * Game Capture HD, "-" when none is attached. Every change of the state is
+ * also sent as a "change" uevent of the application device.
  */
 
 #include <linux/module.h>
@@ -76,10 +77,16 @@ static struct gchd_app {
 	bool registered;
 } app;
 
+/*
+ * State change: notify pollers of the attribute and send a "change"
+ * uevent, so that the userspace program can sleep until something happens.
+ */
 static void gchd_app_notify(void)
 {
-	if (app.registered)
-		sysfs_notify(&app.vdev.dev.kobj, NULL, "gchd_state");
+	if (!app.registered)
+		return;
+	sysfs_notify(&app.vdev.dev.kobj, NULL, "gchd_state");
+	kobject_uevent(&app.vdev.dev.kobj, KOBJ_CHANGE);
 }
 
 static void gchd_app_pix(u32 width, u32 height, struct v4l2_pix_format *p)
