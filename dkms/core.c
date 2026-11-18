@@ -10,7 +10,7 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.5.2");
+MODULE_VERSION("0.5.3");
 
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
@@ -94,11 +94,26 @@ static void gchd_update_tvnorms(struct gchd *d)
  d->vdev.tvnorms = d->input >= 2 ? GCHD_ANALOG_STDS : 0;
 }
 
+/* Output size of composite and S-video for a preset. */
+static void gchd_analog_out_size(const struct gchd *d, u8 out,
+                                 u32 *width, u32 *height);
+
+/* Output preset for a requested size: 640x480, 480x360, else standard. */
+static u8 gchd_analog_out_for(u32 width, u32 height)
+{
+ if (width == 640 && height == 480)
+  return GCHD_OUT_640X480;
+ if (width == 480 && height == 360)
+  return GCHD_OUT_MOBILE;
+ return GCHD_OUT_STANDARD;
+}
+
 /* Field order of the encoded analog stream: top field first (both families). */
 static enum v4l2_field gchd_field(const struct gchd *d)
 {
  if (d->input >= 2)
-  return V4L2_FIELD_INTERLACED_TB;
+  return d->analog_out == GCHD_OUT_STANDARD ?
+         V4L2_FIELD_INTERLACED_TB : V4L2_FIELD_NONE;
  return d->input_interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
 }
 
@@ -111,6 +126,24 @@ static void gchd_nominal_format(const struct gchd *d, u32 *width, u32 *height)
  } else {
   *width = 1280;
   *height = 720;
+ }
+}
+
+static void gchd_analog_out_size(const struct gchd *d, u8 out,
+                                 u32 *width, u32 *height)
+{
+ if (out == GCHD_OUT_640X480) {
+  *width = 640;
+  *height = 480;
+ } else if (out == GCHD_OUT_MOBILE) {
+  *width = 480;
+  *height = 360;
+ } else {
+  *width = 720;
+  if (d->input_height == 480 || d->input_height == 576)
+   *height = d->input_height;
+  else
+   *height = gchd_std_is_50hz(gchd_analog_std(d)) ? 576 : 480;
  }
 }
 
@@ -593,8 +626,10 @@ static bool gchd_rx_urb_stopped(int status)
 }
 
 /*
- * Endpoint 0x81 carries the MPEG-TS stream. Receive transfers are also kept
- * queued on endpoint 0x84; its payload is not passed to the TS parser.
+ * Endpoint 0x81 carries the MPEG-TS stream of transport output 1. Receive
+ * transfers are also kept queued on endpoint 0x84; transfers that carry
+ * data there are passed to the TS parser as well (transport output 2 is
+ * expected on one of the two endpoints).
  */
 static void gchd_rx_complete(struct urb *urb)
 {
@@ -617,8 +652,8 @@ static void gchd_rx_complete(struct urb *urb)
   return;
  }
 
- if (rx->endpoint == GCHD_EP_AUX_IN) {
-  /* Keep the 0x84 receive queue running; its payload is not interpreted. */
+ if (rx->endpoint == GCHD_EP_AUX_IN && !urb->actual_length) {
+  /* Keep the 0x84 receive queue running. */
   r = usb_submit_urb(urb, GFP_ATOMIC);
   if (r && READ_ONCE(d->rx_active))
    dev_err_ratelimited(&d->intf->dev,
@@ -642,7 +677,7 @@ static int gchd_rx(void *arg)
  size_t n = 0;
  bool pes_active = false, cc_valid = false;
  u8 last_cc = 0;
- u64 rx_reads = 0, rx_bytes = 0, rx_empty = 0, rx_errors = 0;
+ u64 rx_reads = 0, rx_bytes = 0, rx_empty = 0, rx_errors = 0, rx_aux_bytes = 0;
  unsigned long report_jiffies = jiffies;
  unsigned int i;
  int r = 0;
@@ -748,9 +783,10 @@ static int gchd_rx(void *arg)
    gchd_deliver(d);
    if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
     dev_info(&d->intf->dev,
-             "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
+             "async bulk-IN stats: reads=%llu bytes=%llu ep84_bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
              (unsigned long long)rx_reads,
              (unsigned long long)rx_bytes,
+             (unsigned long long)rx_aux_bytes,
              (unsigned long long)rx_empty,
              (unsigned long long)rx_errors,
              atomic_read(&d->rx_urb_errors),
@@ -765,12 +801,34 @@ static int gchd_rx(void *arg)
   }
 
   rx_reads++;
+  if (done->endpoint == GCHD_EP_AUX_IN && done->urb->actual_length > 0) {
+   if (!rx_aux_bytes)
+    dev_info(&d->intf->dev,
+             "bulk-IN: first data on ep=0x84 (%d bytes)\n",
+             done->urb->actual_length);
+   rx_aux_bytes += done->urb->actual_length;
+  }
   if (done->urb->actual_length > 0)
    rx_bytes += done->urb->actual_length;
   else
    rx_empty++;
 
-  {
+  /*
+   * Before a scaled output has been switched to, the stream of the
+   * standard output is not delivered.
+   */
+  /*
+   * Transport output 1 arrives on 0x81, output 2 (scaled outputs) on 0x84;
+   * only the endpoint of the running output is parsed.
+   */
+  if (done->endpoint != (d->input >= 2 && READ_ONCE(d->out_active) != GCHD_OUT_STANDARD ?
+                         GCHD_EP_AUX_IN : GCHD_EP_TS_IN)) {
+   /* Other endpoint: not parsed. */
+  } else if (d->input >= 2 && READ_ONCE(d->out_active) != READ_ONCE(d->analog_out)) {
+   /* Data flows: keep the signal-loss check satisfied. */
+   if (done->urb->actual_length > 0)
+    d->last_video_jiffies = jiffies;
+  } else {
    int pos;
 
    for (pos = 0; pos < done->urb->actual_length;) {
@@ -820,9 +878,10 @@ static int gchd_rx(void *arg)
 
   if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
    dev_info(&d->intf->dev,
-            "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
+            "async bulk-IN stats: reads=%llu bytes=%llu ep84_bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
             (unsigned long long)rx_reads,
             (unsigned long long)rx_bytes,
+            (unsigned long long)rx_aux_bytes,
             (unsigned long long)rx_empty,
             (unsigned long long)rx_errors,
             atomic_read(&d->rx_urb_errors),
@@ -1143,6 +1202,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
  bool target_interlaced = false;
  bool family_change = false;
+ bool output_change = false;
  bool family_hold = false;
  int r = 0;
 
@@ -1152,6 +1212,14 @@ static void gchd_mode_workfn(struct work_struct *work)
      (d->input_height != 480 && d->input_height != 576) ||
      !d->input_configured || !READ_ONCE(d->signal_present))
   goto out;
+
+ /* Selected output size differs from the running one: switch to it. */
+ if (d->out_active != d->analog_out) {
+  dev_info(&d->intf->dev, "switching output size: %u -> %u\n",
+           d->out_active, d->analog_out);
+  output_change = true;
+  goto stop_and_restart;
+ }
 
  /*
   * Family check. When 0x88:E7 has bit 7 set (decoder re-evaluating the
@@ -1250,7 +1318,9 @@ stop_and_restart:
  d->ts_partial_len = 0;
  d->input_configured = false;
  gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
- if (family_change) {
+ if (output_change) {
+  r = gchd_analog_output_reconfigure(d);
+ } else if (family_change) {
   r = gchd_analog_family_reconfigure(d, family_hold);
  } else {
   d->input_interlaced = target_interlaced;
@@ -1305,9 +1375,9 @@ stop_and_restart:
  ev.id = d->input;
  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
  v4l2_event_queue(&d->vdev, &ev);
- dev_info(&d->intf->dev, "analog mode now %s\n",
+ dev_info(&d->intf->dev, "analog mode now %s, output %u\n",
           d->input_height == 576 ? (d->input_interlaced ? "576i" : "288p") :
-          (d->input_interlaced ? "480i" : "240p"));
+          (d->input_interlaced ? "480i" : "240p"), d->out_active);
  goto reschedule;
 
 restart_failed:
@@ -1804,6 +1874,16 @@ static int gchd_enum_framesizes(struct file *f, void *p,
  if (!gchd_pixfmt_ok(s->pixel_format))
   return -EINVAL;
 
+ if (d->input >= 2) {
+  /* Source size, 640x480, 480x360 (GCHD_OUT_* order). */
+  if (s->index > GCHD_OUT_MOBILE)
+   return -EINVAL;
+  s->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+  gchd_analog_out_size(d, s->index, &s->discrete.width,
+                       &s->discrete.height);
+  return 0;
+ }
+
  for (i = 0; i < ARRAY_SIZE(gchd_modes); ++i) {
   if (!gchd_mode_allowed(d, &gchd_modes[i]))
    continue;
@@ -1829,12 +1909,18 @@ static int gchd_enum_frameintervals(struct file *f, void *p,
 
  if (d->input >= 2) {
   /* Encoded frame rate: 30000/1001 (60 Hz family) or 25 (50 Hz). */
-  if (v->index != 0 || v->width != 720 ||
-      (v->height != 480 && v->height != 576))
+  bool pal = gchd_std_is_50hz(gchd_analog_std(d));
+
+  if (v->index != 0 ||
+      !((v->width == 720 && (v->height == 480 || v->height == 576)) ||
+        (v->width == 640 && v->height == 480) ||
+        (v->width == 480 && v->height == 360)))
    return -EINVAL;
+  if (v->width == 720)
+   pal = v->height == 576;
   v->type = V4L2_FRMIVAL_TYPE_DISCRETE;
-  v->discrete.numerator = v->height == 576 ? 1 : 1001;
-  v->discrete.denominator = v->height == 576 ? 25 : 30000;
+  v->discrete.numerator = pal ? 1 : 1001;
+  v->discrete.denominator = pal ? 25 : 30000;
   return 0;
  }
 
@@ -1866,13 +1952,8 @@ static int gchd_gfmt(struct file*f,void*p,struct v4l2_format*x)
   * capture allocates its buffers before detection, so the negotiated size
   * alone stays at the nominal one.
   */
- if (d->input >= 2) {
-  d->width = 720;
-  if (d->input_height == 480 || d->input_height == 576)
-   d->height = d->input_height;
-  else
-   gchd_nominal_format(d, &d->width, &d->height);
- }
+ if (d->input >= 2)
+  gchd_analog_out_size(d, d->analog_out, &d->width, &d->height);
  x->fmt.pix.width=d->width;x->fmt.pix.height=d->height;
  x->fmt.pix.pixelformat=d->pixfmt;
  /* Analog inputs are always encoded interlaced (also 240p/288p). */
@@ -1898,10 +1979,12 @@ static const struct gchd_mode *gchd_adjust_fmt(struct gchd *d,
  if (!gchd_pixfmt_ok(pix->pixelformat))
   pix->pixelformat = V4L2_PIX_FMT_H264;
  if (d->input >= 2) {
-  /* The source decides the size: that of the standard detected last. */
-  pix->width = 720;
-  pix->height = gchd_std_is_50hz(gchd_analog_std(d)) ? 576 : 480;
-  pix->field = V4L2_FIELD_INTERLACED_TB;
+  /* 640x480 and 480x360 are scaled outputs; any other size is the source size. */
+  u8 out = gchd_analog_out_for(pix->width, pix->height);
+
+  gchd_analog_out_size(d, out, &pix->width, &pix->height);
+  pix->field = out == GCHD_OUT_STANDARD ? V4L2_FIELD_INTERLACED_TB :
+                                          V4L2_FIELD_NONE;
  } else {
   m = gchd_find_mode(pix->width, pix->height, interlaced);
   if (!m || !gchd_mode_allowed(d, m))
@@ -1935,6 +2018,8 @@ static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
   return -EBUSY;
 
  m = gchd_adjust_fmt(d, &x->fmt.pix);
+ if (d->input >= 2)
+  d->analog_out = gchd_analog_out_for(x->fmt.pix.width, x->fmt.pix.height);
  d->width = x->fmt.pix.width;
  d->height = x->fmt.pix.height;
  d->pixfmt = x->fmt.pix.pixelformat;

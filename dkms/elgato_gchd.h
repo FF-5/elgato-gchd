@@ -24,6 +24,11 @@
 #define GCHD_USB_BUFSIZE 0x10000	/* bulk-IN URB size */
 #define GCHD_PAL60_HOLD_MS 5000
 #define GCHD_REBOOT_GAP_MS 1500
+
+/* Output sizes of composite and S-video (analog_out). */
+#define GCHD_OUT_STANDARD 0 /* source size, 720 x 480 / 576 */
+#define GCHD_OUT_640X480  1
+#define GCHD_OUT_MOBILE   2 /* 480 x 360 */
 #define GCHD_RING_FRAMES 512
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
@@ -120,6 +125,8 @@ struct gchd {
  bool pal60_logged;
  unsigned long shutdown_done; /* jiffies of the last completed shutdown; 0 = none */
  v4l2_std_id analog_std[2]; /* last standard detected on composite, S-video; 0 = none */
+ u8 analog_out; /* GCHD_OUT_*, kept while the device stays connected */
+ u8 out_active; /* output programmed in the encoder (GCHD_OUT_*) */
  u16 dec_applied; /* family << 8 | 0x88:28 of the last family apply block; 0 = unknown */
  bool detect_requested;
  bool disconnected;
@@ -184,6 +191,7 @@ int gchd_analog_mode_pre_stop(struct gchd *, bool);
 int gchd_analog_mode_reconfigure(struct gchd *);
 int gchd_analog_family_pre_stop(struct gchd *, u8, u8);
 int gchd_analog_family_reconfigure(struct gchd *, bool);
+int gchd_analog_output_reconfigure(struct gchd *);
 bool gchd_analog_pal60_hold(struct gchd *, u8, unsigned long, bool *);
 int gchd_analog_pal_mode_change(struct gchd *, bool);
 int gchd_analog_poll_backend(struct gchd *);

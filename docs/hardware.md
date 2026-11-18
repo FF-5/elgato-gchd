@@ -28,11 +28,12 @@ transport (see §2); these paths are **Driver** only.
 | Mailbox (other models) | Control OUT/IN, `bRequest 0xBD`, `wValue = 0`, `wIndex = PORT << 8` | Raw bytes, no padding |
 | Interrupt | Interrupt IN `0x83`, 3 bytes (`10 00 00` observed) | Notification only |
 | Firmware download | Bulk OUT `0x02` | 32 768-byte chunks (`005d`), 16 384-byte chunks (other models) |
-| Video stream | Bulk IN `0x81` | MPEG transport stream, see [video-output.md](video-output.md) |
+| Video stream | Bulk IN `0x81` | MPEG transport stream of transport output 1, see [video-output.md](video-output.md) |
+| Video stream, scaled outputs | Bulk IN `0x84` | MPEG transport stream of transport output 2 (640 × 480, 480 × 360 for analog sources) |
 
-Bulk IN endpoint `0x84` is present on the `005d` model. Receive transfers are
-queued on it during capture start (**Observed**); its payload is not
-documented.
+Receive transfers are queued on both endpoints during capture start
+(**Observed**). Only the endpoint of the enabled transport output carries
+data.
 
 ### 2.1 Mailbox handshake (`005d`, Observed)
 
@@ -195,7 +196,7 @@ step 24.
    part of it.
 2. Receive transfers are queued on bulk IN `0x81` (32–36 × 65 536 bytes)
    and `0x84` (8 transfers) right before or during the encoder writes.
-   No data is received on `0x84`.
+   With transport output 1, no data is received on `0x84`.
 3. SCMD INIT mode `A0`.
 4. Read `0800:2008` (`0x01`).
 5. SCMD STATE_CHANGE START (`05 00 00 02`); receipt confirmed by interrupt

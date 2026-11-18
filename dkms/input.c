@@ -1910,6 +1910,11 @@ static int gchd_input_configure_mode(struct gchd *d)
  if (d->input_configured)
   return 0;
 
+ /*
+  * A capture starts with the standard output; a scaled output is switched
+  * to from the running capture (as recorded), by the mode worker.
+  */
+ d->out_active = GCHD_OUT_STANDARD;
  dev_info(&d->intf->dev,
           "capture setup: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
           d->input, d->input_width, d->input_height, d->input_fps_num,
@@ -1987,6 +1992,23 @@ int gchd_analog_mode_reconfigure(struct gchd *d)
   dev_err(&d->intf->dev, "mode change: back-end setup failed: %d\n", r);
   return r;
  }
+ r = gchd_encoder_program(d);
+ if (r)
+  return r;
+ d->input_prepared = false;
+ d->input_configured = true;
+ return 0;
+}
+
+/*
+ * Output size change while capturing (encoder in STOP): program the encoder
+ * for d->analog_out; no decoder or back-end writes. START follows.
+ */
+int gchd_analog_output_reconfigure(struct gchd *d)
+{
+ int r;
+
+ d->out_active = d->analog_out;
  r = gchd_encoder_program(d);
  if (r)
   return r;

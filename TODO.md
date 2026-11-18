@@ -18,7 +18,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.2): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.3): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -27,7 +27,8 @@ on the `traces` branch.
   STREAMOFF → STREAMON on one handle. V4L2 reporting: standard (NTSC-M /
   PAL, QUERYSTD/G_STD), 720×480/576 by source, 29.97 / 25 fps,
   interlaced top field first; input changes from other processes refused
-  while one captures.
+  while one captures. Output sizes 720×480/576 (interlaced), 640×480 and
+  480×360 (progressive, transport output 2 on endpoint 0x84).
   Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
   `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; the decoder
   reports 60 Hz for a few seconds after power-on and reset, also with the
@@ -44,17 +45,17 @@ Video modes and switching:
       (N64 → running PS1: `0x88:FA` stayed `6`): on S-video one restart of
       ~7 s, on composite two restarts (240p, then 576i). Treat `E7` bit 7
       with an unlocked `CA` like a drop (wait for 50 Hz).
+- [ ] **T-067 [HW] (S)** Firmware start-up failed twice in the T-055
+      tests (`state-change timeout: current=0x10 expected=0x11 state=0x0011
+      completion=0x0008`, IDLE completes without the completion flag), each
+      after a session that ended with a failed START. Check whether it also
+      happens after normal sessions; treat state 0x11 without the flag as
+      IDLE reached.
 - [ ] 288p capture start (recording wanted; the driver uses the apply block
       of the 576i → 288p change).
 
 Output and settings (`docs/composite.md §10`):
 
-- [ ] **T-055 [OFF→HW] (M)** Output size: 720×480/576 (standard),
-      640×480, 480×360 (mobile), as recorded (`v_ip_format 2`, GOP 6,
-      transport output 2 for the two small sizes; which endpoint carries
-      transport output 2 is unknown). V4L2: `S_FMT` sizes. Cropping and the
-      HD sizes are done by the Windows application (no control transfers,
-      cropping instant) and are not driver features.
 - [ ] **T-061 [OFF→HW] (M)** Bitrate control as recorded (CBR at the
       maximum, VBR with `v_ave_bitrate` = displayed value below it; ranges
       per output size), "stretch" (`v_in_source_type 2`), H.264
@@ -188,7 +189,7 @@ Change one at a time (RULES D5), when the mode can be tested.
 | Composite prefix | `02 = C9 … 28 = 88` written on the first composite start after loading the module | written only after S-video (HDMI → composite writes none of them) |
 | Initial analog detection | waits until `0x88:CA` reads `7E` or `66`; family re-checked before START | unknown (no recording of a 480i start) |
 | Receive queue at restart | URBs queued after INIT A0, before START | queued before the first encoder write |
-| Bulk IN `0x84` | required (`-ENODEV` if absent) | queued (8 URBs), never carries data |
+| Bulk IN `0x84` | required (`-ENODEV` if absent); parsed while transport output 2 runs | queued (8 URBs); carries transport output 2 (scaled outputs) |
 | Repeated `0x88:02/3C`, `0x94` writes after detection | written | not written (T-011) |
 
 ## Evidence wanted (maintainer)
