@@ -27,7 +27,8 @@ set_input 2
 bash "$BRIDGE" run >> "$WORK/bridge.log" 2>&1 &
 BRIDGE_PID=$!
 sleep 4
-run bash "$BRIDGE" status
+expect "bridge running and both devices found" "loopback device: /dev/video42" bash "$BRIDGE" status
+run grep -q "service: *running" <(bash "$BRIDGE" status) || run cat "$WORK/bridge.log"
 expect "loopback offers 720x576 YUYV while idle" "720/576" v4l2-ctl -d "$LOOP" --get-fmt-video
 expect "audio source present" "elgato_gchd_audio" pactl list short sources
 expect "capture device off while idle" "^0$" sh -c "sudo dmesg | grep -c 'starting hardware boot'"
@@ -62,7 +63,7 @@ expect "reader kept running (frame count >= 500)" "frame= *([5-9][0-9]{2}|[0-9]{
 expect "input back on composite" "Video input : 2" v4l2-ctl -d "$DEV" --get-input
 
 step "guvcview"
-prompt "Start: guvcview -d $LOOP   (in a second terminal; leave it open)"
+prompt "Start: guvcview -d $LOOP   (in a second terminal; leave it open). If guvcview opens another device, select \"Elgato Game Capture HD\" at $LOOP, not the one at $DEV."
 confirm "guvcview shows the PS1 picture, smooth, no interlacing lines?"
 prompt "Swap the PS1 for the N64 (NTSC) while guvcview stays open; wait about 10 s."
 confirm "guvcview shows the N64 picture again (scaled to the PAL size)?"
