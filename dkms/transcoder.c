@@ -243,6 +243,7 @@ struct gchd_enc_cfg {
  u8 profile, level, vformat;
  u8 out;   /* GCHD_OUT_STANDARD, GCHD_OUT_640X480 or GCHD_OUT_MOBILE */
  bool vbr; /* v_rate_mode 1, v_max_cpb_delay 10 */
+ bool vinpelclk;
 };
 
 /*
@@ -306,7 +307,7 @@ static int gchd_transcoder_write_start(struct gchd *d,
  GCHD_TC_SET(d, GCHD_TC_V_MIN_BITRATE, c->min_bitrate);
  GCHD_TC_SET(d, GCHD_TC_V_HSIZE_OUT, c->width);
  GCHD_TC_SET(d, GCHD_TC_V_VSIZE_OUT, c->height);
- GCHD_TC_SET(d, GCHD_TC_V_VINPELCLK, out2);
+ GCHD_TC_SET(d, GCHD_TC_V_VINPELCLK, c->vinpelclk);
  GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_H, 0);
  GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_L, 0);
  GCHD_TC_SET(d, GCHD_TC_NUM_UNITS_IN_TICK, 0);
@@ -415,8 +416,8 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
   * Composite and S-video: bitrate values as the capture application sets
   * them (composite.md §10): default 11250 kbit/s CBR (15000 VBR for the
   * mobile size), maximum 90 %, average 50 %, minimum 0 up to 4000, 10 %
-  * below 10000, 25 % above; system_rate from the video bitrate (+8 for
-  * the 60 Hz family).
+  * below 10000, 25 % above; system_rate floor(1.0728 * B + 462.1) at
+  * 50 Hz, + 470.6 at 60 Hz.
   */
  bool vbr = false;
  u32 analog_system_rate = 0;
@@ -432,10 +433,11 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
   auto_average_bitrate = bitrate / 2U;
   auto_min_bitrate = bitrate <= 4000 ? 0 :
                      bitrate < 10000 ? bitrate / 10U : bitrate / 4U;
-  analog_system_rate = ((u32)bitrate * 107285U + 46170000U) / 100000U +
-                       (fps == 50 ? 0 : 8);
+  analog_system_rate = ((u32)bitrate * 10728U +
+                        (fps == 50 ? 4621000U : 4706000U)) / 10000U;
  }
- u16 gop = out != GCHD_OUT_STANDARD ? 6 : (fps + 10) / 5;
+ /* Scaled outputs: GOP 6 at 50 Hz, 8 at 60 Hz; else 12 / 14. */
+ u16 gop = out != GCHD_OUT_STANDARD ? (fps == 50 ? 6 : 8) : (fps + 10) / 5;
  u16 anchor = 3;
  u8 profile;
  u8 level;
@@ -504,6 +506,8 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
    .min_bitrate = auto_min_bitrate, .system_rate = system_rate,
    .profile = profile, .level = level, .vformat = vformat,
    .out = out, .vbr = vbr,
+   /* Composite/S-video: 1 with a 50 Hz source, 0 with 60 Hz (all sizes). */
+   .vinpelclk = d->input >= 2 && fps == 50,
   };
 
   return gchd_transcoder_write_start(d, &c);

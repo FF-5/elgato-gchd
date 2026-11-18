@@ -145,6 +145,12 @@ has only the status reads), and the back-end step uses the PAL table:
 Status values with a locked 576i source: `0x88:FA = 07`/`17`,
 `CA = 7E`, `E7 = 79`, `F1 = 63`.
 
+Capture start with a 288p source (`0x88:CA = 66`, Observed): after INIT
+`A0` and the input routing, the PAL apply block with `0x88:28 = 8A`, read
+`0x88:FD`, `0x88:06 = 08`; about 0.4 s later read `0x88:E7` (`79`) and
+`0x88:F1` (`63`); then the PAL back-end table, retrigger, encoder
+programming (the same as for 576i), INIT `A0`, START.
+
 ### 8.2 576i ↔ 288p while capturing
 
 No SCMD and no encoder writes are issued; the stream continues. The PAL
@@ -248,11 +254,18 @@ restarts the encoder (§4 steps 5–8) unless noted.
 
 Bitrate values follow the setting B (kbit/s, `v_bitrate`): maximum
 0.9·B, average B/2, minimum 0 for B ≤ 4000, B/10 below 10000 and B/4 above
-(recorded: 4000, 6000, 9320, 11250, 14040, 15000). `system_rate` is
-⌊1.07285·B + 461.7⌋ with a 50 Hz source (all six recorded values; 8 more
-with a 60 Hz source). CBR (`v_rate_mode 0`, `v_max_cpb_delay 3`) was
-recorded only at the default 11250, VBR (`1`, `10`) at every other value
-and always for the mobile size. The encoder is restarted for every change.
+(recorded with PAL and NTSC sources between 4000 and 15000).
+`system_rate` is ⌊1.0728·B + 462.1⌋ with a 50 Hz source and
+⌊1.0728·B + 470.6⌋ with a 60 Hz source (15 recorded values). The
+application's bitrate slider shows the average B/2 for VBR; its upper end
+is CBR (`v_rate_mode 0`, `v_max_cpb_delay 3`) at B = 11250, shown as
+11.3 Mbit/s, every other position VBR (`1`, `10`): standard and 640 × 480
+from B = 6000 (shown 3.0) to about 14000, mobile 4000 to 15000 (always
+VBR). The encoder is restarted for every change.
+
+GOP size: 12 (50 Hz) or 14 (60 Hz) for the standard size, 6 (50 Hz) or 8
+(60 Hz) for 640 × 480 and 480 × 360. `v_vinpelclk` is 1 with a 50 Hz source
+and 0 with a 60 Hz source, for every output size.
 
 The same fields are written for the `_bl` variants. Transport output 1 and 2
 are defined in [hdmi.md §4](hdmi.md#4-capture-with-a-1080p60-source-output-size-changes-observed).
@@ -262,3 +275,13 @@ START with output 2 completes only when output 2 was enabled
 setup after the firmware INIT, as the initialization recording does; the
 switch from the standard output to a scaled one then follows the sequence
 of §4 steps 5–8 without the back-end table.
+
+## 11. Analog audio gain (Observed)
+
+The application's analog audio gain (default −12 dB) writes the auxiliary
+registers `0x94:4A` and `0x94:4B` (same value, one per channel) and
+`0x94:41`. At −12 dB: `41 = 37`, `4A = 4B = B7` (the values written during
+input setup). While the slider was dragged between −12 dB and +12 dB the
+values `A7`, `AF`, `B5`, `B7`, `BB` were written with `41 = 37` and `BF`,
+`C1`, `C5`, `C9` with `41 = 57`. No control transfers or encoder writes
+follow. The exact value for each dB step has not been recorded.

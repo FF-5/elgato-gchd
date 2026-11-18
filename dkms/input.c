@@ -1421,10 +1421,16 @@ static int gchd_configure_composite_exact(struct gchd *d)
   GCHD_DEC_W(d, 0x28, d->input_interlaced ? 0x88 : 0x8a);
   GCHD_DEC_R(d, 0xfd, v); GCHD_DEC_W(d, 0x06, 0x08);
  } else if (d->input_height == 576 && !d->input_interlaced) {
-  /* 288p; a 576i source needs no apply block. */
+  /*
+   * 288p: apply block with 0x28 = 8A, about 0.4 s, then 0x88:E7 and F1
+   * before the back-end table. A 576i source needs no apply block.
+   */
   r = gchd_pal_apply(d, false);
   if (r)
    return r;
+  msleep(400);
+  GCHD_DEC_R(d, 0xe7, v);
+  GCHD_DEC_R(d, 0xf1, v);
  }
  if (!d->input_interlaced && d->input_height == 480) {
   /* 240p: retrigger, wait for the decoder standard, then 0x88:0A. */

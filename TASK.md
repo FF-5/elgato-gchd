@@ -1,37 +1,41 @@
-# TASK T-065 — Analog robustness: console swap, start-up, signal loss
+# TASK T-070 — Repository layout: all code under `src/`
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** analysis
-- **Type:** driver fixes
-- **Branch:** `fix/analog-robustness` (from `dev` 0.5.5)
-- **TODO items:** T-065, T-067, T-054 (stage 1)
+- **Status:** plan; implementation next
+- **Type:** move only (no code changes)
+- **Branch:** `chore/src-layout` (from `dev` 0.5.6)
+- **TODO items:** T-070
 
 ## Why
 
-The last small stage-1 issues with composite and S-video:
+Agreed with the maintainer (2026-11-18): all code under `src/`, kernel
+driver and userspace program side by side, before the installation
+scripts (T-071) and the guvcview/OBS service (T-060).
 
-- **T-065:** swapping consoles while capturing without a detected signal
-  drop (N64 → running PS1, `0x88:FA` stayed `6`): on S-video one restart
-  of about 7 s, on composite two restarts (240p, then 576i).
-- **T-067:** the firmware start-up failed twice (`state-change timeout:
-  current=0x10 expected=0x11 state=0x0011 completion=0x0008`): IDLE is
-  reached but the completion flag is not set; each time after a session
-  that ended with a failed START.
-- **T-054:** source switched off and on while capturing: worked by report,
-  never checked in the logs.
+## Plan
 
-## Implementation (plan)
+| Today | New |
+|---|---|
+| `dkms/` | `src/kernel/` |
+| `src/*.cpp`, `src/*.hpp`, `src/gchd/`, `src/gui/`, `src/CMakeLists.txt` | `src/userspace/` (content unchanged) |
+| `firmware_extract/` | stays (renamed in T-071) |
+| `udev-rules/`, `docs/` | stay |
 
-1. T-065: treat `0x88:E7` bit 7 together with an unlocked `0x88:CA` like a
-   signal drop (wait for the 50 Hz reading as after a reset).
-2. T-067: when IDLE is requested and the state reads `0x11` without the
-   completion flag, accept IDLE as reached (log it); check the other
-   start-up state changes for the same pattern.
-3. T-054: test steps for source off/on while capturing (both families),
-   with the expected log lines.
-4. Test file `tools/tests/T-065.sh` (console swaps, source off/on,
-   repeated start/close cycles).
+1. `git mv` only; no file content changes except paths:
+   - top-level `CMakeLists.txt`: `ADD_SUBDIRECTORY(src/userspace src)` (the
+     build output stays in `build/src`, as the top-level README says);
+     the commented `src/gui` line to `src/userspace/gui` (paths only, as
+     allowed by the maintainer);
+   - `src/kernel/dkms.conf` and Makefile/Kbuild paths if any;
+   - path references in `docs/`, `src/kernel/README.md`, RULES.md,
+     CLAUDE.md, TODO.md;
+   - `tools` branch: `compare-objs.sh`, `gen-transcoder-fields.py` and
+     `gchd-test.sh` build from `src/kernel/` (with a fallback to `dkms/`
+     for older revisions).
+2. Proof: the module built before and after is identical
+   (`compare-objs.sh`), and the userspace program still builds with CMake.
+3. Hardware test: the `smoke` test with the new paths (one short run).
 
 ## Hardware test (maintainer)
 

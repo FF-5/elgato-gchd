@@ -10,7 +10,7 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.5.5");
+MODULE_VERSION("0.5.6");
 
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
@@ -1349,8 +1349,13 @@ static void gchd_mode_workfn(struct work_struct *work)
              "decoder status changed while capturing (FA=%x CA=%02x E7=%02x); configuring again\n",
              family, lock, std);
     family_change = true;
-    /* The signal had dropped (reset, power cycle): wait out a 60 Hz start. */
-    family_hold = family != 6 && family != 7;
+    /*
+     * The signal had dropped (reset, power cycle) or the decoder is not
+     * locked (console swapped without a detected drop): wait out a 60 Hz
+     * start before configuring.
+     */
+    family_hold = (family != 6 && family != 7) ||
+                  (lock != 0x7e && lock != 0x66);
     r = gchd_analog_family_pre_stop(d, family, lock);
     if (r)
      goto restart_failed;

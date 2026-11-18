@@ -18,7 +18,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.5): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.6): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -32,7 +32,9 @@ on the `traces` branch.
   (2-15 Mbit/s, CBR/VBR) and stretch as V4L2 controls, changeable while
   capturing (encoder restart). All settings remembered across replug,
   module reload and reboot (module parameters, udev rule of ours writing
-  modprobe.d).
+  modprobe.d). Console swaps, source off/on and capture start in every
+  mode (incl. 288p) checked; encoder values match the PAL and NTSC
+  recordings.
   Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
   `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; the decoder
   reports 60 Hz for a few seconds after power-on and reset, also with the
@@ -41,34 +43,8 @@ on the `traces` branch.
 
 ## Stage 1 — Composite and S-video complete
 
-Video modes and switching:
-
-- [ ] **T-054 [HW] (S)** Source loss and return while capturing (worked by
-      report; check the logs once).
-- [ ] **T-065 [HW] (S)** Console swap without a detected signal drop
-      (N64 → running PS1: `0x88:FA` stayed `6`): on S-video one restart of
-      ~7 s, on composite two restarts (240p, then 576i). Treat `E7` bit 7
-      with an unlocked `CA` like a drop (wait for 50 Hz).
-- [ ] **T-067 [HW] (S)** Firmware start-up failed twice in the T-055
-      tests (`state-change timeout: current=0x10 expected=0x11 state=0x0011
-      completion=0x0008`, IDLE completes without the completion flag), each
-      after a session that ended with a failed START. Check whether it also
-      happens after normal sessions; treat state 0x11 without the flag as
-      IDLE reached.
-- [ ] 288p capture start (recording R1 wanted; the driver uses the apply block
-      of the 576i → 288p change).
-
-Output and settings (`docs/composite.md §10`):
-
-- [ ] **T-066 [OFF→HW] (M)** v4l2-compliance 1.26.1 failures left after
-      4c326eb: HDMI/component `G_DV_TIMINGS` fails without a signal although
-      `V4L2_IN_CAP_DV_TIMINGS` is set, `VIDIOC_DV_TIMINGS_CAP` missing
-      (also breaks the buffer tests via `g_dv_timings`); a menu control
-      rejects item 0 ("could not set valid menu item 0", all inputs);
-      `V4L2_CID_DV_RX_POWER_PRESENT` missing (warning). The input menu
-      control still switches inputs for any process while another one
-      captures (S_INPUT returns EBUSY since fd8426b). Needed for
-      guvcview/OBS robustness (T-060).
+All planned composite and S-video items are done (0.5.6). The v4l2
+compliance items (T-066) moved to stage 1b, where they matter.
 
 Stage 1 is done when composite and S-video, NTSC and PAL, all modes and
 settings above work on `dev`.
@@ -100,6 +76,16 @@ settings above work on `dev`.
       - `build-program.sh` at the top: builds the userspace program.
 
 ## Stage 1b — Applications (guvcview, OBS) (after T-070/T-071)
+
+- [ ] **T-066 [OFF→HW] (M)** v4l2-compliance 1.26.1 failures left after
+      4c326eb: HDMI/component `G_DV_TIMINGS` fails without a signal although
+      `V4L2_IN_CAP_DV_TIMINGS` is set, `VIDIOC_DV_TIMINGS_CAP` missing
+      (also breaks the buffer tests via `g_dv_timings`); a menu control
+      rejects item 0 ("could not set valid menu item 0", all inputs);
+      `V4L2_CID_DV_RX_POWER_PRESENT` missing (warning). The input menu
+      control still switches inputs for any process while another one
+      captures (S_INPUT returns EBUSY since fd8426b). Needed for
+      guvcview/OBS robustness (T-060).
 
 - [ ] **T-060 (L)** Make the device usable in guvcview, OBS and similar
       applications. A USB device cannot be turned into a UVC device by a
@@ -192,6 +178,7 @@ Change one at a time (RULES D5), when the mode can be tested.
 | Receive queue at restart | URBs queued after INIT A0, before START | queued before the first encoder write |
 | Bulk IN `0x84` | required (`-ENODEV` if absent); parsed while transport output 2 runs | queued (8 URBs); carries transport output 2 (scaled outputs) |
 | Repeated `0x88:02/3C`, `0x94` writes after detection | written | not written (T-011) |
+| 480i / 576i capture start with a locked source | no decoder apply block | apply block written (NTSC after INIT A0; PAL before, then `0x88:0A = 85`, `0x88:14 = 1B`) (`composite/gchd_*_composite_*bitrate_audio_small` start) |
 
 ## Evidence wanted (maintainer)
 
@@ -204,15 +191,15 @@ a short note what was done and when (seconds) helps.
 
 | # | Recording | For | Status |
 |---|---|---|---|
-| R1 | Composite PAL: PS1 started while the game already shows 288p (capture start straight into 288p) | stage 1, "288p capture start" | **needed** (only open stage-1 start case) |
-| R2 | Bitrate slider with an NTSC source (N64): standard and mobile, a few positions incl. min and max | T-061 | **needed** if the PAL recordings leave the NTSC values open (decided in T-061) |
+| R1 | Composite PAL capture start with a 288p source | stage 1, "288p capture start" | done (`composite/gchd_PAL_composite_small`) |
+| R2 | Bitrate slider with an NTSC source | T-061 | done (`composite/gchd_NTSC_composite_output_bitrate_audio_small`) |
 | R3 | Windows application closed while capturing, and closed without a source | close sequence (T-047 was fixed without a recording) | optional (close works) |
-| R4 | Composite NTSC 480i capture start (N64 menu) | initial detection (known differences table) | optional (480i starts work) |
+| R4 | Composite NTSC 480i capture start | initial detection | done (PS2, same NTSC recording) |
 | R5 | PS1 on S-video, switch to composite while capturing (T-053b) | composite ↔ S-video | not needed (works; the switch sequence is in `input-switching/gchd_PAL_composite_svideo_small` 96 s) |
 | R6 | Output 640×480 / 480×360 with an NTSC source | T-055 | not needed (works, NTSC tested) |
 | R7 | Component with a signal: every mode (480i, 480p, 576i, 576p, 720p, 1080i), mode changes, output sizes, bitrate | stage 2, T-051 | **needed** at stage 2 |
 | R8 | HDMI with a signal: every mode, mode changes, output sizes, bitrate | stage 3, T-050 | **needed** at stage 3 (1080p60 output sizes exist) |
-| R9 | One recording per picture/audio setting changed while capturing | stage 4, T-080 | needed after the release |
+| R9 | One recording per picture/audio setting changed while capturing; for the audio gain: single steps with the displayed dB noted (e.g. −12, −6, 0, +6, +12 dB, pause between them) | stage 4, T-080 | needed after the release (gain registers known: `composite.md` §11) |
 | R10 | Windows initialization with composite selected from the start (application start, no other input before) | initialization (driver uses the component recording) | optional |
 
 ## Testing (maintainer request, 2026-11-18)
