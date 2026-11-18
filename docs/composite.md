@@ -184,7 +184,9 @@ other family read: apply block of that family (0x28 from CA, §9),
                    about 0.45 s later: read 0x88:E7, F1; retrigger
 then:              NULL, STOP
                    read 0x88:FA, CA until locked (CA 7E or 66); while not
-                   locked, the apply block of the family read every 0.5 s
+                   locked, the apply block of the family read every 0.5 s;
+                   once locked, the apply block of that family unless it
+                   was loaded before NULL, about 0.45 s
                    read 0x88:E7, F1; 0x88:0A by E7 (§9)
                    back-end table of the family, retrigger, settle
                    read 0x88:FA, CA, E7, F1
@@ -194,10 +196,12 @@ then:              NULL, STOP
 Total time from the trigger to START: about 3 s.
 
 During this start-up phase the decoder reports `0x88:E7 = 59` (60 Hz with
-PAL colour) or `E7` with bit 7 set. The driver waits up to 5 s for such a
-signal to change to 50 Hz, both at the capture start and during a family
-change, so that capture starts in the console's final mode. A source that
-stays at 60 Hz is captured after that wait.
+PAL colour) or `E7` with bit 7 set. The driver waits for such a signal to
+change to 50 Hz, at most 5 s, at the capture start and after the signal had
+dropped (reset, power cycle, a different console), so that capture starts
+in the console's final mode. The wait ends as soon as the decoder reports
+50 Hz. A source that stays at 60 Hz is captured after 5 s; a change between
+50 and 60 Hz without a signal drop is followed at once.
 
 Applications that size their window from the first frames (for example
 ffplay) show the picture squeezed or stretched after a family change while

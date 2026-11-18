@@ -113,6 +113,11 @@ settings above work on `dev`.
       480i/576i and line-doubles 240p/288p, and feeds a `v4l2loopback`
       device named "Elgato Game Capture HD" plus a PipeWire/PulseAudio
       audio source; started automatically when an application opens it.
+      The service keeps one output size for the whole session (scaling
+      and aspect correction when the source changes between 480 and 576
+      lines or between interlaced and progressive), so applications never
+      see a format change (today ffplay keeps the window size of the first
+      frames and shows later modes squeezed).
       Needs T-020/T-023 (TS with audio) first.
 
 ## Stage 2 — Component
