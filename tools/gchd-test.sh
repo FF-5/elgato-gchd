@@ -115,6 +115,25 @@ build() {
 	fi
 }
 
+# The driver's H.264 device by name (since the application device of 0.5.9
+# is registered first); GCHD_DEV overrides it. Older drivers name it
+# "Elgato Game Capture HD" without the suffix.
+find_h264_dev() {
+	local v name fallback=
+	[ -n "${GCHD_DEV:-}" ] && { DEV=$GCHD_DEV; return 0; }
+	for v in /sys/class/video4linux/video*; do
+		[ -e "$v/name" ] || continue
+		name=$(cat "$v/name")
+		[ "$(basename "$(readlink -f "$v/device/driver")")" = elgato_gchd ] || continue
+		case "$name" in
+		*"(H.264)") DEV=/dev/$(basename "$v"); return 0 ;;
+		"Elgato Game Capture HD"*) fallback=/dev/$(basename "$v") ;;
+		esac
+	done
+	[ -n "$fallback" ] && { DEV=$fallback; return 0; }
+	return 1
+}
+
 # load_module [replug] [module parameters...]
 load_module() {
 	local replug=0
@@ -126,8 +145,12 @@ load_module() {
 	sudo modprobe -a videodev videobuf2-v4l2 videobuf2-vmalloc
 	run sudo insmod "$KSRC/elgato_gchd.ko" "$@" || { result FAIL "insmod $*"; return 1; }
 	local i
-	for i in $(seq 1 20); do [ -e "$DEV" ] && break; sleep 0.5; done
+	for i in $(seq 1 20); do
+		find_h264_dev && [ -e "$DEV" ] && break
+		sleep 0.5
+	done
 	[ -e "$DEV" ] || { result FAIL "$DEV did not appear"; return 1; }
+	log "H.264 device: $DEV"
 	log "module: $(modinfo -F version "$KSRC/elgato_gchd.ko") $*"
 }
 
