@@ -2,9 +2,10 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-Goal: a DKMS/V4L2 driver (C, `dkms/`) that behaves like the Windows driver for
+Goal: a DKMS/V4L2 driver (C, `src/`) that behaves like the Windows driver for
 every input and mode the hardware supports. Our own USB recordings are the
-reference (`traces` branch); `src/` is read-only. Each open item becomes one
+reference (`traces` branch). The project is the kernel driver only
+(maintainer decision 2026-11-18, T-070). Each open item becomes one
 `TASK.md` and one feature branch off `dev`.
 
 **Order (maintainer, 2026-11-18):** finish composite and S-video completely
@@ -51,12 +52,18 @@ settings above work on `dev`.
 
 ## Repository layout and installation (after stage 1)
 
-- [ ] **T-070 (M)** All code under `src/` (agreed 2026-11-18):
-      `src/kernel/` (today's `dkms/`), `src/userspace/` (today's
-      `src/*.cpp`, `src/gchd/`, `src/gui/`, `src/CMakeLists.txt`). The
-      maintainer allows changing the source paths in the top-level
-      `CMakeLists.txt` (paths only). DKMS paths and docs updated. One
-      move-only branch, module checked identical with `compare-objs.sh`.
+- [x] **T-070** Kernel driver only (maintainer 2026-11-18): driver in `src/`,
+      userspace program, `CMakeLists.txt` and the original udev rule
+      removed (git history and the original repository keep them),
+      `firmware_extract/` → `firmware/`, top-level README rewritten for the
+      driver with origin and credits.
+- [ ] **T-094 (S, maintainer)** Licence files: `LICENSE` → `LICENSE.MIT`
+      (original notice unchanged), new `LICENSE` with the GPL-2.0 text,
+      README licence section and SPDX lines in the driver sources
+      accordingly. Approved by the maintainer (2026-11-18), but the
+      development session's permission check blocks licence-file changes;
+      the maintainer makes them (commands in the T-070 findings) or allows
+      them in the session settings.
 - [ ] **T-071 (M)** Scripts for non-technical users, runnable from a file
       manager (executable, with a terminal window; `pkexec` for root):
       - `firmware/` (renamed from `firmware_extract/`), bash: extracts the
@@ -72,10 +79,14 @@ settings above work on `dev`.
         option after the answer; until then the script only extracts from
         an installer the user downloaded.
       - `install-driver.sh` at the top: installs the DKMS module (and the
-        firmware step if missing), with an uninstall option.
-      - `build-program.sh` at the top: builds the userspace program.
+        firmware step and the udev rule if missing), with an uninstall
+        option.
+      - The script uses the top-level `build/` (ignored by git): the
+        compiled module lands in `build/`, intermediate objects in
+        `build/objects/kernel/` (kbuild of this kernel builds in the source
+        directory, so the sources are copied there and built there).
 
-## Stage 1b — Applications (guvcview, OBS) (after T-070/T-071)
+## Stage 1b — Applications (guvcview, OBS) (after T-071)
 
 - [ ] **T-066 [OFF→HW] (M)** v4l2-compliance 1.26.1 failures left after
       4c326eb: HDMI/component `G_DV_TIMINGS` fails without a signal although
@@ -142,7 +153,7 @@ settings above work on `dev`.
 
 ## Code and tooling
 
-- [ ] **T-002 [OFF] (M)** File split ("Planned layout" in `dkms/README.md`),
+- [ ] **T-002 [OFF] (M)** File split ("Planned layout" in `src/README.md`),
       fold the `*_exact` wrappers; each move checked with
       `compare-mailbox-ops.py`. (Together with or after T-070.)
 - [ ] **T-003 [OFF] (S)** Make `vb2_fops` static.
@@ -212,6 +223,14 @@ order, frame rate, decode errors; dmesg: failures) and writes one log
 file. It prompts only for physical actions (cables, consoles) and visual
 checks. The maintainer pastes the log (or its summary) into `TASK.md`.
 
+- [x] **Release decision (maintainer, 2026-11-18):** the project is the
+      kernel driver only; the userspace program was removed (T-070); the
+      former T-092 (userspace compile fix) is dropped.
+- [ ] **T-093 (S)** After the first release (maintainer): this repository
+      is a GitHub fork of the discontinued original. Either ask GitHub
+      support to detach the fork (keeps history and stars), or create a
+      new repository and push the branches. Consider a distinct name so it
+      is not confused with the old userspace driver.
 - [ ] **T-090 (M)** Pre-release test before the first `master` merge
       (after HDMI): one test file covering every accepted feature (inputs,
       standards, modes, mode and family changes, output sizes, bitrate,

@@ -4,8 +4,8 @@ Linux kernel driver for the Elgato Game Capture HD (`0fd9:0044`,
 `0fd9:004e`, `0fd9:0051`, `0fd9:005d`). The USB protocol is described in
 [`../docs`](../docs).
 
-> **Status: experimental.** The driver initializes the device, selects inputs
-> and detects signals. Capture output is not yet reliable.
+> **Status:** composite and S-video are supported (NTSC and PAL, all modes,
+> output sizes, bitrate); component and HDMI are in development.
 
 ## Firmware
 
@@ -17,7 +17,7 @@ loader from `/lib/firmware/gchd/`:
 | `0044`, `004e`, `0051` | `gchd/MB86H57_H58_IDLE`, `gchd/MB86H57_H58_ENC_H` |
 | `005d` | `gchd/MB86M01_ASSP_NSEC_IDLE`, `gchd/MB86M01_ASSP_NSEC_ENC_H` |
 
-The files are not distributed with the driver. `../firmware_extract/`
+The files are not distributed with the driver. `../firmware/`
 contains a script that extracts them from the vendor installer.
 
 ## Build and install
@@ -32,7 +32,7 @@ sudo insmod elgato_gchd.ko
 DKMS:
 
 ```sh
-sudo dkms add ./dkms
+sudo dkms add ./src
 sudo dkms install elgato-gchd/0.5.6
 ```
 

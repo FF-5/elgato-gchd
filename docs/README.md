@@ -2,7 +2,7 @@
 
 This folder describes the USB protocol of the Elgato Game Capture HD
 (`0fd9:0044`, `0fd9:004e`, `0fd9:0051` and `0fd9:005d`) as used by the
-`elgato_gchd` kernel driver in [`../dkms`](../dkms).
+`elgato_gchd` kernel driver in [`../src`](../src).
 
 ## Pages
 
@@ -24,7 +24,7 @@ Each sequence is labelled with how it is known:
 
 - **Observed**: recorded in USB traces of the device in operation. Ordering
   and values are as recorded.
-- **Driver**: implemented in `dkms/`, not yet confirmed by a trace for that
+- **Driver**: implemented in `src/`, not yet confirmed by a trace for that
   scenario.
 - **Unknown**: the operation is part of the sequence but its effect is not
   documented. Unknown operations are kept in the sequence.

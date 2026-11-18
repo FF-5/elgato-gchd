@@ -36,7 +36,7 @@ Notation and status labels are defined in [README.md](README.md).
 ## 3. Mode detection and configuration (Driver)
 
 The driver configuration is implemented in `gchd_configure_hdmi_exact()`
-(`dkms/input.c`).
+(`src/input.c`).
 
 1. `0x94:41 = 37`, `0x94:4A = AF`, `0x94:4B = AF`; front-end setup including
    `0x9C:51 = 45`.

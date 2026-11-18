@@ -1,47 +1,49 @@
-# TASK T-070 — Repository layout: all code under `src/`
+# TASK T-071 — Installer and firmware script
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** plan; implementation next
-- **Type:** move only (no code changes)
-- **Branch:** `chore/src-layout` (from `dev` 0.5.6)
-- **TODO items:** T-070
+- **Status:** plan
+- **Type:** scripts + docs
+- **Branch:** `feat/installer` (from `dev`)
+- **TODO items:** T-071
 
 ## Why
 
-Agreed with the maintainer (2026-11-18): all code under `src/`, kernel
-driver and userspace program side by side, before the installation
-scripts (T-071) and the guvcview/OBS service (T-060).
+Installing today needs several manual commands (firmware extraction,
+DKMS add/install, udev rule). Users without Linux experience should be
+able to install the driver from the file manager.
 
 ## Plan
 
-| Today | New |
-|---|---|
-| `dkms/` | `src/kernel/` |
-| `src/*.cpp`, `src/*.hpp`, `src/gchd/`, `src/gui/`, `src/CMakeLists.txt` | `src/userspace/` (content unchanged) |
-| `firmware_extract/` | stays (renamed in T-071) |
-| `udev-rules/`, `docs/` | stay |
-
-1. `git mv` only; no file content changes except paths:
-   - top-level `CMakeLists.txt`: `ADD_SUBDIRECTORY(src/userspace src)` (the
-     build output stays in `build/src`, as the top-level README says);
-     the commented `src/gui` line to `src/userspace/gui` (paths only, as
-     allowed by the maintainer);
-   - `src/kernel/dkms.conf` and Makefile/Kbuild paths if any;
-   - path references in `docs/`, `src/kernel/README.md`, RULES.md,
-     CLAUDE.md, TODO.md;
-   - `tools` branch: `compare-objs.sh`, `gen-transcoder-fields.py` and
-     `gchd-test.sh` build from `src/kernel/` (with a fallback to `dkms/`
-     for older revisions).
-2. Proof: the module built before and after is identical
-   (`compare-objs.sh`), and the userspace program still builds with CMake.
-3. Hardware test: the `smoke` test with the new paths (one short run).
+1. `install-driver.sh` (top level, executable, runnable from a file
+   manager: opens a terminal when started without one, uses `pkexec` or
+   `sudo` for root steps):
+   - checks the requirements (kernel headers, `dkms`, `make`, `p7zip` for
+     the firmware) and names the package to install when one is missing;
+   - firmware: if `/lib/firmware/gchd/` lacks the files, runs the firmware
+     step (asks for the `GameCaptureSetup*.msi` the user downloaded;
+     download from Elgato only after the e-mail answer, TODO);
+   - builds in `build/objects/kernel/` (sources copied there), module to
+     `build/`; installs with DKMS; installs the udev rule; loads the
+     module;
+   - `--uninstall`: DKMS remove, udev rule and settings file removed
+     (firmware kept unless asked).
+2. `firmware/extract_firmware_windows` reworked: checksum check of the
+   extracted files, clear messages, usable by the installer.
+3. README: install section points to the script; the manual steps stay
+   documented.
+4. Test file `tools/tests/T-071.sh`: install, module loads, capture,
+   uninstall, reinstall.
 
 ## Hardware test (maintainer)
 
 Follows with the implementation.
 
 ## Findings
+
+- T-070 (`chore/src-layout`): smoke test 7/7 PASS with the new layout;
+  merged. Licence files: TODO T-094 (blocked for the development
+  session; commands in my reply of 2026-11-18).
 
 ## Maintainer comments
 

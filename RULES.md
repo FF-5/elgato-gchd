@@ -4,7 +4,7 @@
 never reach `master` (rule B2).
 
 These rules apply to anyone, human or AI, working on the kernel driver
-(`dkms/`) and the documentation (`docs/`). Read them before starting a task
+(`src/`) and the documentation (`docs/`). Read them before starting a task
 and re-check them before every commit.
 
 ## A. Before starting a task
@@ -52,17 +52,18 @@ and re-check them before every commit.
    ```
 
    The last command must print nothing. Nothing that refers to these files
-   may be shipped (code, `docs/`, `dkms/README.md`).
+   may be shipped (code, `docs/`, `src/README.md`).
 3. **Tools and analysis material never enter `dev` or `master`.** New scripts
    are written on the `tools` branch (or a feature branch made from it) and
    used from a worktree or with `git show origin/tools:tools/<script>`. Traces,
    decoded trace listings, logs and analysis notes go to the `traces` branch.
-4. **Protected files — never modify:** `src/`, `CMakeLists.txt`, the
-   original files in `udev-rules/` (`55-elgato-game-capture.rules`),
-   `CREDITS.md`, `LICENSE`, the top-level `README.md`. New files of our own
-   may be added to `udev-rules/`. Changes to the protected files (for
-   example the planned move of `src/`, TODO T-070) are made only with the
-   maintainer's consent.
+4. **Files of the original project:** the project is the kernel driver
+   only (maintainer decision 2026-11-18; the original userspace program
+   was removed in T-070 and stays in the git history and in the original
+   repository). Any file that came from the original project may be edited
+   (maintainer 2026-11-18). Keep the credits to the original authors
+   (`CREDITS.md`, README) and the original MIT copyright and permission
+   notice: they are required by the MIT licence.
 5. Never commit directly to `master`. Never force-push `dev` or `master`.
    Never rewrite published history.
 6. One feature branch per task. Merge into `dev` only when the task's
@@ -72,7 +73,7 @@ and re-check them before every commit.
    `dev` or abandoned. If the session cannot delete remote branches, list
    them in `TODO.md` Phase 0 for the maintainer.
 
-## C. Documentation (`docs/`, `dkms/README.md`)
+## C. Documentation (`docs/`, `src/README.md`)
 
 The documentation ships with the driver and must read as product
 documentation.
@@ -94,8 +95,9 @@ documentation.
 
 ## D. Protocol fidelity
 
-1. **Recorded USB traces of the device are the reference.** The C++ in `src/`
-   is read-only material and a starting point only: it detects input and mode
+1. **Recorded USB traces of the device are the reference.** The C++ program
+   of the original project (git history before T-070, or the original
+   repository) is read-only material and a starting point only: it detects input and mode
    once at start-up and handles neither input changes nor resolution changes.
    The DKMS code is not a reference.
 2. When a trace covers the scenario, follow the trace. When no trace covers
@@ -128,7 +130,7 @@ documentation.
 1. The module builds **without warnings** with `W=1` against Linux 6.8
    headers (Ubuntu 24.04, 6.8.0-x), and against the current distribution
    kernel when available:
-   `make -C /usr/src/linux-headers-6.8.0-*-generic M=$PWD/dkms modules W=1`.
+   `make -C /usr/src/linux-headers-6.8.0-*-generic M=$PWD/src modules W=1`.
 2. No H.264 decoding, scaling or deinterlacing in the kernel.
 3. No `msleep()` or blocking USB calls in URB completion handlers or while
    holding spinlocks. Control transfers only from process context.
@@ -146,7 +148,7 @@ documentation.
    (`GCHD_*_W`, `GCHD_*_R`, `GCHD_*_RX`, `GCHD_BRIDGE_*`, `GCHD_TC_SET`,
    `GCHD_TRY`). No local helper macros in `.c` files.
 8. Diagnostics stay behind module parameters or `dev_dbg`.
-9. Keep `dkms/dkms.conf` `PACKAGE_VERSION` in sync with user-visible
+9. Keep `src/dkms.conf` `PACKAGE_VERSION` in sync with user-visible
    behaviour changes.
 10. **Code comments describe only the code itself and what it does.** No
     references to traces, trace files, the Windows driver, the C++ code,
