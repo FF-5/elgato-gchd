@@ -22,7 +22,9 @@ on the `traces` branch.
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
-  §8.3`), composite ↔ S-video without unplugging, close and reopen.
+  §8.3`), composite ↔ S-video without unplugging, close and reopen
+  (also right after a close and after a session without a source),
+  STREAMOFF → STREAMON on one handle.
   Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
   `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; outputs
   60 Hz with PAL colour for a few seconds after power-on and reset; the
