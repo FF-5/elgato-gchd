@@ -44,6 +44,11 @@ step "PS1 switched off and on while capturing (T-054)"
 prompt "Read first: ffplay opens next. When the PS1 picture shows, switch the PS1 OFF, wait 5 s, switch it ON again and wait until the game picture is back. ffplay closes by itself after 60 s. Press Enter to start."
 play 60 "Did the PS1 picture come back after it was switched on again?"
 
+step "capture start with a 288p source (R1)"
+prompt "Bring the PS1 to the same screen you used for the 288p recording (gchd_PAL_composite_small) and leave it there."
+capture 10 720 576 50/1 tt
+expect "capture started in 288p" "configuring 288p" sudo dmesg
+
 step "start/close cycles (T-067)"
 capture 5 720 576 50/1 tt
 capture 5 720 576 50/1 tt
