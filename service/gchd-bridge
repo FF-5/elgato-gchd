@@ -42,23 +42,36 @@ die() { msg "$*"; exit 1; }
 
 # ------------------------------------------------------------ devices
 
-# Video device node of a driver (elgato_gchd or v4l2loopback), optionally
-# with a given card name.
-find_node() {	# find_node DRIVER [NAME]
-	local d drv
+# Device nodes by sysfs name and driver binding (no device is opened). The
+# capture device is bound to elgato_gchd; the loopback device is the node
+# with the loopback label that is not bound to it (v4l2loopback devices
+# have no bound driver in sysfs).
+node_driver() {	# node_driver SYSFS-DIR
+	basename "$(readlink -f "$1/device/driver" 2>/dev/null)" 2>/dev/null
+}
+
+cap_dev() {
+	local d
 	for d in /sys/class/video4linux/video*; do
 		[ -e "$d" ] || continue
-		drv=$(basename "$(readlink -f "$d/device/driver")" 2>/dev/null)
-		[ "$drv" = "$1" ] || continue
-		[ $# -lt 2 ] || [ "$(cat "$d/name")" = "$2" ] || continue
+		[ "$(node_driver "$d")" = elgato_gchd ] || continue
 		echo "/dev/$(basename "$d")"
 		return 0
 	done
 	return 1
 }
 
-cap_dev()  { find_node elgato_gchd; }
-loop_dev() { find_node v4l2loopback "$LOOP_LABEL"; }
+loop_dev() {
+	local d
+	for d in /sys/class/video4linux/video*; do
+		[ -e "$d" ] || continue
+		[ "$(node_driver "$d")" = elgato_gchd ] && continue
+		[ "$(cat "$d/name" 2>/dev/null)" = "$LOOP_LABEL" ] || continue
+		echo "/dev/$(basename "$d")"
+		return 0
+	done
+	return 1
+}
 
 # Current output size of the capture device: "WIDTH HEIGHT".
 cap_size() {
