@@ -197,8 +197,6 @@ static void gchd_app_stop(struct vb2_queue *q)
 	spin_unlock_irqrestore(&app.qlock, flags);
 	mutex_unlock(&app.deliver);
 	gchd_app_notify();
-	/* The format follows the source again (after the buffers are freed). */
-	schedule_work(&app.update_work);
 }
 
 static const struct vb2_ops gchd_app_qops = {
@@ -403,6 +401,28 @@ static int gchd_app_s_input(struct file *f, void *p, unsigned int i)
 	return r;
 }
 
+/*
+ * Once the buffers are freed (REQBUFS with 0 buffers, or the last close),
+ * the format follows the source again.
+ */
+static int gchd_app_reqbufs(struct file *f, void *p,
+			    struct v4l2_requestbuffers *rb)
+{
+	int r = vb2_ioctl_reqbufs(f, p, rb);
+
+	if (!r && !rb->count)
+		schedule_work(&app.update_work);
+	return r;
+}
+
+static int gchd_app_release(struct file *f)
+{
+	int r = vb2_fop_release(f);
+
+	schedule_work(&app.update_work);
+	return r;
+}
+
 static int gchd_app_subscribe(struct v4l2_fh *fh,
 			      const struct v4l2_event_subscription *sub)
 {
@@ -424,7 +444,7 @@ static const struct v4l2_ioctl_ops gchd_app_ioctl = {
 	.vidioc_enum_input = gchd_app_enum_input,
 	.vidioc_g_input = gchd_app_g_input,
 	.vidioc_s_input = gchd_app_s_input,
-	.vidioc_reqbufs = vb2_ioctl_reqbufs,
+	.vidioc_reqbufs = gchd_app_reqbufs,
 	.vidioc_create_bufs = vb2_ioctl_create_bufs,
 	.vidioc_prepare_buf = vb2_ioctl_prepare_buf,
 	.vidioc_querybuf = vb2_ioctl_querybuf,
@@ -440,7 +460,7 @@ static const struct v4l2_ioctl_ops gchd_app_ioctl = {
 static const struct v4l2_file_operations gchd_app_fops = {
 	.owner = THIS_MODULE,
 	.open = v4l2_fh_open,
-	.release = vb2_fop_release,
+	.release = gchd_app_release,
 	.read = vb2_fop_read,
 	.poll = vb2_fop_poll,
 	.mmap = vb2_fop_mmap,
