@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** analysis
+- **Status:** implemented (b5d4a79); hardware test
 - **Type:** driver feature
 - **Branch:** `feat/output-size` (from `dev` 0.5.2)
 - **TODO items:** T-055 (stage 1)
@@ -35,7 +35,39 @@ Recorded (`docs/composite.md §10`, recordings in `traces/composite/`:
 
 ## Hardware test (maintainer)
 
-Follows with the implementation.
+Build and load; `git log -1 --oneline` must show b5d4a79 or later:
+
+```sh
+cd ~/elgato-gchd && git fetch origin && git checkout feat/output-size && git pull
+git log -1 --oneline
+cd dkms && make -C /lib/modules/$(uname -r)/build M=$PWD clean modules
+sudo rmmod elgato_gchd 2>/dev/null; sudo dmesg -C
+sudo modprobe -a videodev videobuf2-v4l2 videobuf2-vmalloc
+sudo insmod ./elgato_gchd.ko
+v4l2-ctl -d /dev/video0 -i 2
+```
+
+PS1 on composite, game running. For each size, set it, check the report,
+play 15 s, close:
+
+```sh
+v4l2-ctl -d /dev/video0 -v width=640,height=480,pixelformat=MPEG
+v4l2-ctl -d /dev/video0 --get-fmt-video --list-framesizes=MPEG
+ffplay -f mpegts /dev/video0
+```
+
+1. 640 × 480 (commands above).
+2. 480 × 360: `-v width=480,height=360,pixelformat=MPEG`.
+3. Standard again: `-v width=720,height=576,pixelformat=MPEG`.
+
+Expected: ffplay's stream line shows 640x480 / 480x360 / 720x576 with a
+picture each time. If the small sizes give no picture, the dmesg stats line
+(`ep84_bytes=`) shows whether the data arrives on endpoint 0x84. Paste the
+ffplay stream lines (the `Stream #0:0` line) and:
+
+```sh
+sudo dmesg | grep -vE "bulk-IN data|START poll=|firmware chunk|SCMD write succeeded|SCMD interrupt|callbacks suppressed|bulk-IN first reads|no analog family|pre-config raw_status|retrying detection"
+```
 
 ## Findings
 
