@@ -23,44 +23,52 @@ tested. Not supported: Game Capture HD60, HD60 S, HD60 Pro.
 
 - Linux with the kernel headers of the running kernel, `make`, `gcc`
 - `dkms` (recommended, rebuilds the driver after kernel updates)
-- The device firmware (below)
+- Elgato's "Game Capture" installer for Windows, for the firmware (see Install)
 - For viewing and recording: `v4l-utils`, `ffmpeg` (`ffplay`)
-
-## Firmware
-
-The device needs firmware files that cannot be distributed with the driver.
-They are extracted from Elgato's "Game Capture" installer for Windows
-(`GameCaptureSetup*.msi`, available from Elgato) with the script in
-[`firmware/`](firmware/), which needs `p7zip`:
-
-```sh
-cd firmware
-# copy GameCaptureSetup*.msi into this directory, then:
-sudo ./extract_firmware_windows
-```
-
-The files are installed to `/lib/firmware/gchd/`. Details:
-[`src/README.md`](src/README.md#firmware).
 
 ## Install
 
-With DKMS:
+1. Download Elgato's "Game Capture" software for Windows
+   (`GameCaptureSetup*.msi`) and put the file into `firmware/` or
+   `~/Downloads`. The driver needs firmware from it that cannot be
+   distributed with the driver.
+2. Run the installer (double-click `install-driver.sh` in the file
+   manager, or in a terminal):
+
+   ```sh
+   ./install-driver.sh
+   ```
+
+   It checks for the firmware in `/lib/firmware/gchd/` and extracts it
+   from the installer file when missing (it stops if that fails), builds
+   the driver in `build/`, installs it with DKMS (when available; the
+   driver is then rebuilt after kernel updates), installs the udev rule
+   that remembers the settings, and loads the driver. Missing packages
+   (kernel headers, compiler, `dkms`, `7z`) are named and can be
+   installed on request.
+
+Remove the driver with `./install-driver.sh --uninstall` (the firmware is
+kept).
+
+### Manual installation
+
+Firmware (needs `7z`):
+
+```sh
+sudo firmware/extract_firmware_windows path/to/GameCaptureSetup.msi
+```
+
+Driver with DKMS, and the udev rule:
 
 ```sh
 sudo dkms add ./src
 sudo dkms install elgato-gchd/0.5.6
 sudo modprobe elgato_gchd
-```
-
-Remembered settings (input, output size, format, bitrate across replug and
-reboot) need the udev rule:
-
-```sh
 sudo cp udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
 ```
 
-Direct build without DKMS: see [`src/README.md`](src/README.md).
+Firmware files and a build without DKMS: see [`src/README.md`](src/README.md).
 
 ## Use
 
