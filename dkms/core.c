@@ -10,7 +10,7 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.5.4");
+MODULE_VERSION("0.5.5");
 
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
@@ -148,9 +148,99 @@ static void gchd_analog_out_size(const struct gchd *d, u8 out,
  }
 }
 
-/* Input-selection state owns the HDMI default and remembered selection. */
+/*
+ * Remembered settings. The module parameters hold the settings in use; on
+ * every change the driver updates them and sends a "change" uevent with
+ * all values (GCHD_*), from which a udev rule writes them to modprobe.d,
+ * so the next load starts with them. HDMI and the defaults on first use.
+ */
 static DEFINE_MUTEX(gchd_last_input_lock);
 static unsigned int gchd_last_input;
+module_param_named(input, gchd_last_input, uint, 0644);
+MODULE_PARM_DESC(input, "Input: 0 HDMI, 1 component, 2 composite, 3 S-video");
+static unsigned int gchd_set_output;
+module_param_named(output, gchd_set_output, uint, 0644);
+MODULE_PARM_DESC(output, "Composite/S-video output size: 0 source size, 1 640x480, 2 480x360");
+static unsigned int gchd_set_format;
+module_param_named(format, gchd_set_format, uint, 0644);
+MODULE_PARM_DESC(format, "Pixel format: 0 H.264, 1 MPEG transport stream");
+static unsigned int gchd_set_bitrate;
+module_param_named(bitrate, gchd_set_bitrate, uint, 0644);
+MODULE_PARM_DESC(bitrate, "Video bitrate in kbit/s, 0 automatic");
+static unsigned int gchd_set_bitrate_mode = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR;
+module_param_named(bitrate_mode, gchd_set_bitrate_mode, uint, 0644);
+MODULE_PARM_DESC(bitrate_mode, "Bitrate mode: 0 VBR, 1 CBR");
+static unsigned int gchd_set_stretch;
+module_param_named(stretch, gchd_set_stretch, uint, 0644);
+MODULE_PARM_DESC(stretch, "Stretch SD input (composite/S-video): 0 off, 1 on");
+static unsigned int gchd_set_profile = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
+module_param_named(h264_profile, gchd_set_profile, uint, 0644);
+MODULE_PARM_DESC(h264_profile, "H.264 profile (V4L2 value): 0 baseline, 2 main, 4 high");
+static unsigned int gchd_set_level;
+module_param_named(h264_level, gchd_set_level, uint, 0644);
+MODULE_PARM_DESC(h264_level, "H.264 level x10 (30-51), 0 automatic");
+
+/* V4L2 H.264 level menu values and the level x10 they stand for. */
+static const u8 gchd_levels[][2] = {
+ { V4L2_MPEG_VIDEO_H264_LEVEL_3_0, 30 }, { V4L2_MPEG_VIDEO_H264_LEVEL_3_1, 31 },
+ { V4L2_MPEG_VIDEO_H264_LEVEL_3_2, 32 }, { V4L2_MPEG_VIDEO_H264_LEVEL_4_0, 40 },
+ { V4L2_MPEG_VIDEO_H264_LEVEL_4_1, 41 }, { V4L2_MPEG_VIDEO_H264_LEVEL_4_2, 42 },
+ { V4L2_MPEG_VIDEO_H264_LEVEL_5_0, 50 }, { V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 51 },
+};
+
+/* Store the device's settings in the parameters and announce them. */
+static void gchd_settings_save(struct gchd *d)
+{
+ char e[8][40];
+ char *envp[9];
+ int i;
+
+ gchd_set_output = d->analog_out;
+ gchd_set_format = d->pixfmt == V4L2_PIX_FMT_MPEG;
+ gchd_set_bitrate = d->bitrate_forced ? d->bitrate : 0;
+ gchd_set_bitrate_mode = d->bitrate_mode;
+ gchd_set_stretch = d->stretch;
+ gchd_set_profile = d->h264_profile;
+ gchd_set_level = d->h264_level_forced ? d->h264_level : 0;
+
+ snprintf(e[0], sizeof(e[0]), "GCHD_INPUT=%u", d->input);
+ snprintf(e[1], sizeof(e[1]), "GCHD_OUTPUT=%u", gchd_set_output);
+ snprintf(e[2], sizeof(e[2]), "GCHD_FORMAT=%u", gchd_set_format);
+ snprintf(e[3], sizeof(e[3]), "GCHD_BITRATE=%u", gchd_set_bitrate);
+ snprintf(e[4], sizeof(e[4]), "GCHD_BITRATE_MODE=%u", gchd_set_bitrate_mode);
+ snprintf(e[5], sizeof(e[5]), "GCHD_STRETCH=%u", gchd_set_stretch);
+ snprintf(e[6], sizeof(e[6]), "GCHD_H264_PROFILE=%u", gchd_set_profile);
+ snprintf(e[7], sizeof(e[7]), "GCHD_H264_LEVEL=%u", gchd_set_level);
+ for (i = 0; i < 8; ++i)
+  envp[i] = e[i];
+ envp[8] = NULL;
+ kobject_uevent_env(&d->intf->dev.kobj, KOBJ_CHANGE, envp);
+}
+
+/* Settings from the parameters at probe time. */
+static void gchd_settings_load(struct gchd *d)
+{
+ unsigned int i;
+
+ d->analog_out = gchd_set_output <= GCHD_OUT_MOBILE ? gchd_set_output :
+                                                      GCHD_OUT_STANDARD;
+ d->pixfmt = gchd_set_format ? V4L2_PIX_FMT_MPEG : V4L2_PIX_FMT_H264;
+ d->bitrate_forced = gchd_set_bitrate != 0;
+ d->bitrate = gchd_set_bitrate ? clamp_t(unsigned int, gchd_set_bitrate, 32, 40000) : 40000;
+ d->bitrate_mode = gchd_set_bitrate_mode ? V4L2_MPEG_VIDEO_BITRATE_MODE_CBR :
+                                           V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
+ d->stretch = !!gchd_set_stretch;
+ d->h264_profile = gchd_set_profile == V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE ||
+                   gchd_set_profile == V4L2_MPEG_VIDEO_H264_PROFILE_MAIN ?
+                   gchd_set_profile : V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
+ d->h264_level = 41;
+ d->h264_level_forced = false;
+ for (i = 0; i < ARRAY_SIZE(gchd_levels); ++i)
+  if (gchd_levels[i][1] == gchd_set_level) {
+   d->h264_level = gchd_set_level;
+   d->h264_level_forced = true;
+  }
+}
 
 /* GCHD_* tracks driver lifecycle; HW_* names device protocol states/commands. */
 static void gchd_set_lifecycle(struct gchd *d, enum gchd_state state)
@@ -1705,6 +1795,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  mutex_lock(&gchd_last_input_lock);
  gchd_last_input = i;
  mutex_unlock(&gchd_last_input_lock);
+ gchd_settings_save(d);
  d->mode_forced = false;
  /* encoder_started is deliberately preserved across connector changes. */
  d->last_video_jiffies = jiffies;
@@ -2036,6 +2127,7 @@ static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
  d->height = x->fmt.pix.height;
  d->pixfmt = x->fmt.pix.pixelformat;
  d->sizeimage = gchd_fmt_sizeimage(d->pixfmt);
+ gchd_settings_save(d);
  if (m) {
   /* Digital inputs: the requested mode is programmed as given. */
   d->input_width=m->width;
@@ -2172,6 +2264,7 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
  default:
   return -EINVAL;
  }
+ gchd_settings_save(d);
  if (d->streaming) {
   WRITE_ONCE(d->enc_dirty, true);
   mod_delayed_work(system_wq, &d->mode_work, 0);
@@ -2296,22 +2389,34 @@ int gchd_v4l2_register(struct gchd*d)
 {
  int r=v4l2_device_register(&d->intf->dev,&d->v4l2_dev);if(r)return r;
  v4l2_ctrl_handler_init(&d->ctrls,6);
- v4l2_ctrl_new_std(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_BITRATE,32000,40000000,1000,11250000);
- v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
-  V4L2_MPEG_VIDEO_BITRATE_MODE_CBR,0,V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
+ /* Control defaults are the remembered settings (gchd_settings_load()). */
+ {
+  unsigned int i, level_def = V4L2_MPEG_VIDEO_H264_LEVEL_4_1;
+
+  for (i = 0; i < ARRAY_SIZE(gchd_levels); ++i)
+   if (d->h264_level_forced && gchd_levels[i][1] == d->h264_level)
+    level_def = gchd_levels[i][0];
+  v4l2_ctrl_new_std(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_BITRATE,32000,40000000,1000,
+                    d->bitrate_forced ? d->bitrate * 1000 : 11250000);
+  v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
+   V4L2_MPEG_VIDEO_BITRATE_MODE_CBR,0,d->bitrate_mode);
+  v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_PROFILE,V4L2_MPEG_VIDEO_H264_PROFILE_HIGH,
+   ~(BIT(V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)),d->h264_profile);
+  v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_LEVEL,V4L2_MPEG_VIDEO_H264_LEVEL_5_1,0,level_def);
+ }
  {
   static const struct v4l2_ctrl_config stretch_cfg = {
    .ops = &gchd_ctrl_ops,
    .id = V4L2_CID_GCHD_STRETCH,
    .name = "Stretch SD Input",
    .type = V4L2_CTRL_TYPE_BOOLEAN,
-   .min = 0, .max = 1, .step = 1, .def = 0,
+   .min = 0, .max = 1, .step = 1,
   };
-  v4l2_ctrl_new_custom(&d->ctrls, &stretch_cfg, NULL);
+  struct v4l2_ctrl_config cfg = stretch_cfg;
+
+  cfg.def = d->stretch;
+  v4l2_ctrl_new_custom(&d->ctrls, &cfg, NULL);
  }
- v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_PROFILE,V4L2_MPEG_VIDEO_H264_PROFILE_HIGH,
-  ~(BIT(V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)),V4L2_MPEG_VIDEO_H264_PROFILE_MAIN);
- v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_LEVEL,V4L2_MPEG_VIDEO_H264_LEVEL_5_1,0,V4L2_MPEG_VIDEO_H264_LEVEL_4_1);
  {
   struct v4l2_ctrl_config input_cfg = {
    .ops = &gchd_ctrl_ops,
@@ -2390,31 +2495,30 @@ static int gchd_probe(struct usb_interface *i,
  d->width = 1280;
  d->height = 720;
  d->sizeimage = GCHD_MAX_FRAME;
- /* INPUT_SELECTION resolves the remembered connector after hardware init. */
- d->input = 0;
+ /*
+  * The remembered input already at probe, so that G_INPUT and G_FMT report
+  * it before the first capture; INPUT_SELECTION resolves it again after the
+  * hardware initialization.
+  */
+ d->input = gchd_last_input <= 3 ? gchd_last_input : 0;
  /*
   * The decoder keeps its S-video setting while the device has power, also
   * across module reloads: the first composite start writes the S-video to
   * composite sequence.
   */
  d->dec_svideo = true;
- d->bitrate_forced = false;
- d->h264_level_forced = false;
  d->input_width = 0;
  d->input_height = 0;
  d->input_fps_num = 0;
  d->input_fps_den = 0;
- d->bitrate = 40000;
- d->bitrate_mode = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR;
- d->h264_profile = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
- d->h264_level = 41;
+ gchd_settings_load(d);
  d->usb_buf = kmalloc(GCHD_USB_BUFSIZE, GFP_KERNEL);
  d->ts_out = kmalloc(GCHD_TS_BUF_SIZE, GFP_KERNEL);
  if (!d->usb_buf || !d->ts_out) {
   r = -ENOMEM;
   goto err;
  }
- d->pixfmt = V4L2_PIX_FMT_H264;
+ d->sizeimage = gchd_fmt_sizeimage(d->pixfmt);
  d->wait_pat = true;
 
  /*
