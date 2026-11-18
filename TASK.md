@@ -166,3 +166,225 @@ at the end of it).
 
 ## Maintainer comments
 
+Many errors.
+
+gchd-test T-060 20261118-182357 host 6.8.0-146-generic
+log: /home/ff5/gchd-test-logs/T-060-20261118-182357.log
+== build
+$ git fetch -q origin
+$ git checkout -q feat/app-bridge
+$ git pull -q --ff-only
+commit: 1c46631 TODO: T-060 with the driver's application device
+commit: 1c46631 TODO: T-060 with the driver's application device
+build rc=0 warnings=0
+
+=== step 1: driver with three devices
+$ sh -c pkill -f 'gchd-bridge run'; sudo modprobe -r v4l2loopback; true
+PROMPT: Unplug the Elgato from the PC (or detach it in VirtualBox), wait 3 s, plug it in again.
+$ sudo insmod /home/ff5/elgato-gchd/src/elgato_gchd.ko
+module: 0.5.8 
+$ v4l2-ctl --list-devices
+Elgato Game Capture HD (platform:v4l2loopback-000):
+	/dev/video42
+
+Elgato Game Capture HD (HDNew,  (usb-0000:00:0c.0-2):
+	/dev/video0
+	/dev/video1
+	/dev/video2
+
+$ v4l2-ctl --list-devices
+Elgato Game Capture HD (platform:v4l2loopback-000):
+	/dev/video42
+
+Elgato Game Capture HD (HDNew,  (usb-0000:00:0c.0-2):
+	/dev/video0
+	/dev/video1
+	/dev/video2
+[FAIL] H.264 device (expected /Elgato Game Capture HD \(H.264\)/, got: Elgato Game Capture HD (platform:v4l2loopback-000): 	/dev/video42  Elgato Game Capture HD (HDNew,  (usb-0000:00:0c.0-2): 	/dev/video0 	/dev/video1 	/dev/video2)
+$ app_attr
+idle video2 1280 720 60 1 video1
+[FAIL] application device registered, idle (expected /^idle video[0-9]+ 720 (480|576) /, got: idle video2 1280 720 60 1 video1)
+$ v4l2-ctl -d /dev/video2 --list-formats-ext
+ioctl: VIDIOC_ENUM_FMT
+	Type: Video Capture
+
+	[0]: 'YUYV' (YUYV 4:2:2)
+		Size: Discrete 1280x720
+			Interval: Discrete 0.017s (60.000 fps)
+[PASS] application device offers YUYV
+--- dmesg step 1
+[87240.977571] usbcore: deregistering interface driver elgato_gchd
+[87250.784523] usb 1-2: new high-speed USB device number 86 using xhci_hcd
+[87251.176960] usb 1-2: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
+[87251.176967] usb 1-2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[87251.176968] usb 1-2: Product: GameCapture HD
+[87251.176970] usb 1-2: Manufacturer: Elgato
+[87251.176970] usb 1-2: SerialNumber: 04107F1267
+[87251.634909] elgato_gchd 1-2:1.0: GCHD lifecycle: USB probe; registering V4L2 only\n
+[87251.638003] elgato_gchd 1-2:1.0: application device video2: 1280x720, 60/1 frames/s
+[87251.638007] elgato_gchd 1-2:1.0: GCHD lifecycle: USB present; V4L2 registered; hardware stays powered off until STREAMON
+[87251.638029] usbcore: registered new interface driver elgato_gchd
+
+=== step 2: bridge idle: capture device off
+PROMPT: PS1 on composite, game running.
+$ v4l2-ctl -d /dev/video0 -i 2
+Video input set to 2 (Composite: Camera, no signal)
+$ bash /home/ff5/elgato-gchd/service/gchd-bridge status
+driver state:   idle video2 720 480 60000 1001 video1
+stream device:  none
+service:        running (pid 88524)
+$ bash /home/ff5/elgato-gchd/service/gchd-bridge status
+driver state:   idle video2 720 480 60000 1001 video1
+stream device:  none
+service:        running (pid 88524)
+[PASS] bridge running
+$ sh -c sudo dmesg | grep -c 'starting hardware boot'
+0
+[PASS] capture device off while no application streams
+--- dmesg step 2
+[87280.509211] elgato_gchd 1-2:1.0: input switch requested: old=0 new=2 hw_initialized=0 streaming=0
+[87280.509250] elgato_gchd 1-2:1.0: input selected: input=2; detection deferred until device open
+[87280.509290] elgato_gchd 1-2:1.0: application device: 720x480, 60000/1001 frames/s
+
+=== step 3: first read: source detected (PAL), device registered again with 720x576
+$ cat /home/ff5/gchd-test-logs/T-060-20261118-182357/read1.txt
+  Stream #0:0: Video: rawvideo (YUY2 / 0x32595559), yuyv422, 720x480, 331444 kb/s, 59.94 fps, 59.94 tbr, 1000k tbn
+frame=    0 fps=0.0 q=0.0 Lsize=       0kB time=N/A bitrate=N/A speed=N/A    
+$ app_attr
+idle video2 720 480 60000 1001 video1
+$ app_attr
+idle video2 720 480 60000 1001 video1
+[FAIL] application device now 720x576, 50 frames/s (expected / 720 576 50 1 /, got: idle video2 720 480 60000 1001 video1)
+$ tail -8 /home/ff5/gchd-test-logs/T-060-20261118-182357/bridge.log
+--- dmesg step 3
+
+
+=== step 4: read: 720x576 YUYV, about 50 frames/s
+$ cat /home/ff5/gchd-test-logs/T-060-20261118-182357/read2.txt
+  Stream #0:0: Video: rawvideo (YUY2 / 0x32595559), yuyv422, 720x480, 331444 kb/s, 59.94 fps, 59.94 tbr, 1000k tbn
+frame=    0 fps=0.0 q=0.0 Lsize=       0kB time=N/A bitrate=N/A speed=N/A    
+$ cat /home/ff5/gchd-test-logs/T-060-20261118-182357/read2.txt
+  Stream #0:0: Video: rawvideo (YUY2 / 0x32595559), yuyv422, 720x480, 331444 kb/s, 59.94 fps, 59.94 tbr, 1000k tbn
+frame=    0 fps=0.0 q=0.0 Lsize=       0kB time=N/A bitrate=N/A speed=N/A    
+[FAIL] stream YUYV 720x576 (expected /yuyv422.*720x576/, got:   Stream #0:0: Video: rawvideo (YUY2 / 0x32595559), yuyv422, 720x480, 331444 kb/s, 59.94 fps, 59.94 tbr, 1000k tbn frame=    0 fps=0.0 q=0.0 Lsize=       0kB ti)
+$ cat /home/ff5/gchd-test-logs/T-060-20261118-182357/read2.txt
+  Stream #0:0: Video: rawvideo (YUY2 / 0x32595559), yuyv422, 720x480, 331444 kb/s, 59.94 fps, 59.94 tbr, 1000k tbn
+frame=    0 fps=0.0 q=0.0 Lsize=       0kB time=N/A bitrate=N/A speed=N/A    
+[FAIL] frame count >= 450 in 15 s (expected /frame= *([4-9][5-9][0-9]|[5-9][0-9]{2}|[0-9]{4})/, got:   Stream #0:0: Video: rawvideo (YUY2 / 0x32595559), yuyv422, 720x480, 331444 kb/s, 59.94 fps, 59.94 tbr, 1000k tbn frame=    0 fps=0.0 q=0.0 Lsize=       0kB ti)
+$ sudo dmesg
+
+[FAIL] capture device started (expected /starting hardware boot/, got: )
+--- dmesg step 4
+
+
+=== step 5: application closed: capture device off
+$ sudo dmesg
+
+[FAIL] hardware shut down after the application stopped (expected /hardware shutdown done/, got: )
+$ app_attr
+idle video2 720 480 60000 1001 video1
+[PASS] state idle
+--- dmesg step 5
+
+
+=== step 6: audio while capturing
+$ sink_streams
+
+[FAIL] the bridge plays into the audio sink (expected /stream into elgato_gchd/, got: )
+$ ffmpeg -hide_banner -nostdin -f pulse -i elgato_gchd_audio -t 4 -af volumedetect -f null -
+[aist#0:0/pcm_s16le @ 0x64e4ada56640] Guessed Channel Layout: stereo
+Input #0, pulse, from 'elgato_gchd_audio':
+  Duration: N/A, start: 1795022820.764074, bitrate: 1536 kb/s
+  Stream #0:0: Audio: pcm_s16le, 48000 Hz, 2 channels, s16, 1536 kb/s
+[Parsed_volumedetect_0 @ 0x64e4ada58000] n_samples: 0
+Stream mapping:
+  Stream #0:0 -> #0:0 (pcm_s16le (native) -> pcm_s16le (native))
+Output #0, null, to 'pipe:':
+  Metadata:
+    encoder         : Lavf60.16.100
+  Stream #0:0: Audio: pcm_s16le, 48000 Hz, stereo, s16, 1536 kb/s
+    Metadata:
+      encoder         : Lavc60.31.102 pcm_s16le
+size=       0kB time=00:00:00.00 bitrate=N/A speed=N/A    
+size=N/A time=00:00:00.59 bitrate=N/A speed=1.07x    
+size=N/A time=00:00:01.10 bitrate=N/A speed=1.02x    
+size=N/A time=00:00:01.61 bitrate=N/A speed=1.02x    
+size=N/A time=00:00:02.13 bitrate=N/A speed=0.94x    
+size=N/A time=00:00:02.74 bitrate=N/A speed=0.976x    
+size=N/A time=00:00:03.35 bitrate=N/A speed=1.01x    
+size=N/A time=00:00:03.90 bitrate=N/A speed=1.02x    
+[out#0/null @ 0x64e4ada53b00] video:0kB audio:711kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: unknown
+size=N/A time=00:00:03.95 bitrate=N/A speed=0.978x    
+[Parsed_volumedetect_0 @ 0x64e4ada5aa80] n_samples: 369600
+[Parsed_volumedetect_0 @ 0x64e4ada5aa80] mean_volume: -91.0 dB
+[Parsed_volumedetect_0 @ 0x64e4ada5aa80] max_volume: -91.0 dB
+[Parsed_volumedetect_0 @ 0x64e4ada5aa80] histogram_91db: 369600
+[PASS] audio source delivers samples
+--- dmesg step 6
+
+
+=== step 7: input change on the application device while reading
+$ v4l2-ctl -d /dev/video2 -i 3
+Video input set to 3 (S-Video: Camera, ok)
+$ app_attr
+streaming video2 720 480 60000 1001 video1
+$ cat /home/ff5/gchd-test-logs/T-060-20261118-182357/read3.txt
+  Stream #0:0: Video: rawvideo (YUY2 / 0x32595559), yuyv422, 720x480, 331444 kb/s, 59.94 fps, 59.94 tbr, 1000k tbn
+frame=    0 fps=0.0 q=0.0 Lsize=       0kB time=N/A bitrate=N/A speed=N/A    
+$ app_attr
+idle video2 720 480 60000 1001 video1
+[PASS] S-video (no source, NTSC size): device re-registered with 720x480
+$ v4l2-ctl -d /dev/video2 -i 2
+Video input set to 2 (Composite: Camera, ok)
+$ app_attr
+idle video2 720 480 60000 1001 video1
+[FAIL] composite again: 720x576 (expected / 720 576 50 1 /, got: idle video2 720 480 60000 1001 video1)
+$ v4l2-ctl -d /dev/video0 --get-input
+Video input : 2 (Composite: no signal)
+[PASS] input composite on the H.264 device too
+--- dmesg step 7
+[87412.964495] elgato_gchd 1-2:1.0: input switch requested: old=2 new=3 hw_initialized=0 streaming=0
+[87412.964529] elgato_gchd 1-2:1.0: input selected: input=3; detection deferred until device open
+[87452.976902] elgato_gchd 1-2:1.0: input switch requested: old=3 new=2 hw_initialized=0 streaming=0
+[87452.976935] elgato_gchd 1-2:1.0: input selected: input=2; detection deferred until device open
+
+=== step 8: guvcview
+PROMPT: Start in a second terminal: guvcview -d /dev/video2   (leave it open)
+[FAIL] guvcview shows the PS1 picture, smooth, without interlacing lines? -- the terminal says that v4l2_core could not grab image
+PROMPT: Swap the PS1 for the N64 (NTSC) while guvcview stays open; wait about 15 s.
+$ app_attr
+streaming video2 720 480 60000 1001 video1
+[FAIL] guvcview reconnected by itself and shows the N64 picture (720x480)? -- still no image and same error on the terminal
+PROMPT: Close guvcview.
+$ tail -20 /home/ff5/gchd-test-logs/T-060-20261118-182357/bridge.log
+--- dmesg step 8
+
+
+=== step 9: bridge stopped
+$ kill 88524
+$ sh -c pactl list short sources | grep -c elgato_gchd
+0
+[PASS] audio source removed
+--- dmesg step 9
+
+
+=== summary (T-060, 1c46631 TODO: T-060 with the driver's application device)
+FAIL | step 1 driver with three devices | H.264 device (expected /Elgato Game Capture HD \(H.264\)/, got: Elgato Game Capture HD (platform:v4l2loopback-000): 	/dev/video42  Elgato Game Capture HD (HDNew,  (usb-0000:00:0c.0-2): 	/dev/video0 	/dev/video1 	/dev/video2)
+FAIL | step 1 driver with three devices | application device registered, idle (expected /^idle video[0-9]+ 720 (480|576) /, got: idle video2 1280 720 60 1 video1)
+PASS | step 1 driver with three devices | application device offers YUYV
+PASS | step 2 bridge idle: capture device off | bridge running
+PASS | step 2 bridge idle: capture device off | capture device off while no application streams
+FAIL | step 3 first read: source detected (PAL), device registered again with 720x576 | application device now 720x576, 50 frames/s (expected / 720 576 50 1 /, got: idle video2 720 480 60000 1001 video1)
+FAIL | step 4 read: 720x576 YUYV, about 50 frames/s | stream YUYV 720x576 (expected /yuyv422.*720x576/, got:   Stream #0:0: Video: rawvideo (YUY2 / 0x32595559), yuyv422, 720x480, 331444 kb/s, 59.94 fps, 59.94 tbr, 1000k tbn frame=    0 fps=0.0 q=0.0 Lsize=       0kB ti)
+FAIL | step 4 read: 720x576 YUYV, about 50 frames/s | frame count >= 450 in 15 s (expected /frame= *([4-9][5-9][0-9]|[5-9][0-9]{2}|[0-9]{4})/, got:   Stream #0:0: Video: rawvideo (YUY2 / 0x32595559), yuyv422, 720x480, 331444 kb/s, 59.94 fps, 59.94 tbr, 1000k tbn frame=    0 fps=0.0 q=0.0 Lsize=       0kB ti)
+FAIL | step 4 read: 720x576 YUYV, about 50 frames/s | capture device started (expected /starting hardware boot/, got: )
+FAIL | step 5 application closed: capture device off | hardware shut down after the application stopped (expected /hardware shutdown done/, got: )
+PASS | step 5 application closed: capture device off | state idle
+FAIL | step 6 audio while capturing | the bridge plays into the audio sink (expected /stream into elgato_gchd/, got: )
+PASS | step 6 audio while capturing | audio source delivers samples
+PASS | step 7 input change on the application device while reading | S-video (no source, NTSC size): device re-registered with 720x480
+FAIL | step 7 input change on the application device while reading | composite again: 720x576 (expected / 720 576 50 1 /, got: idle video2 720 480 60000 1001 video1)
+PASS | step 7 input change on the application device while reading | input composite on the H.264 device too
+FAIL | step 8 guvcview | guvcview shows the PS1 picture, smooth, without interlacing lines? -- the terminal says that v4l2_core could not grab image
+FAIL | step 8 guvcview | guvcview reconnected by itself and shows the N64 picture (720x480)? -- still no image and same error on the terminal
+PASS | step 9 bridge stopped | audio source removed
