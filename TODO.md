@@ -18,14 +18,15 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.4.1): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.0): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
-  restart, PAL ~0.5 s decoder-only), composite ↔ S-video without
-  unplugging, source off/on, close and reopen. ffplay, H.264 stream. No
-  audio. Sources: N64 (NTSC), PS1 (PAL; outputs 60 Hz for a few seconds
-  after power-on and reset, then 50 Hz).
-- `feat/ts-audio`: MPEG-TS with audio works; 60 ↔ 50 Hz family change
-  while capturing as recorded (`docs/composite.md §8.3`), on test.
+  restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
+  (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
+  §8.3`), composite ↔ S-video without unplugging, close and reopen.
+  Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
+  `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; outputs
+  60 Hz with PAL colour for a few seconds after power-on and reset; the
+  driver waits for its 50 Hz signal).
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller.
 
 ## Stage 1 — Composite and S-video complete
@@ -44,10 +45,6 @@ Video modes and switching:
 
 Output and settings (`docs/composite.md §10`):
 
-- [ ] **T-020 [OFF→HW] (M)** MPEG-TS passthrough (`V4L2_PIX_FMT_MPEG`)
-      next to H.264, with audio; robust TS resync.
-- [ ] **T-023 [OFF→HW] (M)** Audio (MPEG-1 Layer II, PID `0x010F`): comes
-      with T-020; PCM for an ALSA device only through a userspace bridge.
 - [ ] **T-055 [OFF→HW] (M)** Output size: 720×480/576 (standard),
       640×480, 480×360 (mobile), as recorded (`v_ip_format 2`, GOP 6,
       transport output 2 for the two small sizes; which endpoint carries
@@ -118,7 +115,7 @@ settings above work on `dev`.
       lines or between interlaced and progressive), so applications never
       see a format change (today ffplay keeps the window size of the first
       frames and shows later modes squeezed).
-      Needs T-020/T-023 (TS with audio) first.
+      Uses the MPEG-TS format with audio (done, 0.5.0).
 
 ## Stage 2 — Component
 
