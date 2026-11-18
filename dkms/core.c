@@ -2495,8 +2495,12 @@ static int gchd_probe(struct usb_interface *i,
  d->width = 1280;
  d->height = 720;
  d->sizeimage = GCHD_MAX_FRAME;
- /* INPUT_SELECTION resolves the remembered connector after hardware init. */
- d->input = 0;
+ /*
+  * The remembered input already at probe, so that G_INPUT and G_FMT report
+  * it before the first capture; INPUT_SELECTION resolves it again after the
+  * hardware initialization.
+  */
+ d->input = gchd_last_input <= 3 ? gchd_last_input : 0;
  /*
   * The decoder keeps its S-video setting while the device has power, also
   * across module reloads: the first composite start writes the S-video to
