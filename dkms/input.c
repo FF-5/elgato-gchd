@@ -2126,6 +2126,7 @@ int gchd_input_start(struct gchd *d)
   return r;
  }
  d->std_hold_until = jiffies + msecs_to_jiffies(1000);
+ WRITE_ONCE(d->start_jiffies, jiffies);
  dev_info(&d->intf->dev, "gchd-diag START transition completed\n");
  return 0;
 }

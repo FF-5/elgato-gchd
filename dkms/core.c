@@ -529,6 +529,13 @@ static void gchd_signal_check(struct gchd *d)
  /* START and STOP can take longer than the signal-loss debounce. */
  if (READ_ONCE(d->start_pending) || READ_ONCE(d->stop_pending))
   return;
+ /*
+  * After START the first video can take longer than the debounce (0.6 s
+  * with 480x360 at 4000 kbit/s): no signal loss before GCHD_START_GRACE_MS.
+  */
+ if (time_before(jiffies, READ_ONCE(d->start_jiffies) +
+                 msecs_to_jiffies(GCHD_START_GRACE_MS)))
+  return;
 
  if (!READ_ONCE(d->signal_present) &&
      time_after(jiffies, READ_ONCE(d->last_video_jiffies) +
