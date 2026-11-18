@@ -45,6 +45,33 @@ sudo dkms install elgato-gchd/0.5.4
 | `signal_active_retries` | 3 | Signal measurement retries when timing is detected. |
 | `signal_inactive_retries` | 1 | Signal measurement retries when no timing is detected. |
 | `signal_poll_delay_ms` | 200 | Delay between signal measurement batches. |
+| `input` | 0 | Input at load: 0 HDMI, 1 component, 2 composite, 3 S-video. |
+| `output` | 0 | Composite/S-video output size: 0 source size, 1 640 × 480, 2 480 × 360. |
+| `format` | 0 | Pixel format: 0 H.264, 1 MPEG transport stream. |
+| `bitrate` | 0 | Video bitrate in kbit/s, 0 automatic. |
+| `bitrate_mode` | 1 | 0 VBR, 1 CBR. |
+| `stretch` | 0 | Stretch standard-definition input (composite/S-video). |
+| `h264_profile` | 4 | V4L2 H.264 profile: 0 baseline, 2 main, 4 high. |
+| `h264_level` | 0 | H.264 level × 10 (30–51), 0 automatic. |
+
+## Remembered settings
+
+The parameters from `input` to `h264_level` hold the settings in use. When
+an application changes one of them, the driver updates the parameters and
+sends a `change` uevent with all values. The udev rule
+[`../udev-rules/56-elgato-gchd-settings.rules`](../udev-rules/56-elgato-gchd-settings.rules)
+writes them to `/etc/modprobe.d/elgato-gchd-settings.conf`, so the next load
+(unplug and replug, module reload, reboot) starts with the same settings.
+Without settings (first use) the driver starts with HDMI and the defaults.
+
+```sh
+sudo cp ../udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
+sudo udevadm control --reload
+```
+
+Delete `/etc/modprobe.d/elgato-gchd-settings.conf` to return to the
+defaults. `modprobe` applies the file; with `insmod` pass the options by
+hand.
 
 ## Video device
 
