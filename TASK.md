@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** analysis
+- **Status:** implemented (1904bc3, 743919d); hardware test with the test script
 - **Type:** driver fixes
 - **Branch:** `fix/analog-robustness` (from `dev` 0.5.5)
 - **TODO items:** T-065, T-067, T-054 (stage 1)
@@ -21,26 +21,43 @@ The last small stage-1 issues with composite and S-video:
 - **T-054:** source switched off and on while capturing: worked by report,
   never checked in the logs.
 
-## Implementation (plan)
+## Implementation
 
-1. T-065: treat `0x88:E7` bit 7 together with an unlocked `0x88:CA` like a
-   signal drop (wait for the 50 Hz reading as after a reset).
-2. T-067: when IDLE is requested and the state reads `0x11` without the
-   completion flag, accept IDLE as reached (log it); check the other
-   start-up state changes for the same pattern.
-3. T-054: test steps for source off/on while capturing (both families),
-   with the expected log lines.
-4. Test file `tools/tests/T-065.sh` (console swaps, source off/on,
-   repeated start/close cycles).
+1. T-065: the family change also waits out the 60 Hz state when
+   `0x88:CA` is not locked at the trigger (console swap without a drop).
+2. T-067: a state change whose state is reached without the completion
+   flag is accepted after the wait (acknowledged, warning logged).
+3. T-054: test steps (source off/on while capturing, NTSC and PAL).
+4. From the new recordings (743919d): `system_rate` refit (all 15 values),
+   GOP 8 for the NTSC scaled outputs, `v_vinpelclk` 1 for 50 Hz and 0 for
+   60 Hz at every size.
 
 ## Hardware test (maintainer)
 
-Follows with the implementation.
+PS1 and N64 on composite; the script tells you when to swap, switch off
+and on. "signal lost" warnings in the off/on steps are expected.
+
+```sh
+cd ~ && git -C elgato-gchd fetch origin
+git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-065.sh > tests/T-065.sh
+bash gchd-test.sh T-065 --branch fix/analog-robustness
+```
+
+Paste the summary; the log too if anything fails.
 
 ## Findings
+- Maintainer recordings 2026-11-18 (now `traces/composite/`):
+  `gchd_PAL_composite_bitrate_audio_small` (PS1, start with the source on,
+  640×480, bitrate max/min/middle/max, audio gain) and
+  `gchd_NTSC_composite_output_bitrate_audio_small` (PS2 480i, every output
+  size with bitrate min/middle/max, audio gain). Results: `system_rate`
+  refit for PAL and NTSC; the slider shows the VBR average, its top is
+  CBR 11250; GOP 8 for NTSC scaled outputs; `v_vinpelclk` follows the
+  family; audio gain = `0x94:4A/4B` (+ `41` 37/57), `composite.md` §11;
+  480i/576i start writes the apply block (known differences). The PAL
+  start was 576i, so R1 (288p start) is still open: start the capture
+  while the game shows a 240p/288p screen.
 
 ## Maintainer comments
 
-I've uploaded 2 traces:
-- The composite PAL you requested. Starts with the PAL source on and then I open the Windows program. Then I put the output to 640x480. Then I move the bitrate from max (11.3Mbps according to the software) to min (3.0Mbps) , then somewhere around the middle of the slider (7.0Mbps), then back again to max bitrate. At the end I adjusted the analog audio gain from where it was (-12dB) to 0dB, then +12dB and finally back to -12dB.
-- 2 NTSC traces you wanted to have in 1. It's a PS2 (480i) that starts with the source on as I start the Windows program. I first change the output and I change the bitrate setting to min/(around)center/max for each output. Then I change the analog audio setting from -12dB to 0dB, then +12dB and then back to -12dB.
