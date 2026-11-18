@@ -71,3 +71,12 @@ Paste the summary; if the compliance step fails, the log (it lists the
 
 ## Maintainer comments
 
+=== summary (T-066, 978d3fc dkms: remove the private Input Source menu control (T-066))
+PASS | step 2 v4l2-compliance without capture | v4l2-compliance: no failures
+PASS | step 3 DV timings on HDMI (no signal needed) | G_DV_TIMINGS works without a signal
+PASS | step 3 DV timings on HDMI (no signal needed) | DV timings list
+PASS | step 3 DV timings on HDMI (no signal needed) | power present 0 without a signal
+PASS | step 4 composite capture, input change from another process refused | stream 720x576 50/1 tt, ~9473 kbit/s
+PASS | step 4 composite capture, input change from another process refused | input still composite after the refused change
+
+FAIL: 0  WARN: 0
