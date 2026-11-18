@@ -387,7 +387,7 @@ static int gchd_transcoder_write_start(struct gchd *d,
 
 static int gchd_transcoder_program(struct gchd *d, bool start)
 {
- u8 out = d->input >= 2 ? d->analog_out : GCHD_OUT_STANDARD;
+ u8 out = d->input >= 2 ? d->out_active : GCHD_OUT_STANDARD;
  u16 width = out == GCHD_OUT_640X480 ? 640 :
              out == GCHD_OUT_MOBILE ? 480 : d->input_width;
  u16 height = out == GCHD_OUT_640X480 ? 480 :

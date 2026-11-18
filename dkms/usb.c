@@ -501,11 +501,18 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
 {
  u16 state, completion, clear_index = 0;
  u16 last_state = 0xffff, last_completion = 0xffff, last_clear_index = 0xffff;
- int r, tries;
+ int r, tries, rounds = 0;
  bool first = true;
  bool trace_start = current_state != next && next == GCHD_STATE_START;
 
  for (;;) {
+  /* A completion that leaves the state unchanged is retried a few times. */
+  if (++rounds > 10) {
+   dev_err(&d->intf->dev,
+           "state change 0x%02x -> 0x%02x: completed 10 times without the new state\n",
+           current_state, next);
+   return -ETIMEDOUT;
+  }
   for (tries = 0; tries < 2000; ++tries) {
    u16 raw_state;
 

@@ -813,7 +813,15 @@ static int gchd_rx(void *arg)
   else
    rx_empty++;
 
-  {
+  /*
+   * Before a scaled output has been switched to, the stream of the
+   * standard output is not delivered.
+   */
+  if (d->input >= 2 && READ_ONCE(d->out_active) != READ_ONCE(d->analog_out)) {
+   /* Data flows: keep the signal-loss check satisfied. */
+   if (done->urb->actual_length > 0)
+    d->last_video_jiffies = jiffies;
+  } else {
    int pos;
 
    for (pos = 0; pos < done->urb->actual_length;) {
@@ -1186,6 +1194,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
  bool target_interlaced = false;
  bool family_change = false;
+ bool output_change = false;
  bool family_hold = false;
  int r = 0;
 
@@ -1195,6 +1204,14 @@ static void gchd_mode_workfn(struct work_struct *work)
      (d->input_height != 480 && d->input_height != 576) ||
      !d->input_configured || !READ_ONCE(d->signal_present))
   goto out;
+
+ /* Selected output size differs from the running one: switch to it. */
+ if (d->out_active != d->analog_out) {
+  dev_info(&d->intf->dev, "switching output size: %u -> %u\n",
+           d->out_active, d->analog_out);
+  output_change = true;
+  goto stop_and_restart;
+ }
 
  /*
   * Family check. When 0x88:E7 has bit 7 set (decoder re-evaluating the
@@ -1293,7 +1310,9 @@ stop_and_restart:
  d->ts_partial_len = 0;
  d->input_configured = false;
  gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
- if (family_change) {
+ if (output_change) {
+  r = gchd_analog_output_reconfigure(d);
+ } else if (family_change) {
   r = gchd_analog_family_reconfigure(d, family_hold);
  } else {
   d->input_interlaced = target_interlaced;
@@ -1348,9 +1367,9 @@ stop_and_restart:
  ev.id = d->input;
  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
  v4l2_event_queue(&d->vdev, &ev);
- dev_info(&d->intf->dev, "analog mode now %s\n",
+ dev_info(&d->intf->dev, "analog mode now %s, output %u\n",
           d->input_height == 576 ? (d->input_interlaced ? "576i" : "288p") :
-          (d->input_interlaced ? "480i" : "240p"));
+          (d->input_interlaced ? "480i" : "240p"), d->out_active);
  goto reschedule;
 
 restart_failed:
