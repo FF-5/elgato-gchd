@@ -113,6 +113,7 @@ struct gchd {
  bool stop_pending;
  bool mode_retriggered;
  u8 family_mismatch;  /* consecutive polls with the other analog family */
+ unsigned long std_hold_until; /* ignore 0x88:E7 bit 7 until then */
  bool detect_requested;
  bool disconnected;
  bool hw_initialized;
@@ -167,12 +168,15 @@ int gchd_input_start(struct gchd *);
 int gchd_input_check_mode(struct gchd *);
 int gchd_input_read_family(struct gchd *, u8 *);
 void gchd_input_log_status(struct gchd *, const char *);
+int gchd_input_read_lock(struct gchd *, u8 *, u8 *);
 int gchd_input_configure_idle(struct gchd *);
 int gchd_prepare_input_detection(struct gchd *);
 int gchd_probe_video_source(struct gchd *);
 int gchd_input_read_analog_mode(struct gchd *, bool *);
 int gchd_analog_mode_pre_stop(struct gchd *, bool);
 int gchd_analog_mode_reconfigure(struct gchd *);
+int gchd_analog_family_pre_stop(struct gchd *, u8, u8);
+int gchd_analog_family_reconfigure(struct gchd *);
 int gchd_analog_pal_mode_change(struct gchd *, bool);
 int gchd_analog_poll_backend(struct gchd *);
 int gchd_common_block_a(struct gchd *);

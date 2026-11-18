@@ -1103,7 +1103,8 @@ static void gchd_mode_workfn(struct work_struct *work)
  struct gchd *d = container_of(to_delayed_work(work), struct gchd,
                                mode_work);
  struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
- bool target_interlaced;
+ bool target_interlaced = false;
+ bool family_change = false;
  int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
@@ -1114,29 +1115,36 @@ static void gchd_mode_workfn(struct work_struct *work)
   goto out;
 
  /*
-  * The decoder can report the other family (60/50 Hz) only some time after
-  * the start. When it does so continuously for about 2 s (8 polls),
-  * configure again; shorter readings are ignored.
+  * Family check. When 0x88:E7 has bit 7 set (decoder re-evaluating the
+  * standard; ignored for 1 s after START and after a decoder-only mode
+  * change) or 0x88:FA reports the other family on two consecutive polls,
+  * stop and configure for the family the decoder reports.
   */
  {
-  u8 family;
+  u8 family, lock, std;
 
   if (!gchd_input_read_family(d, &family) &&
-      ((family == 6 && d->input_height == 576) ||
-       (family == 7 && d->input_height == 480))) {
-   if (++d->family_mismatch >= 8) {
+      !gchd_input_read_lock(d, &lock, &std)) {
+   bool other = (family == 6 && d->input_height == 576) ||
+                (family == 7 && d->input_height == 480);
+
+   if (other)
+    ++d->family_mismatch;
+   else
+    d->family_mismatch = 0;
+   if ((std & 0x80) && time_before(jiffies, d->std_hold_until))
+    std = 0;
+   if ((std & 0x80) || d->family_mismatch >= 2) {
     d->family_mismatch = 0;
     dev_info(&d->intf->dev,
-             "source is %s while capturing; configuring again\n",
-             family == 7 ? "50 Hz" : "60 Hz");
-    gchd_input_log_status(d, "decoder status");
-    WRITE_ONCE(d->signal_present, false);
-    WRITE_ONCE(d->detect_requested, true);
-    schedule_delayed_work(&d->detect_work, 0);
-    goto out;
+             "decoder status changed while capturing (FA=%x CA=%02x E7=%02x); configuring again\n",
+             family, lock, std);
+    family_change = true;
+    r = gchd_analog_family_pre_stop(d, family, lock);
+    if (r)
+     goto restart_failed;
+    goto stop_and_restart;
    }
-  } else {
-   d->family_mismatch = 0;
   }
  }
 
@@ -1171,6 +1179,7 @@ static void gchd_mode_workfn(struct work_struct *work)
    goto reschedule;
   }
   d->input_interlaced = target_interlaced;
+  d->std_hold_until = jiffies + msecs_to_jiffies(1000);
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
@@ -1191,6 +1200,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  r = gchd_analog_mode_pre_stop(d, target_interlaced);
  if (r)
   goto restart_failed;
+stop_and_restart:
  r = gchd_capture_stop(d);
  if (r)
   goto restart_failed;
@@ -1198,9 +1208,13 @@ static void gchd_mode_workfn(struct work_struct *work)
  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_out_len = 0; WRITE_ONCE(d->wait_pat, true); d->ts_base_valid = false;
  d->ts_partial_len = 0;
  d->input_configured = false;
- d->input_interlaced = target_interlaced;
  gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
- r = gchd_analog_mode_reconfigure(d);
+ if (family_change) {
+  r = gchd_analog_family_reconfigure(d);
+ } else {
+  d->input_interlaced = target_interlaced;
+  r = gchd_analog_mode_reconfigure(d);
+ }
  if (r)
   goto restart_failed;
 
@@ -1247,7 +1261,8 @@ static void gchd_mode_workfn(struct work_struct *work)
  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
  v4l2_event_queue(&d->vdev, &ev);
  dev_info(&d->intf->dev, "analog mode now %s\n",
-          d->input_interlaced ? "480i" : "240p");
+          d->input_height == 576 ? (d->input_interlaced ? "576i" : "288p") :
+          (d->input_interlaced ? "480i" : "240p"));
  goto reschedule;
 
 restart_failed:
