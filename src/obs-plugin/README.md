@@ -20,14 +20,17 @@ properties.
   bitrate mode, H.264 profile, stretch of SD input. A change restarts the
   capture (about 3 s). The driver remembers the settings.
 - **Capture device on/off:** the device captures while the source is shown
-  in OBS (program or preview).
+  anywhere in OBS: in the program or preview, in a projector or multiview,
+  in another scene that is shown, or in the preview of its properties
+  window. It switches off when none of them shows it.
 
 The source uses the video device exclusively while it captures; other
 programs cannot capture from the device at the same time.
 
 ## Build and install
 
-Packages (Ubuntu): `libobs-dev`, `libavformat-dev`, `libavcodec-dev`,
+The installer of the repository installs the plugin
+(`./install-driver.sh --obs`). By hand, packages (Ubuntu): `libobs-dev`, `libavformat-dev`, `libavcodec-dev`,
 `libavutil-dev`, `cmake`, `pkg-config`.
 
 ```sh

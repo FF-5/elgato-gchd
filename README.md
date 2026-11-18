@@ -39,16 +39,27 @@ tested. Not supported: Game Capture HD60, HD60 S, HD60 Pro.
    ./install-driver.sh
    ```
 
-   It checks for the firmware in `/lib/firmware/gchd/` and extracts it
-   from the installer file when missing (it stops if that fails), builds
-   the driver in `build/`, installs it with DKMS (when available; the
-   driver is then rebuilt after kernel updates), installs the udev rule
-   that remembers the settings, and loads the driver. Missing packages
-   (kernel headers, compiler, `dkms`, `7z`) are named and can be
+   It asks what to install: everything, the kernel driver only, or the
+   OBS plugin only (`--all`, `--driver`, `--obs` choose without asking).
+
+   - **Kernel driver:** checks for the firmware in `/lib/firmware/gchd/`
+     and extracts it from the installer file when missing (it stops if
+     that fails), builds the driver in `build/`, installs it with DKMS
+     (when available; the driver is then rebuilt after kernel updates),
+     installs the udev rules (remembered settings, device name
+     `/dev/elgato-gchd`) and the settings tool `gchd-settings`, and loads
+     the driver.
+   - **OBS plugin:** builds the plugin in `build/obs-plugin` and installs
+     it for the current user (`~/.config/obs-studio/plugins`). It needs
+     the kernel driver and an OBS installed from the distribution (an OBS
+     Flatpak cannot load it).
+
+   Missing packages (kernel headers, compiler, `dkms`, `7z`, `whiptail`,
+   the OBS and FFmpeg development packages, `cmake`) are named and can be
    installed on request.
 
-Remove the driver with `./install-driver.sh --uninstall` (the firmware is
-kept).
+Remove everything with `./install-driver.sh --uninstall`, or one part with
+`--uninstall --driver` or `--uninstall --obs` (the firmware is kept).
 
 ### Manual installation
 
@@ -64,9 +75,11 @@ Driver with DKMS, and the udev rule:
 sudo dkms add ./src/driver
 sudo dkms install elgato-gchd/0.5.8
 sudo modprobe elgato_gchd
-sudo cp udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
+sudo cp udev-rules/55-elgato-gchd-device.rules udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
 ```
+
+OBS plugin: see [`src/obs-plugin/README.md`](src/obs-plugin/README.md).
 
 Firmware files and a build without DKMS: see [`src/driver/README.md`](src/driver/README.md).
 

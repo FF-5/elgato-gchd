@@ -1,15 +1,24 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-2.0
 #
-# Install the elgato_gchd driver for the Elgato Game Capture HD.
+# Install the Elgato Game Capture HD support: the elgato_gchd kernel driver
+# and/or the OBS plugin.
 #
-#   ./install-driver.sh              install (or update)
-#   ./install-driver.sh --uninstall  remove the driver and its udev rule
-#   ./install-driver.sh --yes        do not ask before installing packages
+#   ./install-driver.sh              install (or update); asks what to install
+#   ./install-driver.sh --all        kernel driver and OBS plugin
+#   ./install-driver.sh --driver     kernel driver only
+#   ./install-driver.sh --obs        OBS plugin only
+#   ./install-driver.sh --uninstall  remove everything (with --driver or
+#                                    --obs: only that part)
+#   ./install-driver.sh --yes        do not ask (installs everything and the
+#                                    packages it needs)
 #
-# Steps: 1. firmware present? If not, extract it with firmware/ (stop when
-# that fails). 2. build the module in build/. 3. install it (DKMS when
-# available), the udev rule for remembered settings, and load it.
+# Kernel driver: 1. firmware present? If not, extract it with firmware/
+# (stop when that fails). 2. build the module in build/. 3. install it
+# (DKMS when available), the udev rules (remembered settings, device name
+# /dev/elgato-gchd), the settings tool gchd-settings, and load it.
+# OBS plugin: build it in build/obs-plugin and install it for the current
+# user (~/.config/obs-studio/plugins); needs the kernel driver.
 # Can be started from a file manager: it opens a terminal window.
 
 set -u
@@ -26,15 +35,22 @@ SETTINGS=/etc/modprobe.d/elgato-gchd-settings.conf
 BUILD=$HERE/build
 OBJ=$BUILD/objects/kernel
 KDIR=${KDIR:-/lib/modules/$(uname -r)/build}
+SETTINGS_TOOL=/usr/local/bin/gchd-settings
+OBS_BUILD=$BUILD/obs-plugin
+OBS_PLUGIN_DIR=$HOME/.config/obs-studio/plugins/obs-elgato-gchd
 ASSUME_YES=0
 ACTION=install
+PART=
 
 for a in "$@"; do
 	case "$a" in
 	--uninstall) ACTION=uninstall ;;
+	--all) PART=all ;;
+	--driver) PART=driver ;;
+	--obs) PART=obs ;;
 	--yes|-y) ASSUME_YES=1 ;;
 	--in-terminal) ;;
-	-h|--help) sed -n '3,13p' "$0"; exit 0 ;;
+	-h|--help) sed -n '3,22p' "$0"; exit 0 ;;
 	*) echo "unknown option: $a"; exit 2 ;;
 	esac
 done
@@ -84,6 +100,19 @@ pkg_name() { # what -> package name for this distribution
 	build:pacman) echo "base-devel" ;;
 	build:*) echo "make gcc" ;;
 	dkms:*) echo "dkms" ;;
+	obsdev:apt-get) echo "libobs-dev" ;;
+	obsdev:pacman) echo "obs-studio" ;;
+	obsdev:*) echo "obs-studio-devel" ;;
+	ffmpegdev:apt-get) echo "libavformat-dev libavcodec-dev libavutil-dev" ;;
+	ffmpegdev:pacman) echo "ffmpeg" ;;
+	ffmpegdev:dnf) echo "ffmpeg-free-devel" ;;
+	ffmpegdev:*) echo "ffmpeg-devel" ;;
+	cmake:*) echo "cmake" ;;
+	pkgconfig:pacman) echo "pkgconf" ;;
+	pkgconfig:*) echo "pkg-config" ;;
+	whiptail:pacman) echo "libnewt" ;;
+	whiptail:dnf) echo "newt" ;;
+	whiptail:*) echo "whiptail" ;;
 	esac
 }
 need() { # need WHAT TEST-COMMAND...: offer to install a missing package
@@ -100,7 +129,7 @@ need() { # need WHAT TEST-COMMAND...: offer to install a missing package
 	"$@" >/dev/null 2>&1 || die "$what still missing after installing $pkgs."
 }
 
-uninstall() {
+uninstall_driver() {
 	step "Removing the driver"
 	sudo modprobe -r "$MODULE" 2>/dev/null
 	if command -v dkms >/dev/null && dkms status "$NAME" 2>/dev/null | grep -q .; then
@@ -110,8 +139,15 @@ uninstall() {
 	sudo rm -f "/lib/modules/$(uname -r)/updates/$MODULE.ko"
 	sudo depmod -a
 	sudo rm -f "/etc/udev/rules.d/$UDEV_RULE" "/etc/udev/rules.d/$UDEV_DEVICE_RULE" "$SETTINGS"
+	sudo rm -f "$SETTINGS_TOOL"
 	sudo udevadm control --reload 2>/dev/null
 	ok "Driver removed. The firmware in $FIRMWARE_DIR was kept."
+}
+
+uninstall_obs() {
+	step "Removing the OBS plugin"
+	rm -rf "$OBS_PLUGIN_DIR"
+	ok "OBS plugin removed (restart OBS)."
 }
 
 firmware_present() {
@@ -121,7 +157,7 @@ firmware_present() {
 	done
 }
 
-install() {
+install_driver() {
 	echo "${B}Elgato Game Capture HD driver $VERSION${N}"
 	sudo -v || die "administrator rights (sudo) are needed."
 
@@ -179,12 +215,76 @@ install() {
 	sudo install -D -m 0644 "$HERE/udev-rules/$UDEV_DEVICE_RULE" "/etc/udev/rules.d/$UDEV_DEVICE_RULE"
 	sudo udevadm control --reload
 	ok "udev rules installed (settings are remembered; device name /dev/elgato-gchd)."
+	sudo install -D -m 0755 "$HERE/src/settings/gchd-settings" "$SETTINGS_TOOL"
+	if ! command -v whiptail >/dev/null; then
+		cmd=$(pkg_cmd)
+		pk=$(pkg_name whiptail)
+		if [ -n "$cmd" ] && ask "The settings tool needs whiptail. Install it now with: sudo $cmd $pk ?"; then
+			# shellcheck disable=SC2086
+			sudo $cmd $pk || echo "Installing $pk failed; gchd-settings needs it."
+		fi
+	fi
+	ok "Settings tool installed: gchd-settings"
 	sudo modprobe "$MODULE" || die "the driver could not be loaded (see: sudo dmesg)."
 	ok "Driver loaded. Plug in the Game Capture HD; it appears as a /dev/video device."
 	echo "Watch: v4l2-ctl -d /dev/elgato-gchd -v pixelformat=MPEG && ffplay -f mpegts /dev/elgato-gchd"
 }
 
+install_obs() {
+	step "OBS plugin"
+	if ! command -v obs >/dev/null 2>&1; then
+		if command -v flatpak >/dev/null 2>&1 &&
+		   flatpak info com.obsproject.Studio >/dev/null 2>&1; then
+			die "OBS is installed as a Flatpak; it cannot load this plugin. Install OBS from your distribution (or the OBS PPA) and start again."
+		fi
+		echo "OBS was not found; the plugin is installed anyway (for an OBS installed later)."
+	fi
+	modinfo "$MODULE" >/dev/null 2>&1 ||
+		echo "Note: the kernel driver is not installed; the plugin needs it (./install-driver.sh --driver)."
+	need cmake command -v cmake
+	need pkgconfig command -v pkg-config
+	need obsdev pkg-config --exists libobs
+	need ffmpegdev pkg-config --exists libavformat libavcodec libavutil
+	rm -rf "$OBS_BUILD"
+	mkdir -p "$BUILD"
+	{ cmake -S "$HERE/src/obs-plugin" -B "$OBS_BUILD" -DCMAKE_BUILD_TYPE=Release &&
+	  cmake --build "$OBS_BUILD"; } > "$BUILD/obs-plugin.log" 2>&1 ||
+		die "plugin build failed; see $BUILD/obs-plugin.log"
+	cmake --install "$OBS_BUILD" >> "$BUILD/obs-plugin.log" 2>&1 ||
+		die "plugin install failed; see $BUILD/obs-plugin.log"
+	ok "OBS plugin installed in $OBS_PLUGIN_DIR. Restart OBS and add the source 'Elgato Game Capture HD'."
+}
+
+# What to install when no option says it.
+choose_part() {
+	local a
+	[ $ASSUME_YES = 1 ] && { PART=all; return; }
+	echo "${B}What should be installed?${N}"
+	echo "  1) Everything: kernel driver and OBS plugin"
+	echo "  2) Kernel driver only"
+	echo "  3) OBS plugin only (the kernel driver must be installed)"
+	read -r -p "Choice [1]: " a
+	case "$a" in
+	2) PART=driver ;;
+	3) PART=obs ;;
+	*) PART=all ;;
+	esac
+}
+
 case $ACTION in
-install) install ;;
-uninstall) uninstall ;;
+install)
+	[ -n "$PART" ] || choose_part
+	case $PART in
+	all) install_driver; install_obs ;;
+	driver) install_driver ;;
+	obs) install_obs ;;
+	esac
+	;;
+uninstall)
+	case ${PART:-all} in
+	all) uninstall_obs; uninstall_driver ;;
+	driver) uninstall_driver ;;
+	obs) uninstall_obs ;;
+	esac
+	;;
 esac

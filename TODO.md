@@ -61,8 +61,10 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
       settings. The driver stays a single H.264/MPEG device: the
       application device with uncompressed frames and the userspace
       bridge were tried and removed (they remain in the history of
-      `feat/app-bridge`). Open: hardware test, installer integration
-      (udev rule, plugin, tool).
+      `feat/app-bridge`). Plugin, device name and settings tool accepted
+      on hardware (T-060-obs 16/16); installer with three install types
+      (everything, driver, OBS plugin; maintainer 2026-11-18): hardware
+      test open.
 
 ## Stage 2 — Component
 
