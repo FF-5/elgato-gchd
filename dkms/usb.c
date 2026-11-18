@@ -560,6 +560,21 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
     break;
   }
   if (tries == 2000) {
+   if (state == next) {
+    /*
+     * The state was reached but the completion flag never came (seen
+     * with IDLE after a session that ended with a failed START):
+     * acknowledge and accept the state.
+     */
+    dev_warn(&d->intf->dev,
+             "state 0x%02x reached without completion flag (completion=0x%04x); accepted\n",
+             next, completion);
+    r = gchd_reg_write16(d, GCHD_REG_SCMD_COMPLETE, GCHD_SCMD_COMPLETE_BIT);
+    if (r) return r;
+    r = gchd_reg_write16(d, GCHD_REG_SCMD_COMPLETE_AUX, 0x0000);
+    if (r) return r;
+    return 0;
+   }
    dev_err(&d->intf->dev,
            "state-change timeout: current=0x%02x expected=0x%02x state=0x%04x completion=0x%04x\n",
            current_state, next, state, completion);

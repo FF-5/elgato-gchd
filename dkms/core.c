@@ -1349,8 +1349,13 @@ static void gchd_mode_workfn(struct work_struct *work)
              "decoder status changed while capturing (FA=%x CA=%02x E7=%02x); configuring again\n",
              family, lock, std);
     family_change = true;
-    /* The signal had dropped (reset, power cycle): wait out a 60 Hz start. */
-    family_hold = family != 6 && family != 7;
+    /*
+     * The signal had dropped (reset, power cycle) or the decoder is not
+     * locked (console swapped without a detected drop): wait out a 60 Hz
+     * start before configuring.
+     */
+    family_hold = (family != 6 && family != 7) ||
+                  (lock != 0x7e && lock != 0x66);
     r = gchd_analog_family_pre_stop(d, family, lock);
     if (r)
      goto restart_failed;
