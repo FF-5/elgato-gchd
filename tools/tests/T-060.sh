@@ -7,9 +7,11 @@ LOOP=/dev/video42
 BRIDGE="$REPO/service/gchd-bridge"
 
 # loop_read SECONDS: read the loopback device like an application; prints
-# the stream line and the last frame count.
+# the stream line and the last frame count. Stopped after SECONDS + 20 s if
+# frames stop coming.
 loop_read() {
-	ffmpeg -hide_banner -nostdin -f v4l2 -i "$LOOP" -t "$1" -f null - 2>&1 |
+	timeout -s INT -k 5 $(($1 + 20)) \
+		ffmpeg -hide_banner -nostdin -f v4l2 -i "$LOOP" -t "$1" -f null - 2>&1 |
 		tr '\r' '\n' > "$WORK/ffmpeg-read.txt"
 	grep -m1 'Stream #0' "$WORK/ffmpeg-read.txt"
 	grep '^frame=' "$WORK/ffmpeg-read.txt" | tail -1
@@ -71,6 +73,7 @@ sleep 5
 run bash "$BRIDGE" input composite
 wait "$READER"
 run cat "$WORK/input-change.txt"
+run sh -c "tail -12 '$WORK/bridge.log'"
 expect "reader kept running (frame count >= 500)" "frame= *([5-9][0-9]{2}|[0-9]{4})" cat "$WORK/input-change.txt"
 expect "input back on composite" "Video input : 2" v4l2-ctl -d "$DEV" --get-input
 
