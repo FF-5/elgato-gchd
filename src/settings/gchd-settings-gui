@@ -26,7 +26,15 @@ TITLE = "Elgato Game Capture HD"
 INPUTS = ["HDMI", "Component", "Composite", "S-Video"]
 OUTPUTS = [("Source size (720x480 NTSC / 720x576 PAL)", 720, 480),
            ("640x480", 640, 480), ("480x360", 480, 360)]
-MODES = [("Constant (CBR)", 1), ("Variable (VBR)", 0)]
+MODES = [("Constant (CBR), 11250 kbit/s", 1), ("Variable (VBR)", 0)]
+
+# Bitrate settings as the device's capture application uses them for
+# composite and S-video (kbit/s): CBR only at 11250; VBR from 6000 to
+# 14460 for the standard and 640x480 sizes, 4000 to 15000 for 480x360
+# (always VBR).
+CBR_KBPS = 11250
+VBR_RANGE = {0: (6000, 14460), 1: (6000, 14460), 2: (4000, 15000)}
+STEP_KBPS = 20
 PROFILES = [("High", 4), ("Main", 2), ("Baseline", 0)]
 BUSY_TEXT = ("A program is capturing from the device: input and output size "
              "can be changed only while no program captures (for example "
@@ -113,16 +121,17 @@ class Window(Gtk.Window):
         label("Output size", 2)
         self.output = combo([o[0] for o in OUTPUTS], 2, self.on_output)
 
-        label("Bitrate (kbit/s)", 3)
-        self.bitrate = Gtk.Scale.new_with_range(
-            Gtk.Orientation.HORIZONTAL, 2000, 15000, 250)
-        self.bitrate.set_digits(0)
-        self.bitrate.set_value_pos(Gtk.PositionType.RIGHT)
-        self.bitrate.connect("value-changed", self.on_bitrate)
-        grid.attach(self.bitrate, 1, 3, 1, 1)
+        label("Bitrate mode", 3)
+        self.mode = combo([m[0] for m in MODES], 3, self.on_mode)
 
-        label("Bitrate mode", 4)
-        self.mode = combo([m[0] for m in MODES], 4, self.on_mode)
+        label("Bitrate (VBR)", 4)
+        self.bitrate = Gtk.Scale.new_with_range(
+            Gtk.Orientation.HORIZONTAL, 6000, 14460, STEP_KBPS)
+        self.bitrate.set_digits(0)
+        self.bitrate.set_value_pos(Gtk.PositionType.BOTTOM)
+        self.bitrate.connect("format-value", self.format_bitrate)
+        self.bitrate.connect("value-changed", self.on_bitrate)
+        grid.attach(self.bitrate, 1, 4, 1, 1)
         label("H.264 profile", 5)
         self.profile = combo([p[0] for p in PROFILES], 5, self.on_profile)
 
@@ -178,11 +187,10 @@ class Window(Gtk.Window):
             self.output.set_active(out)
             self.output.set_sensitive(inp >= 2)
             self.stretch.set_sensitive(inp >= 2)
-            self.bitrate.get_adjustment().set_upper(15000 if inp >= 2 else 30000)
-            br = self.dev.ctrl("video_bitrate", 11250000)
-            self.bitrate.set_value(br / 1000)
             mode = self.dev.ctrl("video_bitrate_mode", 1)
             self.mode.set_active(0 if mode == 1 else 1)
+            self.bitrate.set_value(self.dev.ctrl("video_bitrate", 11250000) / 1000)
+            self.update_bitrate_controls()
             prof = self.dev.ctrl("h264_profile", 4)
             self.profile.set_active(
                 next((i for i, p in enumerate(PROFILES) if p[1] == prof), 0))
@@ -222,6 +230,41 @@ class Window(Gtk.Window):
         self.say(text)
         return False
 
+    def vbr_range(self):
+        return VBR_RANGE.get(max(self.output.get_active(), 0), VBR_RANGE[0])
+
+    def format_bitrate(self, _scale, value):
+        if self.mode.get_active() != 1:
+            return "%d kbit/s constant" % CBR_KBPS
+        return "%d kbit/s (average %.1f Mbit/s)" % (value, value / 2000)
+
+    def update_bitrate_controls(self):
+        """Mode and slider limits for the output size (480x360: VBR only)."""
+        mobile = self.output.get_active() == 2 and self.input.get_active() >= 2
+        if mobile and self.mode.get_active() != 1:
+            self.mode.set_active(1)
+        self.mode.set_sensitive(self.dev is not None and not mobile)
+        lo, hi = self.vbr_range()
+        adj = self.bitrate.get_adjustment()
+        adj.set_lower(lo)
+        adj.set_upper(hi)
+        if not lo <= self.bitrate.get_value() <= hi:
+            self.bitrate.set_value(min(max(self.bitrate.get_value(), lo), hi))
+        vbr = self.mode.get_active() == 1
+        self.bitrate.set_sensitive(self.dev is not None and vbr)
+
+    def apply_rate(self):
+        """Bitrate mode and value as the capture application sets them."""
+        if self.loading or not self.dev:
+            return
+        if self.mode.get_active() == 1:
+            kb = int(round(self.bitrate.get_value() / STEP_KBPS)) * STEP_KBPS
+            self.apply("Bitrate", "-c", "video_bitrate_mode=0,video_bitrate=%d"
+                       % (kb * 1000))
+        else:
+            self.apply("Bitrate", "-c", "video_bitrate_mode=1,video_bitrate=%d"
+                       % (CBR_KBPS * 1000))
+
     # ------------------------------------------------------------ handlers
 
     def on_input(self, c):
@@ -236,7 +279,11 @@ class Window(Gtk.Window):
         if i < 0:
             return
         _, w, h = OUTPUTS[i]
-        self.apply("Output size", "-v", "width=%d,height=%d" % (w, h))
+        if self.apply("Output size", "-v", "width=%d,height=%d" % (w, h)):
+            self.loading, was = True, self.loading
+            self.update_bitrate_controls()
+            self.loading = was
+            self.apply_rate()
 
     def on_bitrate(self, s):
         if self.loading:
@@ -247,14 +294,16 @@ class Window(Gtk.Window):
 
     def apply_bitrate(self):
         self.bitrate_timer = 0
-        kb = int(round(self.bitrate.get_value()))
-        self.apply("Bitrate", "-c", "video_bitrate=%d" % (kb * 1000))
+        self.apply_rate()
         return False
 
     def on_mode(self, c):
-        i = c.get_active()
-        if i >= 0:
-            self.apply("Bitrate mode", "-c", "video_bitrate_mode=%d" % MODES[i][1])
+        if c.get_active() < 0 or self.loading:
+            return
+        self.loading = True
+        self.update_bitrate_controls()
+        self.loading = False
+        self.apply_rate()
 
     def on_profile(self, c):
         i = c.get_active()

@@ -101,7 +101,9 @@ input format `mpegts`; deinterlacing in the source's context menu.
 "Elgato Game Capture HD Settings" in the application menu
 ([`src/settings/gchd-settings-gui`](src/settings/gchd-settings-gui))
 changes the input, output size and encoder settings in a window (menus,
-bitrate slider, switch); the driver remembers them. Input and output size
+bitrate slider, switch); the driver remembers them. The bitrate offers the
+observed settings only: CBR at 11250 kbit/s, or VBR in the range of the
+output size. Input and output size
 can be changed only while no program captures. Without a desktop:
 [`src/settings/gchd-settings`](src/settings/gchd-settings) (text menu) or
 `v4l2-ctl`.

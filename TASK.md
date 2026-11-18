@@ -104,6 +104,9 @@ userspace service turns the driver's stream into such a device.
 15. (Maintainer, 2026-11-18) Installation scripts distribution
     independent or covering all common distributions (development on an
     Ubuntu flavour; most users elsewhere): RULES F2.
+16. (Maintainer, 2026-11-18) The bitrate controls of both settings
+    windows offer only what the device's capture application uses; the
+    limits change with the other settings (mode, output size).
 
 ## Implementation
 
@@ -164,6 +167,19 @@ Paste the summary; on FAILs the log.
 
 ## Findings
 
+- Bitrate in the recordings (composite: `gchd_288p_standard_bitrate_change`,
+  `gchd_288p_mobile_bitrate_change`, `gchd_NTSC_composite_output_bitrate_audio`,
+  `gchd_PAL_composite_bitrate_audio`): CBR (`v_rate_mode 0`,
+  `v_max_cpb_delay 3`) only at B = 11250 (slider's right end, shown 11.3);
+  every other position VBR; standard size and 640×480: B 6000 (shown 3.0)
+  to 14460 (shown 7.2); the middle of the slider (shown about 7.0) is VBR
+  with B 13980–14460; 480×360 always VBR, 4000–15000 (going back to
+  640×480 sets CBR 11250). No CBR minimum (CBR is one value). VBR maximum
+  above 14460 unknown: slider positions between the middle and the CBR
+  end not recorded (TODO R11). Both settings windows now offer CBR 11250
+  or VBR in the range of the output size (480×360 VBR only), slider only
+  for VBR, the average shown as in the application. The driver itself
+  still accepts CBR at any value and 2000–15000 kbit/s (unchanged).
 - T-060-settings (0d5409b): steps 1–2 PASS (window installed with menu
   entry, shows the settings, every change applied and remembered).
   Step 3 FAIL ×2: OBS was not capturing (no hardware start and no input

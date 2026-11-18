@@ -166,4 +166,5 @@ a short note what was done and when (seconds) helps.
 |---|---|---|---|
 | R7 | Component with a signal: every mode (480i, 480p, 576i, 576p, 720p, 1080i), mode changes, output sizes, bitrate | stage 2, T-051 | **needed** at stage 2 |
 | R8 | HDMI with a signal: every mode, mode changes, output sizes, bitrate | stage 3, T-050 | **needed** at stage 3 (1080p60 output sizes exist) |
+| R11 | Composite, standard size and 640 × 480: bitrate slider at about ¾ and just before the right end (the CBR position), a few seconds each, values shown noted | Bitrate range above B = 14460 (VBR maximum) | needed (settings windows limited to 14460 until then) |
 | R9 | One recording per picture/audio setting changed while capturing; for the audio gain: single steps with the displayed dB noted (e.g. −12, −6, 0, +6, +12 dB, pause between them) | stage 4, T-080 | needed after the release (gain registers known: `composite.md` §11) |

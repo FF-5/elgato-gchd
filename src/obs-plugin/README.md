@@ -16,8 +16,12 @@ properties.
 - **Deinterlacing:** OBS deinterlacing, set to Yadif 2x, top field first
   when the source is created (Deinterlacing in the source's context menu).
 - **Properties:** input (HDMI, component, composite, S-video), output size
-  of composite and S-video (source size, 640 × 480, 480 × 360), bitrate,
-  bitrate mode, H.264 profile, stretch of SD input. A change restarts the
+  of composite and S-video (source size, 640 × 480, 480 × 360), bitrate
+  mode and bitrate, H.264 profile, stretch of SD input. The bitrate follows
+  the observed settings (`docs/composite.md` §10): CBR only at 11250 kbit/s;
+  VBR 6000–14460 kbit/s for the source size and 640 × 480, 4000–15000
+  kbit/s for 480 × 360 (VBR only); the slider limits change with the output
+  size, and the slider is shown for VBR only. A change restarts the
   capture (about 3 s). The driver remembers the settings.
 - **Capture device on/off:** the device captures while the source is shown
   anywhere in OBS: in the program or preview, in a projector or multiview,

@@ -260,8 +260,12 @@ Bitrate values follow the setting B (kbit/s, `v_bitrate`): maximum
 application's bitrate slider shows the average B/2 for VBR; its upper end
 is CBR (`v_rate_mode 0`, `v_max_cpb_delay 3`) at B = 11250, shown as
 11.3 Mbit/s, every other position VBR (`1`, `10`): standard and 640 × 480
-from B = 6000 (shown 3.0) to about 14000, mobile 4000 to 15000 (always
-VBR). The encoder is restarted for every change.
+from B = 6000 (shown 3.0) to 14460 (shown 7.2; the middle of the slider,
+shown about 7.0, is VBR with B between 13980 and 14460), mobile 4000 to
+15000 (always VBR; changing from mobile to 640 × 480 sets CBR 11250 again).
+CBR occurs only at B = 11250. Positions between the middle and the CBR end
+of the slider were not recorded (**Unknown** whether VBR goes above 14460).
+The encoder is restarted for every change.
 
 GOP size: 12 (50 Hz) or 14 (60 Hz) for the standard size, 6 (50 Hz) or 8
 (60 Hz) for 640 × 480 and 480 × 360. `v_vinpelclk` is 1 with a 50 Hz source

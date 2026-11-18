@@ -36,6 +36,16 @@ OBS_DECLARE_MODULE()
 #define GCHD_CID_STRETCH (V4L2_CID_USER_BASE + 0x10f1)
 #define GCHD_IO_SIZE 65424 /* 348 transport-stream packets */
 
+/*
+ * Bitrate settings (kbit/s) of composite and S-video as the device's capture
+ * application uses them: CBR only at 11250; VBR 6000-14460 for the standard
+ * and 640x480 sizes, 4000-15000 for 480x360 (always VBR).
+ */
+#define GCHD_CBR_KBPS 11250
+#define GCHD_VBR_STEP 20
+static const int gchd_vbr_min[3] = { 6000, 6000, 4000 };
+static const int gchd_vbr_max[3] = { 14460, 14460, 15000 };
+
 struct gchd_src {
 	obs_source_t *source;
 
@@ -43,7 +53,7 @@ struct gchd_src {
 	char *device;		/* /dev/videoN, empty: first found */
 	int input;		/* 0 HDMI, 1 component, 2 composite, 3 S-video */
 	int output;		/* 0 source size, 1 640x480, 2 480x360 */
-	int bitrate;		/* kbit/s, 0 automatic */
+	int bitrate;		/* kbit/s (VBR) */
 	int bitrate_mode;	/* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
 	int profile;		/* V4L2_MPEG_VIDEO_H264_PROFILE_* */
 	bool stretch;
@@ -133,9 +143,21 @@ static void gchd_apply(struct gchd_src *s, int fd)
 		if (ioctl(fd, VIDIOC_S_FMT, &fmt) < 0)
 			blog(LOG_WARNING, "[gchd] format: %s", strerror(errno));
 	}
-	gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE_MODE, s->bitrate_mode);
-	if (s->bitrate)
-		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE, s->bitrate * 1000);
+	if (s->input >= 2) {
+		int o = s->output >= 0 && s->output <= 2 ? s->output : 0;
+		bool vbr = o == 2 ||
+			   s->bitrate_mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
+		int kb = vbr ? s->bitrate : GCHD_CBR_KBPS;
+
+		if (vbr && kb < gchd_vbr_min[o])
+			kb = gchd_vbr_min[o];
+		if (vbr && kb > gchd_vbr_max[o])
+			kb = gchd_vbr_max[o];
+		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
+			  vbr ? V4L2_MPEG_VIDEO_BITRATE_MODE_VBR :
+				V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
+		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE, kb * 1000);
+	}
 	gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_H264_PROFILE, s->profile);
 	if (s->input >= 2)
 		gchd_ctrl(fd, GCHD_CID_STRETCH, s->stretch);
@@ -489,7 +511,7 @@ static void gchd_defaults(obs_data_t *settings)
 	obs_data_set_default_string(settings, "device", "");
 	obs_data_set_default_int(settings, "input", 2);
 	obs_data_set_default_int(settings, "output", 0);
-	obs_data_set_default_int(settings, "bitrate", 0);
+	obs_data_set_default_int(settings, "bitrate", 14000);
 	obs_data_set_default_int(settings, "bitrate_mode",
 				 V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
 	obs_data_set_default_int(settings, "profile",
@@ -497,14 +519,38 @@ static void gchd_defaults(obs_data_t *settings)
 	obs_data_set_default_bool(settings, "stretch", false);
 }
 
-static bool gchd_input_changed(obs_properties_t *props, obs_property_t *p,
-			       obs_data_t *settings)
+/*
+ * Visible settings and slider limits: output size, stretch and bitrate for
+ * composite/S-video; 480x360 VBR only; the bitrate slider for VBR only.
+ */
+static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
+				  obs_data_t *settings)
 {
 	bool analog = obs_data_get_int(settings, "input") >= 2;
+	int o = (int)obs_data_get_int(settings, "output");
+	bool mobile, vbr;
+	int kb;
 
 	UNUSED_PARAMETER(p);
+	if (o < 0 || o > 2)
+		o = 0;
+	mobile = o == 2;
+	vbr = mobile || obs_data_get_int(settings, "bitrate_mode") ==
+				V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
 	obs_property_set_visible(obs_properties_get(props, "output"), analog);
 	obs_property_set_visible(obs_properties_get(props, "stretch"), analog);
+	obs_property_set_visible(obs_properties_get(props, "bitrate_mode"),
+				 analog && !mobile);
+	obs_property_set_visible(obs_properties_get(props, "bitrate"),
+				 analog && vbr);
+	obs_property_int_set_limits(obs_properties_get(props, "bitrate"),
+				    gchd_vbr_min[o], gchd_vbr_max[o],
+				    GCHD_VBR_STEP);
+	kb = (int)obs_data_get_int(settings, "bitrate");
+	if (kb < gchd_vbr_min[o] || kb > gchd_vbr_max[o])
+		obs_data_set_int(settings, "bitrate",
+				 kb < gchd_vbr_min[o] ? gchd_vbr_min[o] :
+							gchd_vbr_max[o]);
 	return true;
 }
 
@@ -528,23 +574,27 @@ static obs_properties_t *gchd_properties(void *data)
 	obs_property_list_add_int(p, "Component", 1);
 	obs_property_list_add_int(p, "Composite", 2);
 	obs_property_list_add_int(p, "S-Video", 3);
-	obs_property_set_modified_callback(p, gchd_input_changed);
+	obs_property_set_modified_callback(p, gchd_settings_changed);
 
 	p = obs_properties_add_list(props, "output", "Output size",
 				    OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(p, "Source size (720x480 / 720x576)", 0);
 	obs_property_list_add_int(p, "640x480", 1);
-	obs_property_list_add_int(p, "480x360", 2);
+	obs_property_list_add_int(p, "480x360 (VBR only)", 2);
+	obs_property_set_modified_callback(p, gchd_settings_changed);
 
-	p = obs_properties_add_int(props, "bitrate",
-				   "Bitrate (kbit/s, 0 = automatic)", 0, 40000,
-				   250);
 	p = obs_properties_add_list(props, "bitrate_mode", "Bitrate mode",
 				    OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(p, "Constant (CBR)",
+	obs_property_list_add_int(p, "Constant (CBR), 11250 kbit/s",
 				  V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
 	obs_property_list_add_int(p, "Variable (VBR)",
 				  V4L2_MPEG_VIDEO_BITRATE_MODE_VBR);
+	obs_property_set_modified_callback(p, gchd_settings_changed);
+
+	p = obs_properties_add_int_slider(props, "bitrate",
+					  "Bitrate, VBR (kbit/s; average = half)",
+					  6000, 14460, GCHD_VBR_STEP);
+	obs_property_int_set_suffix(p, " kbit/s");
 
 	p = obs_properties_add_list(props, "profile", "H.264 profile",
 				    OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
