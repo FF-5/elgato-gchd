@@ -1,19 +1,22 @@
-# T-060: application bridge (service/gchd-bridge): v4l2loopback device with
-# YUYV frames, audio source, capture device only on while an application
-# reads, input selection, source change while open, guvcview.
-# Needs: v4l2loopback-dkms, pactl (PipeWire or PulseAudio), guvcview.
+# T-060: application device of the driver ("Elgato Game Capture HD", YUYV)
+# fed by service/gchd-bridge: capture device only on while an application
+# streams, re-registration on a format change (standard, input), audio
+# source, guvcview reconnecting after a re-registration.
+# Needs: pactl (PipeWire or PulseAudio), guvcview. PS1 (PAL) and N64 (NTSC).
 
-LOOP=/dev/video42
 BRIDGE="$REPO/service/gchd-bridge"
 
-# loop_read SECONDS: read the loopback device like an application; prints
-# the stream line and the last frame count. Stopped after SECONDS + 20 s if
-# frames stop coming.
-loop_read() {
+app_attr() { cat /sys/bus/usb/drivers/elgato_gchd/*/app 2>/dev/null; }
+app_dev()  { echo "/dev/$(app_attr | awk '{ print $2 }')"; }
+
+# app_read SECONDS: read the application device like an application;
+# prints the stream line and the last frame count. Time limit SECONDS + 20.
+app_read() {
 	timeout -s INT -k 5 $(($1 + 20)) \
-		ffmpeg -hide_banner -nostdin -f v4l2 -i "$LOOP" -t "$1" -f null - 2>&1 |
+		ffmpeg -hide_banner -nostdin -f v4l2 -i "$(app_dev)" -t "$1" -f null - 2>&1 |
 		tr '\r' '\n' > "$WORK/ffmpeg-read.txt"
 	grep -m1 'Stream #0' "$WORK/ffmpeg-read.txt"
+	grep -E 'Error|error|No such device' "$WORK/ffmpeg-read.txt" | tail -2
 	grep '^frame=' "$WORK/ffmpeg-read.txt" | tail -1
 }
 
@@ -24,72 +27,78 @@ sink_streams() {
 	pactl list short sink-inputs | awk -v i="$i" '$2 == i { print "stream into elgato_gchd:", $0 }'
 }
 
-step "v4l2loopback and the driver"
-run sh -c "modinfo v4l2loopback | grep -E '^(version|filename)'" ||
-	prompt "Install v4l2loopback: sudo apt install v4l2loopback-dkms (then Enter)"
+step "driver with three devices"
+run sh -c "pkill -f 'gchd-bridge run'; sudo modprobe -r v4l2loopback; true"
 load_module replug
-run sudo modprobe -r v4l2loopback
-run sudo modprobe v4l2loopback devices=1 video_nr=42 exclusive_caps=1 "card_label=Elgato Game Capture HD"
-expect "loopback device present" "video42" v4l2-ctl --list-devices
+run v4l2-ctl --list-devices
+expect "H.264 device" "Elgato Game Capture HD \(H.264\)" v4l2-ctl --list-devices
+expect "application device registered, idle" "^idle video[0-9]+ 720 (480|576) " app_attr
+expect "application device offers YUYV" "YUYV" v4l2-ctl -d "$(app_dev)" --list-formats-ext
 
-step "bridge idle: black picture, capture device off"
+step "bridge idle: capture device off"
 prompt "PS1 on composite, game running."
 set_input 2
 bash "$BRIDGE" run >> "$WORK/bridge.log" 2>&1 &
 BRIDGE_PID=$!
-sleep 4
-expect "bridge running and both devices found" "loopback device: /dev/video42" bash "$BRIDGE" status
-run grep -q "service: *running" <(bash "$BRIDGE" status) || run cat "$WORK/bridge.log"
-expect "loopback offers YUYV of the driver's current size while idle" "720/(480|576)" v4l2-ctl -d "$LOOP" --get-fmt-video
-expect "audio source present" "elgato_gchd_audio" pactl list short sources
-expect "capture device off while idle" "^0$" sh -c "sudo dmesg | grep -c 'starting hardware boot'"
-run cat "$WORK/bridge.log"
+sleep 3
+run bash "$BRIDGE" status
+expect "bridge running" "service: *running" bash "$BRIDGE" status
+expect "capture device off while no application streams" "^0$" sh -c "sudo dmesg | grep -c 'starting hardware boot'"
 
-step "application reads: capture starts, 720x576 at 50 frames/s"
-loop_read 15 > "$WORK/read.txt"
-run cat "$WORK/read.txt"
-expect "loopback stream YUYV 720x480 or 720x576" "yuyv422.*720x(480|576)" cat "$WORK/read.txt"
-expect "frame count >= 400 in 15 s (capture running)" "frame= *([4-9][0-9]{2}|[0-9]{4})" cat "$WORK/read.txt"
+step "first read: source detected (PAL), device registered again with 720x576"
+app_read 20 > "$WORK/read1.txt"
+run cat "$WORK/read1.txt"
+sleep 4
+run app_attr
+expect "application device now 720x576, 50 frames/s" " 720 576 50 1 " app_attr
+run tail -8 "$WORK/bridge.log"
+
+step "read: 720x576 YUYV, about 50 frames/s"
+app_read 15 > "$WORK/read2.txt"
+run cat "$WORK/read2.txt"
+expect "stream YUYV 720x576" "yuyv422.*720x576" cat "$WORK/read2.txt"
+expect "frame count >= 450 in 15 s" "frame= *([4-9][5-9][0-9]|[5-9][0-9]{2}|[0-9]{4})" cat "$WORK/read2.txt"
 expect "capture device started" "starting hardware boot" sudo dmesg
 
 step "application closed: capture device off"
-sleep 5
-expect "hardware shut down after the last reader" "hardware shutdown done" sudo dmesg
+sleep 6
+expect "hardware shut down after the application stopped" "hardware shutdown done" sudo dmesg
+expect "state idle" "^idle " app_attr
 
 step "audio while capturing"
-loop_read 14 > /dev/null &
+app_read 14 > /dev/null &
 READER=$!
-sleep 7
+sleep 8
 expect "the bridge plays into the audio sink" "stream into elgato_gchd" sink_streams
 expect "audio source delivers samples" "n_samples: [1-9]" \
 	ffmpeg -hide_banner -nostdin -f pulse -i elgato_gchd_audio -t 4 -af volumedetect -f null -
 wait "$READER"
 
-step "input change through the bridge while an application reads"
-loop_read 24 > "$WORK/input-change.txt" &
+step "input change on the application device while reading"
+app_read 30 > "$WORK/read3.txt" &
 READER=$!
-sleep 8
-run bash "$BRIDGE" input svideo
-sleep 5
-run bash "$BRIDGE" input composite
+sleep 10
+run v4l2-ctl -d "$(app_dev)" -i 3
+sleep 4
+run app_attr
 wait "$READER"
-run cat "$WORK/input-change.txt"
-run sh -c "tail -12 '$WORK/bridge.log'"
-expect "reader kept running (frame count >= 500)" "frame= *([5-9][0-9]{2}|[0-9]{4})" cat "$WORK/input-change.txt"
-expect "input back on composite" "Video input : 2" v4l2-ctl -d "$DEV" --get-input
+run cat "$WORK/read3.txt"
+expect "S-video (no source, NTSC size): device re-registered with 720x480" " 720 480 60000 1001 " app_attr
+run v4l2-ctl -d "$(app_dev)" -i 2
+sleep 2
+expect "composite again: 720x576" " 720 576 50 1 " app_attr
+expect "input composite on the H.264 device too" "Video input : 2" v4l2-ctl -d "$DEV" --get-input
 
 step "guvcview"
-prompt "Start: guvcview -d $LOOP   (in a second terminal; leave it open). If guvcview opens another device, select \"Elgato Game Capture HD\" at $LOOP, not the one at $DEV."
-confirm "guvcview shows the PS1 picture, smooth, no interlacing lines?"
-prompt "Swap the PS1 for the N64 (NTSC) while guvcview stays open; wait about 10 s."
-confirm "guvcview shows the N64 picture again (scaled to the PAL size)?"
+prompt "Start in a second terminal: guvcview -d $(app_dev)   (leave it open)"
+confirm "guvcview shows the PS1 picture, smooth, without interlacing lines?"
+prompt "Swap the PS1 for the N64 (NTSC) while guvcview stays open; wait about 15 s."
+run app_attr
+confirm "guvcview reconnected by itself and shows the N64 picture (720x480)?"
 prompt "Close guvcview."
-sleep 7
-expect "idle size follows the NTSC source after closing" "720/480" v4l2-ctl -d "$LOOP" --get-fmt-video
+run tail -20 "$WORK/bridge.log"
 
 step "bridge stopped"
 run kill "$BRIDGE_PID"
-sleep 2
+sleep 4
 expect "audio source removed" "^0$" sh -c "pactl list short sources | grep -c elgato_gchd"
-run tail -30 "$WORK/bridge.log"
-run sudo modprobe -r v4l2loopback
