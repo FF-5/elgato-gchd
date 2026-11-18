@@ -38,7 +38,9 @@ Video modes and switching:
       S-video → composite sequence only after S-video in the same session.
       5a189e2 test: composite no sync at all. Control test: `dev` (the code
       of the working PAL composite test) fails the same way (`0x88:FA` low
-      nibble `5`, then `D`) → setup, not driver; check with composite only.
+      nibble `5`, then `D`). One input at a time is always used. Lock on
+      composite currently only with the `F5` retrigger (then 60 Hz family);
+      test switch `composite_retrigger`.
 - [ ] **T-044 [HW] (S)** Reopening while the previous stop is still
       running failed once; make a new open wait for it.
 - [ ] **T-047 [HW] (S)** `hardware shutdown on last close failed: -5` after

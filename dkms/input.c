@@ -16,6 +16,9 @@ MODULE_PARM_DESC(signal_active_retries, "Signal measurement retries when timing 
 module_param(signal_inactive_retries, uint, 0644);
 MODULE_PARM_DESC(signal_inactive_retries, "Signal measurement retries when timing is not detected");
 module_param(signal_poll_delay_ms, uint, 0644);
+static bool composite_retrigger;
+module_param(composite_retrigger, bool, 0644);
+MODULE_PARM_DESC(composite_retrigger, "Test: also retrigger the back end on 0x98:F5 bit 7 while polling composite");
 
 MODULE_PARM_DESC(signal_poll_delay_ms, "Delay in milliseconds between signal measurement batches");
 
@@ -606,9 +609,9 @@ static int gchd_be_poll_status(struct gchd *d)
  u8 v;
 
  GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
- if (d->input != 3 || !(v & GCHD_BE_STATUS_FLAG))
+ if ((d->input != 3 && !composite_retrigger) || !(v & GCHD_BE_STATUS_FLAG))
   return 0;
- dev_dbg(&d->intf->dev, "back-end status 0x%02x; retrigger\n", v);
+ dev_info(&d->intf->dev, "back-end status 0x%02x while polling; retrigger\n", v);
  return gchd_be_retrigger(d);
 }
 

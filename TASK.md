@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** `dev` fails too → setup check (composite cable only)
+- **Status:** composite lock depends on the back-end retrigger; test switch
 - **Type:** driver fix + hardware test
 - **Branch:** `fix/pal-svideo` (from `dev`); component (`feat/component`,
   T-051) continues after this
@@ -10,46 +10,65 @@
 
 ## Why
 
-Control test: **`dev` fails with PAL composite exactly like this branch.**
-`dev` is the code of the seventeenth test, in which PAL composite worked
-(merged unchanged from `feat/pal` e79f660). Same code, different result:
-the cause is outside the driver.
+The maintainer always tested one input at a time (a PS1 has one video
+output), so cabling is not the cause. Looking at all composite runs with the
+PS1:
 
-The decoder never saw a usable signal: `0x88:FA` low nibble `5` at first (a
-value never seen before, in no test and no recording), then `D` (no sync).
-Everything that went wrong with composite since then (stretched picture,
-60 Hz family, no sync) started after the PS1 was connected to composite and
-S-video at the same time.
+| Build | Retrigger while polling composite | Result |
+|---|---|---|
+| `dev`, seventeenth test | no | 576i detected, picture correct |
+| b17d75e … 13b1a5b | yes | lock, but 60 Hz family detected, stretched |
+| 5a189e2 | no | no lock (`FA` low nibble `D`) |
+| `dev`, control test | no | no lock (`FA` low nibble `5`, then `D`) |
+
+So at the moment the decoder locks onto the PS1's composite signal only
+when the back end is retriggered, and then with the wrong family; without
+the retrigger it does not lock at all, although the same code locked in the
+seventeenth test. `FA` low nibble `5` means "50 Hz seen, not locked", `D`
+"no sync".
+
+This build has a test switch, `composite_retrigger=1`, that brings the
+retrigger back for composite. Each retrigger is logged
+(`back-end status 0x.. while polling; retrigger`).
 
 ## Acceptance criteria (this test)
 
-1. With **only the composite cable** connected to the PS1 (S-video
-   unplugged at the device and at the console), fresh plug-in, `dev`:
-   picture?
-2. Which cable(s) are used: one cable with both composite and S-video
-   plugs, or two cables? Does the PS1 show a picture on a TV through the
-   composite plug at the same time?
+1. Windows software, PS1 on composite now: picture? (Tells whether the
+   signal itself is fine at the moment.)
+2. Linux, PS1 on composite, `composite_retrigger=0` and `=1`: lock, family,
+   picture.
 
 ## Hardware test (maintainer)
 
+A. Windows: PS1 on composite, start capture. Picture? If yes, a recording
+   of that start (reduced with the bulk-OUT filter) to
+   `traces/composite/` would show the current reference.
+
+B. Linux, PS1 on composite:
+
 ```sh
-git fetch origin && git checkout --detach origin/dev
+git fetch origin && git checkout fix/pal-svideo && git pull
 cd dkms && make -C /lib/modules/$(uname -r)/build M=$PWD clean modules
 sudo rmmod elgato_gchd 2>/dev/null; sudo dmesg -C
 sudo modprobe -a videodev videobuf2-v4l2 videobuf2-vmalloc
-# PS1 on composite only; unplug and replug the device, then:
-sudo insmod elgato_gchd.ko
+# unplug and replug the device, then:
+sudo insmod elgato_gchd.ko composite_retrigger=0
+v4l2-ctl -d /dev/video0 -i 2
+ffplay -f v4l2 -input_format h264 -i /dev/video0
+# close; then:
+sudo rmmod elgato_gchd
+# unplug and replug the device, then:
+sudo insmod elgato_gchd.ko composite_retrigger=1
 v4l2-ctl -d /dev/video0 -i 2
 ffplay -f v4l2 -input_format h264 -i /dev/video0
 sudo dmesg | grep -vE "bulk-IN data|START poll=|firmware chunk|open requested|SCMD write succeeded|SCMD interrupt|bulk-IN stats|callbacks suppressed"
 ```
 
-If composite works this way, the same with `fix/pal-svideo`
-(`git checkout fix/pal-svideo && git pull`), still composite only.
-Paste the output into the maintainer comments below.
+Paste the outputs (labelled 0 and 1) into the maintainer comments below.
 
 ## Findings
 
+- One input at a time is always used (PS1 has one output): not cabling.
 - Control test: `dev` fails with PAL composite like this branch (`FA` low
   nibble `5`, then `D`).
 - 5a189e2 test: composite no sync at all (`FA = ED/FD`) on a fresh start.
