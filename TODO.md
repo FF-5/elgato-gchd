@@ -18,7 +18,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.2): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.3): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -27,7 +27,8 @@ on the `traces` branch.
   STREAMOFF → STREAMON on one handle. V4L2 reporting: standard (NTSC-M /
   PAL, QUERYSTD/G_STD), 720×480/576 by source, 29.97 / 25 fps,
   interlaced top field first; input changes from other processes refused
-  while one captures.
+  while one captures. Output sizes 720×480/576 (interlaced), 640×480 and
+  480×360 (progressive, transport output 2 on endpoint 0x84).
   Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
   `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; the decoder
   reports 60 Hz for a few seconds after power-on and reset, also with the
@@ -55,12 +56,6 @@ Video modes and switching:
 
 Output and settings (`docs/composite.md §10`):
 
-- [ ] **T-055 [OFF→HW] (M)** Output size: 720×480/576 (standard),
-      640×480, 480×360 (mobile), as recorded (`v_ip_format 2`, GOP 6,
-      transport output 2 for the two small sizes; which endpoint carries
-      transport output 2 is unknown). V4L2: `S_FMT` sizes. Cropping and the
-      HD sizes are done by the Windows application (no control transfers,
-      cropping instant) and are not driver features.
 - [ ] **T-061 [OFF→HW] (M)** Bitrate control as recorded (CBR at the
       maximum, VBR with `v_ave_bitrate` = displayed value below it; ranges
       per output size), "stretch" (`v_in_source_type 2`), H.264
