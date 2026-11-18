@@ -145,6 +145,12 @@ has only the status reads), and the back-end step uses the PAL table:
 Status values with a locked 576i source: `0x88:FA = 07`/`17`,
 `CA = 7E`, `E7 = 79`, `F1 = 63`.
 
+Capture start with a 288p source (`0x88:CA = 66`, Observed): after INIT
+`A0` and the input routing, the PAL apply block with `0x88:28 = 8A`, read
+`0x88:FD`, `0x88:06 = 08`; about 0.4 s later read `0x88:E7` (`79`) and
+`0x88:F1` (`63`); then the PAL back-end table, retrigger, encoder
+programming (the same as for 576i), INIT `A0`, START.
+
 ### 8.2 576i ↔ 288p while capturing
 
 No SCMD and no encoder writes are issued; the stream continues. The PAL

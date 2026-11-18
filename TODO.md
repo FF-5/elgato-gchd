@@ -55,7 +55,8 @@ Video modes and switching:
       after a session that ended with a failed START. Check whether it also
       happens after normal sessions; treat state 0x11 without the flag as
       IDLE reached.
-- [ ] 288p capture start (recording R1 wanted; the driver uses the apply block
+- [ ] 288p capture start: recorded (R1), driver adjusted; hardware check in
+      the T-065 test (the driver uses the apply block
       of the 576i → 288p change).
 
 Output and settings (`docs/composite.md §10`):
@@ -205,7 +206,7 @@ a short note what was done and when (seconds) helps.
 
 | # | Recording | For | Status |
 |---|---|---|---|
-| R1 | Composite PAL: capture started while the source already shows **288p** (the 2026-11-18 PAL recording started in 576i: the PS1 showed an interlaced screen). Start the Windows capture while the game shows a 240p/288p screen (most in-game screens, not the PS1 logo or menus) | stage 1, "288p capture start" | **needed** (only open stage-1 start case) |
+| R1 | Composite PAL capture start with a 288p source | stage 1, "288p capture start" | done (`composite/gchd_PAL_composite_small`) |
 | R2 | Bitrate slider with an NTSC source | T-061 | done (`composite/gchd_NTSC_composite_output_bitrate_audio_small`) |
 | R3 | Windows application closed while capturing, and closed without a source | close sequence (T-047 was fixed without a recording) | optional (close works) |
 | R4 | Composite NTSC 480i capture start | initial detection | done (PS2, same NTSC recording) |
