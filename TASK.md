@@ -50,3 +50,4 @@ Follows with the implementation.
 
 ## Maintainer comments
 
+Before starting the task, please change (wherever it's located) the place to look for the Windows installer to be the firmware folder. Manually the firmware script can be pointed anywhere, but if I manage to get authorization from elgato, then I'll make the firmware script download the file directly to the firmware folder. This way the install script just cares about calling the firmware script and reading its output.
