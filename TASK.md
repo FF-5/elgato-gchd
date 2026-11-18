@@ -349,3 +349,23 @@ Paste the summary; on FAILs the log.
 
 ## Maintainer comments
 
+Everything seems to work.
+
+=== summary (T-060-install, 9c9f814 install-driver.sh: three install types (everything, kernel driver, OBS plugin), per-part uninstall; settings tool and device rule with the driver (T-060))
+PASS | step 1 uninstall everything first | plugin removed
+PASS | step 1 uninstall everything first | settings tool removed
+PASS | step 2 kernel driver only (--driver) | driver installed
+PASS | step 2 kernel driver only (--driver) | udev rules installed
+PASS | step 2 kernel driver only (--driver) | settings tool installed
+PASS | step 2 kernel driver only (--driver) | no plugin installed by --driver
+PASS | step 2 kernel driver only (--driver) | /dev/elgato-gchd present
+PASS | step 3 OBS plugin only (--obs) | plugin installed
+PASS | step 4 uninstall the plugin only (--uninstall --obs) | plugin removed
+PASS | step 4 uninstall the plugin only (--uninstall --obs) | driver still installed
+PASS | step 5 menu: everything (choice 1) | driver installed
+PASS | step 5 menu: everything (choice 1) | plugin installed
+PASS | step 5 menu: everything (choice 1) | OBS lists the source and shows the picture?
+
+FAIL: 0  WARN: 0
+
+A comment, I imagined a TUI being the extreme last option for configuration control. I had imagined something similar to what OBS has with v4l2 devices, a window with sliders, menus, etc.
