@@ -224,6 +224,18 @@ static int gchd_transcoder_defaults(struct gchd *d)
  * 720x480/576 with v_in_source_type 3, also for 240p/288p sources: the
  * progressive source is carried as one picture per field.
  */
+/*
+ * Test bits for the scaled outputs (transport output 2):
+ * bit 0: v_vinpelclk 1 in the output-2 block (as in the 288p recordings);
+ * bit 1: transport output 1 stays enabled next to output 2;
+ * bit 2: output 2 enabled in the encoder setup after the firmware INIT
+ *        (v_ts_out2_mode 1, a_ts_out2_mode 2, a2_mode 3, as in the
+ *        initialization recording).
+ */
+static unsigned int out2_test;
+module_param(out2_test, uint, 0644);
+MODULE_PARM_DESC(out2_test, "Scaled output test bits (see source)");
+
 static bool gchd_enc_interlaced(const struct gchd *d)
 {
  return d->input >= 2 ? true : d->input_interlaced;
@@ -256,6 +268,7 @@ static int gchd_transcoder_write_start(struct gchd *d,
  bool vbr = c->out == GCHD_OUT_MOBILE;
  u8 ip_format = out2 || !gchd_enc_interlaced(d) ? 2 : 0;
  u8 cpb_delay = vbr ? 10 : 3;
+ bool both;
 
  GCHD_TC_SET(d, GCHD_TC_V_PID_OUT, GCHD_TS_PID_VIDEO);
  GCHD_TC_SET(d, GCHD_TC_V_PID_OUT_TS_OUT2, GCHD_TS_PID_VIDEO);
@@ -304,7 +317,7 @@ static int gchd_transcoder_write_start(struct gchd *d,
  GCHD_TC_SET(d, GCHD_TC_V_MIN_BITRATE, c->min_bitrate);
  GCHD_TC_SET(d, GCHD_TC_V_HSIZE_OUT, c->width);
  GCHD_TC_SET(d, GCHD_TC_V_VSIZE_OUT, c->height);
- GCHD_TC_SET(d, GCHD_TC_V_VINPELCLK, out2);
+ GCHD_TC_SET(d, GCHD_TC_V_VINPELCLK, out2 && (out2_test & 1));
  GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_H, 0);
  GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_L, 0);
  GCHD_TC_SET(d, GCHD_TC_NUM_UNITS_IN_TICK, 0);
@@ -376,9 +389,13 @@ static int gchd_transcoder_write_start(struct gchd *d,
 
  GCHD_TC_SET(d, GCHD_TC_SOUT_MODE, 0);
  GCHD_TC_SET(d, GCHD_TC_SOUT2_MODE, 0);
- GCHD_TC_SET(d, GCHD_TC_V_TS_OUT_MODE, out2 ? 0 : 1);
- GCHD_TC_SET(d, GCHD_TC_A_TS_OUT_MODE, out2 ? 0 : 2);
- GCHD_TC_SET(d, GCHD_TC_A_MODE, out2 ? 0 : 3);
+ both = out2 && (out2_test & 2);
+ if (out2)
+  dev_info(&d->intf->dev, "encoder: transport output 2 (%ux%u), out2_test=%u\n",
+           c->width, c->height, out2_test);
+ GCHD_TC_SET(d, GCHD_TC_V_TS_OUT_MODE, out2 && !both ? 0 : 1);
+ GCHD_TC_SET(d, GCHD_TC_A_TS_OUT_MODE, out2 && !both ? 0 : 2);
+ GCHD_TC_SET(d, GCHD_TC_A_MODE, out2 && !both ? 0 : 3);
  GCHD_TC_SET(d, GCHD_TC_V_TS_OUT2_MODE, out2 ? 1 : 0);
  GCHD_TC_SET(d, GCHD_TC_A_TS_OUT2_MODE, out2 ? 2 : 0);
  GCHD_TC_SET(d, GCHD_TC_A2_MODE, out2 ? 3 : 0);
@@ -506,7 +523,7 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
  GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_H_BL,0); GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_L_BL,0); GCHD_TC_SET(d, GCHD_TC_NUM_UNITS_IN_TICK_BL,1);
  GCHD_TC_SET(d, GCHD_TC_E_MPEG_PROTECT_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_MODE_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_COPYR_BL,0); GCHD_TC_SET(d, GCHD_TC_E_MPEG_ORIG_BL,1); GCHD_TC_SET(d, GCHD_TC_E_MPEG_EMP_BL,0); GCHD_TC_SET(d, GCHD_TC_A_BITRATE_BL,audio);
  GCHD_TC_SET(d, GCHD_TC_COLOUR_DESCRIPTION_PRESENT_FLAG_BL,1); GCHD_TC_SET(d, GCHD_TC_COLOUR_PRIMARIES_BL,colour); GCHD_TC_SET(d, GCHD_TC_TRANSFER_CHARACTERISTICS_BL,1); GCHD_TC_SET(d, GCHD_TC_MATRIX_COEFFICIENTS_BL,colour); GCHD_TC_SET(d, GCHD_TC_VIDEO_FULL_RANGE_FLAG_BL,0); GCHD_TC_SET(d, GCHD_TC_VIDEO_SIGNAL_TYPE_PRESENT_FLAG_BL,1); GCHD_TC_SET(d, GCHD_TC_VIDEO_FORMAT_BL,5);
- GCHD_TC_SET(d, GCHD_TC_V_TS_OUT_MODE,1); GCHD_TC_SET(d, GCHD_TC_A_MODE,3); GCHD_TC_SET(d, GCHD_TC_V_TS_OUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A_TS_OUT_MODE,2); GCHD_TC_SET(d, GCHD_TC_SOUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A_TS_OUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A2_MODE,0);
+ GCHD_TC_SET(d, GCHD_TC_V_TS_OUT_MODE,1); GCHD_TC_SET(d, GCHD_TC_A_MODE,3); GCHD_TC_SET(d, GCHD_TC_V_TS_OUT2_MODE,(out2_test & 4) ? 1 : 0); GCHD_TC_SET(d, GCHD_TC_A_TS_OUT_MODE,2); GCHD_TC_SET(d, GCHD_TC_SOUT2_MODE,0); GCHD_TC_SET(d, GCHD_TC_A_TS_OUT2_MODE,(out2_test & 4) ? 2 : 0); GCHD_TC_SET(d, GCHD_TC_A2_MODE,(out2_test & 4) ? 3 : 0);
  GCHD_TC_SET(d, GCHD_TC_V_IN_SOURCE_TYPE, gchd_enc_source_type(d)); GCHD_TC_SET(d, GCHD_TC_V_FORMAT,vformat); GCHD_TC_SET(d, GCHD_TC_V_IP_FORMAT, gchd_enc_interlaced(d) ? 0 : 2); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1); GCHD_TC_SET(d, GCHD_TC_TBC_MODE,1);
  GCHD_TC_SET(d, GCHD_TC_A_SAMPLE,0); GCHD_TC_SET(d, GCHD_TC_AIN_MASTER,0); GCHD_TC_SET(d, GCHD_TC_AIN_LSB_FIRST,0); GCHD_TC_SET(d, GCHD_TC_AIN_BIT_POSB,0); GCHD_TC_SET(d, GCHD_TC_AMCK_MODE,1); GCHD_TC_SET(d, GCHD_TC_AIN_DLENGTH,2); GCHD_TC_SET(d, GCHD_TC_AIN_LR_HLSET,1); GCHD_TC_SET(d, GCHD_TC_AIN_I2S,1); GCHD_TC_SET(d, GCHD_TC_AIN_LRCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_SCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_BCLK_SEL,0); GCHD_TC_SET(d, GCHD_TC_AIN_BCLK_HL,0); GCHD_TC_SET(d, GCHD_TC_AIN_OFFSET_MODE,0); GCHD_TC_SET(d, GCHD_TC_AIN_OFFSET,0);
  GCHD_TC_SET(d, GCHD_TC_V_DISABLE_ASPECT_RATIO_INFO_PRESENT_FLAG,0); GCHD_TC_SET(d, GCHD_TC_V_DISABLE_ASPECT_RATIO_INFO_PRESENT_FLAG_BL,0); GCHD_TC_SET(d, GCHD_TC_V_PIC_ORDER_PRESENT_FLAG,1); GCHD_TC_SET(d, GCHD_TC_V_PIC_ORDER_PRESENT_FLAG_BL,1);
