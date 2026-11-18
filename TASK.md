@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** plan; implementation next
+- **Status:** waiting for the release decision (see findings)
 - **Type:** move only (no code changes)
 - **Branch:** `chore/src-layout` (from `dev` 0.5.6)
 - **TODO items:** T-070
@@ -19,7 +19,7 @@ scripts (T-071) and the guvcview/OBS service (T-060).
 |---|---|
 | `dkms/` | `src/kernel/` |
 | `src/*.cpp`, `src/*.hpp`, `src/gchd/`, `src/gui/`, `src/CMakeLists.txt` | `src/userspace/` (content unchanged) |
-| `firmware_extract/` | stays (renamed in T-071) |
+| `firmware_extract/` | `firmware/` (maintainer 2026-11-18) |
 | `udev-rules/`, `docs/` | stay |
 
 1. `git mv` only; no file content changes except paths:
@@ -30,6 +30,9 @@ scripts (T-071) and the guvcview/OBS service (T-060).
    - `src/kernel/dkms.conf` and Makefile/Kbuild paths if any;
    - path references in `docs/`, `src/kernel/README.md`, RULES.md,
      CLAUDE.md, TODO.md;
+   - top-level `README.md`: one section per program; the kernel-module
+     section written new, the userspace section unchanged except paths
+     and the build method (RULES B4 as updated 2026-11-18);
    - `tools` branch: `compare-objs.sh`, `gen-transcoder-fields.py` and
      `gchd-test.sh` build from `src/kernel/` (with a fallback to `dkms/`
      for older revisions).
@@ -43,13 +46,33 @@ Follows with the implementation.
 
 ## Findings
 
+- Maintainer plan (2026-11-18), recorded in TODO/RULES: `firmware_extract/`
+  → `firmware/` (T-070); top-level README with one section per program
+  (RULES B4 updated); two top-level scripts (install the kernel module,
+  build the userspace program) using `build/` with
+  `build/objects/kernel|userspace/` for intermediate files, redundant
+  userspace build files removed afterwards (T-071; `.gitignore` already
+  ignores `build`); T-092 before the first release: userspace compile
+  errors only.
+- Release question (kernel module only, on a branch of its own, or both
+  programs on `master`). My recommendation:
+  1. **If the aim is to contribute to the original project:** `master`
+     with both programs, the kernel module as the main product and the
+     userspace program kept as it is, marked "not maintained" in the
+     README. A contribution there is "add the kernel driver"; removing a
+     program its maintainers wrote is their decision, not part of the
+     contribution. The cost of keeping it is small (T-092, one build
+     script).
+  2. **If it becomes our own project:** a repository of its own with the
+     kernel module only (driver, docs, firmware script, udev rules,
+     installer; credits and a link to the original project kept, GPL).
+     Clean README, releases and issues for the module only.
+  3. **Not recommended:** a long-lived `kernel-module` branch used as the
+     real `master`. Visitors and `git clone` get `master` (the old README
+     and program); releases, tags and the default branch disagree; the
+     two branches drift apart.
+  The move in this task is the same in 1 and 2 except for
+  `src/userspace/`; it waits for the decision.
+
 ## Maintainer comments
 
-Ok, these are the things I have in mind:
-- change firmware_extract to just firmware
-- the consolidation of the source code under src as we discussed
-- top level README.md we will start touching. We will have essentially 2 programs so the README.md should have sections for each. Leave the section for the userspace mostly untouched except for path changes and eventually build method. Try and mostly work on the kernel module section.
-- There are going to be 2 scripts at the top level: a kernel module installer, and the userspace program build. Therefore whatever the userspace uses to build might get made redundant by the build script, so check any build redundancies after creating that script.
-- I want the install and build scripts to use a build folder at the top level for all intermediary objects and compiled elements. The compiled program should land in build and all intermediary objects should be created in build/objects/kernel (or userspace if C++ also creates intermediate objects). Make sure the gitignore includes build and everything inside it.
-- add a TODO item before merging to master, to fix the compile problem of the userspace code. Make sure that this only addresses the compile problems and not any logic in the code. This is necessary for the build script so that we deliver a working thing.
-- a question to you. Is it best to contribute only the kernel module or all? I mean I'm just working on the kernel module and not doing anything about userspace. The module is going to be more complete than the userspace implementation and probably more practical. Is it best, instead of merging to master, we push our releases to a kernel-module or a better named branch without any of the userspace README.md, source and other files? We would essentially be treating this branch as our own master branch that we are going to contribute to the main project. Because I don't really see the benefit of keeping code that I'm not going to maintain and it's usability is worse than ours. Tell me what you think is best for us in this case.

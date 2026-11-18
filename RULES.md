@@ -57,12 +57,15 @@ and re-check them before every commit.
    are written on the `tools` branch (or a feature branch made from it) and
    used from a worktree or with `git show origin/tools:tools/<script>`. Traces,
    decoded trace listings, logs and analysis notes go to the `traces` branch.
-4. **Protected files — never modify:** `src/`, `CMakeLists.txt`, the
-   original files in `udev-rules/` (`55-elgato-game-capture.rules`),
-   `CREDITS.md`, `LICENSE`, the top-level `README.md`. New files of our own
-   may be added to `udev-rules/`. Changes to the protected files (for
-   example the planned move of `src/`, TODO T-070) are made only with the
-   maintainer's consent.
+4. **Protected files:** the userspace program (`src/`, after T-070
+   `src/userspace/`), `CMakeLists.txt`, the original files in `udev-rules/`
+   (`55-elgato-game-capture.rules`), `CREDITS.md`, `LICENSE`. New files of
+   our own may be added to `udev-rules/`. Allowed with the maintainer's
+   consent (2026-11-18): moving the userspace files (T-070) and changing
+   only paths in `CMakeLists.txt`; fixing compile errors of the userspace
+   program without changing its logic (T-092). The top-level `README.md`
+   may be edited: the kernel-module section freely, the userspace section
+   only for paths and the build method.
 5. Never commit directly to `master`. Never force-push `dev` or `master`.
    Never rewrite published history.
 6. One feature branch per task. Merge into `dev` only when the task's

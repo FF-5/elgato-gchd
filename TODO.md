@@ -53,10 +53,14 @@ settings above work on `dev`.
 
 - [ ] **T-070 (M)** All code under `src/` (agreed 2026-11-18):
       `src/kernel/` (today's `dkms/`), `src/userspace/` (today's
-      `src/*.cpp`, `src/gchd/`, `src/gui/`, `src/CMakeLists.txt`). The
-      maintainer allows changing the source paths in the top-level
-      `CMakeLists.txt` (paths only). DKMS paths and docs updated. One
-      move-only branch, module checked identical with `compare-objs.sh`.
+      `src/*.cpp`, `src/gchd/`, `src/gui/`, `src/CMakeLists.txt`);
+      `firmware_extract/` renamed to `firmware/` (maintainer 2026-11-18).
+      The top-level `CMakeLists.txt` changes in paths only. DKMS paths,
+      docs and `tools` scripts updated. Move-only branch, module checked
+      identical with `compare-objs.sh`. Top-level `README.md` with one
+      section per program: kernel module (rewritten), userspace program
+      (unchanged except paths and build method). Depends on the release
+      decision below.
 - [ ] **T-071 (M)** Scripts for non-technical users, runnable from a file
       manager (executable, with a terminal window; `pkexec` for root):
       - `firmware/` (renamed from `firmware_extract/`), bash: extracts the
@@ -74,6 +78,13 @@ settings above work on `dev`.
       - `install-driver.sh` at the top: installs the DKMS module (and the
         firmware step if missing), with an uninstall option.
       - `build-program.sh` at the top: builds the userspace program.
+      - Both scripts use the top-level `build/` (ignored by git): compiled
+        results land in `build/`, intermediate objects in
+        `build/objects/kernel/` and `build/objects/userspace/` (kbuild of
+        this kernel builds in the source directory, so the kernel sources
+        are copied to `build/objects/kernel/` and built there). After the
+        scripts exist, remove what the userspace build no longer needs
+        (redundant build files), paths only.
 
 ## Stage 1b — Applications (guvcview, OBS) (after T-070/T-071)
 
@@ -212,6 +223,14 @@ order, frame rate, decode errors; dmesg: failures) and writes one log
 file. It prompts only for physical actions (cables, consoles) and visual
 checks. The maintainer pastes the log (or its summary) into `TASK.md`.
 
+- [ ] **T-092 (S)** Before the first release: make the userspace program
+      compile again (`build-program.sh`), fixing only compile errors, no
+      program logic (maintainer 2026-11-18). Depends on the release
+      decision.
+- [ ] **Release decision (maintainer):** where releases go: `master` of
+      this repository with both programs (kernel module first, userspace
+      marked as not maintained), or kernel module only (a separate
+      branch or repository). See `TASK.md` findings 2026-11-18.
 - [ ] **T-090 (M)** Pre-release test before the first `master` merge
       (after HDMI): one test file covering every accepted feature (inputs,
       standards, modes, mode and family changes, output sizes, bitrate,
