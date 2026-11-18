@@ -27,7 +27,7 @@ the decoder (§8).
 |---|---|
 | `0x88:CA` | Lock and format, the same codes for both families: `FE` unlocked, `7E` interlaced (480i, 576i) locked, `66` progressive (240p, 288p) locked, `76` first value after a change to interlaced, `6E` first value after a change to progressive, `EE`/`E6` transitional. |
 | `0x88:FA` | Low nibble `6` = NTSC (60 Hz) family, `7` = PAL (50 Hz) family once a signal is present. Reads `1F`/`3E` immediately after the input is selected. Polled while no signal is present. |
-| `0x88:E7` | `69` when stable (NTSC), `79` (PAL); `09` right after a 240p change; `E9` during a mode change. |
+| `0x88:E7` | Decoder standard: `69` when stable (NTSC), `59` (60 Hz source at power-on of some consoles), `79` (PAL); `09` right after a 240p change; bit 7 set (`E9`, `D9`) while the decoder re-evaluates the standard, for about 0.4-0.9 s after an apply block and when the source changes family. |
 | `0x88:F1` | `7E` when stable (NTSC); `63` (PAL). |
 | `0x88:CB` | `6E` when stable; `44` right after a 240p change. |
 | `0x88:FD`, `0x88:F8` | `6E`, `C9`. Unknown. |
@@ -115,12 +115,21 @@ tuning passes are not repeated.
 Composite and S-video are distinguished by `0x88:02` (`C9` / `DC`) and
 `0x88:14 = D2`, not by the selector.
 
+The decoder keeps the S-video setting while the device has power. Selecting
+composite after S-video (Observed): `0x88:02 = C9`, `14 = D2`, `3C = 6B`,
+about 200 ms pause, `28 = 88`, read `FD`, `F8`, `03 = 28`, front-end and
+routing writes as usual; then the first `0x98:F5` read shows bit 7 (`E2`)
+and the back end is retriggered once. Lock follows about 0.3 s later. The
+driver writes this sequence on the first composite start after loading,
+since the decoder's state is not known then.
+
 ## 7. No-signal polling
 
 Read `0x88:FA`, read `0x98:F5`, about every 50 ms. When `0x98:F5` has bit 7
-set (`F2`, `E2`), the back end is retriggered (Observed: PAL S-video, after
-the routing writes; with an NTSC source `F5` reads `62` and no retrigger
-follows). When a source is connected, `0x88:CA` changes from `FE`, polling
+set (`F2`, `E2`), the back end is retriggered (Observed: S-video and
+composite, e.g. after the routing writes, after composite was selected
+following S-video, and while a PAL console powers up after a signal loss;
+when `F5` reads `62` no retrigger follows). When a source is connected, `0x88:CA` changes from `FE`, polling
 ends, and the sequence continues with §3 step 3.
 
 ## 8. PAL (Observed)
@@ -162,14 +171,63 @@ capturing, followed by a second retrigger.
 The encoder programming is the same for 576i and 288p (`v_format = 5`,
 `v_ip_format = 0`, `v_in_source_type = 3`, 720 × 576).
 
+### 8.3 60 Hz ↔ 50 Hz while capturing (Observed)
+
+Some PAL consoles output a 60 Hz signal for a few seconds after power-on or
+reset, then switch to 50 Hz. The change of family is handled with a full
+encoder restart. It is started by `0x88:E7` with bit 7 set, or by
+`0x88:FA` reporting the other family:
+
+```
+E7 bit 7:          neutral back-end table (§4 step 4), retrigger
+other family read: apply block of that family (0x28 from CA, §9),
+                   about 0.45 s later: read 0x88:E7, F1; retrigger
+then:              NULL, STOP
+                   read 0x88:FA, CA until locked (CA 7E or 66); while not
+                   locked, the apply block of the family read every 0.5 s;
+                   once locked, the apply block of that family unless it
+                   was loaded before NULL, about 0.45 s
+                   read 0x88:E7, F1; 0x88:0A by E7 (§9)
+                   back-end table of the family, retrigger, settle
+                   read 0x88:FA, CA, E7, F1
+                   encoder programming (§10), INIT A0, START
+```
+
+Total time from the trigger to START: about 3 s.
+
+During this start-up phase the decoder reports `0x88:E7 = 59` (60 Hz with
+PAL colour) or `E7` with bit 7 set. The driver waits for such a signal to
+change to 50 Hz, at most 5 s, at the capture start and after the signal had
+dropped (reset, power cycle, a different console), so that capture starts
+in the console's final mode. The wait ends as soon as the decoder reports
+50 Hz. A source that stays at 60 Hz is captured after 5 s; a change between
+50 and 60 Hz without a signal drop is followed at once.
+
+Applications that size their window from the first frames (for example
+ffplay) show the picture squeezed or stretched after a family change while
+capturing; restarting the application shows it correctly.
+
 ## 9. Decoder apply block
 
 The writes `0x88:07 = 8A`, `08 = 9B`, `09 = 7A`, `28 = …` followed by a read
 of `0x88:FD` and `0x88:06 = 08` occur when lock is acquired after the input
 was selected without a source (Observed). With a progressive source the block
 is written twice: first with `28 = 88`, then with `28 = 8A`, followed by
-`0x88:0A = 98` (NTSC 240p) or `0x88:0A = 8F` (PAL 288p). When the source is
-already locked at input selection, the block is not written.
+a write of `0x88:0A`. When the source is already locked at input selection,
+the block is not written.
+
+The block for the 50 Hz family is `0x88:07 = 9A`, `08 = 90`, `09 = A8`.
+`0x88:28` follows bit 3 of `0x88:CA`: set (`7E`, `EE`, `FE`) → `88`, clear
+(`66`, `E6`) → `8A`.
+
+`0x88:0A` depends on the standard in `0x88:E7`, read once its bit 7 is
+clear:
+
+| `0x88:E7` | `0x88:0A` |
+|---|---|
+| `59` | `8F` |
+| `69` | `98` |
+| `79` | `85` |
 
 ## 10. Encoder settings for analog sources (Observed)
 

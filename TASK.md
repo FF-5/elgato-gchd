@@ -1,51 +1,62 @@
-# TASK T-020 — MPEG-TS stream with audio
+# TASK T-047 — Close and reopen without errors
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** implementation (offline), then hardware test
-- **Type:** driver feature
-- **Branch:** `feat/ts-audio` (from `dev`)
-- **TODO items:** T-020, T-023 (stage 1)
+- **Status:** diagnostic build; hardware test
+- **Type:** driver fix
+- **Branch:** `fix/close-lifecycle` (from `dev` 0.5.0)
+- **TODO items:** T-047, T-044, T-031, T-045 (stage 1)
 
 ## Why
 
-Composite and S-video work for all NTSC and PAL modes (`dev` 0.4.1). The
-driver still delivers only the H.264 video, one PES packet per buffer, and
-drops the audio: the device multiplexes MPEG-1 Layer II audio (PID `0x010F`)
-into its transport stream. Applications such as ffplay, ffmpeg and OBS can
-use the complete transport stream directly, with sound. It is also the
-input for the planned guvcview/OBS bridge (T-060).
+`dev` 0.5.0 captures composite and S-video in all NTSC and PAL modes, with
+H.264 or MPEG-TS with audio. Closing is not clean in every case:
 
-## Plan
+- **T-047:** `hardware shutdown on last close failed: -5; keeping initialized
+  state` after a session in which no source was found (seen in four tests
+  on `feat/ts-audio`). -5 (`-EIO`) comes from a state change that finds the
+  device in an unexpected state; the log does not say which step.
+- **T-044:** a new open while the previous close is still running failed
+  once.
+- **T-031:** STREAMOFF → STREAMON without closing is untested.
+- **T-045:** ffplay on close (H.264 format): "VIDIOC_QBUF: Bad file
+  descriptor", "Some buffers are still owned by the caller".
 
-1. A second pixel format on the same node: `V4L2_PIX_FMT_MPEG` (MPEG-TS),
-   next to the existing `V4L2_PIX_FMT_H264`. Buffers carry whole 188-byte
-   TS packets as received (video, audio, PAT/PMT, PCR), aligned to packet
-   boundaries; null packets are dropped.
-2. TS resynchronisation: a packet start is accepted only when `0x47`
-   appears at 188-byte spacing several times.
-3. The H.264 format stays unchanged as the default, so existing commands
-   keep working.
-4. Mode changes: after a restart the stream continues; buffers resume with
-   PAT/PMT.
+## Implementation
 
-## Acceptance criteria
-
-1. `ffplay -f v4l2 -input_format mpegts -i /dev/video0` shows the picture
-   with sound (composite and S-video, NTSC and PAL).
-2. A 20 s recording with ffmpeg decodes without errors (video H.264 and
-   audio MP2); `ffprobe` reports both streams.
-3. The H.264 format still works as before.
+1. Diagnostic (this build): the shutdown logs each step it runs with the
+   device state before and after, and the step that fails.
+2. Fix from the diagnostic: the shutdown sequence for a device that never
+   started capturing.
+3. T-044, T-031, T-045 after that, one at a time.
 
 ## Hardware test (maintainer)
 
-_(written when the implementation is ready)_
+Build and load (once); `git log -1 --oneline` must show the commit named in
+the status line of the findings below, or later:
+
+```sh
+cd ~/elgato-gchd && git fetch origin && git checkout fix/close-lifecycle && git pull
+git log -1 --oneline
+cd dkms && make -C /lib/modules/$(uname -r)/build M=$PWD clean modules
+sudo rmmod elgato_gchd 2>/dev/null; sudo dmesg -C
+sudo modprobe -a videodev videobuf2-v4l2 videobuf2-vmalloc
+sudo insmod ./elgato_gchd.ko
+```
+
+1. No console connected (or switched off), composite:
+   `v4l2-ctl -d /dev/video0 -i 2`, `v4l2-ctl -d /dev/video0 -v pixelformat=MPEG`,
+   `ffplay -f mpegts /dev/video0`; wait 20 s; close ffplay (Ctrl+C).
+2. Switch the N64 on, start the same ffplay again: picture expected; close.
+3. Once more with a picture, close, and start ffplay again right away.
+
+After the test:
+
+```sh
+sudo dmesg | grep -E "shutdown|close|SCMD timeout|state-change|START failed|lifecycle"
+```
 
 ## Findings
-
-_(filled in during the task)_
-
----
 
 ## Maintainer comments
 

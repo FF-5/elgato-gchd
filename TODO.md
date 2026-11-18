@@ -18,12 +18,15 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.4.1): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.0): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
-  restart, PAL ~0.5 s decoder-only), composite ↔ S-video without
-  unplugging, source off/on, close and reopen. ffplay, H.264 stream. No
-  audio. Sources: N64 (NTSC), PS1 (PAL; its start-up signal flips between
-  60 and 50 Hz, handled by the family check before START).
+  restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
+  (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
+  §8.3`), composite ↔ S-video without unplugging, close and reopen.
+  Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
+  `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; outputs
+  60 Hz with PAL colour for a few seconds after power-on and reset; the
+  driver waits for its 50 Hz signal).
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller.
 
 ## Stage 1 — Composite and S-video complete
@@ -42,10 +45,6 @@ Video modes and switching:
 
 Output and settings (`docs/composite.md §10`):
 
-- [ ] **T-020 [OFF→HW] (M)** MPEG-TS passthrough (`V4L2_PIX_FMT_MPEG`)
-      next to H.264, with audio; robust TS resync.
-- [ ] **T-023 [OFF→HW] (M)** Audio (MPEG-1 Layer II, PID `0x010F`): comes
-      with T-020; PCM for an ALSA device only through a userspace bridge.
 - [ ] **T-055 [OFF→HW] (M)** Output size: 720×480/576 (standard),
       640×480, 480×360 (mobile), as recorded (`v_ip_format 2`, GOP 6,
       transport output 2 for the two small sizes; which endpoint carries
@@ -111,7 +110,12 @@ settings above work on `dev`.
       480i/576i and line-doubles 240p/288p, and feeds a `v4l2loopback`
       device named "Elgato Game Capture HD" plus a PipeWire/PulseAudio
       audio source; started automatically when an application opens it.
-      Needs T-020/T-023 (TS with audio) first.
+      The service keeps one output size for the whole session (scaling
+      and aspect correction when the source changes between 480 and 576
+      lines or between interlaced and progressive), so applications never
+      see a format change (today ffplay keeps the window size of the first
+      frames and shows later modes squeezed).
+      Uses the MPEG-TS format with audio (done, 0.5.0).
 
 ## Stage 2 — Component
 
@@ -125,6 +129,17 @@ settings above work on `dev`.
 - [ ] **T-050 [WIN+HW] (L)** HDMI, all modes, mode changes, output sizes
       and settings. Recorded so far: `hdmi/gchd_output_switch_hdmi` (1080p60
       source, output sizes; `docs/hdmi.md §4`).
+
+## Stage 4 — Picture and audio settings (after HDMI, after the release)
+
+- [ ] **T-080 [WIN+HW] (M)** Picture settings of the Windows application
+      (brightness, contrast, saturation, hue, sharpness, as offered) and
+      audio settings (volume/gain, audio input selection, as offered). First
+      find out for each whether it is sent to the device or applied by the
+      application: one Windows recording per setting (reduced with the
+      bulk-OUT filter), changing it while capturing. Settings that reach the
+      device become V4L2 controls (`V4L2_CID_BRIGHTNESS`, …, audio via the
+      TS stream); application-side settings are not driver features.
 
 ## Later
 

@@ -245,8 +245,9 @@ static int gchd_post_encoder_prefix(struct gchd *d)
 
 
  /* Continuation after the 0x88:FB read. */
- GCHD_DEC_W(d, 0x02, 0xc9);
- d->dec_svideo = false;
+ /* Keep the decoder mode of the selected analog input (S-video: DC). */
+ GCHD_DEC_W(d, 0x02, d->input == 3 ? 0xdc : 0xc9);
+ d->dec_svideo = d->input == 3;
  GCHD_DEC_W(d, 0x14, 0xd2);
  GCHD_DEC_W(d, 0x3c, 0x6b);
  GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
@@ -276,8 +277,9 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  GCHD_DEC_W(d, 0x6e, 0xa0);
  GCHD_DEC_W(d, 0x06, 0x08);
 
- GCHD_DEC_W(d, 0x02, 0xc9);
- d->dec_svideo = false;
+ /* Keep the decoder mode of the selected analog input (S-video: DC). */
+ GCHD_DEC_W(d, 0x02, d->input == 3 ? 0xdc : 0xc9);
+ d->dec_svideo = d->input == 3;
  GCHD_DEC_W(d, 0x14, 0xd2);
  GCHD_DEC_W(d, 0x3c, 0x6b);
  GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
@@ -596,19 +598,23 @@ static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
  */
 static int gchd_prepare_analog_detection(struct gchd *d);
 static int gchd_be_retrigger(struct gchd *d);
+static int gchd_encoder_program(struct gchd *d);
 
 /*
- * Status poll of the back end while waiting for an analog source. On
- * S-video, the back end is retriggered when GCHD_BE_STATUS_FLAG is set.
+ * Status poll of the back end while waiting for an analog source: the back
+ * end is retriggered when GCHD_BE_STATUS_FLAG is set (composite and S-video).
  */
-static int gchd_be_poll_status(struct gchd *d)
+static int gchd_be_poll_status(struct gchd *d, u8 *status)
 {
  u8 v;
 
  GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
- if (d->input != 3 || !(v & GCHD_BE_STATUS_FLAG))
+ if (status)
+  *status = v;
+ if (d->input < 2 || !(v & GCHD_BE_STATUS_FLAG))
   return 0;
- dev_dbg(&d->intf->dev, "back-end status 0x%02x while polling; retrigger\n", v);
+ dev_info_ratelimited(&d->intf->dev,
+                      "back-end status 0x%02x while polling; retrigger\n", v);
  return gchd_be_retrigger(d);
 }
 
@@ -709,7 +715,7 @@ route:
   int cycle;
   for (cycle = 0; cycle < 2; ++cycle) {
    GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, reply);
-   r = gchd_be_poll_status(d);
+   r = gchd_be_poll_status(d, NULL);
    if (r)
     return r;
    if (cycle == 0)
@@ -820,7 +826,7 @@ int gchd_probe_video_source(struct gchd *d)
   }
   d->input_fps_den=1;
  } else {
-  u8 v;
+  u8 v, std, be_status = 0;
 
   /*
    * After pre-detection tuning and the 0x94 prime, FA reports the analog
@@ -828,7 +834,7 @@ int gchd_probe_video_source(struct gchd *d)
    * deadlocks the 240p path; CA/E7 polling follows family detection.
    */
   GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
-  r = gchd_be_poll_status(d);
+  r = gchd_be_poll_status(d, &be_status);
   if (r)
    return r;
   dev_info(&d->intf->dev,
@@ -838,11 +844,14 @@ int gchd_probe_video_source(struct gchd *d)
   if (v != 6 && v != 7) {
    u8 lock;
 
+   d->pal60_since = 0;
+   d->pal60_logged = false;
+
    /* Diagnostic only: decoder lock status while no family is reported. */
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, lock);
    dev_info_ratelimited(&d->intf->dev,
-                        "gchd-diag no analog family: 0x88:FA=0x%02x 0x88:CA=0x%02x\n",
-                        v, lock);
+                        "gchd-diag no analog family: 0x88:FA=0x%02x 0x88:CA=0x%02x 0x98:F5=0x%02x\n",
+                        v, lock, be_status);
    return -ENOLINK;
   }
 
@@ -850,7 +859,7 @@ int gchd_probe_video_source(struct gchd *d)
    * Family recognized: query decoder status/ready/height in sequence.
    */
   GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
-  GCHD_DEC_R(d, 0xe7, v);
+  GCHD_DEC_R(d, 0xe7, std);
   GCHD_DEC_R(d, 0xf1, v);
 
   /* The 0x94 prime already ran before SOURCE_DETECTION. */
@@ -872,6 +881,10 @@ int gchd_probe_video_source(struct gchd *d)
              "analog format status 0x%02x not locked yet\n", mode);
     return -ENOLINK;
    }
+   if (!d->pal60_since)
+    d->pal60_since = jiffies | 1;
+   if (gchd_analog_pal60_hold(d, std, d->pal60_since, &d->pal60_logged))
+    return -ENOLINK;
    d->input_interlaced = mode != GCHD_DEC_LOCK_240P;
    dev_info(&d->intf->dev,
             "analog format initial status=0x%02x; configuring %s\n",
@@ -879,6 +892,8 @@ int gchd_probe_video_source(struct gchd *d)
   } else if (v == 7) {
    u8 mode;
 
+   d->pal60_since = 0;
+   d->pal60_logged = false;
    d->input_width=720; d->input_height=576;
    d->input_interlaced=true; d->input_fps_num=50;
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, mode);
@@ -1223,6 +1238,67 @@ static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
  return 0;
 }
 
+/* 0x88:0A for the decoder standard reported in 0x88:E7; 0 if unknown. */
+static u8 gchd_dec_0a_value(u8 e7)
+{
+ switch (e7) {
+ case 0x59: return 0x8f;
+ case 0x69: return 0x98;
+ case 0x79: return 0x85;
+ }
+ return 0;
+}
+
+/*
+ * Wait until 0x88:E7 reports a known standard (at most about 1.6 s), read
+ * 0x88:F1 and write the matching 0x88:0A.
+ */
+static int gchd_dec_write_standard(struct gchd *d)
+{
+ u8 v, val = 0;
+ int i;
+
+ for (i = 0; i < 40; ++i) {
+  GCHD_DEC_R(d, 0xe7, v);
+  val = gchd_dec_0a_value(v);
+  if (val)
+   break;
+  msleep(40);
+ }
+ GCHD_DEC_R(d, 0xf1, v);
+ if (!val) {
+  dev_info(&d->intf->dev, "decoder standard not reported; 0x88:0A kept\n");
+  return 0;
+ }
+ GCHD_DEC_W(d, 0x0a, val);
+ return 0;
+}
+
+/*
+ * Decoder apply block for a family (6 = 60 Hz, 7 = 50 Hz); 0x28 follows bit 3
+ * of 0x88:CA (set: 88, clear: 8A).
+ */
+static u16 gchd_dec_apply_key(u8 family, u8 lock)
+{
+ return family << 8 | ((lock & 0x08) ? 0x88 : 0x8a);
+}
+
+static int gchd_dec_apply_family(struct gchd *d, u8 family, u8 lock)
+{
+ u8 v;
+
+ d->dec_applied = gchd_dec_apply_key(family, lock);
+
+ if (family == 7) {
+  GCHD_DEC_W(d, 0x07, 0x9a); GCHD_DEC_W(d, 0x08, 0x90); GCHD_DEC_W(d, 0x09, 0xa8);
+ } else {
+  GCHD_DEC_W(d, 0x07, 0x8a); GCHD_DEC_W(d, 0x08, 0x9b); GCHD_DEC_W(d, 0x09, 0x7a);
+ }
+ GCHD_DEC_W(d, 0x28, (lock & 0x08) ? 0x88 : 0x8a);
+ GCHD_DEC_R(d, 0xfd, v); GCHD_DEC_W(d, 0x06, 0x08);
+ return 0;
+}
+
 /* Decoder apply block for a 50 Hz source: 576i (0x28 = 88) or 288p (8A). */
 static int gchd_pal_apply(struct gchd *d, bool interlaced)
 {
@@ -1337,7 +1413,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
    return r;
  }
  if (!d->input_interlaced && d->input_height == 480) {
-  /* 240p: retrigger, wait for the decoder to settle, then 0x88:0A = 98. */
+  /* 240p: retrigger, wait for the decoder standard, then 0x88:0A. */
   int i;
 
   GCHD_DEC_R(d, 0xe7, v);
@@ -1348,12 +1424,13 @@ static int gchd_configure_composite_exact(struct gchd *d)
    GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v);
    GCHD_DEC_R(d, 0xe7, v);
-   if (v == 0x69)
+   if (gchd_dec_0a_value(v))
     break;
    msleep(40);
   }
-  GCHD_DEC_R(d, 0xf1, v);
-  GCHD_DEC_W(d, 0x0a, 0x98);
+  r = gchd_dec_write_standard(d);
+  if (r)
+   return r;
  }
  /* Back-end programming after analog lock (composite and S-video). */
  r = gchd_analog_backend(d, d->input_height == 576, d->input_interlaced);
@@ -1402,7 +1479,8 @@ int gchd_input_read_analog_mode(struct gchd *d, bool *interlaced)
  * Mode change while capturing, first part (encoder still in START): apply
  * the decoder setting for the new mode and load the neutral back-end table.
  */
-int gchd_analog_mode_pre_stop(struct gchd *d, bool interlaced)
+/* Neutral back-end table, the common block, then one retrigger. */
+static int gchd_be_neutral(struct gchd *d)
 {
  static const struct gchd_mail_cmd table_neutral[] = {
   GCHD_SEQ_BE(0x70, 0xc8),
@@ -1416,12 +1494,6 @@ int gchd_analog_mode_pre_stop(struct gchd *d, bool interlaced)
  };
  u8 v;
  int r;
-
- GCHD_DEC_W(d, 0x07, 0x8a); GCHD_DEC_W(d, 0x08, 0x9b); GCHD_DEC_W(d, 0x09, 0x7a);
- GCHD_DEC_W(d, 0x28, interlaced ? 0x88 : 0x8a);
- GCHD_DEC_R(d, 0xfd, v); GCHD_DEC_W(d, 0x06, 0x08);
- msleep(400);
- GCHD_DEC_R(d, 0xe7, v);
 
  GCHD_BE_W(d, 0x04, 0x95);
  GCHD_BE_R(d, 0x8b, v);
@@ -1444,6 +1516,142 @@ int gchd_analog_mode_pre_stop(struct gchd *d, bool interlaced)
  GCHD_BE_W(d, 0x04, 0x8d);
  GCHD_BE_W(d, 0x62, 0x91);
  return gchd_be_retrigger(d);
+}
+
+int gchd_analog_mode_pre_stop(struct gchd *d, bool interlaced)
+{
+ u8 v;
+
+ GCHD_DEC_W(d, 0x07, 0x8a); GCHD_DEC_W(d, 0x08, 0x9b); GCHD_DEC_W(d, 0x09, 0x7a);
+ GCHD_DEC_W(d, 0x28, interlaced ? 0x88 : 0x8a);
+ GCHD_DEC_R(d, 0xfd, v); GCHD_DEC_W(d, 0x06, 0x08);
+ msleep(400);
+ GCHD_DEC_R(d, 0xe7, v);
+ return gchd_be_neutral(d);
+}
+
+/*
+ * A 60 Hz signal with PAL colour (0x88:E7 = 59) or a standard still being
+ * evaluated (bit 7) is what PAL consoles send for a few seconds after
+ * power-on and reset before they switch to 50 Hz. Returns true while such a
+ * signal should be waited out: at most GCHD_PAL60_HOLD_MS after since; a
+ * source that stays at 60 Hz is used after that.
+ */
+bool gchd_analog_pal60_hold(struct gchd *d, u8 e7, unsigned long since,
+                            bool *logged)
+{
+ if (e7 != 0x59 && !(e7 & 0x80))
+  return false;
+ if (time_after(jiffies, since + msecs_to_jiffies(GCHD_PAL60_HOLD_MS)))
+  return false;
+ if (!*logged)
+  dev_info(&d->intf->dev,
+           "60 Hz signal with PAL colour (0x88:E7=%02x); waiting up to %u ms for 50 Hz\n",
+           e7, GCHD_PAL60_HOLD_MS);
+ *logged = true;
+ return true;
+}
+
+/*
+ * Family change while capturing, first part (encoder still in START).
+ * family/lock are the 0x88:FA low nibble and 0x88:CA just read. When the
+ * decoder reports the other family, load its apply block and retrigger the
+ * back end; otherwise (0x88:E7 re-evaluating) load the neutral back-end
+ * table.
+ */
+int gchd_analog_family_pre_stop(struct gchd *d, u8 family, u8 lock)
+{
+ u8 v;
+ int r;
+
+ if ((family == 7 && d->input_height == 480) ||
+     (family == 6 && d->input_height == 576)) {
+  r = gchd_dec_apply_family(d, family, lock);
+  if (r)
+   return r;
+  msleep(430);
+  GCHD_DEC_R(d, 0xe7, v);
+  GCHD_DEC_R(d, 0xf1, v);
+  return gchd_be_retrigger(d);
+ }
+ d->dec_applied = 0;
+ return gchd_be_neutral(d);
+}
+
+/*
+ * Family change, second part (encoder in STOP): wait for the decoder to
+ * lock, loading the apply block of the family it reports every 0.5 s while
+ * it does not; with hold (the signal had dropped), wait out a 60 Hz signal
+ * with PAL colour. Then set the mode, load the apply block of the locked
+ * family if needed, write 0x88:0A, load the back-end table and program the
+ * encoder. START follows. -ENOLINK when no lock within about 4 s.
+ */
+int gchd_analog_family_reconfigure(struct gchd *d, bool hold)
+{
+ unsigned long start = jiffies;
+ bool held = false;
+ u8 fa, ca, family = 0, v;
+ int r;
+
+ for (;;) {
+  GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, fa);
+  GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, ca);
+  family = fa & 0x0f;
+  if ((family == 6 || family == 7) && (ca == 0x7e || ca == 0x66)) {
+   if (family != 6 || !hold)
+    break;
+   GCHD_DEC_R(d, 0xe7, v);
+   if (!gchd_analog_pal60_hold(d, v, start, &held))
+    break;
+   msleep(250);
+   continue;
+  }
+  if (time_after(jiffies, start + msecs_to_jiffies(4000))) {
+   dev_info(&d->intf->dev,
+            "family change: decoder not locked (FA=%02x CA=%02x)\n", fa, ca);
+   return -ENOLINK;
+  }
+  if (family == 6 || family == 7) {
+   r = gchd_dec_apply_family(d, family, ca);
+   if (r)
+    return r;
+   msleep(430);
+   GCHD_DEC_R(d, 0xe7, v);
+   r = gchd_be_retrigger(d);
+   if (r)
+    return r;
+  } else {
+   msleep(500);
+  }
+ }
+
+ d->input_width = 720;
+ d->input_height = family == 7 ? 576 : 480;
+ d->input_fps_num = family == 7 ? 50 : 60;
+ d->input_fps_den = 1;
+ d->input_interlaced = ca == 0x7e;
+
+ /* Apply block of the locked family unless it is already loaded. */
+ if (d->dec_applied != gchd_dec_apply_key(family, ca)) {
+  r = gchd_dec_apply_family(d, family, ca);
+  if (r)
+   return r;
+  msleep(430);
+ }
+ r = gchd_dec_write_standard(d);
+ if (r)
+  return r;
+ r = gchd_analog_backend_table(d, family == 7);
+ if (r) {
+  dev_err(&d->intf->dev, "family change: back-end setup failed: %d\n", r);
+  return r;
+ }
+ r = gchd_encoder_program(d);
+ if (r)
+  return r;
+ d->input_prepared = false;
+ d->input_configured = true;
+ return 0;
 }
 
 static int gchd_configure_component_exact(struct gchd *d)
@@ -1785,6 +1993,44 @@ int gchd_input_configure_idle(struct gchd *d)
  * configured. START does not complete while the back end is set up for the
  * other mode; returns -EAGAIN so that the caller configures again.
  */
+/* Low nibble of 0x88:FA: 6 = 60 Hz, 7 = 50 Hz family; other values: none. */
+int gchd_input_read_family(struct gchd *d, u8 *family)
+{
+ u8 v;
+
+ GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
+ *family = v & 0x0f;
+ return 0;
+}
+
+/* Log the analog decoder status registers. */
+static int gchd_input_read_status(struct gchd *d, u8 *v)
+{
+ GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v[0]);
+ GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, v[1]);
+ GCHD_DEC_R(d, 0xe7, v[2]);
+ GCHD_DEC_R(d, 0xf1, v[3]);
+ return 0;
+}
+
+void gchd_input_log_status(struct gchd *d, const char *why)
+{
+ u8 v[4];
+
+ if (gchd_input_read_status(d, v))
+  return;
+ dev_info(&d->intf->dev, "%s: 0x88:FA=%02x CA=%02x E7=%02x F1=%02x\n",
+          why, v[0], v[1], v[2], v[3]);
+}
+
+/* 0x88:CA (lock) and 0x88:E7 (standard). */
+int gchd_input_read_lock(struct gchd *d, u8 *lock, u8 *std)
+{
+ GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, *lock);
+ GCHD_DEC_R(d, 0xe7, *std);
+ return 0;
+}
+
 int gchd_input_check_mode(struct gchd *d)
 {
  bool interlaced;
@@ -1839,6 +2085,7 @@ int gchd_input_start(struct gchd *d)
   dev_err(&d->intf->dev, "capture start transition failed: %d\n", r);
   return r;
  }
+ d->std_hold_until = jiffies + msecs_to_jiffies(1000);
  dev_info(&d->intf->dev, "gchd-diag START transition completed\n");
  return 0;
 }

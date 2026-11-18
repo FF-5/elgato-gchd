@@ -28,20 +28,45 @@ static int gchd_transcoder_table_write(struct gchd *d, u16 address,
  return 0;
 }
 
+/*
+ * The PMT is written in this order: the section-length word, the last three
+ * words, then the remaining words from the start.
+ */
+static int gchd_transcoder_pmt_write(struct gchd *d, u16 address,
+                                     const u8 *data, size_t len)
+{
+ int r;
+
+ r = gchd_transcoder_table_write(d, address + 2, data + 2, 2);
+ if (r)
+  return r;
+ r = gchd_transcoder_table_write(d, address + len - 6, data + len - 6, 6);
+ if (r)
+  return r;
+ r = gchd_transcoder_table_write(d, address, data, 2);
+ if (r)
+  return r;
+ return gchd_transcoder_table_write(d, address + 4, data + 4, len - 10);
+}
+
 /* The PSI tables are written without CRC; the transcoder adds it. */
 static const u8 gchd_pat[] = {
- 0x00,0xb0,0x11,0x00,0x00,0x01,0x00,0x00,
+ 0x00,0xb0,0x11,0x00,0x00,0xc1,0x00,0x00,
  0x00,0x01,0xe1,0x10,0x00,0x00,0xe0,0x1f
 };
 static const u8 gchd_sit[] = {
- 0x7f,0xf0,0x0b,0xff,0xff,0x01,0x00,0x00,0xf0,0x00
+ 0x7f,0xf0,0x0b,0xff,0xff,0xc1,0x00,0x00,0xf0,0x00
 };
+/*
+ * Program 1: PCR PID 0x0100, H.264 video on 0x1011 (with registration and
+ * AVC descriptors), MPEG-1 audio on 0x010F.
+ */
 static const u8 gchd_pmt[] = {
- 0x02,0xb0,0x33,0x00,0x01,0x01,0x00,0x00,
- 0xe0,0x00,0xf0,0x0c,0x05,0x04,0x48,0x44,0x4d,0x56,
+ 0x02,0xb0,0x37,0x00,0x01,0xc1,0x00,0x00,
+ 0xe1,0x00,0xf0,0x0c,0x05,0x04,0x48,0x44,0x4d,0x56,
  0x88,0x04,0x0f,0xff,0xfc,0xfc,
- 0x1b,0xe0,0x11,0xf0,0x14,0x05,0x08,0x48,0x44,0x4d,0x56,
- 0xff,0x1b,0x44,0x3f,0x28,0x04,0x2a,0x02,0x7e,0xff,
+ 0x1b,0xf0,0x11,0xf0,0x14,0x05,0x08,0x48,0x44,0x4d,0x56,
+ 0xff,0x1b,0x44,0x3f,0x28,0x04,0x64,0x00,0x28,0x3f,0x2a,0x02,0x7e,0xff,
  0x03,0xe1,0x0f,0xf0,0x00
 };
 
@@ -94,13 +119,13 @@ static int gchd_transcoder_defaults(struct gchd *d)
  GCHD_TC_SET(d, GCHD_TC_A_TS_OUT_MODE, 2);
  GCHD_TC_SET(d, GCHD_TC_A_MODE, 3);
  r = gchd_transcoder_table_write(d, 0x1144, gchd_pat, sizeof(gchd_pat)); if (r) return r;
- r = gchd_transcoder_table_write(d, 0x1174, gchd_pmt, sizeof(gchd_pmt)); if (r) return r;
+ r = gchd_transcoder_pmt_write(d, 0x1174, gchd_pmt, sizeof(gchd_pmt)); if (r) return r;
  r = gchd_transcoder_table_write(d, 0x1010, gchd_sit, sizeof(gchd_sit)); if (r) return r;
  GCHD_TC_SET(d, GCHD_TC_PAT_LENGTH_TS_OUT2, sizeof(gchd_pat));
  GCHD_TC_SET(d, GCHD_TC_PMT_LENGTH_TS_OUT2, sizeof(gchd_pmt));
  GCHD_TC_SET(d, GCHD_TC_SIT_LENGTH_TS_OUT2, sizeof(gchd_sit));
  r = gchd_transcoder_table_write(d, 0x1284, gchd_pat, sizeof(gchd_pat)); if (r) return r;
- r = gchd_transcoder_table_write(d, 0x12b4, gchd_pmt, sizeof(gchd_pmt)); if (r) return r;
+ r = gchd_transcoder_pmt_write(d, 0x12b4, gchd_pmt, sizeof(gchd_pmt)); if (r) return r;
  r = gchd_transcoder_table_write(d, 0x1370, gchd_sit, sizeof(gchd_sit)); if (r) return r;
  GCHD_TC_SET(d, GCHD_TC_SIT_PID_OUT_TS_OUT2, GCHD_TS_PID_SIT);
  GCHD_TC_SET(d, GCHD_TC_THUMBNAIL_PID_OUT_TS_OUT2, GCHD_TS_PID_THUMBNAIL);

@@ -10,7 +10,7 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.4.1");
+MODULE_VERSION("0.5.0");
 
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
@@ -24,6 +24,7 @@ static void gchd_release_ref(struct kref *ref)
  struct gchd *d = container_of(ref, struct gchd, refcount);
 
  kfree(d->usb_buf);
+ kfree(d->ts_out);
  usb_put_dev(d->udev);
  kfree(d);
 }
@@ -105,6 +106,8 @@ static void gchd_input_selection_enter(struct gchd *d)
 
  /* A new open starts from the common HDMI/default route. */
  d->previous_input = 0;
+ d->pal60_since = 0;
+ d->pal60_logged = false;
 
  /*
   * The control value is already kept in sync by gchd_set_input(). Do not
@@ -248,6 +251,8 @@ static bool gchd_has_sps(const u8 *p, size_t n)
  */
 static int gchd_queue_pes(struct gchd *d, const u8 *pes, size_t n)
 {
+ if (READ_ONCE(d->pixfmt) == V4L2_PIX_FMT_MPEG)
+  return 0;
  if (READ_ONCE(d->wait_sps)) {
   if (!gchd_has_sps(pes, n))
    return 0;
@@ -264,6 +269,50 @@ static int gchd_queue_pes(struct gchd *d, const u8 *pes, size_t n)
  * continuity-counter gaps and wait for the next payload-unit start. That
  * prevents corrupted bytes from being delivered as valid H.264 data.
  */
+/*
+ * Transport-stream delivery: whole packets except null packets, starting at
+ * a PAT packet after each stream (re)start, collected into buffers of
+ * GCHD_TS_BUF_PACKETS packets. Video and audio start with a complete PES
+ * packet.
+ */
+static void gchd_ts_out(struct gchd *d, const u8 *p)
+{
+ u16 pid;
+ int r;
+
+ if (p[0] != GCHD_TS_SYNC)
+  return;
+ pid = ((p[1] & 0x1f) << 8) | p[2];
+ if (pid == GCHD_TS_PID_NULL)
+  return;
+ if (READ_ONCE(d->wait_pat)) {
+  if (pid != GCHD_TS_PID_PAT)
+   return;
+  WRITE_ONCE(d->wait_pat, false);
+  d->ts_v_started = false;
+  d->ts_a_started = false;
+ }
+ /* Drop the tail of a PES packet that started before the PAT. */
+ if (pid == GCHD_TS_PID_VIDEO || pid == GCHD_TS_PID_AUDIO) {
+  bool *started = pid == GCHD_TS_PID_VIDEO ? &d->ts_v_started :
+                                             &d->ts_a_started;
+
+  if (!*started) {
+   if (!(p[1] & 0x40))
+    return;
+   *started = true;
+  }
+ }
+ memcpy(d->ts_out + d->ts_out_len, p, GCHD_TS_PACKET);
+ d->ts_out_len += GCHD_TS_PACKET;
+ if (d->ts_out_len < GCHD_TS_BUF_SIZE)
+  return;
+ r = gchd_ring_push(&d->ring, d->ts_out, d->ts_out_len, GCHD_TS_NONE);
+ if (r)
+  dev_warn_ratelimited(&d->intf->dev, "dropping TS buffer: %d\n", r);
+ d->ts_out_len = 0;
+}
+
 static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
                     bool *pes_active, bool *cc_valid, u8 *last_cc)
 {
@@ -708,6 +757,8 @@ static int gchd_rx(void *arg)
     if (d->ts_partial_len == GCHD_TS_PACKET) {
      gchd_ts(d, d->ts_partial, pes, &n, &pes_active,
              &cc_valid, &last_cc);
+     if (READ_ONCE(d->pixfmt) == V4L2_PIX_FMT_MPEG)
+      gchd_ts_out(d, d->ts_partial);
      d->ts_partial_len = 0;
     }
    }
@@ -850,7 +901,7 @@ static void gchd_detection_worker(struct work_struct *work)
    * Keep the encoder firmware running: restarting it after an input change
    * fails with -EINVAL.
    */
-  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
+  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_out_len = 0; WRITE_ONCE(d->wait_pat, true); d->ts_base_valid = false;
   d->ts_partial_len = 0;
   r = gchd_return_to_stop(d);
   if (r) {
@@ -1054,7 +1105,9 @@ static void gchd_mode_workfn(struct work_struct *work)
  struct gchd *d = container_of(to_delayed_work(work), struct gchd,
                                mode_work);
  struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
- bool target_interlaced;
+ bool target_interlaced = false;
+ bool family_change = false;
+ bool family_hold = false;
  int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
@@ -1063,6 +1116,42 @@ static void gchd_mode_workfn(struct work_struct *work)
      (d->input_height != 480 && d->input_height != 576) ||
      !d->input_configured || !READ_ONCE(d->signal_present))
   goto out;
+
+ /*
+  * Family check. When 0x88:E7 has bit 7 set (decoder re-evaluating the
+  * standard; ignored for 1 s after START and after a decoder-only mode
+  * change) or 0x88:FA reports the other family on two consecutive polls,
+  * stop and configure for the family the decoder reports.
+  */
+ {
+  u8 family, lock, std;
+
+  if (!gchd_input_read_family(d, &family) &&
+      !gchd_input_read_lock(d, &lock, &std)) {
+   bool other = (family == 6 && d->input_height == 576) ||
+                (family == 7 && d->input_height == 480);
+
+   if (other)
+    ++d->family_mismatch;
+   else
+    d->family_mismatch = 0;
+   if ((std & 0x80) && time_before(jiffies, d->std_hold_until))
+    std = 0;
+   if ((std & 0x80) || d->family_mismatch >= 2) {
+    d->family_mismatch = 0;
+    dev_info(&d->intf->dev,
+             "decoder status changed while capturing (FA=%x CA=%02x E7=%02x); configuring again\n",
+             family, lock, std);
+    family_change = true;
+    /* The signal had dropped (reset, power cycle): wait out a 60 Hz start. */
+    family_hold = family != 6 && family != 7;
+    r = gchd_analog_family_pre_stop(d, family, lock);
+    if (r)
+     goto restart_failed;
+    goto stop_and_restart;
+   }
+  }
+ }
 
  /* 50 Hz sources: retrigger the back end when its status flag is set. */
  if (d->input_height == 576) {
@@ -1095,6 +1184,7 @@ static void gchd_mode_workfn(struct work_struct *work)
    goto reschedule;
   }
   d->input_interlaced = target_interlaced;
+  d->std_hold_until = jiffies + msecs_to_jiffies(1000);
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
@@ -1115,16 +1205,25 @@ static void gchd_mode_workfn(struct work_struct *work)
  r = gchd_analog_mode_pre_stop(d, target_interlaced);
  if (r)
   goto restart_failed;
+stop_and_restart:
  r = gchd_capture_stop(d);
  if (r)
   goto restart_failed;
 
- gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_out_len = 0; WRITE_ONCE(d->wait_pat, true); d->ts_base_valid = false;
  d->ts_partial_len = 0;
  d->input_configured = false;
- d->input_interlaced = target_interlaced;
  gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
- r = gchd_analog_mode_reconfigure(d);
+ if (family_change) {
+  r = gchd_analog_family_reconfigure(d, family_hold);
+ } else {
+  d->input_interlaced = target_interlaced;
+  r = gchd_analog_mode_reconfigure(d);
+ }
+ if (r)
+  goto restart_failed;
+ /* The source can change again during the setup: detect again. */
+ r = gchd_input_check_mode(d);
  if (r)
   goto restart_failed;
 
@@ -1171,7 +1270,8 @@ static void gchd_mode_workfn(struct work_struct *work)
  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
  v4l2_event_queue(&d->vdev, &ev);
  dev_info(&d->intf->dev, "analog mode now %s\n",
-          d->input_interlaced ? "480i" : "240p");
+          d->input_height == 576 ? (d->input_interlaced ? "576i" : "288p") :
+          (d->input_interlaced ? "480i" : "240p"));
  goto reschedule;
 
 restart_failed:
@@ -1242,6 +1342,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
  }
  /* Deliver only from the first SPS of this stream onwards. */
  WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
+ d->ts_out_len = 0; WRITE_ONCE(d->wait_pat, true);
 
  /*
   * A file open is not proof that an application intends to capture:
@@ -1428,7 +1529,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->input_detect_prepared = false;
  d->input_prepared = false;
  WRITE_ONCE(d->signal_present, false);
- gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_out_len = 0; WRITE_ONCE(d->wait_pat, true); d->ts_base_valid = false;
  d->ts_partial_len = 0;
  d->previous_input = d->input;
  d->input = i;
@@ -1576,11 +1677,31 @@ static int gchd_querycap(struct file*f,void*p,struct v4l2_capability*c)
 
 static int gchd_enum(struct file*f,void*p,struct v4l2_fmtdesc*x)
 {
- if (x->index) return -EINVAL;
- x->pixelformat=V4L2_PIX_FMT_H264;
- x->flags = V4L2_FMT_FLAG_COMPRESSED | V4L2_FMT_FLAG_CONTINUOUS_BYTESTREAM;
- strscpy(x->description, "H.264", sizeof(x->description));
- return 0;
+ switch (x->index) {
+ case 0:
+  x->pixelformat = V4L2_PIX_FMT_H264;
+  x->flags = V4L2_FMT_FLAG_COMPRESSED | V4L2_FMT_FLAG_CONTINUOUS_BYTESTREAM;
+  strscpy(x->description, "H.264", sizeof(x->description));
+  return 0;
+ case 1:
+  x->pixelformat = V4L2_PIX_FMT_MPEG;
+  x->flags = V4L2_FMT_FLAG_COMPRESSED;
+  strscpy(x->description, "MPEG-2 TS (H.264, MP2 audio)",
+          sizeof(x->description));
+  return 0;
+ default:
+  return -EINVAL;
+ }
+}
+
+static bool gchd_pixfmt_ok(u32 f)
+{
+ return f == V4L2_PIX_FMT_H264 || f == V4L2_PIX_FMT_MPEG;
+}
+
+static u32 gchd_fmt_sizeimage(u32 pixfmt)
+{
+ return pixfmt == V4L2_PIX_FMT_MPEG ? GCHD_TS_BUF_SIZE : GCHD_MAX_FRAME;
 }
 
 static int gchd_enum_framesizes(struct file *f, void *p,
@@ -1589,7 +1710,7 @@ static int gchd_enum_framesizes(struct file *f, void *p,
  struct gchd *d = video_drvdata(f);
  unsigned int i, n = 0;
 
- if (s->pixel_format != V4L2_PIX_FMT_H264)
+ if (!gchd_pixfmt_ok(s->pixel_format))
   return -EINVAL;
 
  for (i = 0; i < ARRAY_SIZE(gchd_modes); ++i) {
@@ -1612,7 +1733,7 @@ static int gchd_enum_frameintervals(struct file *f, void *p,
  const struct gchd_mode *m;
  unsigned int i;
 
- if (v->pixel_format != V4L2_PIX_FMT_H264)
+ if (!gchd_pixfmt_ok(v->pixel_format))
   return -EINVAL;
 
  m = NULL;
@@ -1637,7 +1758,7 @@ static int gchd_gfmt(struct file*f,void*p,struct v4l2_format*x)
 {
  struct gchd*d=video_drvdata(f);
  x->fmt.pix.width=d->width;x->fmt.pix.height=d->height;
- x->fmt.pix.pixelformat=V4L2_PIX_FMT_H264;
+ x->fmt.pix.pixelformat=d->pixfmt;
  /* Analog inputs are always encoded interlaced (also 240p/288p). */
  x->fmt.pix.field=(d->input >= 2 || d->input_interlaced) ?
                   V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
@@ -1659,7 +1780,8 @@ static const struct gchd_mode *gchd_adjust_fmt(struct gchd *d,
  const struct gchd_mode *m = NULL;
  bool interlaced = pix->field == V4L2_FIELD_INTERLACED;
 
- pix->pixelformat = V4L2_PIX_FMT_H264;
+ if (!gchd_pixfmt_ok(pix->pixelformat))
+  pix->pixelformat = V4L2_PIX_FMT_H264;
  if (d->input >= 2) {
   pix->width = 720;
   pix->height = pix->height == 576 ? 576 :
@@ -1684,7 +1806,7 @@ static const struct gchd_mode *gchd_adjust_fmt(struct gchd *d,
   }
  }
  pix->bytesperline = 0;
- pix->sizeimage = GCHD_MAX_FRAME;
+ pix->sizeimage = gchd_fmt_sizeimage(pix->pixelformat);
  pix->colorspace = V4L2_COLORSPACE_REC709;
  return m;
 }
@@ -1700,7 +1822,8 @@ static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
  m = gchd_adjust_fmt(d, &x->fmt.pix);
  d->width = x->fmt.pix.width;
  d->height = x->fmt.pix.height;
- d->sizeimage = GCHD_MAX_FRAME;
+ d->pixfmt = x->fmt.pix.pixelformat;
+ d->sizeimage = gchd_fmt_sizeimage(d->pixfmt);
  if (m) {
   /* Digital inputs: the requested mode is programmed as given. */
   d->input_width=m->width;
@@ -1924,7 +2047,7 @@ static int gchd_fop_release(struct file *file)
   d->input_prepared = false;
   d->encoder_started = false;
   d->signal_present = false;
-  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
+  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_out_len = 0; WRITE_ONCE(d->wait_pat, true); d->ts_base_valid = false;
   d->ts_partial_len = 0;
   mutex_unlock(&d->lifecycle_lock);
  }
@@ -2019,6 +2142,12 @@ static int gchd_probe(struct usb_interface *i,
  d->sizeimage = GCHD_MAX_FRAME;
  /* INPUT_SELECTION resolves the remembered connector after hardware init. */
  d->input = 0;
+ /*
+  * The decoder keeps its S-video setting while the device has power, also
+  * across module reloads: the first composite start writes the S-video to
+  * composite sequence.
+  */
+ d->dec_svideo = true;
  d->bitrate_forced = false;
  d->h264_level_forced = false;
  d->input_width = 0;
@@ -2029,10 +2158,13 @@ static int gchd_probe(struct usb_interface *i,
  d->h264_profile = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
  d->h264_level = 41;
  d->usb_buf = kmalloc(GCHD_USB_BUFSIZE, GFP_KERNEL);
- if (!d->usb_buf) {
+ d->ts_out = kmalloc(GCHD_TS_BUF_SIZE, GFP_KERNEL);
+ if (!d->usb_buf || !d->ts_out) {
   r = -ENOMEM;
   goto err;
  }
+ d->pixfmt = V4L2_PIX_FMT_H264;
+ d->wait_pat = true;
 
  /*
   * A successful USB probe finds the device and registers its V4L2 node.
@@ -2077,7 +2209,7 @@ static void gchd_disconnect(struct usb_interface *i)
 
  /* The interface may already be gone: never issue USB commands here. */
  gchd_v4l2_unregister(d);
- gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_base_valid = false;
+ gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_out_len = 0; WRITE_ONCE(d->wait_pat, true); d->ts_base_valid = false;
  kref_put(&d->refcount, gchd_release_ref);
 }
 

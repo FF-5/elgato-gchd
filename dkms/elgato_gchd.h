@@ -22,9 +22,13 @@
 #define GCHD_RX_URBS_EP_IN 32	/* URBs queued on GCHD_EP_TS_IN */
 #define GCHD_RX_URBS_AUX_IN 8	/* URBs queued on GCHD_EP_AUX_IN */
 #define GCHD_USB_BUFSIZE 0x10000	/* bulk-IN URB size */
-#define GCHD_RING_FRAMES 32
+#define GCHD_PAL60_HOLD_MS 5000
+#define GCHD_RING_FRAMES 512
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
+/* Transport-stream buffers: 348 packets of 188 bytes (65 424 bytes). */
+#define GCHD_TS_BUF_PACKETS 348
+#define GCHD_TS_BUF_SIZE (GCHD_TS_BUF_PACKETS * 188U)
 
 struct gchd_rx_urb;
 #define GCHD_TS_NONE U64_MAX
@@ -97,12 +101,23 @@ struct gchd {
  u64 ts_base_ns, ts_base90;
  u8 *usb_buf;
  u8 ts_partial[GCHD_TS_PACKET];
+ u32 pixfmt;          /* V4L2_PIX_FMT_H264 or V4L2_PIX_FMT_MPEG */
+ u8 *ts_out;          /* transport-stream buffer being filled */
+ size_t ts_out_len;
+ bool wait_pat;       /* TS delivery starts at the next PAT packet */
+ bool ts_v_started;   /* video PES start seen since the PAT */
+ bool ts_a_started;   /* audio PES start seen since the PAT */
  u16 ts_partial_len;
  bool streaming; /* V4L2 queue delivery only. */
  bool capture_active; /* Hardware capture is active while a source is present. */
  bool start_pending;
  bool stop_pending;
  bool mode_retriggered;
+ u8 family_mismatch;  /* consecutive polls with the other analog family */
+ unsigned long std_hold_until; /* ignore 0x88:E7 bit 7 until then */
+ unsigned long pal60_since; /* first 60 Hz lock seen by detection; 0 = none */
+ bool pal60_logged;
+ u16 dec_applied; /* family << 8 | 0x88:28 of the last family apply block; 0 = unknown */
  bool detect_requested;
  bool disconnected;
  bool hw_initialized;
@@ -125,7 +140,7 @@ struct gchd {
  u32 width, height, sizeimage;
  u32 input;
  u32 previous_input; /* Connector selected before the current input. */
- bool dec_svideo; /* decoder 0x88:02 set for S-video; kept while plugged in */
+ bool dec_svideo; /* decoder may be set for S-video (kept while powered) */
  u32 input_width, input_height;
  u32 input_fps_num, input_fps_den;
  bool input_interlaced;
@@ -155,12 +170,18 @@ int gchd_load_encoder_firmware(struct gchd *);
 int gchd_input_configure(struct gchd *);
 int gchd_input_start(struct gchd *);
 int gchd_input_check_mode(struct gchd *);
+int gchd_input_read_family(struct gchd *, u8 *);
+void gchd_input_log_status(struct gchd *, const char *);
+int gchd_input_read_lock(struct gchd *, u8 *, u8 *);
 int gchd_input_configure_idle(struct gchd *);
 int gchd_prepare_input_detection(struct gchd *);
 int gchd_probe_video_source(struct gchd *);
 int gchd_input_read_analog_mode(struct gchd *, bool *);
 int gchd_analog_mode_pre_stop(struct gchd *, bool);
 int gchd_analog_mode_reconfigure(struct gchd *);
+int gchd_analog_family_pre_stop(struct gchd *, u8, u8);
+int gchd_analog_family_reconfigure(struct gchd *, bool);
+bool gchd_analog_pal60_hold(struct gchd *, u8, unsigned long, bool *);
 int gchd_analog_pal_mode_change(struct gchd *, bool);
 int gchd_analog_poll_backend(struct gchd *);
 int gchd_common_block_a(struct gchd *);

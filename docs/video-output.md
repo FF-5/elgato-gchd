@@ -44,9 +44,11 @@ HDMI (0), Component (1), Composite (2) and S-Video (3).
 
 | Item | Current behaviour |
 |---|---|
-| Pixel format | `V4L2_PIX_FMT_H264` |
-| Buffer content | Payload of one video PES packet (PID `0x1011`) per buffer, starting with the first packet that contains an SPS; audio is not delivered |
-| Timestamps | Decoding timestamp of the PES packet (DTS, or PTS if no DTS), converted to the monotonic clock and anchored at the first buffer of a stream |
+| Pixel formats | `V4L2_PIX_FMT_H264` (default) and `V4L2_PIX_FMT_MPEG`; the selected format is kept while the device stays connected |
+| Buffer content, H.264 | Payload of one video PES packet (PID `0x1011`) per buffer, starting with the first packet that contains an SPS; no audio |
+| Buffer content, MPEG | 348 transport-stream packets of 188 bytes (65 424 bytes) per buffer, as sent by the device without null packets, starting with a PAT packet after each stream start; contains video, audio (PID `0x010F`) and PSI |
+| I/O | Streaming (mmap) and `read()`; with `read()` the MPEG format is read like a transport-stream file |
+| Timestamps | H.264: decoding timestamp of the PES packet (DTS, or PTS if no DTS), converted to the monotonic clock and anchored at the first buffer of a stream. MPEG: time the buffer was completed (timing is carried in the stream) |
 | Hardware start | `VIDIOC_STREAMON`; firmware is loaded and the input configured at this point |
 | Source changes | `V4L2_EVENT_SOURCE_CHANGE` is queued when the signal appears or is lost, and after a composite or S-video source changes between 480i and 240p or between 576i and 288p |
 | Analog mode change | 480i ↔ 240p: the encoder is stopped and restarted for the new mode (`composite.md` §4); the stream resumes with a new SPS after about 1.5 s. 576i ↔ 288p: only the decoder is reconfigured (`composite.md` §8); the stream continues |
