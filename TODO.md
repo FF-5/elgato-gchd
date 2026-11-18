@@ -36,7 +36,7 @@ Video modes and switching:
       composite polling too (recorded only for S-video; composite polling
       always reads `F5 = 62` in the recordings). Now S-video only, and the
       S-video → composite sequence only after S-video in the same session.
-      Test pending: fresh composite PAL, S-video, composite after S-video.
+      5a189e2 test: composite no sync at all; control test with `dev` next.
 - [ ] **T-044 [HW] (S)** Reopening while the previous stop is still
       running failed once; make a new open wait for it.
 - [ ] **T-047 [HW] (S)** `hardware shutdown on last close failed: -5` after
