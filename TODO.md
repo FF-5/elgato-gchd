@@ -18,29 +18,18 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.4.0): composite NTSC 480i/240p and PAL 576i/288p, S-video NTSC
-  480i/240p, fresh start, mode changes while capturing (NTSC ~1.5 s with
-  encoder restart, PAL ~0.5 s decoder-only), source off/on, close and
-  reopen. ffplay, H.264 stream. No audio. Sources: N64 (NTSC, menu 480i /
-  demo 240p), PS1 (PAL, intro 576i / 288p).
-- `fix/pal-svideo`: PAL S-video works. Composite after S-video (without
-  unplugging) is detected as NTSC and stretched.
+- `dev` (0.4.1): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+  fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
+  restart, PAL ~0.5 s decoder-only), composite ↔ S-video without
+  unplugging, source off/on, close and reopen. ffplay, H.264 stream. No
+  audio. Sources: N64 (NTSC), PS1 (PAL; its start-up signal flips between
+  60 and 50 Hz, handled by the family check before START).
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller.
 
 ## Stage 1 — Composite and S-video complete
 
 Video modes and switching:
 
-- [ ] **T-053b [HW] (S)** Composite broke on `fix/pal-svideo` (also after a
-      fresh plug-in): the `0x98:F5` bit-7 retrigger had been enabled for
-      composite polling too (recorded only for S-video; composite polling
-      always reads `F5 = 62` in the recordings). Now S-video only, and the
-      S-video → composite sequence only after S-video in the same session.
-      5a189e2 test: composite no sync at all. Control test: `dev` (the code
-      of the working PAL composite test) fails the same way (`0x88:FA` low
-      nibble `5`, then `D`). One input at a time is always used. Lock on
-      composite currently only with the `F5` retrigger (then 60 Hz family);
-      test switch `composite_retrigger`.
 - [ ] **T-044 [HW] (S)** Reopening while the previous stop is still
       running failed once; make a new open wait for it.
 - [ ] **T-047 [HW] (S)** `hardware shutdown on last close failed: -5` after
@@ -161,6 +150,8 @@ settings above work on `dev`.
       (reference: `tools/archive/debug-trace.c` on the `tools` branch).
 - [ ] Branches to delete on GitHub (refused from the development session):
       `fix/mode-change-restart`, `feat/svideo`, `feat/pal`,
+      `fix/pal-svideo`, `feat/component` (superseded; component comes
+      after the restructure),
       `async-bulk-in-queue`, `cherry3`, `debug`, `debug-saved-enable-state`,
       `diagnostic-input-baseline`, `state-machine`, `v4l2-dkms-driver`,
       `v4l2-h264-access-units`, `video-output-lazy-init`.
