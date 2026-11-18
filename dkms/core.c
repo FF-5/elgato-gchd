@@ -1366,6 +1366,18 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
 
   dev_info(&d->intf->dev,
            "GCHD lifecycle: starting hardware boot/init from V4L2 STREAMON\n");
+  /*
+   * A boot directly after the shutdown (0.1 s) left the decoder without a
+   * signal for the whole session; 1.6 s later it worked.
+   */
+  if (d->shutdown_done &&
+      time_before(jiffies, d->shutdown_done + msecs_to_jiffies(GCHD_REBOOT_GAP_MS))) {
+   unsigned int ms = jiffies_to_msecs(d->shutdown_done +
+                                      msecs_to_jiffies(GCHD_REBOOT_GAP_MS) - jiffies);
+
+   dev_info(&d->intf->dev, "waiting %u ms after the previous shutdown\n", ms);
+   msleep(ms);
+  }
   r = gchd_hw_init(d);
   if (r) {
    d->hw_initialized = false;
@@ -2035,6 +2047,7 @@ static int gchd_fop_release(struct file *file)
    } else {
     d->hw_initialized = false;
     d->hw_init_failed = false;
+    d->shutdown_done = jiffies | 1;
     gchd_set_lifecycle(d, GCHD_POWER_OFF);
    }
   }
