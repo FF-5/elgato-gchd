@@ -33,18 +33,13 @@ retrigger back for composite. Each retrigger is logged
 
 ## Acceptance criteria (this test)
 
-1. Windows software, PS1 on composite now: picture? (Tells whether the
-   signal itself is fine at the moment.)
-2. Linux, PS1 on composite, `composite_retrigger=0` and `=1`: lock, family,
-   picture.
+PS1 on composite (no game needed), `composite_retrigger=0` and `=1`: lock,
+detected family, picture. The Windows reference already exists (the
+recordings were made with this PS1).
 
 ## Hardware test (maintainer)
 
-A. Windows: PS1 on composite, start capture. Picture? If yes, a recording
-   of that start (reduced with the bulk-OUT filter) to
-   `traces/composite/` would show the current reference.
-
-B. Linux, PS1 on composite:
+PS1 on composite:
 
 ```sh
 git fetch origin && git checkout fix/pal-svideo && git pull
