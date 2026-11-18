@@ -18,7 +18,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.0): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.1): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -33,8 +33,6 @@ on the `traces` branch.
 
 Video modes and switching:
 
-- [ ] **T-044 [HW] (S)** Reopening while the previous stop is still
-      running failed once; make a new open wait for it.
 - [ ] **T-054 [HW] (S)** Source loss and return while capturing (worked by
       report; check the logs once).
 - [ ] **T-065 [HW] (S)** Console swap without a detected signal drop
