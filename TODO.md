@@ -184,7 +184,7 @@ Change one at a time (RULES D5), when the mode can be tested.
 
 | Item | Driver | Recordings |
 |---|---|---|
-| `system_rate` | `1.075 × (bitrate + 320) + 256` (12693 at 720 wide) | `1.0728 × (bitrate + 320) + 118` (PAL; NTSC +8) |
+| `system_rate` | composite/S-video as recorded (T-061); HDMI/component `1.075 × (bitrate + 320) + 256` | `⌊1.07285 × bitrate + 461.7⌋` (PAL; NTSC +8) |
 | HDMI/component encoder and back end | C++ blocks (`65`/`64` pulses, `0900:0018 = 00 0A`, `v_vinpelclk = 0`, `time_scale_l = 0`, `num_units_in_tick = 0`, GOP 14, bitrate formula) | `05`/`15` pulses, `02 0A`, `v_vinpelclk = 1`, `time_scale_l = 60`, `num_units_in_tick = 1`, GOP 8, bitrate per output size |
 | Composite prefix | `02 = C9 … 28 = 88` written on the first composite start after loading the module | written only after S-video (HDMI → composite writes none of them) |
 | Initial analog detection | waits until `0x88:CA` reads `7E` or `66`; family re-checked before START | unknown (no recording of a 480i start) |

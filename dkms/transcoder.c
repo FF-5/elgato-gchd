@@ -231,8 +231,9 @@ static bool gchd_enc_interlaced(const struct gchd *d)
 
 static u8 gchd_enc_source_type(const struct gchd *d)
 {
+ /* Composite and S-video: 3, or 2 with "stretch" (composite.md §10). */
  if (d->input >= 2)
-  return 3;
+  return d->stretch ? 2 : 3;
  return d->input_height == 576 ? 3 : 0;
 }
 
@@ -241,6 +242,7 @@ struct gchd_enc_cfg {
  u32 max_bitrate, ave_bitrate, min_bitrate, system_rate;
  u8 profile, level, vformat;
  u8 out;   /* GCHD_OUT_STANDARD, GCHD_OUT_640X480 or GCHD_OUT_MOBILE */
+ bool vbr; /* v_rate_mode 1, v_max_cpb_delay 10 */
 };
 
 /*
@@ -253,7 +255,7 @@ static int gchd_transcoder_write_start(struct gchd *d,
  bool hdnew = d->family == GCHD_FAMILY_HDNEW;
  /* The small output sizes are encoded progressive on transport output 2. */
  bool out2 = c->out != GCHD_OUT_STANDARD;
- bool vbr = c->out == GCHD_OUT_MOBILE;
+ bool vbr = c->vbr;
  u8 ip_format = out2 || !gchd_enc_interlaced(d) ? 2 : 0;
  u8 cpb_delay = vbr ? 10 : 3;
 
@@ -408,6 +410,31 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
  auto_average_bitrate = min_t(u32, auto_bitrate / 2U, 40000U);
  auto_min_bitrate = min_t(u32, auto_bitrate / 4U, 40000U);
  bitrate = d->bitrate_forced ? d->bitrate : (u16)auto_bitrate;
+
+ /*
+  * Composite and S-video: bitrate values as the capture application sets
+  * them (composite.md §10): default 11250 kbit/s CBR (15000 VBR for the
+  * mobile size), maximum 90 %, average 50 %, minimum 0 up to 4000, 10 %
+  * below 10000, 25 % above; system_rate from the video bitrate (+8 for
+  * the 60 Hz family).
+  */
+ bool vbr = false;
+ u32 analog_system_rate = 0;
+
+ if (d->input >= 2) {
+  if (d->bitrate_forced)
+   bitrate = clamp_t(u32, d->bitrate, 2000, 15000);
+  else
+   bitrate = out == GCHD_OUT_MOBILE ? 15000 : 11250;
+  vbr = out == GCHD_OUT_MOBILE ||
+        d->bitrate_mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
+  auto_max_bitrate = bitrate * 9U / 10U;
+  auto_average_bitrate = bitrate / 2U;
+  auto_min_bitrate = bitrate <= 4000 ? 0 :
+                     bitrate < 10000 ? bitrate / 10U : bitrate / 4U;
+  analog_system_rate = ((u32)bitrate * 107285U + 46170000U) / 100000U +
+                       (fps == 50 ? 0 : 8);
+ }
  u16 gop = out != GCHD_OUT_STANDARD ? 6 : (fps + 10) / 5;
  u16 anchor = 3;
  u8 profile;
@@ -430,6 +457,8 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
   level = 30;
  } else if (out == GCHD_OUT_MOBILE) {
   level = 22;
+ } else if (d->input >= 2) {
+  level = 31;
  } else {
   u32 frame_mb = (width * height) / (16U * 16U);
   u32 mbps = frame_mb * fps;
@@ -455,8 +484,8 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
  u32 system_rate = (1075U * ((u32)bitrate + audio)) / 1000U + 256U;
  u16 colour = d->input == 0 ? 1 : 6;
 
- if (out == GCHD_OUT_MOBILE && !d->bitrate_forced)
-  system_rate = 16554;
+ if (d->input >= 2)
+  system_rate = analog_system_rate;
  u8 vformat;
 
  /* The input format code follows the source, also for scaled outputs. */
@@ -465,13 +494,6 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
  else if (src_height == 576) vformat = gchd_enc_interlaced(d) ? 5 : 9;
  else if (src_height == 480) vformat = gchd_enc_interlaced(d) ? 4 : 8;
  else return -EINVAL;
- if (out == GCHD_OUT_MOBILE && !d->bitrate_forced) {
-  /* Mobile output: VBR at the top of its range, as the application sets it. */
-  bitrate = 15000;
-  auto_max_bitrate = 13500;
-  auto_average_bitrate = 7500;
-  auto_min_bitrate = 3750;
- }
  if (fps == 50) vformat |= 1;
 
  if (start) {
@@ -481,7 +503,7 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
    .max_bitrate = auto_max_bitrate, .ave_bitrate = auto_average_bitrate,
    .min_bitrate = auto_min_bitrate, .system_rate = system_rate,
    .profile = profile, .level = level, .vformat = vformat,
-   .out = out,
+   .out = out, .vbr = vbr,
   };
 
   return gchd_transcoder_write_start(d, &c);

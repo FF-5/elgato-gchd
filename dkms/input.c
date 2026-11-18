@@ -2009,6 +2009,7 @@ int gchd_analog_output_reconfigure(struct gchd *d)
  int r;
 
  d->out_active = d->analog_out;
+ d->enc_dirty = false;
  r = gchd_encoder_program(d);
  if (r)
   return r;

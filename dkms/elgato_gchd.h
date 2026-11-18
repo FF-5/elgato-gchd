@@ -127,6 +127,9 @@ struct gchd {
  v4l2_std_id analog_std[2]; /* last standard detected on composite, S-video; 0 = none */
  u8 analog_out; /* GCHD_OUT_*, kept while the device stays connected */
  u8 out_active; /* output programmed in the encoder (GCHD_OUT_*) */
+ bool stretch; /* composite/S-video: v_in_source_type 2 */
+ int bitrate_mode; /* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
+ bool enc_dirty; /* encoder settings changed while capturing */
  u16 dec_applied; /* family << 8 | 0x88:28 of the last family apply block; 0 = unknown */
  bool detect_requested;
  bool disconnected;
