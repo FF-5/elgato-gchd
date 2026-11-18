@@ -83,6 +83,11 @@ userspace service turns the driver's stream into such a device.
     (decoding exact, 4:2:0 → 4:2:2 without loss, no scaling);
     deinterlacing is the only change to the picture (filter selectable,
     line doubling to be compared with bwdif for 240p/288p).
+11. (Maintainer, 2026-11-18) A stand-alone OBS plugin is preferred for
+    OBS (the Media Source needs the user to type the device); keep the
+    driver as it is (application device + bridge for other programs).
+    Decisions 10 on hold: the plugin uses the H.264 device, which stays
+    visible. OBS runs in the VM (tests with OBS possible again).
 
 ## Implementation
 
@@ -145,6 +150,18 @@ at the end of it).
 
 ## Findings
 
+- OBS plugin (`obs-plugin/`, source "Elgato Game Capture HD"): finds
+  the H.264 device by name, applies input, output size, bitrate, mode,
+  profile and stretch with V4L2 ioctls, reads the transport stream (poll,
+  non-blocking, stoppable), decodes with FFmpeg, outputs I420 video and
+  the audio with common timestamps; OBS deinterlacing Yadif 2x top field
+  first set once; captures while shown. Built against libobs 30.0.2 (as
+  in Ubuntu 24.04), no warnings. Offline with a test harness: a PAL
+  576i25 H.264 + MP2 stream gives 73 of 75 frames (2 held by the decoder
+  at the end of the file) and audio; PAL followed by NTSC gives 163
+  frames, the size changes from 720×576 to 720×480 without a restart.
+  A first version used AVFMT_FLAG_NOBUFFER, which drops the packets read
+  while probing (the first keyframe): removed.
 - Run 1786e0d: 32/33 PASS (the bridge fixes work: audio stream at once,
   leftover sink removed, replug state). FAIL: step 10 after the NTSC swap
   "it froze": to be clarified whether the picture stood still (intended:

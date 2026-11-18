@@ -1,0 +1,41 @@
+# OBS source "Elgato Game Capture HD"
+
+An OBS Studio source for the Elgato Game Capture HD with the `elgato_gchd`
+driver. It finds the device by itself, captures video and audio from the
+driver's H.264 device ("Elgato Game Capture HD (H.264)") and offers the
+device settings in the source properties.
+
+## Behaviour
+
+- **Device:** the first "Elgato Game Capture HD (H.264)" device; found again
+  after unplugging and plugging in.
+- **Video and audio:** the MPEG transport stream of the device is decoded
+  with FFmpeg (H.264 video, MPEG audio) and passed to OBS with common
+  timestamps. Size changes of the source (for example between NTSC and
+  PAL) are followed without a restart.
+- **Deinterlacing:** OBS deinterlacing, set to Yadif 2x, top field first
+  when the source is created (Deinterlacing in the source's context menu).
+- **Properties:** input (HDMI, component, composite, S-video), output size
+  of composite and S-video (source size, 640 × 480, 480 × 360), bitrate,
+  bitrate mode, H.264 profile, stretch of SD input. A change restarts the
+  capture (about 3 s). The driver remembers the settings.
+- **Capture device on/off:** the device captures while the source is shown
+  in OBS (program or preview).
+
+The source uses the H.264 device exclusively while it captures; other
+programs cannot capture from the device at the same time.
+
+## Build and install
+
+Packages (Ubuntu): `libobs-dev`, `libavformat-dev`, `libavcodec-dev`,
+`libavutil-dev`, `cmake`, `pkg-config`.
+
+```sh
+cmake -S obs-plugin -B build/obs-plugin -DCMAKE_BUILD_TYPE=Release
+cmake --build build/obs-plugin
+cmake --install build/obs-plugin
+```
+
+The plugin is installed for the current user in
+`~/.config/obs-studio/plugins/obs-elgato-gchd/bin/64bit/`. Restart OBS and
+add the source "Elgato Game Capture HD".

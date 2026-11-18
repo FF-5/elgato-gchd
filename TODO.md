@@ -68,6 +68,9 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
       persistent device replaced the driver's own re-registration).
       Open: systemd user service, installer, remembered application
       format, input selection from the desktop.
+      OBS: stand-alone plugin `obs-plugin/` (maintainer 2026-11-18),
+      source "Elgato Game Capture HD" with the device settings as
+      properties; open: hardware test, installer integration.
 
 ## Stage 2 — Component
 
