@@ -10,7 +10,7 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.5.0");
+MODULE_VERSION("0.5.1");
 
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
@@ -1366,6 +1366,18 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
 
   dev_info(&d->intf->dev,
            "GCHD lifecycle: starting hardware boot/init from V4L2 STREAMON\n");
+  /*
+   * A boot directly after the shutdown (0.1 s) left the decoder without a
+   * signal for the whole session; 1.6 s later it worked.
+   */
+  if (d->shutdown_done &&
+      time_before(jiffies, d->shutdown_done + msecs_to_jiffies(GCHD_REBOOT_GAP_MS))) {
+   unsigned int ms = jiffies_to_msecs(d->shutdown_done +
+                                      msecs_to_jiffies(GCHD_REBOOT_GAP_MS) - jiffies);
+
+   dev_info(&d->intf->dev, "waiting %u ms after the previous shutdown\n", ms);
+   msleep(ms);
+  }
   r = gchd_hw_init(d);
   if (r) {
    d->hw_initialized = false;
@@ -2035,6 +2047,7 @@ static int gchd_fop_release(struct file *file)
    } else {
     d->hw_initialized = false;
     d->hw_init_failed = false;
+    d->shutdown_done = jiffies | 1;
     gchd_set_lifecycle(d, GCHD_POWER_OFF);
    }
   }

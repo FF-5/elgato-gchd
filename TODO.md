@@ -18,7 +18,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.0): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.1): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -33,13 +33,12 @@ on the `traces` branch.
 
 Video modes and switching:
 
-- [ ] **T-044 [HW] (S)** Reopening while the previous stop is still
-      running failed once; make a new open wait for it.
-- [ ] **T-047 [HW] (S)** `hardware shutdown on last close failed: -5` after
-      a session in which no source was detected.
-- [ ] **T-031 [HW] (S)** STREAMOFF → STREAMON without closing.
 - [ ] **T-054 [HW] (S)** Source loss and return while capturing (worked by
       report; check the logs once).
+- [ ] **T-065 [HW] (S)** Console swap without a detected signal drop
+      (N64 → running PS1: `0x88:FA` stayed `6`): on S-video one restart of
+      ~7 s, on composite two restarts (240p, then 576i). Treat `E7` bit 7
+      with an unlocked `CA` like a drop (wait for 50 Hz).
 - [ ] 288p capture start (recording wanted; the driver uses the apply block
       of the 576i → 288p change).
 
@@ -61,8 +60,6 @@ Output and settings (`docs/composite.md §10`):
 - [ ] **T-022 [OFF] (S)** Field order/`V4L2_FIELD_INTERLACED` reporting
       for 480i/576i/240p/288p.
 - [ ] **T-042 [OFF] (S)** Report the current analog mode to userspace.
-- [ ] **T-045 [OFF] (S)** ffplay on close: "VIDIOC_QBUF: Bad file
-      descriptor", "Some buffers are still owned by the caller".
 - [ ] **T-064 (M)** Input persistence: HDMI on first use after
       installation, afterwards the last selected input, also across module
       reloads and reboots (today only while the module stays loaded). Plan:

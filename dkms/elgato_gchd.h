@@ -23,6 +23,7 @@
 #define GCHD_RX_URBS_AUX_IN 8	/* URBs queued on GCHD_EP_AUX_IN */
 #define GCHD_USB_BUFSIZE 0x10000	/* bulk-IN URB size */
 #define GCHD_PAL60_HOLD_MS 5000
+#define GCHD_REBOOT_GAP_MS 1500
 #define GCHD_RING_FRAMES 512
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
@@ -117,6 +118,7 @@ struct gchd {
  unsigned long std_hold_until; /* ignore 0x88:E7 bit 7 until then */
  unsigned long pal60_since; /* first 60 Hz lock seen by detection; 0 = none */
  bool pal60_logged;
+ unsigned long shutdown_done; /* jiffies of the last completed shutdown; 0 = none */
  u16 dec_applied; /* family << 8 | 0x88:28 of the last family apply block; 0 = unknown */
  bool detect_requested;
  bool disconnected;
