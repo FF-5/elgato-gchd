@@ -27,7 +27,7 @@ the decoder (§8).
 |---|---|
 | `0x88:CA` | Lock and format, the same codes for both families: `FE` unlocked, `7E` interlaced (480i, 576i) locked, `66` progressive (240p, 288p) locked, `76` first value after a change to interlaced, `6E` first value after a change to progressive, `EE`/`E6` transitional. |
 | `0x88:FA` | Low nibble `6` = NTSC (60 Hz) family, `7` = PAL (50 Hz) family once a signal is present. Reads `1F`/`3E` immediately after the input is selected. Polled while no signal is present. |
-| `0x88:E7` | `69` when stable (NTSC), `79` (PAL); `09` right after a 240p change; `E9` during a mode change. |
+| `0x88:E7` | Decoder standard: `69` when stable (NTSC), `59` (60 Hz source at power-on of some consoles), `79` (PAL); `09` right after a 240p change; bit 7 set (`E9`, `D9`) while the decoder re-evaluates the standard, for about 0.4-0.9 s after an apply block and when the source changes family. |
 | `0x88:F1` | `7E` when stable (NTSC); `63` (PAL). |
 | `0x88:CB` | `6E` when stable; `44` right after a 240p change. |
 | `0x88:FD`, `0x88:F8` | `6E`, `C9`. Unknown. |
@@ -162,14 +162,49 @@ capturing, followed by a second retrigger.
 The encoder programming is the same for 576i and 288p (`v_format = 5`,
 `v_ip_format = 0`, `v_in_source_type = 3`, 720 × 576).
 
+### 8.3 60 Hz ↔ 50 Hz while capturing (Observed)
+
+Some PAL consoles output a 60 Hz signal for a few seconds after power-on or
+reset, then switch to 50 Hz. The change of family is handled with a full
+encoder restart. It is started by `0x88:E7` with bit 7 set, or by
+`0x88:FA` reporting the other family:
+
+```
+E7 bit 7:          neutral back-end table (§4 step 4), retrigger
+other family read: apply block of that family (0x28 from CA, §9),
+                   about 0.45 s later: read 0x88:E7, F1; retrigger
+then:              NULL, STOP
+                   read 0x88:FA, CA until locked (CA 7E or 66); while not
+                   locked, the apply block of the family read every 0.5 s
+                   read 0x88:E7, F1; 0x88:0A by E7 (§9)
+                   back-end table of the family, retrigger, settle
+                   read 0x88:FA, CA, E7, F1
+                   encoder programming (§10), INIT A0, START
+```
+
+Total time from the trigger to START: about 3 s.
+
 ## 9. Decoder apply block
 
 The writes `0x88:07 = 8A`, `08 = 9B`, `09 = 7A`, `28 = …` followed by a read
 of `0x88:FD` and `0x88:06 = 08` occur when lock is acquired after the input
 was selected without a source (Observed). With a progressive source the block
 is written twice: first with `28 = 88`, then with `28 = 8A`, followed by
-`0x88:0A = 98` (NTSC 240p) or `0x88:0A = 8F` (PAL 288p). When the source is
-already locked at input selection, the block is not written.
+a write of `0x88:0A`. When the source is already locked at input selection,
+the block is not written.
+
+The block for the 50 Hz family is `0x88:07 = 9A`, `08 = 90`, `09 = A8`.
+`0x88:28` follows bit 3 of `0x88:CA`: set (`7E`, `EE`, `FE`) → `88`, clear
+(`66`, `E6`) → `8A`.
+
+`0x88:0A` depends on the standard in `0x88:E7`, read once its bit 7 is
+clear:
+
+| `0x88:E7` | `0x88:0A` |
+|---|---|
+| `59` | `8F` |
+| `69` | `98` |
+| `79` | `85` |
 
 ## 10. Encoder settings for analog sources (Observed)
 

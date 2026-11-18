@@ -22,8 +22,10 @@ on the `traces` branch.
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), composite ↔ S-video without
   unplugging, source off/on, close and reopen. ffplay, H.264 stream. No
-  audio. Sources: N64 (NTSC), PS1 (PAL; its start-up signal flips between
-  60 and 50 Hz, handled by the family check before START).
+  audio. Sources: N64 (NTSC), PS1 (PAL; outputs 60 Hz for a few seconds
+  after power-on and reset, then 50 Hz).
+- `feat/ts-audio`: MPEG-TS with audio works; 60 ↔ 50 Hz family change
+  while capturing as recorded (`docs/composite.md §8.3`), on test.
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller.
 
 ## Stage 1 — Composite and S-video complete
