@@ -195,6 +195,8 @@
 #define GCHD_TS_PACKET			188
 #define GCHD_TS_SYNC			0x47
 /* PIDs and stream ids programmed into the encoder by transcoder.c */
+#define GCHD_TS_PID_PAT			0x0000
+#define GCHD_TS_PID_NULL		0x1fff
 #define GCHD_TS_PID_VIDEO		0x1011
 #define GCHD_TS_PID_AUDIO		0x010f
 #define GCHD_TS_PID_PMT			0x0110

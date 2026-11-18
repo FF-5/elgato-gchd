@@ -25,6 +25,9 @@
 #define GCHD_RING_FRAMES 32
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
+/* Transport-stream buffers: 348 packets of 188 bytes (65 424 bytes). */
+#define GCHD_TS_BUF_PACKETS 348
+#define GCHD_TS_BUF_SIZE (GCHD_TS_BUF_PACKETS * 188U)
 
 struct gchd_rx_urb;
 #define GCHD_TS_NONE U64_MAX
@@ -97,6 +100,10 @@ struct gchd {
  u64 ts_base_ns, ts_base90;
  u8 *usb_buf;
  u8 ts_partial[GCHD_TS_PACKET];
+ u32 pixfmt;          /* V4L2_PIX_FMT_H264 or V4L2_PIX_FMT_MPEG */
+ u8 *ts_out;          /* transport-stream buffer being filled */
+ size_t ts_out_len;
+ bool wait_pat;       /* TS delivery starts at the next PAT packet */
  u16 ts_partial_len;
  bool streaming; /* V4L2 queue delivery only. */
  bool capture_active; /* Hardware capture is active while a source is present. */
