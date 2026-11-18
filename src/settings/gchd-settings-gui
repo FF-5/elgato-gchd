@@ -1,0 +1,277 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-2.0
+"""Elgato Game Capture HD settings: a window with the settings of the
+elgato_gchd driver (input, output size, bitrate, bitrate mode, H.264
+profile, stretch of SD input). Changes are applied at once; the driver
+remembers them. Input and output size can be changed only while no program
+captures from the device.
+
+    gchd-settings-gui [DEVICE]   DEVICE: default /dev/elgato-gchd, else the
+                                 first device of the driver
+
+Needs: python3-gi, gir1.2-gtk-3.0, v4l2-ctl (v4l-utils).
+"""
+
+import os
+import re
+import subprocess
+import sys
+
+import gi
+
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk, Pango  # noqa: E402
+
+TITLE = "Elgato Game Capture HD"
+INPUTS = ["HDMI", "Component", "Composite", "S-Video"]
+OUTPUTS = [("Source size (720x480 NTSC / 720x576 PAL)", 720, 480),
+           ("640x480", 640, 480), ("480x360", 480, 360)]
+MODES = [("Constant (CBR)", 1), ("Variable (VBR)", 0)]
+PROFILES = [("High", 4), ("Main", 2), ("Baseline", 0)]
+BUSY_TEXT = ("A program is capturing from the device: input and output size "
+             "can be changed only while no program captures (for example "
+             "hide the source in OBS).")
+
+
+def find_device():
+    if os.path.exists("/dev/elgato-gchd"):
+        return "/dev/elgato-gchd"
+    base = "/sys/class/video4linux"
+    try:
+        names = sorted(os.listdir(base), key=lambda n: int(n[5:] or 0))
+    except (OSError, ValueError):
+        return None
+    for name in names:
+        drv = os.path.realpath(os.path.join(base, name, "device", "driver"))
+        if os.path.basename(drv) == "elgato_gchd":
+            return "/dev/" + name
+    return None
+
+
+class Device:
+    """The driver's video device, through v4l2-ctl."""
+
+    def __init__(self, path):
+        self.path = path
+
+    def run(self, *args):
+        p = subprocess.run(["v4l2-ctl", "-d", self.path, *args],
+                           capture_output=True, text=True)
+        return p.returncode, p.stdout + p.stderr
+
+    def ctrl(self, name, default=None):
+        rc, out = self.run("-C", name)
+        m = re.search(r":\s*(-?\d+)", out)
+        return int(m.group(1)) if rc == 0 and m else default
+
+    def input(self):
+        rc, out = self.run("-I")
+        m = re.search(r"Video input\s*:\s*(\d)", out)
+        return int(m.group(1)) if rc == 0 and m else 0
+
+    def size(self):
+        rc, out = self.run("-V")
+        m = re.search(r"Width/Height\s*:\s*(\d+)/(\d+)", out)
+        return (int(m.group(1)), int(m.group(2))) if rc == 0 and m else None
+
+
+class Window(Gtk.Window):
+    def __init__(self, path):
+        super().__init__(title=TITLE + " Settings")
+        self.set_border_width(12)
+        self.set_default_size(480, -1)
+        self.dev = None
+        self.loading = False
+        self.bitrate_timer = 0
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self.add(box)
+
+        grid = Gtk.Grid(column_spacing=12, row_spacing=8)
+        box.pack_start(grid, False, False, 0)
+
+        def label(text, row):
+            lab = Gtk.Label(label=text, xalign=0)
+            grid.attach(lab, 0, row, 1, 1)
+
+        def combo(items, row, handler):
+            c = Gtk.ComboBoxText()
+            for text in items:
+                c.append_text(text)
+            c.set_hexpand(True)
+            c.connect("changed", handler)
+            grid.attach(c, 1, row, 1, 1)
+            return c
+
+        label("Device", 0)
+        self.device_label = Gtk.Label(xalign=0)
+        self.device_label.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
+        grid.attach(self.device_label, 1, 0, 1, 1)
+
+        label("Input", 1)
+        self.input = combo(INPUTS, 1, self.on_input)
+        label("Output size", 2)
+        self.output = combo([o[0] for o in OUTPUTS], 2, self.on_output)
+
+        label("Bitrate (kbit/s)", 3)
+        self.bitrate = Gtk.Scale.new_with_range(
+            Gtk.Orientation.HORIZONTAL, 2000, 15000, 250)
+        self.bitrate.set_digits(0)
+        self.bitrate.set_value_pos(Gtk.PositionType.RIGHT)
+        self.bitrate.connect("value-changed", self.on_bitrate)
+        grid.attach(self.bitrate, 1, 3, 1, 1)
+
+        label("Bitrate mode", 4)
+        self.mode = combo([m[0] for m in MODES], 4, self.on_mode)
+        label("H.264 profile", 5)
+        self.profile = combo([p[0] for p in PROFILES], 5, self.on_profile)
+
+        label("Stretch SD input", 6)
+        self.stretch = Gtk.Switch(halign=Gtk.Align.START)
+        self.stretch.connect("notify::active", self.on_stretch)
+        grid.attach(self.stretch, 1, 6, 1, 1)
+
+        self.status = Gtk.Label(xalign=0, wrap=True)
+        self.status.set_max_width_chars(60)
+        box.pack_start(self.status, False, False, 0)
+
+        buttons = Gtk.Box(spacing=6)
+        refresh = Gtk.Button(label="Refresh")
+        refresh.connect("clicked", lambda _b: self.load())
+        close = Gtk.Button(label="Close")
+        close.connect("clicked", lambda _b: self.close())
+        buttons.pack_end(close, False, False, 0)
+        buttons.pack_end(refresh, False, False, 0)
+        box.pack_end(buttons, False, False, 0)
+
+        self.fixed_path = path
+        self.load()
+
+    # ------------------------------------------------------------ state
+
+    def say(self, text):
+        self.status.set_text(text)
+
+    def load(self):
+        """Read the device's settings into the widgets."""
+        path = self.fixed_path or find_device()
+        self.loading = True
+        try:
+            if not path or not os.path.exists(path):
+                self.dev = None
+                self.device_label.set_text("not found")
+                self.say("No Elgato Game Capture HD found: driver loaded, "
+                         "device plugged in? Then press Refresh.")
+                self.set_controls(False)
+                return
+            self.dev = Device(path)
+            self.device_label.set_text(path)
+            self.set_controls(True)
+            inp = self.dev.input()
+            self.input.set_active(inp)
+            size = self.dev.size()
+            out = 0
+            if size == (640, 480):
+                out = 1
+            elif size == (480, 360):
+                out = 2
+            self.output.set_active(out)
+            self.output.set_sensitive(inp >= 2)
+            self.stretch.set_sensitive(inp >= 2)
+            self.bitrate.get_adjustment().set_upper(15000 if inp >= 2 else 30000)
+            br = self.dev.ctrl("video_bitrate", 11250000)
+            self.bitrate.set_value(br / 1000)
+            mode = self.dev.ctrl("video_bitrate_mode", 1)
+            self.mode.set_active(0 if mode == 1 else 1)
+            prof = self.dev.ctrl("h264_profile", 4)
+            self.profile.set_active(
+                next((i for i, p in enumerate(PROFILES) if p[1] == prof), 0))
+            self.stretch.set_active(bool(self.dev.ctrl("stretch_sd_input", 0)))
+            self.say("Changes are applied at once and remembered by the driver.")
+        finally:
+            self.loading = False
+
+    def set_controls(self, on):
+        for w in (self.input, self.output, self.bitrate, self.mode,
+                  self.profile, self.stretch):
+            w.set_sensitive(on)
+
+    def apply(self, what, *args):
+        """Run a change; on 'busy' explain and reload."""
+        if self.loading or not self.dev:
+            return True
+        rc, out = self.dev.run(*args)
+        if rc == 0:
+            self.say(what + " changed.")
+            return True
+        if "busy" in out.lower():
+            self.say(BUSY_TEXT)
+        else:
+            self.say(what + ": " + out.strip())
+        GLib.idle_add(self.load_keep_status)
+        return False
+
+    def load_keep_status(self):
+        text = self.status.get_text()
+        self.load()
+        self.say(text)
+        return False
+
+    # ------------------------------------------------------------ handlers
+
+    def on_input(self, c):
+        i = c.get_active()
+        if i < 0:
+            return
+        if self.apply("Input", "-i", str(i)):
+            GLib.idle_add(self.load_keep_status)
+
+    def on_output(self, c):
+        i = c.get_active()
+        if i < 0:
+            return
+        _, w, h = OUTPUTS[i]
+        self.apply("Output size", "-v", "width=%d,height=%d" % (w, h))
+
+    def on_bitrate(self, s):
+        if self.loading:
+            return
+        if self.bitrate_timer:
+            GLib.source_remove(self.bitrate_timer)
+        self.bitrate_timer = GLib.timeout_add(400, self.apply_bitrate)
+
+    def apply_bitrate(self):
+        self.bitrate_timer = 0
+        kb = int(round(self.bitrate.get_value()))
+        self.apply("Bitrate", "-c", "video_bitrate=%d" % (kb * 1000))
+        return False
+
+    def on_mode(self, c):
+        i = c.get_active()
+        if i >= 0:
+            self.apply("Bitrate mode", "-c", "video_bitrate_mode=%d" % MODES[i][1])
+
+    def on_profile(self, c):
+        i = c.get_active()
+        if i >= 0:
+            self.apply("H.264 profile", "-c", "h264_profile=%d" % PROFILES[i][1])
+
+    def on_stretch(self, sw, _param):
+        self.apply("Stretch", "-c", "stretch_sd_input=%d" % int(sw.get_active()))
+
+
+def main():
+    if subprocess.run(["sh", "-c", "command -v v4l2-ctl"],
+                      capture_output=True).returncode:
+        print("gchd-settings-gui: v4l2-ctl is needed (package v4l-utils)",
+              file=sys.stderr)
+        return 1
+    win = Window(sys.argv[1] if len(sys.argv) > 1 else None)
+    win.connect("destroy", Gtk.main_quit)
+    win.show_all()
+    Gtk.main()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

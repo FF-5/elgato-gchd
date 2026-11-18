@@ -47,14 +47,15 @@ tested. Not supported: Game Capture HD60, HD60 S, HD60 Pro.
      that fails), builds the driver in `build/`, installs it with DKMS
      (when available; the driver is then rebuilt after kernel updates),
      installs the udev rules (remembered settings, device name
-     `/dev/elgato-gchd`) and the settings tool `gchd-settings`, and loads
-     the driver.
+     `/dev/elgato-gchd`) and the settings window (application menu) and
+     text menu, and loads the driver.
    - **OBS plugin:** builds the plugin in `build/obs-plugin` and installs
      it for the current user (`~/.config/obs-studio/plugins`). It needs
      the kernel driver and an OBS installed from the distribution (an OBS
      Flatpak cannot load it).
 
    Missing packages (kernel headers, compiler, `dkms`, `7z`, `whiptail`,
+   `v4l-utils`, the GTK 3 Python bindings,
    the OBS and FFmpeg development packages, `cmake`) are named and can be
    installed on request.
 
@@ -97,9 +98,13 @@ input format `mpegts`; deinterlacing in the source's context menu.
 
 ### Settings
 
-[`src/settings/gchd-settings`](src/settings/gchd-settings) changes the
-input, output size and encoder settings in a text menu; the driver
-remembers them. They can also be set with `v4l2-ctl`.
+"Elgato Game Capture HD Settings" in the application menu
+([`src/settings/gchd-settings-gui`](src/settings/gchd-settings-gui))
+changes the input, output size and encoder settings in a window (menus,
+bitrate slider, switch); the driver remembers them. Input and output size
+can be changed only while no program captures. Without a desktop:
+[`src/settings/gchd-settings`](src/settings/gchd-settings) (text menu) or
+`v4l2-ctl`.
 
 ### Command line
 

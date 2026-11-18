@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** OBS plugin, `/dev/elgato-gchd`, settings tool accepted on hardware (T-060-obs 16/16); installer with three install types: hardware test (T-060-install)
+- **Status:** OBS plugin, `/dev/elgato-gchd`, installer accepted on hardware (T-060-obs 16/16, T-060-install 13/13); settings window: hardware test (T-060-settings)
 - **Type:** new userspace component (service) next to the driver
 - **Branch:** `feat/app-bridge` (from `dev` 0.5.8)
 - **TODO items:** T-060 (stage 1b)
@@ -99,6 +99,8 @@ userspace service turns the driver's stream into such a device.
     stream and changes settings.
 13. (Maintainer, 2026-11-18) The installer offers three install types:
     everything, the kernel driver part only, the OBS plugin only.
+14. (Maintainer, 2026-11-18) Settings in a window like OBS's V4L2
+    properties (menus, sliders); a text menu only as the last resort.
 
 ## Implementation
 
@@ -124,6 +126,17 @@ warnings, stream test (PAL; PAL then NTSC: size follows, audio
 continuous); shellcheck clean (tool, installer warnings only the known
 SC2033 false positive).
 
+Settings window (`src/settings/gchd-settings-gui`, "Elgato Game Capture
+HD Settings" in the application menu): GTK 3 with Python (preinstalled on
+Ubuntu desktops), v4l2-ctl; menus for input, output size, bitrate mode,
+profile, a bitrate slider (2000–15000 kbit/s for analog, applied 0.4 s
+after the slider stops), a stretch switch; changes applied at once; when
+a program captures, an input or output change is refused with an
+explanation and the menu returns to the device's value; installed with
+the driver part (offers python3-gi, gir1.2-gtk-3.0, v4l-utils). Checked
+here on a virtual screen with a stand-in v4l2-ctl (window, values, busy
+explanation). The text menu stays as `gchd-settings`.
+
 Installer (`install-driver.sh`): asks what to install (everything,
 kernel driver, OBS plugin) or takes `--all`, `--driver`, `--obs`; the
 driver part also installs `/dev/elgato-gchd` (udev rule) and
@@ -135,20 +148,24 @@ builds, installs and uninstalls the plugin (temporary home folder).
 
 ## Hardware test (maintainer)
 
-Installer: firmware present (or the .msi in `firmware/`), Elgato plugged
-in, OBS installed; PS1 or N64 on composite for the last check.
+Settings window: OBS with the plugin, a console on composite.
 
 ```sh
 cd ~ && git -C elgato-gchd fetch origin
 git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
-mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-060-install.sh > tests/T-060-install.sh
-bash gchd-test.sh T-060-install --branch feat/app-bridge
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-060-settings.sh > tests/T-060-settings.sh
+bash gchd-test.sh T-060-settings --branch feat/app-bridge
 ```
 
 Paste the summary; on FAILs the log.
 
 ## Findings
 
+- T-060-install (9c9f814): 13/13 PASS (uninstall all, driver only,
+  plugin only, plugin uninstall only, menu "everything", OBS lists the
+  source and shows the picture). Maintainer: settings belong in a window
+  like OBS's V4L2 properties; the text menu only as the last resort
+  (Decisions 14): settings window added.
 - T-060-obs, second run (4db2b4a): 16/16 PASS: plugin built and
   installed, device found automatically, PS1 picture (50 frames/s) and
   sound, 640×480 from the properties, PAL → NTSC swap followed by itself,
@@ -349,23 +366,3 @@ Paste the summary; on FAILs the log.
 
 ## Maintainer comments
 
-Everything seems to work.
-
-=== summary (T-060-install, 9c9f814 install-driver.sh: three install types (everything, kernel driver, OBS plugin), per-part uninstall; settings tool and device rule with the driver (T-060))
-PASS | step 1 uninstall everything first | plugin removed
-PASS | step 1 uninstall everything first | settings tool removed
-PASS | step 2 kernel driver only (--driver) | driver installed
-PASS | step 2 kernel driver only (--driver) | udev rules installed
-PASS | step 2 kernel driver only (--driver) | settings tool installed
-PASS | step 2 kernel driver only (--driver) | no plugin installed by --driver
-PASS | step 2 kernel driver only (--driver) | /dev/elgato-gchd present
-PASS | step 3 OBS plugin only (--obs) | plugin installed
-PASS | step 4 uninstall the plugin only (--uninstall --obs) | plugin removed
-PASS | step 4 uninstall the plugin only (--uninstall --obs) | driver still installed
-PASS | step 5 menu: everything (choice 1) | driver installed
-PASS | step 5 menu: everything (choice 1) | plugin installed
-PASS | step 5 menu: everything (choice 1) | OBS lists the source and shows the picture?
-
-FAIL: 0  WARN: 0
-
-A comment, I imagined a TUI being the extreme last option for configuration control. I had imagined something similar to what OBS has with v4l2 devices, a window with sliders, menus, etc.

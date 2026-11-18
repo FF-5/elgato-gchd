@@ -16,7 +16,8 @@
 # Kernel driver: 1. firmware present? If not, extract it with firmware/
 # (stop when that fails). 2. build the module in build/. 3. install it
 # (DKMS when available), the udev rules (remembered settings, device name
-# /dev/elgato-gchd), the settings tool gchd-settings, and load it.
+# /dev/elgato-gchd), the settings window gchd-settings-gui (application
+# menu) and the text menu gchd-settings, and load it.
 # OBS plugin: build it in build/obs-plugin and install it for the current
 # user (~/.config/obs-studio/plugins); needs the kernel driver.
 # Can be started from a file manager: it opens a terminal window.
@@ -36,6 +37,8 @@ BUILD=$HERE/build
 OBJ=$BUILD/objects/kernel
 KDIR=${KDIR:-/lib/modules/$(uname -r)/build}
 SETTINGS_TOOL=/usr/local/bin/gchd-settings
+SETTINGS_GUI=/usr/local/bin/gchd-settings-gui
+SETTINGS_DESKTOP=/usr/local/share/applications/elgato-gchd-settings.desktop
 OBS_BUILD=$BUILD/obs-plugin
 OBS_PLUGIN_DIR=$HOME/.config/obs-studio/plugins/obs-elgato-gchd
 ASSUME_YES=0
@@ -113,6 +116,10 @@ pkg_name() { # what -> package name for this distribution
 	whiptail:pacman) echo "libnewt" ;;
 	whiptail:dnf) echo "newt" ;;
 	whiptail:*) echo "whiptail" ;;
+	gtk:apt-get) echo "python3-gi gir1.2-gtk-3.0" ;;
+	gtk:pacman) echo "python-gobject gtk3" ;;
+	gtk:*) echo "python3-gobject gtk3" ;;
+	v4lutils:*) echo "v4l-utils" ;;
 	esac
 }
 need() { # need WHAT TEST-COMMAND...: offer to install a missing package
@@ -139,7 +146,7 @@ uninstall_driver() {
 	sudo rm -f "/lib/modules/$(uname -r)/updates/$MODULE.ko"
 	sudo depmod -a
 	sudo rm -f "/etc/udev/rules.d/$UDEV_RULE" "/etc/udev/rules.d/$UDEV_DEVICE_RULE" "$SETTINGS"
-	sudo rm -f "$SETTINGS_TOOL"
+	sudo rm -f "$SETTINGS_TOOL" "$SETTINGS_GUI" "$SETTINGS_DESKTOP"
 	sudo udevadm control --reload 2>/dev/null
 	ok "Driver removed. The firmware in $FIRMWARE_DIR was kept."
 }
@@ -224,7 +231,18 @@ install_driver() {
 			sudo $cmd $pk || echo "Installing $pk failed; gchd-settings needs it."
 		fi
 	fi
-	ok "Settings tool installed: gchd-settings"
+	sudo install -D -m 0755 "$HERE/src/settings/gchd-settings-gui" "$SETTINGS_GUI"
+	sudo install -D -m 0644 "$HERE/src/settings/elgato-gchd-settings.desktop" "$SETTINGS_DESKTOP"
+	need v4lutils command -v v4l2-ctl
+	if ! /usr/bin/python3 -c "import gi; gi.require_version('Gtk', '3.0')" 2>/dev/null; then
+		cmd=$(pkg_cmd)
+		pk=$(pkg_name gtk)
+		if [ -n "$cmd" ] && ask "The settings window needs $pk. Install it now with: sudo $cmd $pk ?"; then
+			# shellcheck disable=SC2086
+			sudo $cmd $pk || echo "Installing $pk failed; the settings window needs it."
+		fi
+	fi
+	ok "Settings installed: 'Elgato Game Capture HD Settings' in the application menu (gchd-settings-gui); text menu: gchd-settings"
 	sudo modprobe "$MODULE" || die "the driver could not be loaded (see: sudo dmesg)."
 	ok "Driver loaded. Plug in the Game Capture HD; it appears as a /dev/video device."
 	echo "Watch: v4l2-ctl -d /dev/elgato-gchd -v pixelformat=MPEG && ffplay -f mpegts /dev/elgato-gchd"
