@@ -39,12 +39,23 @@ userspace service turns the driver's stream into such a device.
    so parts can be replaced (ffmpeg does the decoding in C either way).
 2. The capture device runs only while an application uses it (the device
    gets hot when it runs without need).
-3. Output size: the size of the source. A v4l2loopback device keeps its
-   format while an application has it open, so the size is taken when an
-   application opens it; a source change while it is open (NTSC ↔ PAL) is
-   scaled to that size until the application reopens. To be checked:
-   whether OBS/guvcview can be made to reopen by themselves.
+3. Output size: the size of the source. Large changes (NTSC ↔ PAL, a
+   different HDMI/component resolution, an input change) do not happen
+   within one piece of content; when they happen, the device the
+   applications use is removed and added again, as when a UVC camera is
+   unplugged and plugged in again (applications such as guvcview and OBS
+   handle that while running).
 4. Folder: `service/`.
+5. (Maintainer, after the analysis of 3) The application device becomes a
+   second video node of `elgato_gchd`: the bridge writes decoded frames
+   into it, applications read them (frames are passed through only, no
+   decoding in the kernel). The driver unregisters and registers it again
+   on a large change, which v4l2loopback cannot do: it refuses to remove a
+   device while an application has it open (EBUSY, v4l2loopback 0.13.2
+   `V4L2LOOPBACK_CTL_REMOVE`; 0.12.7 cannot add or remove at runtime). The
+   driver also tells the bridge when an application opens the node (no
+   polling), and v4l2loopback is no longer needed.
+6. Tests without OBS for now (the VM cannot run it); guvcview only.
 
 ## Prototype (`service/gchd-bridge`)
 
@@ -67,15 +78,20 @@ userspace service turns the driver's stream into such a device.
 - Offline check: an interlaced 576i → 480i transport stream through the
   same filter chain gives continuous 720×576 YUYV frames.
 
-Next steps after the test: systemd user service (start at login),
+Next steps after the test: the driver's own application node (decision
+5) replacing v4l2loopback, size and input changes as remove/add;
+systemd user service (start at login),
 `install-driver.sh` integration (v4l2loopback options in `modprobe.d`,
 service install), documentation (`docs/`), input selection from the
 desktop.
 
 ## Hardware test (maintainer)
 
-Needs `v4l2loopback-dkms`, guvcview and OBS. PS1 (PAL) on composite, the
-N64 (NTSC) for the source change. The test loads v4l2loopback as
+First test of the prototype with v4l2loopback: decoding, deinterlacing,
+sound, capture device only on while read, input selection, guvcview.
+Needs `v4l2loopback-dkms` and guvcview. PS1 (PAL) on composite, the N64
+(NTSC) for the source change (with v4l2loopback the picture is still
+scaled). The test loads v4l2loopback as
 `/dev/video42`; if it is loaded already with other options it is
 reloaded.
 

@@ -75,7 +75,11 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
       Decisions (maintainer 2026-11-18): shell + ffmpeg first, modular,
       replaceable by something faster; capture device only on while an
       application reads; output size = source size when the application
-      opens the device; folder `service/`. Prototype on `feat/app-bridge`.
+      opens the device, large changes (standard, resolution, input) as
+      remove/add of the device like a UVC unplug; the device becomes a
+      second video node of `elgato_gchd` fed by the bridge (v4l2loopback
+      cannot remove an open device). Folder `service/`. Prototype (with
+      v4l2loopback) on `feat/app-bridge`.
 
 ## Stage 2 — Component
 
