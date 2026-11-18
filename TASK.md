@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** analysis; implementation next
+- **Status:** implemented (168cb35); hardware test
 - **Type:** driver feature (V4L2 reporting)
 - **Branch:** `feat/format-reporting` (from `dev` 0.5.1)
 - **TODO items:** T-046, T-022, T-042 (stage 1)
@@ -39,7 +39,41 @@ Today:
 
 ## Hardware test (maintainer)
 
-Follows with the implementation.
+Build and load; `git log -1 --oneline` must show 168cb35 or later:
+
+```sh
+cd ~/elgato-gchd && git fetch origin && git checkout feat/format-reporting && git pull
+git log -1 --oneline
+cd dkms && make -C /lib/modules/$(uname -r)/build M=$PWD clean modules
+sudo rmmod elgato_gchd 2>/dev/null; sudo dmesg -C
+sudo modprobe -a videodev videobuf2-v4l2 videobuf2-vmalloc
+sudo insmod ./elgato_gchd.ko
+```
+
+The report command used below (paste its output each time):
+
+```sh
+v4l2-ctl -d /dev/video0 --get-input --get-fmt-video --get-parm --get-standard --get-detected-standard
+```
+
+1. Composite (`-i 2`), MPEG format, before any capture: report.
+   Expected: 720×480, field "Interlaced Top-Bottom", 29.97 fps, standard
+   NTSC-M, detected standard: none/unknown.
+2. PS1 on, game running, `ffplay -f mpegts /dev/video0`. In a second
+   terminal while it plays: report. Expected: 576 lines, 25 fps, PAL, detected PAL.
+3. Close ffplay; report again. Expected: still 576 / 25 fps / PAL
+   (detected: none).
+4. N64 instead of the PS1, ffplay again; report while it plays. Expected:
+   480 lines, 29.97 fps, NTSC-M.
+5. Optional: `v4l2-ctl -d /dev/video0 --list-inputs` and
+   `v4l2-compliance -d /dev/video0` (package `v4l-utils`); paste the
+   summary lines.
+
+dmesg after the test:
+
+```sh
+sudo dmesg | grep -vE "bulk-IN data|START poll=|firmware chunk|SCMD write succeeded|SCMD interrupt|callbacks suppressed|bulk-IN first reads"
+```
 
 ## Findings
 
