@@ -118,6 +118,7 @@ pkg_name() { # what -> package name for this distribution
 	whiptail:*) echo "whiptail" ;;
 	gtk:apt-get) echo "python3-gi gir1.2-gtk-3.0" ;;
 	gtk:pacman) echo "python-gobject gtk3" ;;
+	gtk:zypper) echo "python3-gobject typelib-1_0-Gtk-3_0" ;;
 	gtk:*) echo "python3-gobject gtk3" ;;
 	v4lutils:*) echo "v4l-utils" ;;
 	esac

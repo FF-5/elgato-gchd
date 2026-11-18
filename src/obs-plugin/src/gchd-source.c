@@ -304,11 +304,14 @@ static void gchd_session(struct gchd_src *s, const char *path)
 	av_dict_set(&opt, "analyzeduration", "1000000", 0);
 	if (avformat_open_input(&fc, NULL, av_find_input_format("mpegts"),
 				&opt) < 0) {
+		blog(LOG_WARNING, "[gchd] %s: no transport stream", path);
 		fc = NULL;
 		goto out;
 	}
-	if (avformat_find_stream_info(fc, NULL) < 0)
+	if (avformat_find_stream_info(fc, NULL) < 0) {
+		blog(LOG_WARNING, "[gchd] %s: stream not recognized", path);
 		goto out;
+	}
 	vi = av_find_best_stream(fc, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
 	ai = av_find_best_stream(fc, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
 	if (vi >= 0)
@@ -361,14 +364,25 @@ static void *gchd_thread(void *data)
 	struct gchd_src *s = data;
 	char path[300];
 
+	bool told = false;
+
 	os_set_thread_name("gchd-capture");
+	blog(LOG_INFO, "[gchd] capture started (source shown)");
 	while (!s->stop) {
 		if (s->device && *s->device)
 			snprintf(path, sizeof(path), "%s", s->device);
 		else if (!gchd_find(path, sizeof(path)))
 			path[0] = 0;
-		if (path[0])
+		if (path[0]) {
+			told = false;
 			gchd_session(s, path);
+			if (!s->stop)
+				blog(LOG_INFO, "[gchd] capture from %s ended; retrying",
+				     path);
+		} else if (!told) {
+			blog(LOG_INFO, "[gchd] no device of the elgato_gchd driver; waiting");
+			told = true;
+		}
 		if (s->stop)
 			break;
 		/* No picture until the device is back. */
@@ -396,6 +410,7 @@ static void gchd_stop(struct gchd_src *s)
 	pthread_join(s->thread, NULL);
 	s->thread_running = false;
 	obs_source_output_video2(s->source, NULL);
+	blog(LOG_INFO, "[gchd] capture stopped (source hidden or settings changed)");
 }
 
 /* ------------------------------------------------------------ OBS source */

@@ -172,6 +172,17 @@ A task may be merged to `dev` only when all of these hold:
    `TASK.md` is rewritten for the next task, keeping the maintainer-comments
    section.
 
+## F2. Installation and tools for users
+
+1. **Distribution independent** (maintainer 2026-11-18): installation
+   scripts and user tools work on any common distribution, not only on
+   Ubuntu, where development and tests happen. Use only tools that exist
+   everywhere (bash, coreutils, udev, DKMS when present, the distribution's
+   package manager); name packages per package manager (apt, dnf, pacman,
+   zypper) and say which package is missing when it cannot be installed
+   automatically; no hard-coded Ubuntu paths or versions. Record what was
+   tested on which distribution in the test log.
+
 ## G. While working
 
 1. Make small commits with a clear "why" in the message.
