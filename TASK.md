@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** implemented (1904bc3, 743919d); hardware test with the test script
+- **Status:** implemented (1904bc3, 743919d, dea13c8); hardware test with the test script
 - **Type:** driver fixes
 - **Branch:** `fix/analog-robustness` (from `dev` 0.5.5)
 - **TODO items:** T-065, T-067, T-054 (stage 1)
@@ -28,7 +28,9 @@ The last small stage-1 issues with composite and S-video:
 2. T-067: a state change whose state is reached without the completion
    flag is accepted after the wait (acknowledged, warning logged).
 3. T-054: test steps (source off/on while capturing, NTSC and PAL).
-4. From the new recordings (743919d): `system_rate` refit (all 15 values),
+4. 288p capture start as recorded (R1, dea13c8): wait 0.4 s and read
+   `E7`/`F1` after the apply block.
+5. From the new recordings (743919d): `system_rate` refit (all 15 values),
    GOP 8 for the NTSC scaled outputs, `v_vinpelclk` 1 for 50 Hz and 0 for
    60 Hz at every size.
 
