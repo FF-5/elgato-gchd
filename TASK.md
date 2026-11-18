@@ -50,8 +50,14 @@ picture:
 
 ```sh
 sudo rmmod elgato_gchd 2>/dev/null; sudo dmesg -C
-# unplug and replug the device, then (N = 4, 5, 6, 1, 0):
-sudo insmod ./elgato_gchd.ko out2_test=N
+# unplug and replug the device, then ONE of these lines, in this order
+# for the successive runs:
+sudo insmod ./elgato_gchd.ko out2_test=4
+sudo insmod ./elgato_gchd.ko out2_test=5
+sudo insmod ./elgato_gchd.ko out2_test=6
+sudo insmod ./elgato_gchd.ko out2_test=1
+sudo insmod ./elgato_gchd.ko out2_test=0
+# then:
 v4l2-ctl -d /dev/video0 -i 2
 v4l2-ctl -d /dev/video0 -v width=640,height=480,pixelformat=MPEG
 ffplay -f mpegts /dev/video0
