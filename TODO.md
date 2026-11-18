@@ -53,33 +53,19 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
 ## Stage 1b — Applications (guvcview, OBS)
 
 - [ ] **T-060 (L)** Make the device usable in guvcview, OBS and similar
-      applications. A USB device cannot be turned into a UVC device by a
-      driver: UVC is a property of the device's own USB protocol. What
-      these applications need is a V4L2 device with uncompressed frames
-      (YUYV/NV12) and a normal audio source. Decoding H.264 is not allowed
-      in the kernel (RULES E2), so the plan is a small userspace service:
-      it reads the H.264/TS node, decodes (ffmpeg/GStreamer), deinterlaces
-      480i/576i and line-doubles 240p/288p, and feeds a `v4l2loopback`
-      device named "Elgato Game Capture HD" plus a PipeWire/PulseAudio
-      audio source; started automatically when an application opens it.
-      The service keeps one output size for the whole session (scaling
-      and aspect correction when the source changes between 480 and 576
-      lines or between interlaced and progressive), so applications never
-      see a format change (today ffplay keeps the window size of the first
-      frames and shows later modes squeezed).
-      Uses the MPEG-TS format with audio (done, 0.5.0).
-      The service also offers the input selection (the driver's private
-      "Input Source" menu control was removed in T-066: it changed the
-      input behind `v4l2-compliance`; `VIDIOC_S_INPUT` remains). guvcview
-      has no input selector of its own.
-      Decisions (maintainer 2026-11-18): shell + ffmpeg first, modular,
-      replaceable by something faster; capture device only on while an
-      application reads; output size = source size when the application
-      opens the device, large changes (standard, resolution, input) as
-      remove/add of the device like a UVC unplug; the device becomes a
-      second video node of `elgato_gchd` fed by the bridge (v4l2loopback
-      cannot remove an open device). Folder `service/`. Prototype (with
-      v4l2loopback) on `feat/app-bridge`.
+      applications: they need uncompressed frames and a separate audio
+      source; decoding is not allowed in the kernel (RULES E2). The driver
+      offers an application device ("Elgato Game Capture HD", YUYV, source
+      size and rate) fed through a frame input device by
+      `service/gchd-bridge` (ffmpeg: decode, deinterlace one frame per
+      field, scale), which runs only while an application streams; a
+      format change while an application uses the device re-registers it
+      like an unplugged camera (v4l2loopback cannot remove an open
+      device). Audio as a PipeWire/PulseAudio source. Decisions
+      (maintainer 2026-11-18): shell + ffmpeg first, modular, replaceable
+      by something faster; folder `service/`; tests without OBS for now.
+      Open: systemd user service, installer, input selection from the
+      desktop, remembered standard per input.
 
 ## Stage 2 — Component
 
