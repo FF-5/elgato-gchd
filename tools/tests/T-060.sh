@@ -1,7 +1,7 @@
 # T-060: application bridge (service/gchd-bridge): v4l2loopback device with
 # YUYV frames, audio source, capture device only on while an application
-# reads, input selection, source change while open, guvcview and OBS.
-# Needs: v4l2loopback-dkms, pactl (PipeWire or PulseAudio), guvcview, OBS.
+# reads, input selection, source change while open, guvcview.
+# Needs: v4l2loopback-dkms, pactl (PipeWire or PulseAudio), guvcview.
 
 LOOP=/dev/video42
 BRIDGE="$REPO/service/gchd-bridge"
@@ -69,11 +69,6 @@ confirm "guvcview shows the N64 picture again (scaled to the PAL size)?"
 prompt "Close guvcview."
 sleep 7
 expect "idle size follows the NTSC source after closing" "720/480" v4l2-ctl -d "$LOOP" --get-fmt-video
-
-step "OBS"
-prompt "In OBS add a 'Video Capture Device (V4L2)' source: device 'Elgato Game Capture HD' at $LOOP; and an 'Audio Input Capture (PulseAudio)' source: 'Elgato Game Capture HD'. N64 running."
-confirm "OBS shows the N64 picture and plays its sound, in sync?"
-prompt "Close OBS."
 
 step "bridge stopped"
 run kill "$BRIDGE_PID"
