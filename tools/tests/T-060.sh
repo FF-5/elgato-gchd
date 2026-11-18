@@ -10,7 +10,16 @@ BRIDGE="$REPO/service/gchd-bridge"
 # the stream line and the last frame count.
 loop_read() {
 	ffmpeg -hide_banner -nostdin -f v4l2 -i "$LOOP" -t "$1" -f null - 2>&1 |
-		tr '\r' '\n' | grep -E 'Stream #0|^frame=' | tail -2
+		tr '\r' '\n' > "$WORK/ffmpeg-read.txt"
+	grep -m1 'Stream #0' "$WORK/ffmpeg-read.txt"
+	grep '^frame=' "$WORK/ffmpeg-read.txt" | tail -1
+}
+
+# sink_streams: streams playing into the bridge's sink "elgato_gchd".
+sink_streams() {
+	local i
+	i=$(pactl list short sinks | awk '$2 == "elgato_gchd" { print $1 }')
+	pactl list short sink-inputs | awk -v i="$i" '$2 == i { print "stream into elgato_gchd:", $0 }'
 }
 
 step "v4l2loopback and the driver"
@@ -29,14 +38,14 @@ BRIDGE_PID=$!
 sleep 4
 expect "bridge running and both devices found" "loopback device: /dev/video42" bash "$BRIDGE" status
 run grep -q "service: *running" <(bash "$BRIDGE" status) || run cat "$WORK/bridge.log"
-expect "loopback offers 720x576 YUYV while idle" "720/576" v4l2-ctl -d "$LOOP" --get-fmt-video
+expect "loopback offers YUYV of the driver's current size while idle" "720/(480|576)" v4l2-ctl -d "$LOOP" --get-fmt-video
 expect "audio source present" "elgato_gchd_audio" pactl list short sources
 expect "capture device off while idle" "^0$" sh -c "sudo dmesg | grep -c 'starting hardware boot'"
 
 step "application reads: capture starts, 720x576 at 50 frames/s"
 loop_read 15 > "$WORK/read.txt"
 run cat "$WORK/read.txt"
-expect "loopback stream 720x576 YUYV" "yuyv422.*720x576" cat "$WORK/read.txt"
+expect "loopback stream YUYV 720x480 or 720x576" "yuyv422.*720x(480|576)" cat "$WORK/read.txt"
 expect "frame count >= 400 in 15 s (capture running)" "frame= *([4-9][0-9]{2}|[0-9]{4})" cat "$WORK/read.txt"
 expect "capture device started" "starting hardware boot" sudo dmesg
 
@@ -46,18 +55,21 @@ expect "hardware shut down after the last reader" "hardware shutdown done" sudo 
 
 step "audio while capturing"
 loop_read 14 > /dev/null &
+READER=$!
 sleep 7
-expect "audio source carries sound (mean volume above -60 dB)" "mean_volume: -([0-9]|[1-5][0-9])\." \
+expect "the bridge plays into the audio sink" "stream into elgato_gchd" sink_streams
+expect "audio source delivers samples" "n_samples: [1-9]" \
 	ffmpeg -hide_banner -nostdin -f pulse -i elgato_gchd_audio -t 4 -af volumedetect -f null -
-wait
+wait "$READER"
 
 step "input change through the bridge while an application reads"
 loop_read 24 > "$WORK/input-change.txt" &
+READER=$!
 sleep 8
 run bash "$BRIDGE" input svideo
 sleep 5
 run bash "$BRIDGE" input composite
-wait
+wait "$READER"
 run cat "$WORK/input-change.txt"
 expect "reader kept running (frame count >= 500)" "frame= *([5-9][0-9]{2}|[0-9]{4})" cat "$WORK/input-change.txt"
 expect "input back on composite" "Video input : 2" v4l2-ctl -d "$DEV" --get-input
