@@ -10,17 +10,17 @@ run v4l2-ctl -d "$DEV" -l
 
 step "default: 11250 kbit/s CBR"
 prompt "PS1 on composite, game running (PAL)."
-capture 10 720 576 25/1 tt
+capture 10 720 576 50/1 tt
 
 step "6000 kbit/s VBR (set while stopped)"
 set_ctrl video_bitrate_mode=0,video_bitrate=6000000
-capture 10 720 576 25/1 tt
+capture 10 720 576 50/1 tt
 
 step "14040 kbit/s VBR, changed while capturing"
-capture 14 720 576 25/1 tt "during=5:v4l2-ctl -d $DEV -c video_bitrate=14040000"
+capture 14 720 576 50/1 tt "during=5:v4l2-ctl -d $DEV -c video_bitrate=14040000"
 
 step "back to 11250 CBR while capturing"
-capture 14 720 576 25/1 tt "during=5:v4l2-ctl -d $DEV -c video_bitrate_mode=1,video_bitrate=11250000"
+capture 14 720 576 50/1 tt "during=5:v4l2-ctl -d $DEV -c video_bitrate_mode=1,video_bitrate=11250000"
 
 step "stretch"
 set_ctrl stretch_sd_input=1

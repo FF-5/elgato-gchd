@@ -103,7 +103,7 @@ build() {
 		make -C "/lib/modules/$(uname -r)/build" M="$REPO/dkms" clean modules W=1 \
 			> "$WORK/build.txt" 2>&1
 		local rc=$? w
-		w=$(grep -c "warning:" "$WORK/build.txt")
+		w=$(grep "warning:" "$WORK/build.txt" | grep -vc "compiler differs")
 		log "build rc=$rc warnings=$w"
 		grep -E "warning:|error:" "$WORK/build.txt" | grep -v "compiler differs" >> "$LOG"
 		if [ $rc -ne 0 ]; then
@@ -166,7 +166,9 @@ report() {
 
 # capture SECONDS [WIDTH HEIGHT FPS FIELD] [during=DELAY:COMMAND]: read the
 # MPEG stream with read(), check it with ffprobe. FPS as ffprobe prints
-# r_frame_rate (25/1, 30000/1001); FIELD progressive or tt (top first) or
+# r_frame_rate: the field rate for interlaced streams (50/1, 60000/1001),
+# the frame rate for progressive ones (25/1, 30000/1001); FIELD progressive
+# or tt (top first) or
 # "-" to skip. during=: run COMMAND DELAY seconds into the capture.
 capture() {
 	local secs=$1 f="$WORK/step$STEP-$RANDOM.ts" info errs during= kbps
