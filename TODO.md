@@ -36,7 +36,9 @@ Video modes and switching:
       composite polling too (recorded only for S-video; composite polling
       always reads `F5 = 62` in the recordings). Now S-video only, and the
       S-video → composite sequence only after S-video in the same session.
-      5a189e2 test: composite no sync at all; control test with `dev` next.
+      5a189e2 test: composite no sync at all. Control test: `dev` (the code
+      of the working PAL composite test) fails the same way (`0x88:FA` low
+      nibble `5`, then `D`) → setup, not driver; check with composite only.
 - [ ] **T-044 [HW] (S)** Reopening while the previous stop is still
       running failed once; make a new open wait for it.
 - [ ] **T-047 [HW] (S)** `hardware shutdown on last close failed: -5` after
@@ -92,9 +94,16 @@ settings above work on `dev`.
       manager (executable, with a terminal window; `pkexec` for root):
       - `firmware/` (renamed from `firmware_extract/`), bash: extracts the
         four firmware files from the official installer
-        (`GameCaptureSetup*.msi`). Optionally downloads the installer from
-        Elgato's own server after the user confirms (the firmware itself is
-        not redistributed by the project; to be decided by the maintainer).
+        (`GameCaptureSetup*.msi`). Optional download of that installer from
+        Elgato's own server after the user confirms, with a link to
+        Elgato's terms; no mirroring or redistribution of the installer or
+        firmware by the project; checksum check; URL kept in one place for
+        updates; manual download stays as the fallback.
+      - **Maintainer: e-mail Elgato (Corsair) and ask whether the script
+        may download the official installer from their server and extract
+        the firmware for use with this driver.** Decide on the download
+        option after the answer; until then the script only extracts from
+        an installer the user downloaded.
       - `install-driver.sh` at the top: installs the DKMS module (and the
         firmware step if missing), with an uninstall option.
       - `build-program.sh` at the top: builds the userspace program.
