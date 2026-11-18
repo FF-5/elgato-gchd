@@ -43,6 +43,7 @@ run grep -q "service: *running" <(bash "$BRIDGE" status) || run cat "$WORK/bridg
 expect "loopback offers YUYV of the driver's current size while idle" "720/(480|576)" v4l2-ctl -d "$LOOP" --get-fmt-video
 expect "audio source present" "elgato_gchd_audio" pactl list short sources
 expect "capture device off while idle" "^0$" sh -c "sudo dmesg | grep -c 'starting hardware boot'"
+run cat "$WORK/bridge.log"
 
 step "application reads: capture starts, 720x576 at 50 frames/s"
 loop_read 15 > "$WORK/read.txt"
