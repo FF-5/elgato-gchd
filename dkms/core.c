@@ -1113,6 +1113,31 @@ static void gchd_mode_workfn(struct work_struct *work)
      !d->input_configured || !READ_ONCE(d->signal_present))
   goto out;
 
+ /*
+  * The decoder can report the other family (60/50 Hz) only some time after
+  * the start. Two consecutive polls with it: configure again.
+  */
+ {
+  u8 family;
+
+  if (!gchd_input_read_family(d, &family) &&
+      ((family == 6 && d->input_height == 576) ||
+       (family == 7 && d->input_height == 480))) {
+   if (++d->family_mismatch >= 2) {
+    d->family_mismatch = 0;
+    dev_info(&d->intf->dev,
+             "source is %s while capturing; configuring again\n",
+             family == 7 ? "50 Hz" : "60 Hz");
+    WRITE_ONCE(d->signal_present, false);
+    WRITE_ONCE(d->detect_requested, true);
+    schedule_delayed_work(&d->detect_work, 0);
+    goto out;
+   }
+  } else {
+   d->family_mismatch = 0;
+  }
+ }
+
  /* 50 Hz sources: retrigger the back end when its status flag is set. */
  if (d->input_height == 576) {
   r = gchd_analog_poll_backend(d);

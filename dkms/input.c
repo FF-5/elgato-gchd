@@ -245,8 +245,9 @@ static int gchd_post_encoder_prefix(struct gchd *d)
 
 
  /* Continuation after the 0x88:FB read. */
- GCHD_DEC_W(d, 0x02, 0xc9);
- d->dec_svideo = false;
+ /* Keep the decoder mode of the selected analog input (S-video: DC). */
+ GCHD_DEC_W(d, 0x02, d->input == 3 ? 0xdc : 0xc9);
+ d->dec_svideo = d->input == 3;
  GCHD_DEC_W(d, 0x14, 0xd2);
  GCHD_DEC_W(d, 0x3c, 0x6b);
  GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
@@ -276,8 +277,9 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  GCHD_DEC_W(d, 0x6e, 0xa0);
  GCHD_DEC_W(d, 0x06, 0x08);
 
- GCHD_DEC_W(d, 0x02, 0xc9);
- d->dec_svideo = false;
+ /* Keep the decoder mode of the selected analog input (S-video: DC). */
+ GCHD_DEC_W(d, 0x02, d->input == 3 ? 0xdc : 0xc9);
+ d->dec_svideo = d->input == 3;
  GCHD_DEC_W(d, 0x14, 0xd2);
  GCHD_DEC_W(d, 0x3c, 0x6b);
  GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
@@ -1785,6 +1787,16 @@ int gchd_input_configure_idle(struct gchd *d)
  * configured. START does not complete while the back end is set up for the
  * other mode; returns -EAGAIN so that the caller configures again.
  */
+/* Low nibble of 0x88:FA: 6 = 60 Hz, 7 = 50 Hz family; other values: none. */
+int gchd_input_read_family(struct gchd *d, u8 *family)
+{
+ u8 v;
+
+ GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
+ *family = v & 0x0f;
+ return 0;
+}
+
 int gchd_input_check_mode(struct gchd *d)
 {
  bool interlaced;
