@@ -1989,6 +1989,11 @@ static int gchd_probe(struct usb_interface *i,
  d = kzalloc(sizeof(*d), GFP_KERNEL);
  if (!d)
   return -ENOMEM;
+ /*
+  * The analog decoder keeps its composite/S-video setting while powered,
+  * also across module reloads: treat it as possibly set for S-video.
+  */
+ d->dec_svideo = true;
  kref_init(&d->refcount);
  d->udev = usb_get_dev(interface_to_usbdev(i));
  d->intf = i;

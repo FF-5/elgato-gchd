@@ -28,10 +28,15 @@ on the `traces` branch.
 - [ ] **T-051 [WIN+HW] (M)** Component, all modes (480i, 480p, 576i, 576p,
       720p, 1080i; mode changes). The driver uses the C++ blocks; no
       recording of component with a signal yet.
-- [ ] **T-053b [HW] (S)** PAL S-video: works since b17d75e (`0x98:F5`
-      bit 7 retrigger). Open on `fix/pal-svideo`: composite after S-video
-      without replugging (decoder kept `0x88:02 = DC`; fixed, test pending).
-      288p capture start is still not recorded.
+- [ ] **T-053b [HW] (S)** PAL S-video works (b17d75e). Open on
+      `fix/pal-svideo`: composite after S-video (also after a module reload
+      without replugging) gave a vertically stretched picture: the decoder
+      kept the S-video setting and `0x88:28 = 8A` from a 288p session.
+      Now the recorded S-video → composite sequence (`02 = C9, 14 = D2,
+      3C = 6B`, pause, `28 = 88`, `03 = 28`) is written whenever the decoder
+      may still be set for S-video (always on the first composite start
+      after loading the module). Test pending. 288p capture start is still
+      not recorded.
 - [ ] **T-047 [HW] (S)** `hardware shutdown on last close failed: -5` when
       ffplay is closed after a session in which no source was detected.
 - [ ] **T-005b [OFF] (S)** Code comments still name `configureDevice()`
@@ -60,11 +65,23 @@ on the `traces` branch.
       sources (`docs/composite.md §10`): 640×480 and 480×360 use
       `v_ip_format 2`, GOP 6 and transport output 2; HD sizes and cropping
       cause no control transfers (bulk OUT `0x02` not in the reduced
-      recordings; check with the filter below); bitrate slider and
-      "stretch" (`v_in_source_type 2`) are encoder fields.
+      recordings), and cropping takes effect instantly (maintainer), so it
+      is done by the application; bitrate slider, 640×480 and "stretch"
+      (`v_in_source_type 2`) restart the encoder.
 - [ ] **T-054 [HW] (S)** Source loss and return.
 
 ## Data path and usability
+
+- [ ] **T-064 (M)** Input persistence (maintainer requirement): HDMI on the
+      very first use after installation; afterwards the last input the user
+      selected, also after replugging, module reloads and reboots. Today the
+      driver keeps it only while the module stays loaded (`gchd_last_input`).
+      Persisting it needs storage outside the kernel, for example: the
+      driver sends a uevent on each input change, a udev rule stores the
+      value (e.g. `/var/lib/elgato-gchd/input`), and a module parameter
+      `default_input` is set from it at load time (`/etc/modprobe.d`).
+      Touches `udev-rules/` (protected, RULES B4): to be decided with the
+      maintainer.
 
 - [ ] **T-020 [OFF→HW] (M)** MPEG-TS passthrough (`V4L2_PIX_FMT_MPEG`)
       instead of PES/H.264 extraction; robust TS resync.

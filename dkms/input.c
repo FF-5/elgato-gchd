@@ -650,10 +650,11 @@ static int gchd_prepare_analog_detection(struct gchd *d)
   * initial FD poll directly to 0x06=08 and the F8 read.
   * The discriminator is applied in late configuration after detection.
   *
-  * S-video needs its distinct decoder mode before detection. When the
-  * decoder is still set for S-video (it keeps the setting until the device
-  * is unplugged, also across closing and reopening), composite first gets
-  * C9 + D2 as the S-video-to-composite transition prefix.
+  * S-video needs its distinct decoder mode before detection. The decoder
+  * keeps its setting until the device loses power (also across closing,
+  * reopening and reloading the module). When it may still be set for
+  * S-video, composite gets the S-video-to-composite sequence instead:
+  * 02 = C9, 14 = D2, 3C = 6B, a pause, 28 = 88, then 03 = 28.
   */
  if (d->input == 3) {
   GCHD_DEC_W(d, 0x02, 0xdc);
@@ -664,11 +665,16 @@ static int gchd_prepare_analog_detection(struct gchd *d)
   GCHD_DEC_W(d, 0x02, 0xc9);
   d->dec_svideo = false;
   GCHD_DEC_W(d, 0x14, 0xd2);
+  GCHD_DEC_W(d, 0x3c, 0x6b);
+  msleep(220);
+  GCHD_DEC_W(d, 0x28, 0x88);
+  goto route;
  }
  GCHD_DEC_W(d, 0x06, 0x08);
 
  GCHD_DEC_R(d, 0xf8, reply);
 
+route:
  GCHD_DEC_W(d, 0x03, 0x28);
  GCHD_FE_W(d, 0xb3, 0x33);
  GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xce);
