@@ -126,9 +126,10 @@ since the decoder's state is not known then.
 ## 7. No-signal polling
 
 Read `0x88:FA`, read `0x98:F5`, about every 50 ms. When `0x98:F5` has bit 7
-set (`F2`, `E2`), the back end is retriggered (Observed: PAL S-video, after
-the routing writes; with an NTSC source `F5` reads `62` and no retrigger
-follows). When a source is connected, `0x88:CA` changes from `FE`, polling
+set (`F2`, `E2`), the back end is retriggered (Observed: S-video and
+composite, e.g. after the routing writes, after composite was selected
+following S-video, and while a PAL console powers up after a signal loss;
+when `F5` reads `62` no retrigger follows). When a source is connected, `0x88:CA` changes from `FE`, polling
 ends, and the sequence continues with §3 step 3.
 
 ## 8. PAL (Observed)

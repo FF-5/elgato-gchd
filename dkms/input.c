@@ -601,17 +601,20 @@ static int gchd_be_retrigger(struct gchd *d);
 static int gchd_encoder_program(struct gchd *d);
 
 /*
- * Status poll of the back end while waiting for an analog source. On
- * S-video, the back end is retriggered when GCHD_BE_STATUS_FLAG is set.
+ * Status poll of the back end while waiting for an analog source: the back
+ * end is retriggered when GCHD_BE_STATUS_FLAG is set (composite and S-video).
  */
-static int gchd_be_poll_status(struct gchd *d)
+static int gchd_be_poll_status(struct gchd *d, u8 *status)
 {
  u8 v;
 
  GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
- if (d->input != 3 || !(v & GCHD_BE_STATUS_FLAG))
+ if (status)
+  *status = v;
+ if (d->input < 2 || !(v & GCHD_BE_STATUS_FLAG))
   return 0;
- dev_dbg(&d->intf->dev, "back-end status 0x%02x while polling; retrigger\n", v);
+ dev_info_ratelimited(&d->intf->dev,
+                      "back-end status 0x%02x while polling; retrigger\n", v);
  return gchd_be_retrigger(d);
 }
 
@@ -639,7 +642,6 @@ int gchd_prepare_input_detection(struct gchd *d)
  */
 static int gchd_prepare_analog_detection(struct gchd *d)
 {
- bool from_svideo = false;
  int r;
  u8 reply;
 
@@ -666,7 +668,6 @@ static int gchd_prepare_analog_detection(struct gchd *d)
   GCHD_DEC_W(d, 0x14, 0xd2);
   GCHD_DEC_W(d, 0x28, 0x88);
  } else if (d->input == 2 && d->dec_svideo) {
-  from_svideo = true;
   GCHD_DEC_W(d, 0x02, 0xc9);
   d->dec_svideo = false;
   GCHD_DEC_W(d, 0x14, 0xd2);
@@ -714,12 +715,7 @@ route:
   int cycle;
   for (cycle = 0; cycle < 2; ++cycle) {
    GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, reply);
-   /*
-    * After the S-video to composite sequence the back end may still
-    * report its flag: one retrigger, as for S-video.
-    */
-   r = from_svideo && cycle == 0 ? gchd_analog_poll_backend(d) :
-                                   gchd_be_poll_status(d);
+   r = gchd_be_poll_status(d, NULL);
    if (r)
     return r;
    if (cycle == 0)
@@ -830,7 +826,7 @@ int gchd_probe_video_source(struct gchd *d)
   }
   d->input_fps_den=1;
  } else {
-  u8 v;
+  u8 v, be_status = 0;
 
   /*
    * After pre-detection tuning and the 0x94 prime, FA reports the analog
@@ -838,7 +834,7 @@ int gchd_probe_video_source(struct gchd *d)
    * deadlocks the 240p path; CA/E7 polling follows family detection.
    */
   GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
-  r = gchd_be_poll_status(d);
+  r = gchd_be_poll_status(d, &be_status);
   if (r)
    return r;
   dev_info(&d->intf->dev,
@@ -851,8 +847,8 @@ int gchd_probe_video_source(struct gchd *d)
    /* Diagnostic only: decoder lock status while no family is reported. */
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, lock);
    dev_info_ratelimited(&d->intf->dev,
-                        "gchd-diag no analog family: 0x88:FA=0x%02x 0x88:CA=0x%02x\n",
-                        v, lock);
+                        "gchd-diag no analog family: 0x88:FA=0x%02x 0x88:CA=0x%02x 0x98:F5=0x%02x\n",
+                        v, lock, be_status);
    return -ENOLINK;
   }
 
