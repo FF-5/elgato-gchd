@@ -248,3 +248,9 @@ restarts the encoder (§4 steps 5–8) unless noted.
 
 The same fields are written for the `_bl` variants. Transport output 1 and 2
 are defined in [hdmi.md §4](hdmi.md#4-capture-with-a-1080p60-source-output-size-changes-observed).
+Transport output 2 is delivered on bulk IN `0x84` (output 1 on `0x81`). A
+START with output 2 completes only when output 2 was enabled
+(`v_ts_out2_mode = 1`, `a_ts_out2_mode = 2`, `a2_mode = 3`) in the encoder
+setup after the firmware INIT, as the initialization recording does; the
+switch from the standard output to a scaled one then follows the sequence
+of §4 steps 5–8 without the back-end table.

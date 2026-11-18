@@ -22,9 +22,9 @@
 #define GCHD_PID_HDNEW			0x005d	/* HD-New (MB86M01) */
 
 #define GCHD_EP_FW_OUT			0x02	/* bulk OUT: firmware download */
-#define GCHD_EP_TS_IN			0x81	/* bulk IN: MPEG transport stream */
+#define GCHD_EP_TS_IN			0x81	/* bulk IN: MPEG transport stream, output 1 */
 #define GCHD_EP_INT_IN			0x83	/* interrupt IN: mailbox/SCMD notify */
-#define GCHD_EP_AUX_IN			0x84	/* bulk IN: payload not documented */
+#define GCHD_EP_AUX_IN			0x84	/* bulk IN: MPEG transport stream, output 2 */
 
 #define GCHD_FW_CHUNK_HD		16384	/* firmware chunk size, original HD */
 #define GCHD_FW_CHUNK_HDNEW		32768	/* firmware chunk size, HD-New */

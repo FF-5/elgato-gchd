@@ -44,6 +44,12 @@ Video modes and switching:
       (N64 → running PS1: `0x88:FA` stayed `6`): on S-video one restart of
       ~7 s, on composite two restarts (240p, then 576i). Treat `E7` bit 7
       with an unlocked `CA` like a drop (wait for 50 Hz).
+- [ ] **T-067 [HW] (S)** Firmware start-up failed twice in the T-055
+      tests (`state-change timeout: current=0x10 expected=0x11 state=0x0011
+      completion=0x0008`, IDLE completes without the completion flag), each
+      after a session that ended with a failed START. Check whether it also
+      happens after normal sessions; treat state 0x11 without the flag as
+      IDLE reached.
 - [ ] 288p capture start (recording wanted; the driver uses the apply block
       of the 576i → 288p change).
 
@@ -188,7 +194,7 @@ Change one at a time (RULES D5), when the mode can be tested.
 | Composite prefix | `02 = C9 … 28 = 88` written on the first composite start after loading the module | written only after S-video (HDMI → composite writes none of them) |
 | Initial analog detection | waits until `0x88:CA` reads `7E` or `66`; family re-checked before START | unknown (no recording of a 480i start) |
 | Receive queue at restart | URBs queued after INIT A0, before START | queued before the first encoder write |
-| Bulk IN `0x84` | required (`-ENODEV` if absent) | queued (8 URBs), never carries data |
+| Bulk IN `0x84` | required (`-ENODEV` if absent); parsed while transport output 2 runs | queued (8 URBs); carries transport output 2 (scaled outputs) |
 | Repeated `0x88:02/3C`, `0x94` writes after detection | written | not written (T-011) |
 
 ## Evidence wanted (maintainer)

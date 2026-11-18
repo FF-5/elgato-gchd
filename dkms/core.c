@@ -817,7 +817,14 @@ static int gchd_rx(void *arg)
    * Before a scaled output has been switched to, the stream of the
    * standard output is not delivered.
    */
-  if (d->input >= 2 && READ_ONCE(d->out_active) != READ_ONCE(d->analog_out)) {
+  /*
+   * Transport output 1 arrives on 0x81, output 2 (scaled outputs) on 0x84;
+   * only the endpoint of the running output is parsed.
+   */
+  if (done->endpoint != (d->input >= 2 && READ_ONCE(d->out_active) != GCHD_OUT_STANDARD ?
+                         GCHD_EP_AUX_IN : GCHD_EP_TS_IN)) {
+   /* Other endpoint: not parsed. */
+  } else if (d->input >= 2 && READ_ONCE(d->out_active) != READ_ONCE(d->analog_out)) {
    /* Data flows: keep the signal-loss check satisfied. */
    if (done->urb->actual_length > 0)
     d->last_video_jiffies = jiffies;
@@ -871,9 +878,10 @@ static int gchd_rx(void *arg)
 
   if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
    dev_info(&d->intf->dev,
-            "async bulk-IN stats: reads=%llu bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
+            "async bulk-IN stats: reads=%llu bytes=%llu ep84_bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
             (unsigned long long)rx_reads,
             (unsigned long long)rx_bytes,
+            (unsigned long long)rx_aux_bytes,
             (unsigned long long)rx_empty,
             (unsigned long long)rx_errors,
             atomic_read(&d->rx_urb_errors),
