@@ -16,6 +16,9 @@ MODULE_PARM_DESC(signal_active_retries, "Signal measurement retries when timing 
 module_param(signal_inactive_retries, uint, 0644);
 MODULE_PARM_DESC(signal_inactive_retries, "Signal measurement retries when timing is not detected");
 module_param(signal_poll_delay_ms, uint, 0644);
+static bool dec_dump;
+module_param(dec_dump, bool, 0644);
+MODULE_PARM_DESC(dec_dump, "Diagnostic: log decoder registers 0x88:00-7F before analog detection");
 MODULE_PARM_DESC(signal_poll_delay_ms, "Delay in milliseconds between signal measurement batches");
 
 static bool gchd_hdmi_timing_valid(u32 value)
@@ -749,6 +752,17 @@ route:
  GCHD_AUX_W(d, 0x41, 0x37);
  GCHD_AUX_W(d, 0x4a, 0xb7);
  GCHD_AUX_W(d, 0x4b, 0xb7);
+
+ if (dec_dump) {
+  u8 regs[16];
+  int base, k;
+
+  for (base = 0; base < 0x80; base += 16) {
+   for (k = 0; k < 16; ++k)
+    GCHD_DEC_R(d, base + k, regs[k]);
+   dev_info(&d->intf->dev, "dec %02x: %16ph\n", base, regs);
+  }
+ }
 
  d->input_detect_prepared = true;
  return 0;

@@ -43,8 +43,9 @@ material.
   branch (`git show origin/tools:tools/compare-objs.sh`).
 - Documentation (`docs/`, `dkms/README.md`) is neutral product
   documentation (RULES C).
-- Never modify `src/`, `CMakeLists.txt`, `udev-rules/`, `CREDITS.md`,
-  `LICENSE` or the top-level `README.md` (RULES B4).
+- Never modify `src/`, `CMakeLists.txt`, the original files in
+  `udev-rules/`, `CREDITS.md`, `LICENSE` or the top-level `README.md`
+  (RULES B4); new files of our own in `udev-rules/` are allowed.
 
 ## Branches
 
