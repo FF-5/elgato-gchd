@@ -73,11 +73,17 @@ Delete `/etc/modprobe.d/elgato-gchd-settings.conf` to return to the
 defaults. `modprobe` applies the file; with `insmod` pass the options by
 hand.
 
-## Video device
+## Video devices
 
-Inputs: HDMI (0), Component (1), Composite (2), S-Video (3). The hardware is
-initialized on `VIDIOC_STREAMON`. The output format is described in
-[`../docs/video-output.md`](../docs/video-output.md).
+- "Elgato Game Capture HD (H.264)": the compressed stream; inputs HDMI (0),
+  Component (1), Composite (2), S-Video (3). The hardware is initialized
+  on `VIDIOC_STREAMON`.
+- "Elgato Game Capture HD": uncompressed YUYV frames for applications,
+  written into "Elgato Game Capture HD (frame input)" by a userspace
+  program (`service/gchd-bridge`); state in the sysfs attribute `app` of
+  the USB interface.
+
+The formats are described in [`../docs/video-output.md`](../docs/video-output.md).
 
 ## Source layout
 
@@ -93,6 +99,7 @@ initialized on `VIDIOC_STREAMON`. The output format is described in
 | `transcoder.c` | Encoder defaults and per-mode configuration. |
 | `core.c` | V4L2 device, buffer queue, device lifecycle, bulk-IN reception, USB probe and disconnect. |
 | `fops.c` | V4L2 file operations. |
+| `app.c` | Application device, frame input device, sysfs attribute `app`. |
 
 Example of the access macros:
 

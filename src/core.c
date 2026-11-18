@@ -27,6 +27,11 @@ static void gchd_release_ref(struct kref *ref)
  usb_put_dev(d->udev);
  kfree(d);
 }
+
+void gchd_put(struct gchd *d)
+{
+ kref_put(&d->refcount, gchd_release_ref);
+}
 static struct v4l2_file_operations gchd_fops;
 
 static unsigned long ring_bytes = GCHD_RING_BYTES;
@@ -126,6 +131,35 @@ static void gchd_nominal_format(const struct gchd *d, u32 *width, u32 *height)
   *width = 1280;
   *height = 720;
  }
+}
+
+/*
+ * Size and frame rate of the source for the application device: the
+ * detected mode, else the nominal size of the input. Interlaced sources
+ * count one frame per field. Returns false when no mode is detected.
+ */
+bool gchd_source_format(struct gchd *d, u32 *width, u32 *height,
+                        struct v4l2_fract *rate)
+{
+ bool known = d->input_width && d->input_height;
+
+ if (known) {
+  *width = d->input_width;
+  *height = d->input_height;
+ } else {
+  gchd_nominal_format(d, width, height);
+ }
+ if (d->input >= 2) {
+  rate->numerator = *height == 576 ? 50 : 60000;
+  rate->denominator = *height == 576 ? 1 : 1001;
+ } else if (d->input_fps_num && d->input_fps_den) {
+  rate->numerator = d->input_fps_num;
+  rate->denominator = d->input_fps_den;
+ } else {
+  rate->numerator = 60;
+  rate->denominator = 1;
+ }
+ return known;
 }
 
 static void gchd_analog_out_size(const struct gchd *d, u8 out,
@@ -543,6 +577,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
+  gchd_app_update(d);
   WRITE_ONCE(d->signal_present, true);
   dev_info(&d->intf->dev,
            "signal present: input=%u; first video TS packet on PID 0x1011\n",
@@ -632,6 +667,7 @@ static void gchd_signal_check(struct gchd *d)
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
+  gchd_app_update(d);
   WRITE_ONCE(d->signal_present, false);
   /* RX must not issue control transfers or attempt to stop itself here. */
   if (READ_ONCE(d->capture_active) && READ_ONCE(d->detect_requested))
@@ -1181,6 +1217,7 @@ static void gchd_detection_worker(struct work_struct *work)
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
+  gchd_app_update(d);
 
   if (!READ_ONCE(d->capture_active)) {
    /*
@@ -1391,6 +1428,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   ev.id = d->input;
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
+  gchd_app_update(d);
   dev_info(&d->intf->dev, "analog mode now %s\n",
            d->input_interlaced ? "576i" : "288p");
   goto reschedule;
@@ -1474,6 +1512,7 @@ stop_and_restart:
  ev.id = d->input;
  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
  v4l2_event_queue(&d->vdev, &ev);
+  gchd_app_update(d);
  dev_info(&d->intf->dev, "analog mode now %s, output %u\n",
           d->input_height == 576 ? (d->input_interlaced ? "576i" : "288p") :
           (d->input_interlaced ? "480i" : "240p"), d->out_active);
@@ -1836,7 +1875,16 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  /* Only the file handle that owns the capture buffers may switch inputs. */
  if (i != d->input && vb2_queue_is_busy(&d->vbq, f))
   return -EBUSY;
- return gchd_set_input(d, i);
+ return gchd_select_input(d, i);
+}
+
+/* Input selection from the application device (app.c). */
+int gchd_select_input(struct gchd *d, unsigned int i)
+{
+ int r = gchd_set_input(d, i);
+
+ gchd_app_update(d);
+ return r;
 }
 
 /*
@@ -1906,6 +1954,7 @@ static int gchd_s_dv_timings(struct file *f, void *p, struct v4l2_dv_timings *t)
  d->width = m->width;
  d->height = m->height;
  *t = gchd_dv_presets[i];
+ gchd_app_update(d);
  return 0;
 }
 
@@ -1976,7 +2025,7 @@ static int gchd_dv_timings_cap(struct file *f, void *p,
 
 static int gchd_querycap(struct file*f,void*p,struct v4l2_capability*c)
 {struct gchd *d = video_drvdata(f);
- strscpy(c->driver,"elgato-gchd",sizeof(c->driver));strscpy(c->card,"Elgato Game Capture HD",sizeof(c->card));
+ strscpy(c->driver,"elgato-gchd",sizeof(c->driver));strscpy(c->card,d->vdev.name,sizeof(c->card));
  usb_make_path(d->udev,c->bus_info,sizeof(c->bus_info));c->device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_STREAMING|V4L2_CAP_READWRITE;c->capabilities=c->device_caps|V4L2_CAP_DEVICE_CAPS;return 0;}
 
 static int gchd_enum(struct file*f,void*p,struct v4l2_fmtdesc*x)
@@ -2433,9 +2482,21 @@ static int gchd_fop_release(struct file *file)
  return r;
 }
 
+/*
+ * The driver data lives as long as the v4l2_device, which every registered
+ * device node holds until its last handle is closed (also the application
+ * devices that were re-registered).
+ */
+static void gchd_v4l2_dev_release(struct v4l2_device *v)
+{
+ gchd_put(container_of(v, struct gchd, v4l2_dev));
+}
+
 int gchd_v4l2_register(struct gchd*d)
 {
  int r=v4l2_device_register(&d->intf->dev,&d->v4l2_dev);if(r)return r;
+ kref_get(&d->refcount);
+ d->v4l2_dev.release = gchd_v4l2_dev_release;
  v4l2_ctrl_handler_init(&d->ctrls,7);
  /* Control defaults are the remembered settings (gchd_settings_load()). */
  {
@@ -2477,7 +2538,7 @@ int gchd_v4l2_register(struct gchd*d)
  memset(&d->vbq,0,sizeof(d->vbq));d->vbq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE;d->vbq.io_modes=VB2_MMAP|VB2_READ;d->vbq.timestamp_flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;d->vbq.dev=&d->intf->dev;
  d->vbq.drv_priv=d;d->vbq.ops=&gchd_vb2_ops;d->vbq.mem_ops=&vb2_vmalloc_memops;d->vbq.lock=&d->lock;
  r=vb2_queue_init(&d->vbq);if(r)goto err;
- strscpy(d->vdev.name,d->family == GCHD_FAMILY_HDNEW ? "Elgato Game Capture HD (HDNew)" : "Elgato Game Capture HD",sizeof(d->vdev.name));d->vdev.v4l2_dev=&d->v4l2_dev;d->vdev.release=video_device_release_empty;
+ strscpy(d->vdev.name,d->family == GCHD_FAMILY_HDNEW ? "Elgato Game Capture HD (HDNew, H.264)" : "Elgato Game Capture HD (H.264)",sizeof(d->vdev.name));d->vdev.v4l2_dev=&d->v4l2_dev;d->vdev.release=video_device_release_empty;
  gchd_fops = vb2_fops;
  gchd_fops.open = gchd_fop_open;
  gchd_fops.release = gchd_fop_release;
@@ -2486,9 +2547,9 @@ int gchd_v4l2_register(struct gchd*d)
  r=video_register_device(&d->vdev,VFL_TYPE_VIDEO,-1);if(r)goto err;
  gchd_update_tvnorms(d);
  return 0;
-err:v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);return r;
+err:v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);v4l2_device_put(&d->v4l2_dev);return r;
 }
-void gchd_v4l2_unregister(struct gchd*d){video_unregister_device(&d->vdev);v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);}
+void gchd_v4l2_unregister(struct gchd*d){video_unregister_device(&d->vdev);v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);v4l2_device_put(&d->v4l2_dev);}
 
 static const struct usb_device_id gchd_ids[] = {
  { USB_DEVICE(GCHD_VID, GCHD_PID_HD_0044), .driver_info = GCHD_FAMILY_OLD },
@@ -2573,6 +2634,13 @@ static int gchd_probe(struct usb_interface *i,
   usb_set_intfdata(i, NULL);
   goto err;
  }
+ r = gchd_app_init(d);
+ if (r) {
+  dev_err(&i->dev, "application device: setup failed: %d\n", r);
+  gchd_v4l2_unregister(d);
+  usb_set_intfdata(i, NULL);
+  goto err;
+ }
  gchd_set_lifecycle(d, GCHD_ONLINE);
  dev_info(&i->dev,
           "GCHD lifecycle: USB present; V4L2 registered; hardware stays powered off until STREAMON\n");
@@ -2604,6 +2672,7 @@ static void gchd_disconnect(struct usb_interface *i)
  mutex_unlock(&d->lifecycle_lock);
 
  /* The interface may already be gone: never issue USB commands here. */
+ gchd_app_cleanup(d);
  gchd_v4l2_unregister(d);
  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_out_len = 0; WRITE_ONCE(d->wait_pat, true); d->ts_base_valid = false;
  kref_put(&d->refcount, gchd_release_ref);
@@ -2646,6 +2715,7 @@ static struct usb_driver gchd_usb = {
  .id_table = gchd_ids,
  .probe = gchd_probe,
  .disconnect = gchd_disconnect,
+ .dev_groups = gchd_groups,
  .driver = {
   .shutdown = gchd_shutdown,
  },
