@@ -10,7 +10,7 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.5.1");
+MODULE_VERSION("0.5.2");
 
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
@@ -66,12 +66,48 @@ static void gchd_set_negotiated(struct gchd *d, u32 width, u32 height)
  d->height = height;
 }
 
+/* Analog standards reported for composite and S-video. */
+#define GCHD_ANALOG_STDS (V4L2_STD_NTSC_M | V4L2_STD_PAL)
+
+static bool gchd_std_is_50hz(v4l2_std_id std)
+{
+ return !!(std & V4L2_STD_PAL);
+}
+
+/*
+ * Standard of the selected analog input: the one detected last on it while
+ * the module is loaded, NTSC before the first detection.
+ */
+static v4l2_std_id gchd_analog_std(const struct gchd *d)
+{
+ v4l2_std_id std = d->input >= 2 ? d->analog_std[d->input - 2] : 0;
+
+ return std ? std : V4L2_STD_NTSC_M;
+}
+
+/*
+ * Standards can be enumerated only on composite and S-video. tvnorms is set
+ * at registration so that the standard ioctls exist, and follows the input.
+ */
+static void gchd_update_tvnorms(struct gchd *d)
+{
+ d->vdev.tvnorms = d->input >= 2 ? GCHD_ANALOG_STDS : 0;
+}
+
+/* Field order of the encoded analog stream: top field first (both families). */
+static enum v4l2_field gchd_field(const struct gchd *d)
+{
+ if (d->input >= 2)
+  return V4L2_FIELD_INTERLACED_TB;
+ return d->input_interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+}
+
 /* Nominal format of an input before a signal has been measured. */
 static void gchd_nominal_format(const struct gchd *d, u32 *width, u32 *height)
 {
  if (d->input >= 2) {
   *width = 720;
-  *height = d->input_height == 576 ? 576 : 480;
+  *height = gchd_std_is_50hz(gchd_analog_std(d)) ? 576 : 480;
  } else {
   *width = 1280;
   *height = 720;
@@ -102,6 +138,7 @@ static void gchd_input_selection_enter(struct gchd *d)
 {
  mutex_lock(&gchd_last_input_lock);
  d->input = gchd_last_input <= 3 ? gchd_last_input : 0;
+ gchd_update_tvnorms(d);
  mutex_unlock(&gchd_last_input_lock);
 
  /* A new open starts from the common HDMI/default route. */
@@ -529,8 +566,7 @@ static void gchd_deliver(struct gchd *d)
   } else {
    memcpy(dst,f->data,f->len);vb2_set_plane_payload(&b->vb.vb2_buf,0,f->len);
    b->vb.sequence=f->sequence;b->vb.vb2_buf.timestamp=gchd_buffer_timestamp(d, f->ts90);
-   b->vb.field=(d->input >= 2 || d->input_interlaced) ?
-               V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+   b->vb.field=gchd_field(d);
    dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%llu bytes=%zu sizeimage=%u\n",
            (unsigned long long)f->sequence, f->len, d->sizeimage);
    vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_DONE);
@@ -1451,8 +1487,45 @@ static int gchd_enuminput(struct file *f, void *p, struct v4l2_input *in)
    schedule_delayed_work(&d->detect_work, 0);
   }
  }
- if (index < 2)
+ if (index < 2) {
   in->capabilities = V4L2_IN_CAP_DV_TIMINGS;
+ } else {
+  in->capabilities = V4L2_IN_CAP_STD;
+  in->std = GCHD_ANALOG_STDS;
+ }
+ return 0;
+}
+
+/*
+ * Analog standard. The source decides it; S_STD accepts any supported
+ * standard and changes nothing. Digital inputs have no standard.
+ */
+static int gchd_g_std(struct file *f, void *p, v4l2_std_id *std)
+{
+ struct gchd *d = video_drvdata(f);
+
+ if (d->input < 2)
+  return -ENODATA;
+ *std = gchd_analog_std(d);
+ return 0;
+}
+
+static int gchd_s_std(struct file *f, void *p, v4l2_std_id std)
+{
+ struct gchd *d = video_drvdata(f);
+
+ if (d->input < 2)
+  return -ENODATA;
+ return (std & GCHD_ANALOG_STDS) ? 0 : -EINVAL;
+}
+
+static int gchd_querystd(struct file *f, void *p, v4l2_std_id *std)
+{
+ struct gchd *d = video_drvdata(f);
+
+ if (d->input < 2)
+  return -ENODATA;
+ *std = READ_ONCE(d->signal_present) ? gchd_analog_std(d) : V4L2_STD_UNKNOWN;
  return 0;
 }
 
@@ -1545,6 +1618,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->ts_partial_len = 0;
  d->previous_input = d->input;
  d->input = i;
+ gchd_update_tvnorms(d);
  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
  mutex_lock(&gchd_last_input_lock);
  gchd_last_input = i;
@@ -1590,6 +1664,10 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
  struct gchd *d = video_drvdata(f);
  struct v4l2_ctrl *ctrl;
  int r;
+
+ /* Only the file handle that owns the capture buffers may switch inputs. */
+ if (i != d->input && vb2_queue_is_busy(&d->vbq, f))
+  return -EBUSY;
 
  r = gchd_set_input(d, i);
  if (r)
@@ -1684,8 +1762,9 @@ static int gchd_enum_dv_timings(struct file *f, void *p,
 }
 
 static int gchd_querycap(struct file*f,void*p,struct v4l2_capability*c)
-{strscpy(c->driver,"elgato-gchd",sizeof(c->driver));strscpy(c->card,"Elgato Game Capture HD",sizeof(c->card));
- strscpy(c->bus_info,"usb",sizeof(c->bus_info));c->device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_STREAMING|V4L2_CAP_READWRITE;c->capabilities=c->device_caps|V4L2_CAP_DEVICE_CAPS;return 0;}
+{struct gchd *d = video_drvdata(f);
+ strscpy(c->driver,"elgato-gchd",sizeof(c->driver));strscpy(c->card,"Elgato Game Capture HD",sizeof(c->card));
+ usb_make_path(d->udev,c->bus_info,sizeof(c->bus_info));c->device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_STREAMING|V4L2_CAP_READWRITE;c->capabilities=c->device_caps|V4L2_CAP_DEVICE_CAPS;return 0;}
 
 static int gchd_enum(struct file*f,void*p,struct v4l2_fmtdesc*x)
 {
@@ -1748,6 +1827,17 @@ static int gchd_enum_frameintervals(struct file *f, void *p,
  if (!gchd_pixfmt_ok(v->pixel_format))
   return -EINVAL;
 
+ if (d->input >= 2) {
+  /* Encoded frame rate: 30000/1001 (60 Hz family) or 25 (50 Hz). */
+  if (v->index != 0 || v->width != 720 ||
+      (v->height != 480 && v->height != 576))
+   return -EINVAL;
+  v->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+  v->discrete.numerator = v->height == 576 ? 1 : 1001;
+  v->discrete.denominator = v->height == 576 ? 25 : 30000;
+  return 0;
+ }
+
  m = NULL;
  for (i = 0; i < ARRAY_SIZE(gchd_modes); ++i) {
   if (gchd_modes[i].width == v->width &&
@@ -1769,11 +1859,24 @@ static int gchd_enum_frameintervals(struct file *f, void *p,
 static int gchd_gfmt(struct file*f,void*p,struct v4l2_format*x)
 {
  struct gchd*d=video_drvdata(f);
+
+ /*
+  * Composite and S-video: the size follows the source (buffers have a fixed
+  * size for both): the configured mode, else the standard detected last. A
+  * capture allocates its buffers before detection, so the negotiated size
+  * alone stays at the nominal one.
+  */
+ if (d->input >= 2) {
+  d->width = 720;
+  if (d->input_height == 480 || d->input_height == 576)
+   d->height = d->input_height;
+  else
+   gchd_nominal_format(d, &d->width, &d->height);
+ }
  x->fmt.pix.width=d->width;x->fmt.pix.height=d->height;
  x->fmt.pix.pixelformat=d->pixfmt;
  /* Analog inputs are always encoded interlaced (also 240p/288p). */
- x->fmt.pix.field=(d->input >= 2 || d->input_interlaced) ?
-                  V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
+ x->fmt.pix.field=gchd_field(d);
  x->fmt.pix.sizeimage=d->sizeimage;
  x->fmt.pix.colorspace=V4L2_COLORSPACE_REC709;
  return 0;
@@ -1795,10 +1898,10 @@ static const struct gchd_mode *gchd_adjust_fmt(struct gchd *d,
  if (!gchd_pixfmt_ok(pix->pixelformat))
   pix->pixelformat = V4L2_PIX_FMT_H264;
  if (d->input >= 2) {
+  /* The source decides the size: that of the standard detected last. */
   pix->width = 720;
-  pix->height = pix->height == 576 ? 576 :
-                (pix->height == 480 ? 480 : d->height == 576 ? 576 : 480);
-  pix->field = V4L2_FIELD_INTERLACED;
+  pix->height = gchd_std_is_50hz(gchd_analog_std(d)) ? 576 : 480;
+  pix->field = V4L2_FIELD_INTERLACED_TB;
  } else {
   m = gchd_find_mode(pix->width, pix->height, interlaced);
   if (!m || !gchd_mode_allowed(d, m))
@@ -1864,7 +1967,15 @@ static int gchd_g_parm(struct file *f, void *p, struct v4l2_streamparm *a)
   return -EINVAL;
  memset(&a->parm.capture, 0, sizeof(a->parm.capture));
  a->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
- if (d->input_fps_num && d->input_fps_den) {
+ /* Buffers used by read() (vb2 file I/O). */
+ a->parm.capture.readbuffers = 2;
+ if (d->input >= 2) {
+  bool pal = d->input_height ? d->input_height == 576 :
+                               gchd_std_is_50hz(gchd_analog_std(d));
+
+  t->numerator = pal ? 1 : 1001;
+  t->denominator = pal ? 25 : 30000;
+ } else if (d->input_fps_num && d->input_fps_den) {
   t->numerator = d->input_fps_den;
   t->denominator = d->input_fps_num;
  } else {
@@ -1897,6 +2008,7 @@ static const struct v4l2_ioctl_ops gchd_ioctl={
  .vidioc_enum_framesizes=gchd_enum_framesizes,
  .vidioc_enum_frameintervals=gchd_enum_frameintervals,
  .vidioc_enum_input=gchd_enuminput,
+ .vidioc_g_std=gchd_g_std,.vidioc_s_std=gchd_s_std,.vidioc_querystd=gchd_querystd,
  .vidioc_g_input=gchd_ginput,.vidioc_s_input=gchd_sinput,
  .vidioc_g_fmt_vid_cap=gchd_gfmt,.vidioc_s_fmt_vid_cap=gchd_sfmt,
 .vidioc_try_fmt_vid_cap=gchd_tryfmt,
@@ -2101,9 +2213,11 @@ int gchd_v4l2_register(struct gchd*d)
  gchd_fops = vb2_fops;
  gchd_fops.open = gchd_fop_open;
  gchd_fops.release = gchd_fop_release;
- d->vdev.fops=&gchd_fops;d->vdev.ioctl_ops=&gchd_ioctl;d->vdev.queue=&d->vbq;d->vdev.lock=&d->lock;
+ d->vdev.tvnorms=GCHD_ANALOG_STDS;d->vdev.fops=&gchd_fops;d->vdev.ioctl_ops=&gchd_ioctl;d->vdev.queue=&d->vbq;d->vdev.lock=&d->lock;
  d->vdev.ctrl_handler=&d->ctrls;d->vdev.device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_STREAMING|V4L2_CAP_READWRITE;video_set_drvdata(&d->vdev,d);
- r=video_register_device(&d->vdev,VFL_TYPE_VIDEO,-1);if(r)goto err;return 0;
+ r=video_register_device(&d->vdev,VFL_TYPE_VIDEO,-1);if(r)goto err;
+ gchd_update_tvnorms(d);
+ return 0;
 err:v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);return r;
 }
 void gchd_v4l2_unregister(struct gchd*d){video_unregister_device(&d->vdev);v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);}

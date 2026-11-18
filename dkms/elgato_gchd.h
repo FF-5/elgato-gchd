@@ -119,6 +119,7 @@ struct gchd {
  unsigned long pal60_since; /* first 60 Hz lock seen by detection; 0 = none */
  bool pal60_logged;
  unsigned long shutdown_done; /* jiffies of the last completed shutdown; 0 = none */
+ v4l2_std_id analog_std[2]; /* last standard detected on composite, S-video; 0 = none */
  u16 dec_applied; /* family << 8 | 0x88:28 of the last family apply block; 0 = unknown */
  bool detect_requested;
  bool disconnected;

@@ -18,15 +18,20 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.1): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.2): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
-  §8.3`), composite ↔ S-video without unplugging, close and reopen.
+  §8.3`), composite ↔ S-video without unplugging, close and reopen
+  (also right after a close and after a session without a source),
+  STREAMOFF → STREAMON on one handle. V4L2 reporting: standard (NTSC-M /
+  PAL, QUERYSTD/G_STD), 720×480/576 by source, 29.97 / 25 fps,
+  interlaced top field first; input changes from other processes refused
+  while one captures.
   Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
-  `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; outputs
-  60 Hz with PAL colour for a few seconds after power-on and reset; the
-  driver waits for its 50 Hz signal).
+  `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; the decoder
+  reports 60 Hz for a few seconds after power-on and reset, also with the
+  Windows driver; the driver waits for the 50 Hz reading).
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller.
 
 ## Stage 1 — Composite and S-video complete
@@ -55,11 +60,15 @@ Output and settings (`docs/composite.md §10`):
       per output size), "stretch" (`v_in_source_type 2`), H.264
       profile/level/GOP if exposed. V4L2 controls; each change restarts the
       encoder like the recordings.
-- [ ] **T-046 [OFF] (S)** Frame rate reported before detection is the NTSC
-      default (ffplay shows 60 fps for PAL on the first open).
-- [ ] **T-022 [OFF] (S)** Field order/`V4L2_FIELD_INTERLACED` reporting
-      for 480i/576i/240p/288p.
-- [ ] **T-042 [OFF] (S)** Report the current analog mode to userspace.
+- [ ] **T-066 [OFF→HW] (M)** v4l2-compliance 1.26.1 failures left after
+      4c326eb: HDMI/component `G_DV_TIMINGS` fails without a signal although
+      `V4L2_IN_CAP_DV_TIMINGS` is set, `VIDIOC_DV_TIMINGS_CAP` missing
+      (also breaks the buffer tests via `g_dv_timings`); a menu control
+      rejects item 0 ("could not set valid menu item 0", all inputs);
+      `V4L2_CID_DV_RX_POWER_PRESENT` missing (warning). The input menu
+      control still switches inputs for any process while another one
+      captures (S_INPUT returns EBUSY since fd8426b). Needed for
+      guvcview/OBS robustness (T-060).
 - [ ] **T-064 (M)** Input persistence: HDMI on first use after
       installation, afterwards the last selected input, also across module
       reloads and reboots (today only while the module stays loaded). Plan:

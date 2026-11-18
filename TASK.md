@@ -1,41 +1,37 @@
-# TASK T-046 — Format reporting for analog sources
+# TASK T-055 — Output sizes for analog sources
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** analysis; implementation next
-- **Type:** driver feature (V4L2 reporting)
-- **Branch:** `feat/format-reporting` (from `dev` 0.5.1)
-- **TODO items:** T-046, T-022, T-042 (stage 1)
+- **Status:** analysis
+- **Type:** driver feature
+- **Branch:** `feat/output-size` (from `dev` 0.5.2)
+- **TODO items:** T-055 (stage 1)
 
 ## Why
 
-Applications learn the source format from V4L2 before and while capturing.
-Today:
+The capture application offers three output sizes for composite and
+S-video; the driver always encodes the source size (720 × 480 / 576).
+Recorded (`docs/composite.md §10`, recordings in `traces/composite/`:
+`gchd_288p_output_switch_small`, `gchd_288p_standard_640x480_output_small`,
+`gchd_288p_mobile_bitrate_change_small`):
 
-- **T-046:** before the first detection the frame rate is the NTSC value;
-  ffplay showed 60 fps for a PAL source on the first open. G_PARM reports
-  the field rate as an integer (60/1, 50/1), while the encoded stream has
-  29.97 (NTSC) or 25 (PAL) frames per second (ffprobe of every recording).
-- **T-022:** field order: analog sources are always encoded interlaced
-  (`top first` in ffprobe), also 240p/288p; G_FMT reports
-  `V4L2_FIELD_INTERLACED`. To be checked against `V4L2_FIELD_INTERLACED_TB`
-  / `_BT` for NTSC and PAL.
-- **T-042:** the current analog mode (NTSC 480i/240p, PAL 576i/288p, PAL
-  60) is visible only in dmesg.
+| Output | Encoder fields |
+|---|---|
+| Standard | source size, `v_ip_format = 0`, GOP 12, transport output 1 |
+| Standard 640 × 480 | `v_ip_format = 2`, GOP 6, level 30, transport output 2 |
+| Mobile 480 × 360 | `v_ip_format = 2`, GOP 6, VBR, level 22, transport output 2 |
 
 ## Implementation (plan)
 
-1. Frame rate: G_PARM and ENUM_FRAMEINTERVALS report the encoded frame
-   rate, 30000/1001 for the 60 Hz family and 25/1 for the 50 Hz family.
-   Before detection: the family last detected on this input while the
-   module is loaded (NTSC on first use).
-2. Field order from the stream (`top first` for both families per
-   ffprobe); G_FMT and the buffer `field` agree.
-3. Analog standard: `VIDIOC_QUERYSTD`, `VIDIOC_G_STD` and the `std` field
-   of ENUMINPUT for inputs 2 and 3 (`V4L2_STD_NTSC_M`, `V4L2_STD_PAL`,
-   `V4L2_STD_PAL_60` for 60 Hz with PAL colour); ENUMINPUT `status`
-   `V4L2_IN_ST_NO_SIGNAL` while no source is detected. 240p/288p versus
-   480i/576i in the input status log and the source-change event.
+1. Analysis of the three recordings: complete encoder field sets per size
+   (NTSC and PAL where recorded), the restart sequence, and the bulk-IN
+   data of transport output 2 (PIDs, endpoint).
+2. V4L2: `S_FMT` with 640 × 480 or 480 × 360 on composite/S-video selects
+   the output size (encoder restart while capturing, as recorded);
+   720 × source lines selects the standard output. `ENUM_FRAMESIZES` lists
+   the three. `G_FMT` reports the selected output size. Kept while the
+   device stays connected, like the input and the pixel format.
+3. Docs: `video-output.md`, `composite.md §10`.
 
 ## Hardware test (maintainer)
 
