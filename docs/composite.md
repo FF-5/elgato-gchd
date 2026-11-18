@@ -115,6 +115,14 @@ tuning passes are not repeated.
 Composite and S-video are distinguished by `0x88:02` (`C9` / `DC`) and
 `0x88:14 = D2`, not by the selector.
 
+The decoder keeps the S-video setting while the device has power. Selecting
+composite after S-video (Observed): `0x88:02 = C9`, `14 = D2`, `3C = 6B`,
+about 200 ms pause, `28 = 88`, read `FD`, `F8`, `03 = 28`, front-end and
+routing writes as usual; then the first `0x98:F5` read shows bit 7 (`E2`)
+and the back end is retriggered once. Lock follows about 0.3 s later. The
+driver writes this sequence on the first composite start after loading,
+since the decoder's state is not known then.
+
 ## 7. No-signal polling
 
 Read `0x88:FA`, read `0x98:F5`, about every 50 ms. When `0x98:F5` has bit 7
