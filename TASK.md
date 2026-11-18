@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** same code fails today → hardware chain check with the N64
+- **Status:** PS1 without game may output 60 Hz; questions to the maintainer
 - **Type:** driver fix + hardware test
 - **Branch:** `fix/pal-svideo` (from `dev`); component (`feat/component`,
   T-051) continues after this
@@ -10,50 +10,53 @@
 
 ## Why
 
-Last test (7d8ed87, PS1 PAL): composite no sync (`0x88:FA = ED/FD`) with
-`composite_retrigger` off and on; S-video showed the stretched picture that
-composite showed before, although S-video gave a correct 576i picture in
-the earlier tests.
+The 7d8ed87 test log (S-video part included) shows the decoder reporting a
+**60 Hz signal** on S-video throughout: `0x88:FA = 06/26` (low nibble 6),
+lock `66` then `7E`, so 240p/480i was configured, correct for a 60 Hz
+source. In the earlier S-video test with the same PS1 (game intro running)
+it read `07/17` (50 Hz) and gave a correct 576i picture. Same driver code,
+different signal.
 
-`dev`, the exact code that captured PAL composite correctly in the
-seventeenth test, fails today as well. The same code giving different
-results on different days points to the hardware chain (PS1 output,
-the Elgato's analog breakout cable or connector, the device's analog input)
-rather than the driver. A known-good NTSC source settles it: the N64 worked
-on composite and S-video with `dev` many times.
+Today the PS1 ran without a game. If its start-up menu outputs 60 Hz with
+PAL colour ("PAL-60"), that explains S-video (correct 60 Hz handling; the
+horizontal lines are how 240p looks in plain ffplay, see
+`docs/video-output.md`: `-vf separatefields`) and composite (PAL colour at
+60 Hz can confuse the composite decoder: `FA` low nibble `5`, then `D`).
+The monitor test shows the PS1 output itself is fine.
 
-## Acceptance criteria (this test)
+## Questions (maintainer)
 
-1. N64 on composite, `dev`, fresh plug-in: picture (480i/240p)?
-2. N64 on S-video, `dev`: picture?
-3. If the N64 works: PS1 on composite again after reseating the Elgato's
-   analog breakout connector (unplug it from the device and plug it in
-   firmly) and power-cycling the PS1.
+1. What does the PS1 show right now (start-up menu without disc, CD player,
+   game)?
+2. Does the monitor show 50 Hz or 60 Hz for the PS1 signal (on-screen
+   info)?
 
-## Hardware test (maintainer)
+## Hardware test (maintainer), depending on the answers
+
+- If 60 Hz: PAL composite again with the game intro running (50 Hz), with
+  `dev` and with this branch. PAL-60 becomes a separate item (a Windows
+  recording of the start-up menu on composite would show how Windows
+  handles it).
+- If 50 Hz: the same commands as last time with the N64 on composite as a
+  known-good check.
 
 ```sh
-git fetch origin && git checkout --detach origin/dev
+git fetch origin && git checkout fix/pal-svideo && git pull
 cd dkms && make -C /lib/modules/$(uname -r)/build M=$PWD clean modules
 sudo rmmod elgato_gchd 2>/dev/null; sudo dmesg -C
 sudo modprobe -a videodev videobuf2-v4l2 videobuf2-vmalloc
-# N64 on composite; unplug and replug the device, then:
+# unplug and replug the device, then:
 sudo insmod elgato_gchd.ko
 v4l2-ctl -d /dev/video0 -i 2
-ffplay -f v4l2 -input_format h264 -i /dev/video0
-# close; N64 on S-video:
-v4l2-ctl -d /dev/video0 -i 3
 ffplay -f v4l2 -input_format h264 -i /dev/video0
 sudo dmesg | grep -vE "bulk-IN data|START poll=|firmware chunk|open requested|SCMD write succeeded|SCMD interrupt|bulk-IN stats|callbacks suppressed"
 ```
 
-Then point 3 with the PS1, same commands. Please include the S-video part
-of the log this time. Paste the outputs into the maintainer comments below.
-
 ## Findings
 
 - 7d8ed87 test: composite no sync with and without the switch; S-video
-  stretched (it showed correct 576i before).
+  detected 60 Hz (`FA = 06/26`) and captured 240p/480i; earlier, with the
+  game intro, the same PS1 gave 50 Hz (576i/288p).
 - One input at a time is always used (PS1 has one output): not cabling.
 - Control test: `dev` fails with PAL composite like this branch (`FA` low
   nibble `5`, then `D`).
