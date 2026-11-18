@@ -101,7 +101,12 @@ repository.
 
 ## Licence
 
-The kernel driver is released under the GNU General Public License,
-version 2 (`MODULE_LICENSE("GPL")`). The original project is licensed under
-the MIT License; its copyright notice and permission text are in
-[`LICENSE`](LICENSE).
+The repository has two licence files:
+
+- [`LICENSE`](LICENSE): the GNU General Public License, version 2. The
+  kernel driver and everything else in this repository are released under
+  it (`MODULE_LICENSE("GPL")`).
+- [`LICENSE.MIT`](LICENSE.MIT): the MIT License of the original project
+  (copyright Tolga Cakir). Parts of the driver are derived from the
+  original project's research and code; the MIT licence allows this and
+  requires that its copyright and permission notice stay with them.
