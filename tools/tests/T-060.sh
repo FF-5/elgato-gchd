@@ -33,9 +33,10 @@ expect "audio source present" "elgato_gchd_audio" pactl list short sources
 expect "capture device off while idle" "^0$" sh -c "sudo dmesg | grep -c 'starting hardware boot'"
 
 step "application reads: capture starts, 720x576 at 50 frames/s"
-expect "frames from the loopback device (15 s)" "yuyv422.*720x576" loop_read 15
-run tail -2 "$LOG"
-expect "frame count >= 400 (capture running)" "frame= *([4-9][0-9]{2}|[0-9]{4})" sh -c "tail -3 '$LOG'"
+loop_read 15 > "$WORK/read.txt"
+run cat "$WORK/read.txt"
+expect "loopback stream 720x576 YUYV" "yuyv422.*720x576" cat "$WORK/read.txt"
+expect "frame count >= 400 in 15 s (capture running)" "frame= *([4-9][0-9]{2}|[0-9]{4})" cat "$WORK/read.txt"
 expect "capture device started" "starting hardware boot" sudo dmesg
 
 step "application closed: capture device off"
