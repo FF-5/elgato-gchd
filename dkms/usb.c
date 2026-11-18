@@ -1163,6 +1163,24 @@ static int gchd_hw_shutdown_steps(struct gchd *d, const char **step)
  /* RESET is the final close-time transition to a known boot state. */
  *step = "RESET";
  r = gchd_state_cmd(d, GCHD_SCMD_RESET, 1, 0, GCHD_STATE_SHUTDOWN);
+ if (r == -EIO) {
+  /*
+   * From IDLE (no capture started in the session) the device can be in
+   * STOP when RESET completes. From STOP, IDLE followed by RESET reaches
+   * the shutdown state.
+   */
+  r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
+  if (r) return r;
+  state &= GCHD_STATE_MASK;
+  if (state != GCHD_STATE_STOP)
+   return -EIO;
+  dev_info(&d->intf->dev, "shutdown: device in STOP after RESET; IDLE and RESET again\n");
+  *step = "IDLE (after STOP)";
+  r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
+  if (r) return r;
+  *step = "RESET (after STOP)";
+  r = gchd_state_cmd(d, GCHD_SCMD_RESET, 1, 0, GCHD_STATE_SHUTDOWN);
+ }
  if (r) return r;
 
  d->hw_enable_state = 0;
