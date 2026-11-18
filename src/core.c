@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 #include <linux/kthread.h>
+#include <linux/v4l2-dv-timings.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
@@ -11,14 +12,10 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.5.7");
+MODULE_VERSION("0.5.8");
 
-/* Private V4L2 menu control so GUI applications can select the connector. */
-#define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
+/* Private V4L2 control "Stretch SD Input". */
 #define V4L2_CID_GCHD_STRETCH (V4L2_CID_USER_BASE + 0x10f1)
-static const char * const gchd_input_menu[] = {
- "HDMI", "Component", "Composite", "S-Video", NULL,
-};
 
 /* Preserve the VB2 read/poll/mmap/ioctl operations while adding lifecycle hooks. */
 static void gchd_release_ref(struct kref *ref)
@@ -270,12 +267,6 @@ static void gchd_input_selection_enter(struct gchd *d)
  d->previous_input = 0;
  d->pal60_since = 0;
  d->pal60_logged = false;
-
- /*
-  * The control value is already kept in sync by gchd_set_input(). Do not
-  * call v4l2_ctrl_s_ctrl() here: open holds lifecycle_lock, and the control
-  * callback re-enters gchd_set_input(), which takes the same mutex.
-  */
  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
  WRITE_ONCE(d->detect_requested, true);
  schedule_delayed_work(&d->detect_work, 0);
@@ -1841,21 +1832,80 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 static int gchd_sinput(struct file *f, void *p, unsigned int i)
 {
  struct gchd *d = video_drvdata(f);
- struct v4l2_ctrl *ctrl;
- int r;
 
  /* Only the file handle that owns the capture buffers may switch inputs. */
  if (i != d->input && vb2_queue_is_busy(&d->vbq, f))
   return -EBUSY;
+ return gchd_set_input(d, i);
+}
 
- r = gchd_set_input(d, i);
- if (r)
-  return r;
+/*
+ * Standard timings of the HDMI/component modes, in the order of
+ * gchd_modes[] (same index).
+ */
+static const struct v4l2_dv_timings gchd_dv_presets[] = {
+ V4L2_DV_BT_CEA_1920X1080P60,
+ V4L2_DV_BT_CEA_1920X1080I60,
+ V4L2_DV_BT_CEA_1280X720P60,
+ V4L2_DV_BT_CEA_720X576P50,
+ V4L2_DV_BT_CEA_720X576I50,
+ V4L2_DV_BT_CEA_720X480P59_94,
+ V4L2_DV_BT_CEA_720X480I59_94,
+};
 
- /* Keep the GUI-visible menu and standard VIDIOC_S_INPUT API in sync. */
- ctrl = v4l2_ctrl_find(&d->ctrls, V4L2_CID_GCHD_INPUT_SOURCE);
- if (ctrl && ctrl->val != i)
-  return v4l2_ctrl_s_ctrl(ctrl, i);
+/* Index of a mode in gchd_modes[] / gchd_dv_presets[], or -1. */
+static int gchd_dv_index(u32 width, u32 height, bool interlaced)
+{
+ const struct gchd_mode *m = gchd_find_mode(width, height, interlaced);
+
+ return m ? (int)(m - gchd_modes) : -1;
+}
+
+/* Current timings of HDMI/component: the configured mode, else the last set. */
+static int gchd_dv_current(const struct gchd *d)
+{
+ int i = gchd_dv_index(d->input_width, d->input_height, d->input_interlaced);
+
+ return i >= 0 ? i : d->dv_index;
+}
+
+static int gchd_g_dv_timings(struct file *f, void *p, struct v4l2_dv_timings *t)
+{
+ struct gchd *d = video_drvdata(f);
+
+ if (d->input >= 2)
+  return -ENODATA;
+ *t = gchd_dv_presets[gchd_dv_current(d)];
+ return 0;
+}
+
+static int gchd_s_dv_timings(struct file *f, void *p, struct v4l2_dv_timings *t)
+{
+ struct gchd *d = video_drvdata(f);
+ const struct gchd_mode *m;
+ int i;
+
+ if (d->input >= 2)
+  return -ENODATA;
+ if (t->type != V4L2_DV_BT_656_1120)
+  return -EINVAL;
+ i = gchd_dv_index(t->bt.width, t->bt.height, t->bt.interlaced);
+ if (i < 0 || !gchd_mode_allowed(d, &gchd_modes[i]))
+  return -EINVAL;
+ if (vb2_is_busy(&d->vbq))
+  return i == gchd_dv_current(d) ? 0 : -EBUSY;
+ m = &gchd_modes[i];
+ d->dv_index = i;
+ d->input_width = m->width;
+ d->input_height = m->height;
+ d->input_fps_num = m->fps_num;
+ d->input_fps_den = m->fps_den;
+ d->input_interlaced = m->interlaced;
+ d->mode_forced = true;
+ d->input_configured = false;
+ d->width = m->width;
+ d->height = m->height;
+ *t = gchd_dv_presets[i];
  return 0;
 }
 
@@ -1863,7 +1913,7 @@ static int gchd_query_dv_timings(struct file *f, void *p,
 				     struct v4l2_dv_timings *t)
 {
  struct gchd *d = video_drvdata(f);
- u64 clock;
+ int i;
 
  if (d->input >= 2)
   return -ENODATA;
@@ -1874,31 +1924,10 @@ static int gchd_query_dv_timings(struct file *f, void *p,
   }
   return -ENOLINK;
  }
-
- memset(t, 0, sizeof(*t));
- t->type = V4L2_DV_BT_656_1120;
- t->bt.width = d->input_width;
- t->bt.height = d->input_height;
- t->bt.interlaced = d->input_interlaced;
- t->bt.polarities = 0;
-
- if (d->input_width == 1920)
-  clock = d->input_interlaced ? 74250000ULL : 148500000ULL;
- else if (d->input_width == 1280)
-  clock = 74250000ULL;
- else if (d->input_height == 576)
-  clock = d->input_interlaced ? 13500000ULL : 27000000ULL;
- else
-  clock = d->input_interlaced ? 13500000ULL : 27000000ULL;
-
- t->bt.pixelclock = clock;
- t->bt.hfrontporch = 88;
- t->bt.hsync = 44;
- t->bt.hbackporch = 148;
- t->bt.vfrontporch = d->input_interlaced ? 2 : 4;
- t->bt.vsync = d->input_interlaced ? 5 : 5;
- t->bt.vbackporch = d->input_interlaced ? 15 : 36;
-
+ i = gchd_dv_index(d->input_width, d->input_height, d->input_interlaced);
+ if (i < 0)
+  return -ERANGE;
+ *t = gchd_dv_presets[i];
  return 0;
 }
 
@@ -1906,38 +1935,43 @@ static int gchd_enum_dv_timings(struct file *f, void *p,
 				 struct v4l2_enum_dv_timings *e)
 {
  struct gchd *d = video_drvdata(f);
- static const struct {
-  u32 width, height, fps, pixelclock;
-  bool interlaced;
- } modes[] = {
-  {1920,1080,60,148500000,false},
-  {1920,1080,60,74250000,true},
-  {1280,720,60,74250000,false},
-  {720,576,50,27000000,false},
-  {720,576,50,13500000,true},
-  {720,480,60,27000000,false},
-  {720,480,60,13500000,true},
- };
  unsigned int n = 0, i;
 
  if (d->input >= 2)
   return -ENODATA;
-
- for (i = 0; i < ARRAY_SIZE(modes); ++i) {
+ if (e->pad)
+  return -EINVAL;
+ for (i = 0; i < ARRAY_SIZE(gchd_modes); ++i) {
   if (!gchd_mode_allowed(d, &gchd_modes[i]))
    continue;
   if (n++ != e->index)
    continue;
-  memset(&e->timings, 0, sizeof(e->timings));
-  e->timings.type = V4L2_DV_BT_656_1120;
-  e->timings.bt.width = modes[i].width;
-  e->timings.bt.height = modes[i].height;
-  e->timings.bt.interlaced = modes[i].interlaced;
-  e->timings.bt.pixelclock = modes[i].pixelclock;
+  e->timings = gchd_dv_presets[i];
   return 0;
  }
-
  return -EINVAL;
+}
+
+static int gchd_dv_timings_cap(struct file *f, void *p,
+			       struct v4l2_dv_timings_cap *cap)
+{
+ struct gchd *d = video_drvdata(f);
+
+ if (d->input >= 2)
+  return -ENODATA;
+ if (cap->pad)
+  return -EINVAL;
+ memset(cap, 0, sizeof(*cap));
+ cap->type = V4L2_DV_BT_656_1120;
+ cap->bt.min_width = 720;
+ cap->bt.max_width = 1920;
+ cap->bt.min_height = 480;
+ cap->bt.max_height = 1080;
+ cap->bt.min_pixelclock = 13500000;
+ cap->bt.max_pixelclock = 148500000;
+ cap->bt.standards = V4L2_DV_BT_STD_CEA861;
+ cap->bt.capabilities = V4L2_DV_BT_CAP_INTERLACED | V4L2_DV_BT_CAP_PROGRESSIVE;
+ return 0;
 }
 
 static int gchd_querycap(struct file*f,void*p,struct v4l2_capability*c)
@@ -2209,6 +2243,8 @@ static const struct v4l2_ioctl_ops gchd_ioctl={
 .vidioc_try_fmt_vid_cap=gchd_tryfmt,
  .vidioc_g_parm=gchd_g_parm,.vidioc_s_parm=gchd_s_parm,
  .vidioc_query_dv_timings=gchd_query_dv_timings,
+ .vidioc_g_dv_timings=gchd_g_dv_timings,.vidioc_s_dv_timings=gchd_s_dv_timings,
+ .vidioc_dv_timings_cap=gchd_dv_timings_cap,
  .vidioc_enum_dv_timings=gchd_enum_dv_timings,
  .vidioc_reqbufs=vb2_ioctl_reqbufs,.vidioc_querybuf=vb2_ioctl_querybuf,
  .vidioc_qbuf=vb2_ioctl_qbuf,.vidioc_dqbuf=vb2_ioctl_dqbuf,
@@ -2221,11 +2257,6 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
 {
  struct gchd *d = container_of(c->handler, struct gchd, ctrls);
  u8 level;
-
- switch (c->id) {
- case V4L2_CID_GCHD_INPUT_SOURCE:
-  return gchd_set_input(d, c->val);
- }
 
  /*
   * Encoder settings: on composite and S-video a change while capturing
@@ -2277,7 +2308,18 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
  }
  return 0;
 }
-static const struct v4l2_ctrl_ops gchd_ctrl_ops = { .s_ctrl = gchd_ctrl };
+/* V4L2_CID_DV_RX_POWER_PRESENT: a signal on the selected HDMI/component input. */
+static int gchd_g_volatile_ctrl(struct v4l2_ctrl *c)
+{
+ struct gchd *d = container_of(c->handler, struct gchd, ctrls);
+
+ if (c->id == V4L2_CID_DV_RX_POWER_PRESENT)
+  c->val = d->input < 2 && READ_ONCE(d->signal_present);
+ return 0;
+}
+static const struct v4l2_ctrl_ops gchd_ctrl_ops = {
+ .s_ctrl = gchd_ctrl, .g_volatile_ctrl = gchd_g_volatile_ctrl,
+};
 
 static int gchd_fop_open(struct file *file)
 {
@@ -2394,7 +2436,7 @@ static int gchd_fop_release(struct file *file)
 int gchd_v4l2_register(struct gchd*d)
 {
  int r=v4l2_device_register(&d->intf->dev,&d->v4l2_dev);if(r)return r;
- v4l2_ctrl_handler_init(&d->ctrls,6);
+ v4l2_ctrl_handler_init(&d->ctrls,7);
  /* Control defaults are the remembered settings (gchd_settings_load()). */
  {
   unsigned int i, level_def = V4L2_MPEG_VIDEO_H264_LEVEL_4_1;
@@ -2408,7 +2450,15 @@ int gchd_v4l2_register(struct gchd*d)
    V4L2_MPEG_VIDEO_BITRATE_MODE_CBR,0,d->bitrate_mode);
   v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_PROFILE,V4L2_MPEG_VIDEO_H264_PROFILE_HIGH,
    ~(BIT(V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)),d->h264_profile);
-  v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_LEVEL,V4L2_MPEG_VIDEO_H264_LEVEL_5_1,0,level_def);
+  /* Levels below 3.0 are not offered (0xff skips 1.0 ... 2.2). */
+  v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_LEVEL,V4L2_MPEG_VIDEO_H264_LEVEL_5_1,0xff,level_def);
+  {
+   struct v4l2_ctrl *power = v4l2_ctrl_new_std(&d->ctrls, &gchd_ctrl_ops,
+                                               V4L2_CID_DV_RX_POWER_PRESENT, 0, 1, 0, 0);
+
+   if (power)
+    power->flags |= V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY;
+  }
  }
  {
   static const struct v4l2_ctrl_config stretch_cfg = {
@@ -2422,22 +2472,6 @@ int gchd_v4l2_register(struct gchd*d)
 
   cfg.def = d->stretch;
   v4l2_ctrl_new_custom(&d->ctrls, &cfg, NULL);
- }
- {
-  struct v4l2_ctrl_config input_cfg = {
-   .ops = &gchd_ctrl_ops,
-   .id = V4L2_CID_GCHD_INPUT_SOURCE,
-   .name = "Input Source",
-   .type = V4L2_CTRL_TYPE_MENU,
-   .min = 0,
-   .max = ARRAY_SIZE(gchd_input_menu) - 2,
-   /* V4L2 menu controls use menu_skip_mask, not step. */
-   .step = 0,
-   .menu_skip_mask = 0,
-   .def = d->input,
-   .qmenu = gchd_input_menu,
-  };
-  v4l2_ctrl_new_custom(&d->ctrls, &input_cfg, NULL);
  }
  if(d->ctrls.error){r=d->ctrls.error;goto err;}
  memset(&d->vbq,0,sizeof(d->vbq));d->vbq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE;d->vbq.io_modes=VB2_MMAP|VB2_READ;d->vbq.timestamp_flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;d->vbq.dev=&d->intf->dev;
@@ -2501,6 +2535,7 @@ static int gchd_probe(struct usb_interface *i,
  d->width = 1280;
  d->height = 720;
  d->sizeimage = GCHD_MAX_FRAME;
+ d->dv_index = 2; /* 1280x720p60 before the first detection or S_DV_TIMINGS */
  /*
   * The remembered input already at probe, so that G_INPUT and G_FMT report
   * it before the first capture; INPUT_SELECTION resolves it again after the

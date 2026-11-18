@@ -128,6 +128,7 @@ struct gchd {
  unsigned long shutdown_done; /* jiffies of the last completed shutdown; 0 = none */
  v4l2_std_id analog_std[2]; /* last standard detected on composite, S-video; 0 = none */
  u8 analog_out; /* GCHD_OUT_*, kept while the device stays connected */
+ int dv_index; /* HDMI/component timings set with S_DV_TIMINGS (gchd_modes[] index) */
  u8 out_active; /* output programmed in the encoder (GCHD_OUT_*) */
  bool stretch; /* composite/S-video: v_in_source_type 2 */
  int bitrate_mode; /* V4L2_MPEG_VIDEO_BITRATE_MODE_* */

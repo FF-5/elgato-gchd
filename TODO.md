@@ -19,7 +19,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.7): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.8): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -40,6 +40,8 @@ on the `traces` branch.
   `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; the decoder
   reports 60 Hz for a few seconds after power-on and reset, also with the
   Windows driver; the driver waits for the 50 Hz reading).
+  `v4l2-compliance` 1.26.1: 0 failures (DV timings for HDMI/component,
+  power-present control; inputs only through `VIDIOC_S_INPUT`).
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller.
 
 ## Stage 1 — Composite and S-video complete
@@ -68,19 +70,17 @@ settings above work on `dev`.
       mirroring, checksum check, URL in one place). **Maintainer: e-mail
       Elgato (Corsair) and ask whether the script may download the
       official installer from their server.** Until the answer the script
-      only uses an installer the user downloaded.
+      only uses an installer the user downloaded. The script looks for the
+      installer only in `firmware/` (maintainer 2026-11-18), so a download
+      goes there too; the installer only calls the script and checks its
+      result.
 
 ## Stage 1b — Applications (guvcview, OBS) (after T-071)
 
-- [ ] **T-066 [OFF→HW] (M)** v4l2-compliance 1.26.1 failures left after
-      4c326eb: HDMI/component `G_DV_TIMINGS` fails without a signal although
-      `V4L2_IN_CAP_DV_TIMINGS` is set, `VIDIOC_DV_TIMINGS_CAP` missing
-      (also breaks the buffer tests via `g_dv_timings`); a menu control
-      rejects item 0 ("could not set valid menu item 0", all inputs);
-      `V4L2_CID_DV_RX_POWER_PRESENT` missing (warning). The input menu
-      control still switches inputs for any process while another one
-      captures (S_INPUT returns EBUSY since fd8426b). Needed for
-      guvcview/OBS robustness (T-060).
+- [x] **T-066** v4l2-compliance: 0 failures, 2 warnings
+      (`VIDIOC_CREATE_BUFS` not supported); DV timings, H.264 level menu,
+      power-present control, "Input Source" control removed; accepted
+      2026-11-18 (0.5.8).
 
 - [ ] **T-060 (L)** Make the device usable in guvcview, OBS and similar
       applications. A USB device cannot be turned into a UVC device by a
@@ -98,6 +98,10 @@ settings above work on `dev`.
       see a format change (today ffplay keeps the window size of the first
       frames and shows later modes squeezed).
       Uses the MPEG-TS format with audio (done, 0.5.0).
+      The service also offers the input selection (the driver's private
+      "Input Source" menu control was removed in T-066: it changed the
+      input behind `v4l2-compliance`; `VIDIOC_S_INPUT` remains). guvcview
+      has no input selector of its own.
 
 ## Stage 2 — Component
 
@@ -152,13 +156,11 @@ settings above work on `dev`.
       repeated `0x88:02/3C` and `0x94` writes after detection.
 - [ ] **T-012 [OFF] (S)** debugfs raw bulk-IN dump behind a module parameter
       (reference: `tools/archive/debug-trace.c` on the `tools` branch).
-- [ ] Branches to delete on GitHub (refused from the development session):
-      `fix/mode-change-restart`, `feat/svideo`, `feat/pal`,
-      `fix/pal-svideo`, `feat/component` (superseded; component comes
-      after the restructure),
-      `async-bulk-in-queue`, `cherry3`, `debug`, `debug-saved-enable-state`,
-      `diagnostic-input-baseline`, `state-machine`, `v4l2-dkms-driver`,
-      `v4l2-h264-access-units`, `video-output-lazy-init`.
+- [ ] Branches to delete on GitHub (refused from the development session;
+      state 2026-11-18): `cherry3`; merged into `dev`: `chore/src-layout`,
+      `feat/bitrate`, `feat/format-reporting`, `feat/input-persistence`,
+      `feat/installer`, `feat/output-size`, `feat/ts-audio`,
+      `fix/analog-robustness`, `fix/close-lifecycle`, `fix/v4l2-compliance`.
 
 ## Known differences between the driver and the recordings
 
