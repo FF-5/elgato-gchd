@@ -639,6 +639,7 @@ int gchd_prepare_input_detection(struct gchd *d)
  */
 static int gchd_prepare_analog_detection(struct gchd *d)
 {
+ bool from_svideo = false;
  int r;
  u8 reply;
 
@@ -665,6 +666,7 @@ static int gchd_prepare_analog_detection(struct gchd *d)
   GCHD_DEC_W(d, 0x14, 0xd2);
   GCHD_DEC_W(d, 0x28, 0x88);
  } else if (d->input == 2 && d->dec_svideo) {
+  from_svideo = true;
   GCHD_DEC_W(d, 0x02, 0xc9);
   d->dec_svideo = false;
   GCHD_DEC_W(d, 0x14, 0xd2);
@@ -712,7 +714,12 @@ route:
   int cycle;
   for (cycle = 0; cycle < 2; ++cycle) {
    GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, reply);
-   r = gchd_be_poll_status(d);
+   /*
+    * After the S-video to composite sequence the back end may still
+    * report its flag: one retrigger, as for S-video.
+    */
+   r = from_svideo && cycle == 0 ? gchd_analog_poll_backend(d) :
+                                   gchd_be_poll_status(d);
    if (r)
     return r;
    if (cycle == 0)

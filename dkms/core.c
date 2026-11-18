@@ -2133,6 +2133,12 @@ static int gchd_probe(struct usb_interface *i,
  d->sizeimage = GCHD_MAX_FRAME;
  /* INPUT_SELECTION resolves the remembered connector after hardware init. */
  d->input = 0;
+ /*
+  * The decoder keeps its S-video setting while the device has power, also
+  * across module reloads: the first composite start writes the S-video to
+  * composite sequence.
+  */
+ d->dec_svideo = true;
  d->bitrate_forced = false;
  d->h264_level_forced = false;
  d->input_width = 0;
