@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 #include <linux/kthread.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -10,7 +11,7 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.5.6");
+MODULE_VERSION("0.5.7");
 
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)

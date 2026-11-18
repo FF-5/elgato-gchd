@@ -19,7 +19,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.6): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.7): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -57,34 +57,18 @@ settings above work on `dev`.
       removed (git history and the original repository keep them),
       `firmware_extract/` → `firmware/`, top-level README rewritten for the
       driver with origin and credits.
-- [ ] **T-094 (S, maintainer)** Licence files: `LICENSE` → `LICENSE.MIT`
-      (original notice unchanged), new `LICENSE` with the GPL-2.0 text,
-      README licence section and SPDX lines in the driver sources
-      accordingly. Approved by the maintainer (2026-11-18), but the
-      development session's permission check blocks licence-file changes;
-      the maintainer makes them (commands in the T-070 findings) or allows
-      them in the session settings.
-- [ ] **T-071 (M)** Scripts for non-technical users, runnable from a file
-      manager (executable, with a terminal window; `pkexec` for root):
-      - `firmware/` (renamed from `firmware_extract/`), bash: extracts the
-        four firmware files from the official installer
-        (`GameCaptureSetup*.msi`). Optional download of that installer from
-        Elgato's own server after the user confirms, with a link to
-        Elgato's terms; no mirroring or redistribution of the installer or
-        firmware by the project; checksum check; URL kept in one place for
-        updates; manual download stays as the fallback.
-      - **Maintainer: e-mail Elgato (Corsair) and ask whether the script
-        may download the official installer from their server and extract
-        the firmware for use with this driver.** Decide on the download
-        option after the answer; until then the script only extracts from
-        an installer the user downloaded.
-      - `install-driver.sh` at the top: installs the DKMS module (and the
-        firmware step and the udev rule if missing), with an uninstall
-        option.
-      - The script uses the top-level `build/` (ignored by git): the
-        compiled module lands in `build/`, intermediate objects in
-        `build/objects/kernel/` (kbuild of this kernel builds in the source
-        directory, so the sources are copied there and built there).
+- [x] **T-094** Licence files: `LICENSE` (GPL-2.0) and `LICENSE.MIT` (the
+      original notice), done by the maintainer; README licence section and
+      SPDX lines in every driver source file.
+- [x] **T-071** `install-driver.sh`: firmware check (extraction from the
+      user's `GameCaptureSetup*.msi`, stops on failure), build in `build/`,
+      DKMS install, udev rule, `--uninstall`; accepted 2026-11-18.
+- [ ] **T-095 (S)** Optional download of the Elgato installer by the
+      firmware script, after the user confirms (link to Elgato's terms, no
+      mirroring, checksum check, URL in one place). **Maintainer: e-mail
+      Elgato (Corsair) and ask whether the script may download the
+      official installer from their server.** Until the answer the script
+      only uses an installer the user downloaded.
 
 ## Stage 1b — Applications (guvcview, OBS) (after T-071)
 

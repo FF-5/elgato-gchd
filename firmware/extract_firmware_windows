@@ -1,22 +1,55 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+#
+# Extract the Elgato Game Capture HD firmware from Elgato's "Game Capture"
+# installer for Windows (GameCaptureSetup*.msi) into /lib/firmware/gchd/.
+#
+#   extract_firmware_windows [PATH/TO/GameCaptureSetup.msi]
+#
+# Without an argument the installer is looked for in this directory, the
+# current directory and ~/Downloads. Needs 7z (p7zip). Exits with status 0
+# when all firmware files are in place, 1 otherwise.
 
-type 7z >/dev/null 2>&1 || { echo >&2 "This requires p7zip but it is not installed."; exit 1; }
+FIRMWARE_DIR=/lib/firmware/gchd
+FILES="MB86H57_H58_IDLE MB86H57_H58_ENC_H MB86M01_ASSP_NSEC_IDLE MB86M01_ASSP_NSEC_ENC_H"
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-shopt -s nullglob #Critical behaviour change variable.
+fail() { echo "Firmware: $*" >&2; exit 1; }
 
-pattern="GameCaptureSetup*.msi"
-fileList=( ${pattern} )
-filename=${fileList[0]}
-[[ ! -z "${filename// }" ]] || { echo >&2 "Cannot find a GameCaptureSetup*.msi file."; exit 1; }
+type 7z >/dev/null 2>&1 || fail "7z is needed (package p7zip-full, p7zip or 7zip)."
 
-FIRMWARE_DIR="/lib/firmware/gchd"
+msi=${1:-}
+if [ -z "$msi" ]; then
+	user_home=$HOME
+	[ -n "${SUDO_USER:-}" ] && user_home=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+	for dir in "$HERE" "$PWD" "$user_home/Downloads"; do
+		for f in "$dir"/GameCaptureSetup*.msi; do
+			[ -f "$f" ] && { msi=$f; break 2; }
+		done
+	done
+fi
+[ -n "$msi" ] && [ -f "$msi" ] || fail "no GameCaptureSetup*.msi found. Download Elgato's \"Game Capture\" software for Windows and put the .msi file into $HERE or ~/Downloads, or give its path as argument."
 
-TEMPDIR=$(mktemp -d -p .)
-trap 'rm -rf "${TEMPDIR}"' EXIT
+if [ "$(id -u)" != 0 ]; then
+	exec sudo "$0" "$msi"
+fi
 
-mkdir -p "${FIRMWARE_DIR}"
+echo "Firmware: extracting from $msi"
+tmp=$(mktemp -d) || fail "cannot create a temporary directory"
+trap 'rm -rf "$tmp"' EXIT
 
-7z e -o"${TEMPDIR}" "${filename}" x86_yPushFile3.dll
-7z e -y -o"${FIRMWARE_DIR}" -r "${TEMPDIR}/x86_yPushFile3.dll" MB86H57_H58_IDLE MB86H57_H58_ENC_H MB86M01_ASSP_NSEC_IDLE MB86M01_ASSP_NSEC_ENC_H
+7z e -y -o"$tmp" "$msi" x86_yPushFile3.dll >/dev/null ||
+	fail "x86_yPushFile3.dll not found in $msi (not the Game Capture HD installer?)"
+mkdir -p "$FIRMWARE_DIR" || fail "cannot create $FIRMWARE_DIR"
+# shellcheck disable=SC2086
+7z e -y -o"$FIRMWARE_DIR" -r "$tmp/x86_yPushFile3.dll" $FILES >/dev/null ||
+	fail "extraction from x86_yPushFile3.dll failed"
 
-echo "Firmware extracted to ${FIRMWARE_DIR}"
+missing=
+for f in $FILES; do
+	[ -s "$FIRMWARE_DIR/$f" ] || missing="$missing $f"
+done
+[ -z "$missing" ] || fail "missing after extraction:$missing"
+
+echo "Firmware: installed to $FIRMWARE_DIR"
+exit 0

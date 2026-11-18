@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 #include <linux/module.h>
 #include "elgato_gchd.h"
 #include "gchd_transcoder_fields.h"

@@ -1,1 +1,9 @@
 build
+# kernel build files (builds in src/)
+*.o
+*.ko
+*.mod
+*.mod.c
+.*.cmd
+Module.symvers
+modules.order
