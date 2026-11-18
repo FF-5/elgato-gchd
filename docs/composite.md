@@ -27,7 +27,7 @@ the decoder (§8).
 |---|---|
 | `0x88:CA` | Lock and format, the same codes for both families: `FE` unlocked, `7E` interlaced (480i, 576i) locked, `66` progressive (240p, 288p) locked, `76` first value after a change to interlaced, `6E` first value after a change to progressive, `EE`/`E6` transitional. |
 | `0x88:FA` | Low nibble `6` = NTSC (60 Hz) family, `7` = PAL (50 Hz) family once a signal is present. Reads `1F`/`3E` immediately after the input is selected. Polled while no signal is present. |
-| `0x88:E7` | Decoder standard: `69` when stable (NTSC), `59` (60 Hz source at power-on of some consoles), `79` (PAL); `09` right after a 240p change; bit 7 set (`E9`, `D9`) while the decoder re-evaluates the standard, for about 0.4-0.9 s after an apply block and when the source changes family. |
+| `0x88:E7` | Decoder standard: `69` when stable (NTSC), `59` (60 Hz family read for a few seconds after a 50 Hz source appears, see §8.3), `79` (PAL); `09` right after a 240p change; bit 7 set (`E9`, `D9`) while the decoder re-evaluates the standard, for about 0.4-0.9 s after an apply block and when the source changes family. |
 | `0x88:F1` | `7E` when stable (NTSC); `63` (PAL). |
 | `0x88:CB` | `6E` when stable; `44` right after a 240p change. |
 | `0x88:FD`, `0x88:F8` | `6E`, `C9`. Unknown. |
@@ -128,7 +128,7 @@ since the decoder's state is not known then.
 Read `0x88:FA`, read `0x98:F5`, about every 50 ms. When `0x98:F5` has bit 7
 set (`F2`, `E2`), the back end is retriggered (Observed: S-video and
 composite, e.g. after the routing writes, after composite was selected
-following S-video, and while a PAL console powers up after a signal loss;
+following S-video, and while a PAL source returns after a signal loss;
 when `F5` reads `62` no retrigger follows). When a source is connected, `0x88:CA` changes from `FE`, polling
 ends, and the sequence continues with §3 step 3.
 
@@ -173,9 +173,11 @@ The encoder programming is the same for 576i and 288p (`v_format = 5`,
 
 ### 8.3 60 Hz ↔ 50 Hz while capturing (Observed)
 
-Some PAL consoles output a 60 Hz signal for a few seconds after power-on or
-reset, then switch to 50 Hz. The change of family is handled with a full
-encoder restart. It is started by `0x88:E7` with bit 7 set, or by
+With a 50 Hz source the decoder can report the 60 Hz family (`0x88:FA = 6`,
+`CA = 66`, `E7 = 59`) for a few seconds after the signal appears (source
+power-on or reset), then the 50 Hz family. The same readings occur with the
+original application. A change of family is handled with a full encoder
+restart. It is started by `0x88:E7` with bit 7 set, or by
 `0x88:FA` reporting the other family:
 
 ```
@@ -195,11 +197,10 @@ then:              NULL, STOP
 
 Total time from the trigger to START: about 3 s.
 
-During this start-up phase the decoder reports `0x88:E7 = 59` (60 Hz with
-PAL colour) or `E7` with bit 7 set. The driver waits for such a signal to
-change to 50 Hz, at most 5 s, at the capture start and after the signal had
-dropped (reset, power cycle, a different console), so that capture starts
-in the console's final mode. The wait ends as soon as the decoder reports
+While the decoder reports `0x88:E7 = 59` or `E7` with bit 7 set, the driver
+waits for the 50 Hz family, at most 5 s, at the capture start and after the
+signal had dropped (reset, power cycle, a different source), so that capture
+starts in the source's final mode. The wait ends as soon as the decoder reports
 50 Hz. A source that stays at 60 Hz is captured after 5 s; a change between
 50 and 60 Hz without a signal drop is followed at once.
 

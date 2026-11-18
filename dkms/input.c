@@ -1545,11 +1545,11 @@ int gchd_analog_mode_pre_stop(struct gchd *d, bool interlaced)
 }
 
 /*
- * A 60 Hz signal with PAL colour (0x88:E7 = 59) or a standard still being
- * evaluated (bit 7) is what PAL consoles send for a few seconds after
- * power-on and reset before they switch to 50 Hz. Returns true while such a
- * signal should be waited out: at most GCHD_PAL60_HOLD_MS after since; a
- * source that stays at 60 Hz is used after that.
+ * With a 50 Hz source the decoder can report the 60 Hz family with
+ * 0x88:E7 = 59, or a standard still being evaluated (bit 7), for a few
+ * seconds after the signal appears, before it reports 50 Hz. Returns true
+ * while such a state should be waited out: at most GCHD_PAL60_HOLD_MS after
+ * since; a source that stays at 60 Hz is used after that.
  */
 bool gchd_analog_pal60_hold(struct gchd *d, u8 e7, unsigned long since,
                             bool *logged)
@@ -1561,7 +1561,7 @@ bool gchd_analog_pal60_hold(struct gchd *d, u8 e7, unsigned long since,
  if (!*logged)
   dev_info(&d->intf->dev,
            "%s (0x88:E7=%02x); waiting up to %u ms\n",
-           e7 == 0x59 ? "60 Hz signal with PAL colour" :
+           e7 == 0x59 ? "decoder reports 60 Hz, standard 59" :
                         "decoder standard not settled",
            e7, GCHD_PAL60_HOLD_MS);
  *logged = true;
@@ -1597,8 +1597,8 @@ int gchd_analog_family_pre_stop(struct gchd *d, u8 family, u8 lock)
 /*
  * Family change, second part (encoder in STOP): wait for the decoder to
  * lock, loading the apply block of the family it reports every 0.5 s while
- * it does not; with hold (the signal had dropped), wait out a 60 Hz signal
- * with PAL colour. Then set the mode, load the apply block of the locked
+ * it does not; with hold (the signal had dropped), wait out the 60 Hz
+ * state with 0x88:E7 = 59 (gchd_analog_pal60_hold()). Then set the mode, load the apply block of the locked
  * family if needed, write 0x88:0A, load the back-end table and program the
  * encoder. START follows. -ENOLINK when no lock within about 4 s.
  */

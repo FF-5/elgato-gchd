@@ -18,17 +18,20 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.1): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.2): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
   §8.3`), composite ↔ S-video without unplugging, close and reopen
   (also right after a close and after a session without a source),
-  STREAMOFF → STREAMON on one handle.
+  STREAMOFF → STREAMON on one handle. V4L2 reporting: standard (NTSC-M /
+  PAL, QUERYSTD/G_STD), 720×480/576 by source, 29.97 / 25 fps,
+  interlaced top field first; input changes from other processes refused
+  while one captures.
   Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
-  `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; outputs
-  60 Hz with PAL colour for a few seconds after power-on and reset; the
-  driver waits for its 50 Hz signal).
+  `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; the decoder
+  reports 60 Hz for a few seconds after power-on and reset, also with the
+  Windows driver; the driver waits for the 50 Hz reading).
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller.
 
 ## Stage 1 — Composite and S-video complete
