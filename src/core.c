@@ -134,32 +134,69 @@ static void gchd_nominal_format(const struct gchd *d, u32 *width, u32 *height)
 }
 
 /*
- * Size and frame rate of the source for the application device: the
- * detected mode, else the nominal size of the input. Interlaced sources
- * count one frame per field. Returns false when no mode is detected.
+ * Output sizes of the current input for the application device, with the
+ * frame rate of each (frames per second after deinterlacing one frame per
+ * field). Composite and S-video: the encoder's output sizes (source size,
+ * 640x480, 480x360, GCHD_OUT_* order); HDMI and component: the source
+ * size. Returns the number of entries (at most GCHD_APP_SIZES).
  */
-bool gchd_source_format(struct gchd *d, u32 *width, u32 *height,
-                        struct v4l2_fract *rate)
+unsigned int gchd_app_sizes(struct gchd *d, struct gchd_app_size *list)
 {
- bool known = d->input_width && d->input_height;
+ unsigned int out;
 
- if (known) {
-  *width = d->input_width;
-  *height = d->input_height;
- } else {
-  gchd_nominal_format(d, width, height);
- }
  if (d->input >= 2) {
-  rate->numerator = *height == 576 ? 50 : 60000;
-  rate->denominator = *height == 576 ? 1 : 1001;
- } else if (d->input_fps_num && d->input_fps_den) {
-  rate->numerator = d->input_fps_num;
-  rate->denominator = d->input_fps_den;
- } else {
-  rate->numerator = 60;
-  rate->denominator = 1;
+  bool pal = gchd_std_is_50hz(gchd_analog_std(d));
+
+  for (out = GCHD_OUT_STANDARD; out <= GCHD_OUT_MOBILE; ++out) {
+   gchd_analog_out_size(d, out, &list[out].width, &list[out].height);
+   if (out == GCHD_OUT_STANDARD)
+    pal = list[out].height == 576;
+   /* Interlaced: one frame per field; the small sizes are progressive. */
+   if (out == GCHD_OUT_STANDARD) {
+    list[out].rate.numerator = pal ? 50 : 60000;
+    list[out].rate.denominator = pal ? 1 : 1001;
+   } else {
+    list[out].rate.numerator = pal ? 25 : 30000;
+    list[out].rate.denominator = pal ? 1 : 1001;
+   }
+  }
+  return 3;
  }
- return known;
+ if (d->input_width && d->input_height) {
+  list[0].width = d->input_width;
+  list[0].height = d->input_height;
+ } else {
+  gchd_nominal_format(d, &list[0].width, &list[0].height);
+ }
+ list[0].rate.numerator = d->input_fps_num ? d->input_fps_num : 60;
+ list[0].rate.denominator = d->input_fps_den ? d->input_fps_den : 1;
+ return 1;
+}
+
+/* Index in gchd_app_sizes() of the output the encoder is set to. */
+unsigned int gchd_app_size_selected(struct gchd *d)
+{
+ return d->input >= 2 ? d->analog_out : 0;
+}
+
+/*
+ * Size the encoder delivers now, when known: the selected output of the
+ * detected source.
+ */
+bool gchd_app_output(struct gchd *d, u32 *width, u32 *height)
+{
+ struct gchd_app_size list[GCHD_APP_SIZES];
+ unsigned int n, i;
+
+ if (!d->input_width || !d->input_height)
+  return false;
+ n = gchd_app_sizes(d, list);
+ i = gchd_app_size_selected(d);
+ if (i >= n)
+  return false;
+ *width = list[i].width;
+ *height = list[i].height;
+ return true;
 }
 
 static void gchd_analog_out_size(const struct gchd *d, u8 out,
@@ -211,6 +248,16 @@ MODULE_PARM_DESC(h264_profile, "H.264 profile (V4L2 value): 0 baseline, 2 main, 
 static unsigned int gchd_set_level;
 module_param_named(h264_level, gchd_set_level, uint, 0644);
 MODULE_PARM_DESC(h264_level, "H.264 level x10 (30-51), 0 automatic");
+static unsigned int gchd_set_std[2];
+module_param_named(std_composite, gchd_set_std[0], uint, 0644);
+MODULE_PARM_DESC(std_composite, "Last standard on composite: 0 unknown, 1 NTSC (60 Hz), 2 PAL (50 Hz)");
+module_param_named(std_svideo, gchd_set_std[1], uint, 0644);
+MODULE_PARM_DESC(std_svideo, "Last standard on S-video: 0 unknown, 1 NTSC (60 Hz), 2 PAL (50 Hz)");
+
+static unsigned int gchd_std_param(v4l2_std_id std)
+{
+ return !std ? 0 : gchd_std_is_50hz(std) ? 2 : 1;
+}
 
 /* V4L2 H.264 level menu values and the level x10 they stand for. */
 static const u8 gchd_levels[][2] = {
@@ -223,8 +270,8 @@ static const u8 gchd_levels[][2] = {
 /* Store the device's settings in the parameters and announce them. */
 static void gchd_settings_save(struct gchd *d)
 {
- char e[8][40];
- char *envp[9];
+ char e[10][40];
+ char *envp[11];
  int i;
 
  gchd_set_output = d->analog_out;
@@ -234,6 +281,8 @@ static void gchd_settings_save(struct gchd *d)
  gchd_set_stretch = d->stretch;
  gchd_set_profile = d->h264_profile;
  gchd_set_level = d->h264_level_forced ? d->h264_level : 0;
+ gchd_set_std[0] = gchd_std_param(d->analog_std[0]);
+ gchd_set_std[1] = gchd_std_param(d->analog_std[1]);
 
  snprintf(e[0], sizeof(e[0]), "GCHD_INPUT=%u", d->input);
  snprintf(e[1], sizeof(e[1]), "GCHD_OUTPUT=%u", gchd_set_output);
@@ -243,10 +292,22 @@ static void gchd_settings_save(struct gchd *d)
  snprintf(e[5], sizeof(e[5]), "GCHD_STRETCH=%u", gchd_set_stretch);
  snprintf(e[6], sizeof(e[6]), "GCHD_H264_PROFILE=%u", gchd_set_profile);
  snprintf(e[7], sizeof(e[7]), "GCHD_H264_LEVEL=%u", gchd_set_level);
- for (i = 0; i < 8; ++i)
+ snprintf(e[8], sizeof(e[8]), "GCHD_STD_COMPOSITE=%u", gchd_set_std[0]);
+ snprintf(e[9], sizeof(e[9]), "GCHD_STD_SVIDEO=%u", gchd_set_std[1]);
+ for (i = 0; i < 10; ++i)
   envp[i] = e[i];
- envp[8] = NULL;
+ envp[10] = NULL;
  kobject_uevent_env(&d->intf->dev.kobj, KOBJ_CHANGE, envp);
+}
+
+/* Remember a newly detected composite/S-video standard (app.c, process context). */
+void gchd_remember_std(struct gchd *d)
+{
+ if (READ_ONCE(d->disconnected))
+  return;
+ if (gchd_set_std[0] != gchd_std_param(d->analog_std[0]) ||
+     gchd_set_std[1] != gchd_std_param(d->analog_std[1]))
+  gchd_settings_save(d);
 }
 
 /* Settings from the parameters at probe time. */
@@ -265,6 +326,9 @@ static void gchd_settings_load(struct gchd *d)
  d->h264_profile = gchd_set_profile == V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE ||
                    gchd_set_profile == V4L2_MPEG_VIDEO_H264_PROFILE_MAIN ?
                    gchd_set_profile : V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
+ for (i = 0; i < 2; ++i)
+  d->analog_std[i] = gchd_set_std[i] == 2 ? V4L2_STD_PAL :
+                     gchd_set_std[i] == 1 ? V4L2_STD_NTSC_M : 0;
  d->h264_level = 41;
  d->h264_level_forced = false;
  for (i = 0; i < ARRAY_SIZE(gchd_levels); ++i)

@@ -14,16 +14,20 @@
 #
 # The driver publishes the state in the sysfs attribute "gchd_state" of the
 # application device:
-#   STATE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE
-# While STATE is "streaming" (an application streams from the application
-# device), the service writes YUYV frames of that format (the source
-# format) into the frame input device: from the H.264 device STREAM-NODE of
-# the attached Game Capture HD (decoded, deinterlaced one frame per field,
-# not scaled; after a source change while streaming the picture is placed
-# in the middle, with black borders or cropped; the audio goes to the audio
-# source), or a "Please connect" picture while no Game Capture HD is
-# attached. When the application stops, ffmpeg stops and the capture device
-# switches off.
+#   STATE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE OUT-W OUT-H
+# WIDTH x HEIGHT is the format the application selected (one of the output
+# sizes of the device's encoder for the current input); OUT-W x OUT-H the
+# size the encoder delivers now (0 0 while not known). While STATE is
+# "streaming", the service sets the encoder of the attached Game Capture HD
+# (H.264 device STREAM-NODE) to the selected size, decodes its transport
+# stream, deinterlaces it (one frame per field; no scaling) and writes the
+# YUYV frames into the frame input device; the audio goes to the audio
+# source. While the encoder delivers another size than the selected one
+# (the source changed between NTSC and PAL while streaming), only the audio
+# is played: the picture stands still until the application selects the
+# new format (the driver reports V4L2_EVENT_SOURCE_CHANGE). Without a Game
+# Capture HD a "Please connect" picture is shown. When the application
+# stops, ffmpeg stops and the capture device switches off.
 #
 # The service sleeps until the driver reports a change (a "change" uevent of
 # the application device, through udevadm monitor); without udevadm it
@@ -101,7 +105,8 @@ audio_cleanup() {
 # ------------------------------------------------------------ pipeline
 
 PID=        # running ffmpeg
-FORMAT=     # "WIDTH HEIGHT NUM DEN STREAM-NODE" ffmpeg was started with
+FORMAT=     # "WIDTH HEIGHT NUM DEN STREAM-NODE MODE" ffmpeg was started with
+MODE=       # video or audio
 
 # Stop ffmpeg: TERM, then KILL after 3 s (an ffmpeg that waits for data
 # from an input without signal may not react to TERM).
@@ -123,24 +128,25 @@ stop_pipeline() {
 	msg "capture stopped"
 }
 
-# Decode the transport stream, deinterlace, place the picture 1:1 in the
-# application format (unchanged when the sizes match; centred with black
-# borders or cropped after a source change while streaming), write YUYV
-# frames to the feed device and the audio to the sink.
-start_pipeline() {	# start_pipeline TS FEED W H NUM DEN
-	local audio=()
-	v4l2-ctl -d "$1" -v "width=$3,height=$4,pixelformat=MPEG" >/dev/null 2>&1 ||
-		msg "cannot set the transport stream format on $1"
+# Decode the transport stream, deinterlace (no scaling), write YUYV frames
+# to the feed device and the audio to the sink. With MODE "audio" only the
+# audio is played (the encoder delivers another size than the selected
+# format).
+start_pipeline() {	# start_pipeline TS FEED W H MODE
+	local audio=() video=()
 	if pactl list short sinks 2>/dev/null | grep -q "	$SINK	"; then
 		audio=(-map '0:a:0?' -f pulse -device "$SINK" "$AUDIO_DESC")
 	fi
+	if [ "$5" = video ]; then
+		video=(-map 0:v:0 -vf "$DEINTERLACE,format=yuyv422" -f v4l2 "$2")
+	else
+		[ ${#audio[@]} -gt 0 ] || audio=(-map 0:v:0 -f null -)
+	fi
 	ffmpeg -hide_banner -loglevel error -nostdin \
 		-fflags nobuffer -probesize 1000000 -analyzeduration 1000000 \
-		-f mpegts -i "$1" \
-		-map 0:v:0 -vf "$DEINTERLACE,crop='min(iw,$3)':'min(ih,$4)',pad=$3:$4:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=$5/$6,format=yuyv422" \
-		-f v4l2 "$2" "${audio[@]}" &
+		-f mpegts -i "$1" "${video[@]}" "${audio[@]}" &
 	PID=$!
-	msg "capture: $1 -> $2 ($3x$4, $5/$6 frames/s)"
+	msg "capture ($5): $1 -> $2 (${3}x$4)"
 }
 
 # "Please connect" picture while no Game Capture HD is attached (black
@@ -195,7 +201,7 @@ cleanup() {
 }
 
 run() {
-	local dir state w h num den feed ts
+	local dir state w h num den feed ts ow oh mode
 	mkdir -p "$STATE_DIR"
 	echo $$ > "$PIDFILE"
 	trap cleanup INT TERM
@@ -208,22 +214,34 @@ run() {
 		# shellcheck disable=SC2086
 		set -- $state
 		state=${1:-none} w=${2:-} h=${3:-} num=${4:-} den=${5:-} feed=${6:--} ts=${7:--}
+		ow=${8:-0} oh=${9:-0}
 
 		if [ "$state" = streaming ] && [ "$feed" != - ]; then
-			if [ -n "$PID" ] && [ "$FORMAT" != "$w $h $num $den $ts" ]; then
-				msg "now ${w}x$h, $num/$den, stream device $ts"
+			# Video while the encoder delivers the selected size (or
+			# its size is not known yet), else audio only.
+			mode=$MODE
+			if [ "$ow" != 0 ]; then
+				if [ "$ow $oh" = "$w $h" ]; then mode=video; else mode=audio; fi
+			fi
+			[ -n "$mode" ] || mode=video
+			if [ -n "$PID" ] && [ "$FORMAT" != "$w $h $num $den $ts $mode" ]; then
+				msg "now ${w}x$h, $num/$den, stream device $ts, encoder ${ow}x$oh: $mode"
 				stop_pipeline
 			fi
 			if [ -z "$PID" ]; then
 				if [ "$ts" != - ]; then
-					start_pipeline "/dev/$ts" "/dev/$feed" "$w" "$h" "$num" "$den"
+					v4l2-ctl -d "/dev/$ts" -v "width=$w,height=$h,pixelformat=MPEG" >/dev/null 2>&1 ||
+						msg "cannot set the output size ${w}x$h on /dev/$ts"
+					start_pipeline "/dev/$ts" "/dev/$feed" "$w" "$h" "$mode"
 				else
 					start_black "/dev/$feed" "$w" "$h" "$num" "$den"
 				fi
-				FORMAT="$w $h $num $den $ts"
+				FORMAT="$w $h $num $den $ts $mode"
+				MODE=$mode
 			fi
 		elif [ -n "$PID" ]; then
 			stop_pipeline
+			MODE=
 		fi
 
 		# ffmpeg that ended by itself (source lost, error) is started

@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** application device registered at module load (source size, unscaled) + bridge; hardware test
+- **Status:** application device registered at module load (encoder output sizes, unscaled) + bridge; hardware test
 - **Type:** new userspace component (service) next to the driver
 - **Branch:** `feat/app-bridge` (from `dev` 0.5.8)
 - **TODO items:** T-060 (stage 1b)
@@ -61,10 +61,16 @@ userspace service turns the driver's stream into such a device.
    is loaded (independent of the USB device), and behaves like a usual
    capture device: the application chooses the size from a list, the
    bridge scales to it; source changes do not change the format.
-8. (Maintainer, 2026-11-18) No scaling: 1:1 output. The device offers
-   only the source size and rate; after a source change while streaming
-   the bridge places the picture unscaled (black borders or cropped)
-   until the application reopens the device.
+8. (Maintainer, 2026-11-18) No scaling: 1:1 output. The resolutions an
+   application gets are the device's own output sizes for the input type
+   (composite/S-video: source size, 640×480, 480×360; HDMI/component:
+   1920×1080, 1280×720, 640×480, 480×360, observed with a 1080p60
+   source), selected on the device's encoder. After a source change while
+   streaming (NTSC ↔ PAL, HDMI mode) the application gets
+   V4L2_EVENT_SOURCE_CHANGE and the picture stands still (audio continues)
+   until it selects the new format or reopens; no cropping, borders or
+   scaling, and the stream is never ended with an error ("making the host
+   program panic and close is a no-no").
 9. (Maintainer, 2026-11-18) No periodic work while no application uses
    the device; a "Please connect" picture without a Game Capture HD.
 
@@ -78,11 +84,15 @@ Driver (`src/app.c`, hooks in `core.c`; no protocol change):
   (frame input)" (output) are registered at module load and stay while
   the module is loaded; the first connected Game Capture HD is attached
   (detached on unplug, the next one attached at plug-in).
-- One format: the source size and rate (unscaled). While no application
-  has buffers it follows the detected source (720×480 at 59.94 after
-  loading); while streaming it stays, a source change queues
-  V4L2_EVENT_SOURCE_CHANGE. A "change" uevent on each state change (only
-  on real changes: udev opens the device on every uevent).
+- Sizes = the encoder's output sizes of the current input (composite and
+  S-video: source size at 50/59.94 one frame per field, 640×480 and
+  480×360 at 25/29.97 progressive; HDMI/component: the source size until
+  stage 3 adds its output sizes). While no application has buffers the
+  list and format follow the source; while streaming the format stays, and
+  when the encoder delivers another size, V4L2_EVENT_SOURCE_CHANGE is
+  queued (the bridge plays audio only: picture stands still). A "change"
+  uevent on each real state change. The standard per input is remembered
+  across loads (`std_composite`, `std_svideo`, udev rule).
 - `VIDIOC_S_INPUT` on the application device switches the attached
   device's input (also while capturing).
 - sysfs `/sys/class/video4linux/videoN/gchd_state` of the application
@@ -93,7 +103,8 @@ Driver (`src/app.c`, hooks in `core.c`; no protocol change):
 
 Bridge (`service/gchd-bridge`): while an application streams, ffmpeg
 decodes the attached device's stream, deinterlaces one frame per field,
-places it 1:1 (crop/pad, a no-op while the sizes match), `fps` to the rate, writes YUYV into the
+sets the encoder to the selected size first (no scaling, no frame-rate
+conversion), writes YUYV into the
 frame input and the audio to the audio source; a black picture while no
 Game Capture HD is attached ("Please connect" picture); sleeps on the
 driver's uevents (`udevadm monitor`, bounded reads); stops when the application stops (capture
@@ -124,6 +135,11 @@ at the end of it).
 
 ## Findings
 
+- Maintainer (2026-11-18) clarified the resolutions (Decisions 8): the
+  application gets the device's own output sizes for the input, not a
+  free list; the earlier list (1920×1080 … 640×480 for every input) and
+  the "1280×720 request" test were a misunderstanding. Mid-stream source
+  change: event + still picture, never an error that ends the stream.
 - Run with uevents (3b53941): 20 PASS, 6 FAIL, 1 WARN. Cause: a uevent
   loop. Every uevent makes udev open and close the application device;
   the close re-checked the source and notified even without a change, so

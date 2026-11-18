@@ -53,12 +53,14 @@ sudo dkms install elgato-gchd/0.5.8
 | `stretch` | 0 | Stretch standard-definition input (composite/S-video). |
 | `h264_profile` | 4 | V4L2 H.264 profile: 0 baseline, 2 main, 4 high. |
 | `h264_level` | 0 | H.264 level × 10 (30–51), 0 automatic. |
+| `std_composite` | 0 | Last standard detected on composite: 0 unknown, 1 NTSC (60 Hz), 2 PAL (50 Hz); sets the format before the first detection. |
+| `std_svideo` | 0 | The same for S-video. |
 
 ## Remembered settings
 
-The parameters from `input` to `h264_level` hold the settings in use. When
-an application changes one of them, the driver updates the parameters and
-sends a `change` uevent with all values. The udev rule
+The parameters from `input` to `std_svideo` hold the settings in use. When
+an application changes one of them (or a new standard is detected), the
+driver updates the parameters and sends a `change` uevent with all values. The udev rule
 [`../udev-rules/56-elgato-gchd-settings.rules`](../udev-rules/56-elgato-gchd-settings.rules)
 writes them to `/etc/modprobe.d/elgato-gchd-settings.conf`, so the next load
 (unplug and replug, module reload, reboot) starts with the same settings.
@@ -79,7 +81,8 @@ hand.
   stream; inputs HDMI (0), Component (1), Composite (2), S-Video (3). The
   hardware is initialized on `VIDIOC_STREAMON`.
 - "Elgato Game Capture HD", while the module is loaded: uncompressed YUYV
-  frames for applications in the size and rate of the source (unscaled),
+  frames for applications in one of the encoder's output sizes of the
+  current input (unscaled),
   written into "Elgato Game Capture HD (frame input)" by a userspace
   program (`service/gchd-bridge`); state in the sysfs attribute
   `gchd_state` of the device.

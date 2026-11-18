@@ -13,20 +13,24 @@
  * driver copies each written frame into the next queued buffer of the
  * application device. No decoding takes place in the kernel.
  *
- * The format is the size and frame rate of the detected source (one frame
- * per field for interlaced sources); it is the only format offered. While
- * no application has buffers allocated, it follows the source. While an
- * application streams, it does not change: a source change is reported
- * with V4L2_EVENT_SOURCE_CHANGE, and the userspace program places the new
- * picture unscaled in the frame (black borders or cropped) until the
- * application opens the device again.
+The application chooses one of the output sizes of the current input (the
+ * sizes the device's encoder delivers: composite and S-video the source
+ * size, 640x480 and 480x360; HDMI and component the source size), each with
+ * its frame rate (interlaced sizes one frame per field). The userspace
+ * program sets the encoder to that size; frames are never scaled. While no
+ * application has buffers allocated, the list and the format follow the
+ * source. While an application streams, the format does not change; when
+ * the encoder delivers another size (for example after a change between
+ * NTSC and PAL), V4L2_EVENT_SOURCE_CHANGE is queued and no frames are
+ * delivered until the application selects the new format.
  *
- * The state is published in the sysfs attribute "gchd_state" of the
+  * The state is published in the sysfs attribute "gchd_state" of the
  * application device:
- *   STATE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE
+ *   STATE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE OUT-W OUT-H
  * STATE is "streaming" while an application streams from the application
  * device, "idle" otherwise; STREAM-NODE is the H.264 device of the attached
- * Game Capture HD, "-" when none is attached. Every change of the state is
+ * Game Capture HD, "-" when none is attached; OUT-W x OUT-H is the size the
+ * encoder delivers now, 0 0 when not known. Every change of the state is
  * also sent as a "change" uevent of the application device.
  */
 
@@ -52,8 +56,12 @@ static struct gchd_app {
 	struct mutex deliver;		/* frame delivery against stop_streaming */
 	spinlock_t qlock;
 	struct list_head bufs;
-	u32 width, height;
+	u32 width, height;		/* selected format */
 	struct v4l2_fract rate;
+	unsigned int sel;		/* index of the format in list */
+	struct gchd_app_size list[GCHD_APP_SIZES]; /* offered formats */
+	unsigned int n;
+	u32 out_w, out_h;		/* encoder size last notified */
 	u32 sequence;
 	bool streaming;
 
@@ -219,27 +227,78 @@ static int gchd_app_g_fmt(struct file *f, void *p, struct v4l2_format *x)
 	return 0;
 }
 
-/* One size and one frame rate: those of the source. */
+/* The offered sizes, each with one frame rate. */
 static int gchd_app_framesizes(struct file *f, void *p,
 			       struct v4l2_frmsizeenum *s)
 {
-	if (s->index || s->pixel_format != V4L2_PIX_FMT_YUYV)
+	if (s->index >= app.n || s->pixel_format != V4L2_PIX_FMT_YUYV)
 		return -EINVAL;
 	s->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-	s->discrete.width = app.width;
-	s->discrete.height = app.height;
+	s->discrete.width = app.list[s->index].width;
+	s->discrete.height = app.list[s->index].height;
 	return 0;
+}
+
+/* Index of the offered size WIDTH x HEIGHT, or the nearest one. */
+static unsigned int gchd_app_find(u32 width, u32 height)
+{
+	unsigned int i, best = 0, dist, dbest = UINT_MAX;
+
+	for (i = 0; i < app.n; i++) {
+		dist = abs((int)app.list[i].width - (int)width) +
+		       abs((int)app.list[i].height - (int)height);
+		if (dist < dbest) {
+			dbest = dist;
+			best = i;
+		}
+	}
+	return best;
 }
 
 static int gchd_app_frameintervals(struct file *f, void *p,
 				   struct v4l2_frmivalenum *iv)
 {
-	if (iv->index || iv->pixel_format != V4L2_PIX_FMT_YUYV ||
-	    iv->width != app.width || iv->height != app.height)
+	unsigned int i;
+
+	if (iv->index || iv->pixel_format != V4L2_PIX_FMT_YUYV)
+		return -EINVAL;
+	i = gchd_app_find(iv->width, iv->height);
+	if (app.list[i].width != iv->width || app.list[i].height != iv->height)
 		return -EINVAL;
 	iv->type = V4L2_FRMIVAL_TYPE_DISCRETE;
-	iv->discrete.numerator = app.rate.denominator;
-	iv->discrete.denominator = app.rate.numerator;
+	iv->discrete.numerator = app.list[i].rate.denominator;
+	iv->discrete.denominator = app.list[i].rate.numerator;
+	return 0;
+}
+
+static int gchd_app_try_fmt(struct file *f, void *p, struct v4l2_format *x)
+{
+	unsigned int i = gchd_app_find(x->fmt.pix.width, x->fmt.pix.height);
+
+	gchd_app_pix(app.list[i].width, app.list[i].height, &x->fmt.pix);
+	return 0;
+}
+
+static void gchd_app_select(unsigned int i)
+{
+	app.sel = i;
+	app.width = app.list[i].width;
+	app.height = app.list[i].height;
+	app.rate = app.list[i].rate;
+}
+
+static int gchd_app_s_fmt(struct file *f, void *p, struct v4l2_format *x)
+{
+	unsigned int i = gchd_app_find(x->fmt.pix.width, x->fmt.pix.height);
+
+	gchd_app_try_fmt(f, p, x);
+	if (i == app.sel && app.width == app.list[i].width &&
+	    app.height == app.list[i].height)
+		return 0;
+	if (vb2_is_busy(&app.q))
+		return -EBUSY;
+	gchd_app_select(i);
+	gchd_app_notify();
 	return 0;
 }
 
@@ -354,8 +413,8 @@ static const struct v4l2_ioctl_ops gchd_app_ioctl = {
 	.vidioc_querycap = gchd_app_querycap,
 	.vidioc_enum_fmt_vid_cap = gchd_app_enum_fmt,
 	.vidioc_g_fmt_vid_cap = gchd_app_g_fmt,
-	.vidioc_s_fmt_vid_cap = gchd_app_g_fmt,
-	.vidioc_try_fmt_vid_cap = gchd_app_g_fmt,
+	.vidioc_s_fmt_vid_cap = gchd_app_s_fmt,
+	.vidioc_try_fmt_vid_cap = gchd_app_try_fmt,
 	.vidioc_enum_framesizes = gchd_app_framesizes,
 	.vidioc_enum_frameintervals = gchd_app_frameintervals,
 	.vidioc_g_parm = gchd_app_g_parm,
@@ -399,30 +458,41 @@ static void gchd_app_update_workfn(struct work_struct *work)
 		.type = V4L2_EVENT_SOURCE_CHANGE,
 		.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION,
 	};
-	struct v4l2_fract rate;
+	struct gchd_app_size list[GCHD_APP_SIZES];
 	struct gchd *d;
-	bool known, changed = false;
-	u32 w, h;
+	unsigned int n, sel;
+	bool changed = false;
+	u32 ow = 0, oh = 0;
 
 	d = gchd_app_get();
 	if (!d)
 		return;
-	known = gchd_source_format(d, &w, &h, &rate);
+	gchd_remember_std(d);
+	n = gchd_app_sizes(d, list);
+	if (!gchd_app_output(d, &ow, &oh))
+		ow = oh = 0;
 	gchd_put(d);
-	if (!known || !rate.numerator || !rate.denominator)
-		return;
 
 	mutex_lock(&app.lock);
-	if (w != app.width || h != app.height ||
-	    rate.numerator != app.rate.numerator ||
-	    rate.denominator != app.rate.denominator) {
-		if (!vb2_is_busy(&app.q)) {
-			app.width = w;
-			app.height = h;
-			app.rate = rate;
+	if (!vb2_is_busy(&app.q)) {
+		sel = app.sel < n ? app.sel : 0;
+		if (n != app.n || memcmp(list, app.list, n * sizeof(*list)) ||
+		    sel != app.sel || app.width != list[sel].width ||
+		    app.height != list[sel].height) {
+			memcpy(app.list, list, n * sizeof(*list));
+			app.n = n;
+			gchd_app_select(sel);
 			changed = true;
 		}
+	} else if (ow && (ow != app.out_w || oh != app.out_h) &&
+		   (ow != app.width || oh != app.height)) {
+		/* The encoder delivers another size than the selected one. */
 		v4l2_event_queue(&app.vdev, &ev);
+	}
+	if (ow != app.out_w || oh != app.out_h) {
+		app.out_w = ow;
+		app.out_h = oh;
+		changed = true;
 	}
 	mutex_unlock(&app.lock);
 	/* Notify only real changes (a uevent makes udev open the device). */
@@ -610,12 +680,16 @@ static ssize_t gchd_state_show(struct device *dev,
 	struct gchd *d = gchd_app_get();
 	ssize_t n;
 
-	n = sysfs_emit(buf, "%s %u %u %u %u %s %s\n",
+	u32 ow = 0, oh = 0;
+
+	if (!d || !gchd_app_output(d, &ow, &oh))
+		ow = oh = 0;
+	n = sysfs_emit(buf, "%s %u %u %u %u %s %s %u %u\n",
 		       READ_ONCE(app.streaming) ? "streaming" : "idle",
 		       app.width, app.height,
 		       app.rate.numerator, app.rate.denominator,
 		       video_device_node_name(&app.feed),
-		       d ? video_device_node_name(&d->vdev) : "-");
+		       d ? video_device_node_name(&d->vdev) : "-", ow, oh);
 	if (d)
 		gchd_put(d);
 	return n;
@@ -666,10 +740,12 @@ int gchd_app_register(void)
 	INIT_LIST_HEAD(&app.feed_pending);
 	mutex_init(&app.attach_lock);
 	INIT_WORK(&app.update_work, gchd_app_update_workfn);
-	app.width = 720;
-	app.height = 480;
-	app.rate.numerator = 60000;
-	app.rate.denominator = 1001;
+	/* Before a device is attached: the composite/S-video NTSC sizes. */
+	app.list[0] = (struct gchd_app_size){ 720, 480, { 60000, 1001 } };
+	app.list[1] = (struct gchd_app_size){ 640, 480, { 30000, 1001 } };
+	app.list[2] = (struct gchd_app_size){ 480, 360, { 30000, 1001 } };
+	app.n = 3;
+	gchd_app_select(0);
 	app.feed_width = app.width;
 	app.feed_height = app.height;
 
