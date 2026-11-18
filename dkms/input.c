@@ -1546,7 +1546,9 @@ bool gchd_analog_pal60_hold(struct gchd *d, u8 e7, unsigned long since,
   return false;
  if (!*logged)
   dev_info(&d->intf->dev,
-           "60 Hz signal with PAL colour (0x88:E7=%02x); waiting up to %u ms for 50 Hz\n",
+           "%s (0x88:E7=%02x); waiting up to %u ms\n",
+           e7 == 0x59 ? "60 Hz signal with PAL colour" :
+                        "decoder standard not settled",
            e7, GCHD_PAL60_HOLD_MS);
  *logged = true;
  return true;
