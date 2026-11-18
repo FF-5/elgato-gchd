@@ -86,7 +86,10 @@ AUDIO_MODULES=
 audio_setup() {
 	local m1 m2
 	command -v pactl >/dev/null || { msg "pactl missing: no audio source"; return; }
-	pactl list short sinks 2>/dev/null | grep -q "	$SINK	" && return
+	# Remove a sink and source left by a bridge that did not end cleanly.
+	pactl list short modules 2>/dev/null |
+		awk -v s="$SINK" '$0 ~ "sink_name=" s "( |$)" || $0 ~ "source_name=" s "_audio( |$)" { print $1 }' |
+		while read -r m; do pactl unload-module "$m" 2>/dev/null; done
 	m1=$(pactl load-module module-null-sink sink_name=$SINK \
 		"sink_properties=device.description=\"$AUDIO_DESC (bridge)\"") || return
 	m2=$(pactl load-module module-remap-source master=$SINK.monitor \
@@ -232,6 +235,11 @@ run() {
 				if [ "$ts" != - ]; then
 					v4l2-ctl -d "/dev/$ts" -v "width=$w,height=$h,pixelformat=MPEG" >/dev/null 2>&1 ||
 						msg "cannot set the output size ${w}x$h on /dev/$ts"
+					# Decide with the encoder size after setting it.
+					# shellcheck disable=SC2046
+					set -- $(app_state "$dir")
+					mode=video
+					[ "${8:-0}" = 0 ] || [ "$8 $9" = "$w $h" ] || mode=audio
 					start_pipeline "/dev/$ts" "/dev/$feed" "$w" "$h" "$mode"
 				else
 					start_black "/dev/$feed" "$w" "$h" "$num" "$den"
