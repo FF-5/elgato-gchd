@@ -1,5 +1,5 @@
 # T-066: V4L2 compliance (DV timings, level menu, power-present control,
-# input control while another process captures).
+# input change from another process while capturing).
 
 step "load module (fresh plug-in)"
 load_module replug
@@ -14,10 +14,10 @@ expect "G_DV_TIMINGS works without a signal" "1280x720p60|Active width: 1280" v4
 expect "DV timings list" "Active width: 1920" v4l2-ctl -d "$DEV" --list-dv-timings
 expect "power present 0 without a signal" "power_present.*value=0" v4l2-ctl -d "$DEV" -l
 
-step "composite capture, input control refused while capturing"
+step "composite capture, input change from another process refused"
 prompt "PS1 on composite, game running."
 set_input 2
 set_fmt 720 576 MPEG
-capture 10 720 576 50/1 tt "during=5:v4l2-ctl -d $DEV -c input_source=0; v4l2-ctl -d $DEV --get-input"
+capture 10 720 576 50/1 tt "during=5:v4l2-ctl -d $DEV -i 0; v4l2-ctl -d $DEV --get-input"
 run sh -c "grep -A2 'during capture' '$LOG' | tail -3"
 expect "input still composite after the refused change" "Video input : 2" v4l2-ctl -d "$DEV" --get-input
