@@ -1,0 +1,291 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+#
+# gchd-bridge: offers the Elgato Game Capture HD to applications that need
+# uncompressed video (guvcview, OBS, browsers, video calls) and a separate
+# audio source.
+#
+#   gchd-bridge run                 run the service (foreground)
+#   gchd-bridge input INPUT         select the input: hdmi, component,
+#                                   composite, svideo (or 0-3)
+#   gchd-bridge status              show devices and state
+#
+# The service decodes the transport stream of the driver, deinterlaces it
+# and writes YUYV frames to a v4l2loopback device; the audio goes to a
+# PipeWire/PulseAudio source. The capture device runs only while an
+# application has the loopback device open; otherwise a black picture of
+# the same size is offered and the capture device stays off.
+#
+# Needs: v4l2loopback (loaded with exclusive_caps=1), ffmpeg, v4l2-ctl,
+# fuser (psmisc), pactl.
+#
+# Environment: GCHD_LOOP_LABEL (card label of the loopback device, default
+# "Elgato Game Capture HD"), GCHD_DEINTERLACE (ffmpeg filter, default
+# "bwdif=mode=send_field:deint=interlaced").
+
+set -u
+
+LOOP_LABEL=${GCHD_LOOP_LABEL:-Elgato Game Capture HD}
+DEINTERLACE=${GCHD_DEINTERLACE:-bwdif=mode=send_field:deint=interlaced}
+SINK=elgato_gchd
+SOURCE=elgato_gchd_audio
+AUDIO_DESC="Elgato Game Capture HD"
+POLL=1             # seconds between checks
+OPEN_POLLS=2       # consecutive checks with a reader before the capture starts
+IDLE_FPS=5
+STATE_DIR=${XDG_RUNTIME_DIR:-/tmp}/gchd-bridge-$(id -u)
+PIDFILE=$STATE_DIR/pid
+REQUEST=$STATE_DIR/input
+
+msg() { printf 'gchd-bridge: %s\n' "$*" >&2; }
+die() { msg "$*"; exit 1; }
+
+# ------------------------------------------------------------ devices
+
+# Video device node of a driver (elgato_gchd or v4l2loopback), optionally
+# with a given card name.
+find_node() {	# find_node DRIVER [NAME]
+	local d drv
+	for d in /sys/class/video4linux/video*; do
+		[ -e "$d" ] || continue
+		drv=$(basename "$(readlink -f "$d/device/driver")" 2>/dev/null)
+		[ "$drv" = "$1" ] || continue
+		[ $# -lt 2 ] || [ "$(cat "$d/name")" = "$2" ] || continue
+		echo "/dev/$(basename "$d")"
+		return 0
+	done
+	return 1
+}
+
+cap_dev()  { find_node elgato_gchd; }
+loop_dev() { find_node v4l2loopback "$LOOP_LABEL"; }
+
+# Current output size of the capture device: "WIDTH HEIGHT".
+cap_size() {
+	v4l2-ctl -d "$1" --get-fmt-video 2>/dev/null |
+		sed -n 's#.*Width/Height *: *\([0-9]*\)/\([0-9]*\).*#\1 \2#p'
+}
+
+input_number() {
+	case "$1" in
+	0|hdmi|HDMI) echo 0 ;;
+	1|component) echo 1 ;;
+	2|composite) echo 2 ;;
+	3|svideo|s-video) echo 3 ;;
+	*) return 1 ;;
+	esac
+}
+
+# Processes other than ours that have the loopback device open.
+readers() {	# readers LOOP OWN-PID...
+	local loop=$1 p own
+	shift
+	for p in $(fuser "$loop" 2>/dev/null); do
+		for own in "$$" "$@"; do
+			[ "$p" = "$own" ] && continue 2
+		done
+		echo "$p"
+	done
+}
+
+# ------------------------------------------------------------ audio
+
+AUDIO_MODULES=
+audio_setup() {
+	local m1 m2
+	command -v pactl >/dev/null || { msg "pactl missing: no audio source"; return; }
+	pactl list short sinks 2>/dev/null | grep -q "	$SINK	" && return
+	m1=$(pactl load-module module-null-sink sink_name=$SINK \
+		"sink_properties=device.description=\"$AUDIO_DESC (bridge)\"") || return
+	m2=$(pactl load-module module-remap-source master=$SINK.monitor \
+		source_name=$SOURCE \
+		"source_properties=device.description=\"$AUDIO_DESC\"") || m2=
+	AUDIO_MODULES="$m2 $m1"
+}
+
+audio_cleanup() {
+	local m
+	for m in $AUDIO_MODULES; do
+		pactl unload-module "$m" 2>/dev/null
+	done
+}
+
+# ------------------------------------------------------------ pipelines
+
+PID=          # running ffmpeg (black picture or capture)
+MODE=none     # none | idle | capture
+SIZE=
+
+stop_pipeline() {
+	[ -n "$PID" ] || return 0
+	kill "$PID" 2>/dev/null
+	wait "$PID" 2>/dev/null
+	PID=
+}
+
+# Black picture of the given size, so the device can be listed and opened
+# while the capture device is off.
+start_idle() {	# start_idle LOOP W H
+	ffmpeg -hide_banner -loglevel error -nostdin \
+		-f lavfi -i "color=c=black:s=$2x$3:r=$IDLE_FPS" \
+		-vf format=yuyv422 -f v4l2 "$1" &
+	PID=$!
+	MODE=idle
+	SIZE="$2 $3"
+	msg "idle: black $2x$3 on $1"
+}
+
+# Decode the transport stream of the capture device, deinterlace, scale to
+# the size the loopback device was opened with, write YUYV frames and the
+# audio.
+start_capture() {	# start_capture CAP LOOP W H
+	local audio=()
+	v4l2-ctl -d "$1" -v pixelformat=MPEG >/dev/null 2>&1 ||
+		msg "cannot set the MPEG format on $1"
+	if pactl list short sinks 2>/dev/null | grep -q "	$SINK	"; then
+		audio=(-map '0:a:0?' -f pulse -device "$SINK" "$AUDIO_DESC")
+	fi
+	ffmpeg -hide_banner -loglevel error -nostdin \
+		-fflags nobuffer -probesize 1000000 -analyzeduration 1000000 \
+		-f mpegts -i "$1" \
+		-map 0:v:0 -vf "$DEINTERLACE,scale=$3:$4,setsar=1,format=yuyv422" \
+		-f v4l2 "$2" "${audio[@]}" &
+	PID=$!
+	MODE=capture
+	msg "capture: $1 -> $2 ($3x$4)"
+}
+
+# ------------------------------------------------------------ service
+
+cleanup() {
+	stop_pipeline
+	audio_cleanup
+	rm -f "$PIDFILE"
+	exit 0
+}
+
+run() {
+	local cap loop size seen=0 hup=0 n idle_check=0
+	mkdir -p "$STATE_DIR"
+	echo $$ > "$PIDFILE"
+	trap cleanup INT TERM
+	trap 'hup=1' HUP
+
+	loop=$(loop_dev) || die "no v4l2loopback device \"$LOOP_LABEL\" (modprobe v4l2loopback exclusive_caps=1 card_label=\"$LOOP_LABEL\")"
+	# Keep the format while no producer writes, so that the switch between
+	# the black picture and the capture is seamless for the application.
+	v4l2-ctl -d "$loop" -c keep_format=1 >/dev/null 2>&1
+	audio_setup
+
+	while :; do
+		cap=$(cap_dev) || cap=
+		if [ -z "$cap" ]; then
+			# Device unplugged or driver not loaded.
+			[ "$MODE" = capture ] && { stop_pipeline; MODE=none; }
+		fi
+
+		if [ $hup = 1 ]; then
+			hup=0
+			n=$(cat "$REQUEST" 2>/dev/null)
+			if [ -n "$cap" ] && [ -n "$n" ]; then
+				[ "$MODE" = capture ] && { stop_pipeline; MODE=none; }
+				v4l2-ctl -d "$cap" -i "$n" >/dev/null 2>&1 ||
+					msg "input $n could not be selected"
+				msg "input $n selected"
+			fi
+		fi
+
+		if [ -n "$(readers "$loop" "${PID:-0}")" ]; then
+			seen=$((seen + 1))
+		else
+			seen=0
+		fi
+
+		case "$MODE" in
+		none)
+			size=
+			[ -n "$cap" ] && size=$(cap_size "$cap")
+			if [ "$seen" -ge $OPEN_POLLS ] && [ -n "$cap" ]; then
+				# Restart after an input change or a stopped capture:
+				# keep the size the application opened.
+				[ -n "$SIZE" ] || SIZE=${size:-720 480}
+				# shellcheck disable=SC2086
+				start_capture "$cap" "$loop" $SIZE
+			elif [ "$seen" = 0 ]; then
+				# shellcheck disable=SC2086
+				start_idle "$loop" ${size:-720 480}
+			fi
+			;;
+		idle)
+			if [ "$seen" -ge $OPEN_POLLS ] && [ -n "$cap" ]; then
+				stop_pipeline
+				# shellcheck disable=SC2086
+				start_capture "$cap" "$loop" $SIZE
+			elif [ "$seen" = 0 ] && [ -n "$cap" ]; then
+				# Follow the source size while no application has the
+				# device open (checked every 5 s).
+				idle_check=$(((idle_check + 1) % 5))
+				if [ $idle_check = 0 ]; then
+					size=$(cap_size "$cap")
+					if [ -n "$size" ] && [ "$size" != "$SIZE" ]; then
+						stop_pipeline
+						# shellcheck disable=SC2086
+						start_idle "$loop" $size
+					fi
+				fi
+			fi
+			;;
+		capture)
+			if [ "$seen" = 0 ]; then
+				stop_pipeline
+				MODE=none
+				msg "no application: capture stopped"
+			fi
+			;;
+		esac
+
+		# A pipeline that ended by itself (source lost, error) is
+		# restarted by the next round.
+		if [ -n "$PID" ] && ! kill -0 "$PID" 2>/dev/null; then
+			wait "$PID" 2>/dev/null
+			msg "$MODE pipeline ended"
+			PID=
+			MODE=none
+		fi
+
+		sleep "$POLL" &
+		wait $! 2>/dev/null
+	done
+}
+
+select_input() {
+	local n cap pid
+	n=$(input_number "${1:-}") || die "unknown input: ${1:-} (hdmi, component, composite, svideo)"
+	pid=$(cat "$PIDFILE" 2>/dev/null)
+	if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+		echo "$n" > "$REQUEST"
+		kill -HUP "$pid"
+		return
+	fi
+	cap=$(cap_dev) || die "Elgato Game Capture HD not found"
+	v4l2-ctl -d "$cap" -i "$n"
+}
+
+status() {
+	local pid
+	echo "capture device:  $(cap_dev || echo none)"
+	echo "loopback device: $(loop_dev || echo none)"
+	pid=$(cat "$PIDFILE" 2>/dev/null)
+	if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+		echo "service:         running (pid $pid)"
+	else
+		echo "service:         not running"
+	fi
+}
+
+case "${1:-}" in
+run) run ;;
+input) select_input "${2:-}" ;;
+status) status ;;
+*) sed -n '4,10p' "$0"; exit 2 ;;
+esac
