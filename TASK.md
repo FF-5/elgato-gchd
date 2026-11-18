@@ -70,3 +70,14 @@ hangs), say where; Ctrl+C stops it.
 
 ## Maintainer comments
 
+=== summary (T-061, 4aa0117 TASK: findings of the first script run; retest)
+PASS | step 2 default: 11250 kbit/s CBR | stream 720x576 50/1 tt
+PASS | step 3 6000 kbit/s VBR (set while stopped) | stream 720x576 50/1 tt
+PASS | step 4 14040 kbit/s VBR, changed while capturing | stream 720x576 50/1 tt
+PASS | step 5 back to 11250 CBR while capturing | stream 720x576 50/1 tt
+PASS | step 6 stretch | Is the picture different from normal (stretched)? Describe in the note how. -- horizontally stretched
+PASS | step 7 mobile 480x360 at 4000 kbit/s | stream 480x360 25/1 progressive
+PASS | step 8 mobile 480x360 at 15000 kbit/s | stream 480x360 25/1 progressive
+PASS | step 9 picture check at the end | Normal PS1 picture with sound?
+
+FAIL: 0  WARN: 0
