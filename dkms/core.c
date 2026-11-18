@@ -1843,6 +1843,20 @@ static int gchd_enum_frameintervals(struct file *f, void *p,
 static int gchd_gfmt(struct file*f,void*p,struct v4l2_format*x)
 {
  struct gchd*d=video_drvdata(f);
+
+ /*
+  * Composite and S-video: the size follows the source (buffers have a fixed
+  * size for both): the configured mode, else the standard detected last. A
+  * capture allocates its buffers before detection, so the negotiated size
+  * alone stays at the nominal one.
+  */
+ if (d->input >= 2) {
+  d->width = 720;
+  if (d->input_height == 480 || d->input_height == 576)
+   d->height = d->input_height;
+  else
+   gchd_nominal_format(d, &d->width, &d->height);
+ }
  x->fmt.pix.width=d->width;x->fmt.pix.height=d->height;
  x->fmt.pix.pixelformat=d->pixfmt;
  /* Analog inputs are always encoded interlaced (also 240p/288p). */
@@ -1868,9 +1882,9 @@ static const struct gchd_mode *gchd_adjust_fmt(struct gchd *d,
  if (!gchd_pixfmt_ok(pix->pixelformat))
   pix->pixelformat = V4L2_PIX_FMT_H264;
  if (d->input >= 2) {
+  /* The source decides the size: that of the standard detected last. */
   pix->width = 720;
-  pix->height = pix->height == 576 ? 576 :
-                (pix->height == 480 ? 480 : d->height == 576 ? 576 : 480);
+  pix->height = gchd_std_is_50hz(gchd_analog_std(d)) ? 576 : 480;
   pix->field = V4L2_FIELD_INTERLACED_TB;
  } else {
   m = gchd_find_mode(pix->width, pix->height, interlaced);
