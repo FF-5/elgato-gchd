@@ -1,48 +1,59 @@
-# TASK T-070 — Repository layout: all code under `src/`
+# TASK T-070 — Kernel driver only: repository layout
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** waiting for the release decision (see findings)
+- **Status:** done except the licence files (maintainer go-ahead); smoke test
 - **Type:** move only (no code changes)
 - **Branch:** `chore/src-layout` (from `dev` 0.5.6)
 - **TODO items:** T-070
 
 ## Why
 
-Agreed with the maintainer (2026-11-18): all code under `src/`, kernel
-driver and userspace program side by side, before the installation
-scripts (T-071) and the guvcview/OBS service (T-060).
+Maintainer decision (2026-11-18): the project becomes the kernel driver
+only. The original project (userspace program) is discontinued; its code
+stays in the git history and in the original repository, its authors are
+credited.
 
-## Plan
+## Done
 
-| Today | New |
+| Before | Now |
 |---|---|
-| `dkms/` | `src/kernel/` |
-| `src/*.cpp`, `src/*.hpp`, `src/gchd/`, `src/gui/`, `src/CMakeLists.txt` | `src/userspace/` (content unchanged) |
-| `firmware_extract/` | `firmware/` (maintainer 2026-11-18) |
-| `udev-rules/`, `docs/` | stay |
+| `dkms/` | `src/` |
+| `src/` (C++ userspace program), `CMakeLists.txt` | removed |
+| `udev-rules/55-elgato-game-capture.rules` (USB access for the userspace program) | removed |
+| `firmware_extract/` | `firmware/` |
+| top-level `README.md` (userspace program) | the kernel driver, with origin and credits |
 
-1. `git mv` only; no file content changes except paths:
-   - top-level `CMakeLists.txt`: `ADD_SUBDIRECTORY(src/userspace src)` (the
-     build output stays in `build/src`, as the top-level README says);
-     the commented `src/gui` line to `src/userspace/gui` (paths only, as
-     allowed by the maintainer);
-   - `src/kernel/dkms.conf` and Makefile/Kbuild paths if any;
-   - path references in `docs/`, `src/kernel/README.md`, RULES.md,
-     CLAUDE.md, TODO.md;
-   - top-level `README.md`: one section per program; the kernel-module
-     section written new, the userspace section unchanged except paths
-     and the build method (RULES B4 as updated 2026-11-18);
-   - `tools` branch: `compare-objs.sh`, `gen-transcoder-fields.py` and
-     `gchd-test.sh` build from `src/kernel/` (with a fallback to `dkms/`
-     for older revisions).
-2. Proof: the module built before and after is identical
-   (`compare-objs.sh`), and the userspace program still builds with CMake.
-3. Hardware test: the `smoke` test with the new paths (one short run).
+- Paths updated in `docs/`, `src/README.md`, RULES, CLAUDE, TODO and the
+  `tools` scripts (they handle `src/` and, for older revisions, `dkms/`).
+- `compare-objs.sh origin/dev WORKTREE`: identical code and data.
+- After the first release: detach the fork or create a new repository
+  (TODO T-093).
+
+**Pending, needs the maintainer's explicit go-ahead in a session** (the
+session's permission check blocked it): `LICENSE` → `LICENSE.MIT` (the
+original MIT notice, unchanged), a new `LICENSE` with the GPL-2.0 text,
+and an SPDX line (`GPL-2.0`) in every driver source file.
 
 ## Hardware test (maintainer)
 
-Follows with the implementation.
+Your checkout still has the old `dkms/` directory with build files in it
+(ignored files stay behind after the move); remove it once:
+
+```sh
+rm -rf ~/elgato-gchd/dkms
+```
+
+Then the quick regression with the new layout (PS1 and N64 on composite):
+
+```sh
+cd ~ && git -C elgato-gchd fetch origin
+git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/smoke.sh > tests/smoke.sh
+bash gchd-test.sh smoke --branch chore/src-layout
+```
+
+Paste the summary.
 
 ## Findings
 
