@@ -164,15 +164,26 @@ report() {
 		--get-standard --get-detected-standard 2>&1 | grep -vE "Transfer|YCbCr|Quantization|Flags|Bytes per|Colorspace|Read buffers"
 }
 
-# capture SECONDS [WIDTH HEIGHT FPS FIELD]: read the MPEG stream with read(),
-# check it with ffprobe. FPS as ffprobe prints r_frame_rate (25/1,
-# 30000/1001); FIELD progressive or tt (top first) or "-" to skip.
+# capture SECONDS [WIDTH HEIGHT FPS FIELD] [during=DELAY:COMMAND]: read the
+# MPEG stream with read(), check it with ffprobe. FPS as ffprobe prints
+# r_frame_rate (25/1, 30000/1001); FIELD progressive or tt (top first) or
+# "-" to skip. during=: run COMMAND DELAY seconds into the capture.
 capture() {
-	local secs=$1 f="$WORK/step$STEP.ts" info errs
+	local secs=$1 f="$WORK/step$STEP-$RANDOM.ts" info errs during= kbps
 	shift
+	if [ $# -gt 0 ]; then
+		local last=${*: -1}
+		case "$last" in
+		during=*) during=${last#during=}; set -- "${@:1:$(($# - 1))}" ;;
+		esac
+	fi
 	say "capturing ${secs}s to $(basename "$f")"
+	if [ -n "$during" ]; then
+		( sleep "${during%%:*}"; log "during capture: ${during#*:}"; eval "${during#*:}" >> "$LOG" 2>&1 ) &
+	fi
 	timeout -k 5 $((secs + 20)) bash -c \
 		"head -c \$(( $secs * 4000000 )) < '$DEV' > '$f' & p=\$!; sleep $secs; kill \$p 2>/dev/null; wait \$p" 2>/dev/null
+	wait
 	if [ ! -s "$f" ]; then
 		result FAIL "capture: no data"
 		return 1
@@ -180,8 +191,9 @@ capture() {
 	info=$(ffprobe -v error -select_streams v:0 -show_entries \
 		stream=codec_name,width,height,field_order,r_frame_rate -of default=nw=1 "$f" | head -5 | tr '\n' ' ')
 	errs=$(ffmpeg -v error -i "$f" -f null - 2>&1 | wc -l)
-	log "capture: $(stat -c %s "$f") bytes; $info; decode errors $errs"
-	say "  $info; decode errors $errs"
+	kbps=$(( $(stat -c %s "$f") * 8 / 1000 / secs ))
+	log "capture: $(stat -c %s "$f") bytes, ~$kbps kbit/s; $info; decode errors $errs"
+	say "  $info; ~$kbps kbit/s; decode errors $errs"
 	ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "$f" | grep -q mp2 \
 		&& log "audio: mp2" || result FAIL "capture: no audio stream"
 	if [ $# -ge 4 ]; then
@@ -208,6 +220,11 @@ play() {
 # set_fmt WIDTH HEIGHT [PIXFMT]
 set_fmt() {
 	run v4l2-ctl -d "$DEV" -v "width=$1,height=$2,pixelformat=${3:-MPEG}"
+}
+
+# set_ctrl NAME=VALUE[,NAME=VALUE...] (v4l2-ctl control names)
+set_ctrl() {
+	run v4l2-ctl -d "$DEV" -c "$1"
 }
 
 set_input() {
