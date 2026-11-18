@@ -1278,9 +1278,16 @@ static int gchd_dec_write_standard(struct gchd *d)
  * Decoder apply block for a family (6 = 60 Hz, 7 = 50 Hz); 0x28 follows bit 3
  * of 0x88:CA (set: 88, clear: 8A).
  */
+static u16 gchd_dec_apply_key(u8 family, u8 lock)
+{
+ return family << 8 | ((lock & 0x08) ? 0x88 : 0x8a);
+}
+
 static int gchd_dec_apply_family(struct gchd *d, u8 family, u8 lock)
 {
  u8 v;
+
+ d->dec_applied = gchd_dec_apply_key(family, lock);
 
  if (family == 7) {
   GCHD_DEC_W(d, 0x07, 0x9a); GCHD_DEC_W(d, 0x08, 0x90); GCHD_DEC_W(d, 0x09, 0xa8);
@@ -1567,16 +1574,19 @@ int gchd_analog_family_pre_stop(struct gchd *d, u8 family, u8 lock)
   GCHD_DEC_R(d, 0xf1, v);
   return gchd_be_retrigger(d);
  }
+ d->dec_applied = 0;
  return gchd_be_neutral(d);
 }
 
 /*
  * Family change, second part (encoder in STOP): wait for the decoder to
  * lock, loading the apply block of the family it reports every 0.5 s while
- * it does not; then set the mode, write 0x88:0A, load the back-end table and
- * program the encoder. START follows. -ENOLINK when no lock within about 4 s.
+ * it does not; with hold (the signal had dropped), wait out a 60 Hz signal
+ * with PAL colour. Then set the mode, load the apply block of the locked
+ * family if needed, write 0x88:0A, load the back-end table and program the
+ * encoder. START follows. -ENOLINK when no lock within about 4 s.
  */
-int gchd_analog_family_reconfigure(struct gchd *d)
+int gchd_analog_family_reconfigure(struct gchd *d, bool hold)
 {
  unsigned long start = jiffies;
  bool held = false;
@@ -1588,7 +1598,7 @@ int gchd_analog_family_reconfigure(struct gchd *d)
   GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, ca);
   family = fa & 0x0f;
   if ((family == 6 || family == 7) && (ca == 0x7e || ca == 0x66)) {
-   if (family != 6)
+   if (family != 6 || !hold)
     break;
    GCHD_DEC_R(d, 0xe7, v);
    if (!gchd_analog_pal60_hold(d, v, start, &held))
@@ -1621,6 +1631,13 @@ int gchd_analog_family_reconfigure(struct gchd *d)
  d->input_fps_den = 1;
  d->input_interlaced = ca == 0x7e;
 
+ /* Apply block of the locked family unless it is already loaded. */
+ if (d->dec_applied != gchd_dec_apply_key(family, ca)) {
+  r = gchd_dec_apply_family(d, family, ca);
+  if (r)
+   return r;
+  msleep(430);
+ }
  r = gchd_dec_write_standard(d);
  if (r)
   return r;

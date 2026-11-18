@@ -117,6 +117,7 @@ struct gchd {
  unsigned long std_hold_until; /* ignore 0x88:E7 bit 7 until then */
  unsigned long pal60_since; /* first 60 Hz lock seen by detection; 0 = none */
  bool pal60_logged;
+ u16 dec_applied; /* family << 8 | 0x88:28 of the last family apply block; 0 = unknown */
  bool detect_requested;
  bool disconnected;
  bool hw_initialized;
@@ -179,7 +180,7 @@ int gchd_input_read_analog_mode(struct gchd *, bool *);
 int gchd_analog_mode_pre_stop(struct gchd *, bool);
 int gchd_analog_mode_reconfigure(struct gchd *);
 int gchd_analog_family_pre_stop(struct gchd *, u8, u8);
-int gchd_analog_family_reconfigure(struct gchd *);
+int gchd_analog_family_reconfigure(struct gchd *, bool);
 bool gchd_analog_pal60_hold(struct gchd *, u8, unsigned long, bool *);
 int gchd_analog_pal_mode_change(struct gchd *, bool);
 int gchd_analog_poll_backend(struct gchd *);

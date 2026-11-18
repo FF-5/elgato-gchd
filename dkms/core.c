@@ -1107,6 +1107,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  struct v4l2_event ev = { .type = V4L2_EVENT_SOURCE_CHANGE };
  bool target_interlaced = false;
  bool family_change = false;
+ bool family_hold = false;
  int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
@@ -1142,6 +1143,8 @@ static void gchd_mode_workfn(struct work_struct *work)
              "decoder status changed while capturing (FA=%x CA=%02x E7=%02x); configuring again\n",
              family, lock, std);
     family_change = true;
+    /* The signal had dropped (reset, power cycle): wait out a 60 Hz start. */
+    family_hold = family != 6 && family != 7;
     r = gchd_analog_family_pre_stop(d, family, lock);
     if (r)
      goto restart_failed;
@@ -1212,7 +1215,7 @@ stop_and_restart:
  d->input_configured = false;
  gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
  if (family_change) {
-  r = gchd_analog_family_reconfigure(d);
+  r = gchd_analog_family_reconfigure(d, family_hold);
  } else {
   d->input_interlaced = target_interlaced;
   r = gchd_analog_mode_reconfigure(d);
