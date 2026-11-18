@@ -62,7 +62,9 @@ Output and settings (`docs/composite.md §10`):
       `V4L2_IN_CAP_DV_TIMINGS` is set, `VIDIOC_DV_TIMINGS_CAP` missing
       (also breaks the buffer tests via `g_dv_timings`); a menu control
       rejects item 0 ("could not set valid menu item 0", all inputs);
-      `V4L2_CID_DV_RX_POWER_PRESENT` missing (warning). Needed for
+      `V4L2_CID_DV_RX_POWER_PRESENT` missing (warning). The input menu
+      control still switches inputs for any process while another one
+      captures (S_INPUT returns EBUSY since fd8426b). Needed for
       guvcview/OBS robustness (T-060).
 - [ ] **T-064 (M)** Input persistence: HDMI on first use after
       installation, afterwards the last selected input, also across module
