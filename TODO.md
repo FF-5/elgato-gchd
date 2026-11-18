@@ -72,6 +72,10 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
       "Input Source" menu control was removed in T-066: it changed the
       input behind `v4l2-compliance`; `VIDIOC_S_INPUT` remains). guvcview
       has no input selector of its own.
+      Decisions (maintainer 2026-11-18): shell + ffmpeg first, modular,
+      replaceable by something faster; capture device only on while an
+      application reads; output size = source size when the application
+      opens the device; folder `service/`. Prototype on `feat/app-bridge`.
 
 ## Stage 2 — Component
 

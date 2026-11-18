@@ -2,10 +2,9 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** analysis; maintainer decisions needed (see "Open questions")
+- **Status:** prototype (`service/gchd-bridge`); first hardware test
 - **Type:** new userspace component (service) next to the driver
-- **Branch:** `feat/app-bridge` (from `dev` 0.5.8), created when the
-  decisions are made
+- **Branch:** `feat/app-bridge` (from `dev` 0.5.8)
 - **TODO items:** T-060 (stage 1b)
 
 ## Why
@@ -34,40 +33,61 @@ userspace service turns the driver's stream into such a device.
    and N64 (NTSC) on composite; installed by `install-driver.sh`, removed by
    `--uninstall`.
 
-## Plan (draft)
+## Decisions (maintainer, 2026-11-18)
 
-1. Building blocks: `v4l2loopback` (DKMS package of the distributions,
-   `exclusive_caps=1`, `card_label`), ffmpeg (or GStreamer) for decoding,
-   deinterlacing (`yadif`/`bwdif`) and scaling, a PipeWire/PulseAudio
-   pipe or null sink for the audio.
-2. Prototype as a shell script with ffmpeg: driver TS node → decode →
-   v4l2loopback + audio; measure latency and CPU load.
-3. Start on demand: systemd user service or udev rule; detection of
-   an application opening the loopback device (v4l2loopback events, or the
-   service always running while the Elgato is plugged in).
-4. Input selection: a small command, a desktop entry, or a control on the
-   loopback device.
-5. Installer integration and documentation (`docs/`).
+1. Language: the fastest in the end; shell + ffmpeg for now, kept modular
+   so parts can be replaced (ffmpeg does the decoding in C either way).
+2. The capture device runs only while an application uses it (the device
+   gets hot when it runs without need).
+3. Output size: the size of the source. A v4l2loopback device keeps its
+   format while an application has it open, so the size is taken when an
+   application opens it; a source change while it is open (NTSC ↔ PAL) is
+   scaled to that size until the application reopens. To be checked:
+   whether OBS/guvcview can be made to reopen by themselves.
+4. Folder: `service/`.
 
-## Open questions (maintainer)
+## Prototype (`service/gchd-bridge`)
 
-1. Language of the service: shell + ffmpeg (simplest, depends on the
-   ffmpeg command line), Python + GStreamer, or C with libav*. Proposal:
-   start with shell + ffmpeg, change only if latency or the start/stop
-   behaviour needs it.
-2. Always running while the device is plugged in (simple, the device and
-   the encoder run all the time), or only while an application reads the
-   loopback device (more work, depends on v4l2loopback)? Proposal: on
-   demand.
-3. Output size of the loopback device: 1280×720 (fits the later HDMI
-   modes, scaled up from SD) or the source size 720×480/576 (no
-   scaling, but the size depends on the first source)? Proposal: 1280×720
-   now, configurable.
-4. Folder name in the repository (proposal: `service/`).
+- `gchd-bridge run`: finds the driver's device and the v4l2loopback
+  device (by driver, label "Elgato Game Capture HD"), creates a null sink
+  and an audio source "Elgato Game Capture HD" (`pactl`).
+- Idle: a black YUYV picture of the current source size at 5 frames/s,
+  so applications can list and open the device; the capture device stays
+  off. The idle size follows the source (checked every 5 s).
+- An application opens the loopback device (`fuser`, 2 checks 1 s apart):
+  the black picture stops; ffmpeg reads the transport stream of the
+  driver, deinterlaces (`bwdif`, one frame per field: 50/60 frames/s),
+  scales to the opened size, writes YUYV to the loopback device and the
+  audio to the null sink. `keep_format=1` on the loopback device keeps
+  the format during the switch.
+- Last application closed: ffmpeg stops, the driver shuts the device down,
+  the black picture returns.
+- `gchd-bridge input composite|svideo|component|hdmi`: stops the capture,
+  selects the input, the capture restarts with the same size.
+- Offline check: an interlaced 576i → 480i transport stream through the
+  same filter chain gives continuous 720×576 YUYV frames.
+
+Next steps after the test: systemd user service (start at login),
+`install-driver.sh` integration (v4l2loopback options in `modprobe.d`,
+service install), documentation (`docs/`), input selection from the
+desktop.
 
 ## Hardware test (maintainer)
 
-Written with the implementation.
+Needs `v4l2loopback-dkms`, guvcview and OBS. PS1 (PAL) on composite, the
+N64 (NTSC) for the source change. The test loads v4l2loopback as
+`/dev/video42`; if it is loaded already with other options it is
+reloaded.
+
+```sh
+cd ~ && git -C elgato-gchd fetch origin
+git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-060.sh > tests/T-060.sh
+bash gchd-test.sh T-060 --branch feat/app-bridge
+```
+
+Paste the summary; on FAILs the log too (the bridge's own messages are
+at the end of it).
 
 ## Findings
 
@@ -78,9 +98,3 @@ Written with the implementation.
 
 ## Maintainer comments
 
-1. I want to aim for performance so ultimately I would want what is fastest. As long as it's modular enough that can be replaced by something else, I'm fine with your suggestion for now.
-2. Yes, having the device for too long (specially when nothing is being captured) makes it quite hot, so only when it's needed.
-3. Ideally I would like it to be the same as the source. Can't this be restarted and reconfigured on every input/output-res change?
-4. Yes, I'm fine with this name.
-
-Can you also check for obsolete items in TODO.md? Besides the already deleted branches, there are some thing under tooling that seems to be obsolete and traces that are no longer needed that are just making the TODO unnecessary long.
