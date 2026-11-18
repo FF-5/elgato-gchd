@@ -95,6 +95,14 @@ driver reconfigures because of the family.
   Windows PAL recordings never show `FA` with the 60 Hz family, so the
   check now needs 8 polls (2 s) and logs FA/CA/E7/F1 when it fires.
   `ring_dropped=0` throughout; the 20 s recording decodes without errors.
+- Maintainer: in the first Windows recording with the PS1 the Windows
+  application showed 720×480 at first and settled on 720×576 later, while
+  the picture was correct throughout. In that recording
+  (`composite/filtered_288p_pal_composite`) `0x88:FA` reads `1F` → `17` →
+  `07` (50 Hz) before the encoder is programmed, and the encoder writes are
+  PAL (`v_format = 5`, 720×576): the 720×480 was the application's label.
+  If the driver still needs a restart at the start often, wait for a
+  stable family reading before the first configuration.
 - Unclean exit of a program: the kernel closes its file handles and the
   driver's close path (clean hardware shutdown) runs. A new open waits:
   the close holds the user lock through the shutdown, and open takes it.
