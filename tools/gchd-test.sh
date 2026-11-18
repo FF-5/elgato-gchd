@@ -187,7 +187,13 @@ capture() {
 		"head -c \$(( $secs * 4000000 )) < '$DEV' > '$f' & p=\$!; sleep $secs; kill \$p 2>/dev/null; wait \$p" 2>/dev/null
 	wait
 	if [ ! -s "$f" ]; then
-		result FAIL "capture: no data"
+		# A console that is still starting gives no data: one retry.
+		say "  no data; retrying once (source may still be starting)"
+		timeout -k 5 $((secs + 30)) bash -c \
+			"head -c \$(( $secs * 4000000 )) < '$DEV' > '$f' & p=\$!; sleep $((secs + 10)); kill \$p 2>/dev/null; wait \$p" 2>/dev/null
+	fi
+	if [ ! -s "$f" ]; then
+		result FAIL "capture: no data (also after a retry)"
 		return 1
 	fi
 	info=$(ffprobe -v error -select_streams v:0 -show_entries \
