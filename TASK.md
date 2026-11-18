@@ -55,3 +55,17 @@ Paste the summary; the log too if anything fails.
 
 ## Maintainer comments
 
+=== summary (T-064, 6870774 TASK: findings of the T-064 run; retest)
+PASS | step 2 first use: HDMI and defaults | input HDMI on first use
+PASS | step 2 first use: HDMI and defaults | format H.264 on first use
+PASS | step 2 first use: HDMI and defaults | bitrate default 11.25 Mbit/s
+PASS | step 3 change settings | settings file written
+PASS | step 4 module reload with the saved settings | input composite after reload
+PASS | step 4 module reload with the saved settings | 640x480 MPEG after reload
+PASS | step 4 module reload with the saved settings | MPEG after reload
+PASS | step 4 module reload with the saved settings | bitrate 6000 VBR, stretch after reload
+PASS | step 4 module reload with the saved settings | VBR after reload
+PASS | step 4 module reload with the saved settings | stretch after reload
+PASS | step 5 replug with the saved settings, capture | stream 640x480 25/1 progressive, ~1779 kbit/s
+
+FAIL: 0  WARN: 0
