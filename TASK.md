@@ -87,3 +87,15 @@ Paste the summary.
 
 ## Maintainer comments
 
+I give you permission to change RULES.md to allow editing any file from the original project. Now here's the summary:
+
+=== summary (smoke, 6b52c1b TASK: T-070 done except licence files; smoke test)
+PASS | step 2 composite, standard size, PS1 | stream 720x576 50/1 tt, ~9368 kbit/s
+PASS | step 3 composite 640x480 | stream 640x480 25/1 progressive, ~6068 kbit/s
+PASS | step 4 composite 480x360 | stream 480x360 25/1 progressive, ~2772 kbit/s
+PASS | step 5 picture check | ffplay showed the PS1 picture with sound, correct aspect?
+PASS | step 6 reopen right after close | stream 720x576 50/1 tt, ~7739 kbit/s
+PASS | step 6 reopen right after close | stream 720x576 50/1 tt, ~4495 kbit/s
+PASS | step 7 N64 on composite | stream 720x480 60000/1001 tt, ~7431 kbit/s
+
+FAIL: 0  WARN: 0
