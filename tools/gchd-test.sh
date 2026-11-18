@@ -16,6 +16,8 @@ set -u
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO=${GCHD_REPO:-$HOME/elgato-gchd}
+# Driver directory: src/ (dkms/ before T-070); resolved after the checkout.
+KSRC=
 DEV=${GCHD_DEV:-/dev/video0}
 TEST=${1:-}
 BRANCH=
@@ -97,10 +99,11 @@ build() {
 		run git checkout -q "$BRANCH" || exit 1
 	fi
 	run git pull -q --ff-only
+	if [ -f "$REPO/src/core.c" ]; then KSRC=$REPO/src; else KSRC=$REPO/dkms; fi
 	log "commit: $(git log -1 --oneline)"
 	say "commit: $(git log -1 --oneline)"
 	if [ "$BUILD" = 1 ]; then
-		make -C "/lib/modules/$(uname -r)/build" M="$REPO/dkms" clean modules W=1 \
+		make -C "/lib/modules/$(uname -r)/build" M="$KSRC" clean modules W=1 \
 			> "$WORK/build.txt" 2>&1
 		local rc=$? w
 		w=$(grep "warning:" "$WORK/build.txt" | grep -vc "compiler differs")
@@ -121,11 +124,11 @@ load_module() {
 		prompt "Unplug the Elgato from the PC (or detach it in VirtualBox), wait 3 s, plug it in again."
 	fi
 	sudo modprobe -a videodev videobuf2-v4l2 videobuf2-vmalloc
-	run sudo insmod "$REPO/dkms/elgato_gchd.ko" "$@" || { result FAIL "insmod $*"; return 1; }
+	run sudo insmod "$KSRC/elgato_gchd.ko" "$@" || { result FAIL "insmod $*"; return 1; }
 	local i
 	for i in $(seq 1 20); do [ -e "$DEV" ] && break; sleep 0.5; done
 	[ -e "$DEV" ] || { result FAIL "$DEV did not appear"; return 1; }
-	log "module: $(modinfo -F version "$REPO/dkms/elgato_gchd.ko") $*"
+	log "module: $(modinfo -F version "$KSRC/elgato_gchd.ko") $*"
 }
 
 # ---------------------------------------------------------------- steps

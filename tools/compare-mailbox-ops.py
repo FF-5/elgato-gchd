@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Compare the mailbox/USB operation stream of dkms/ between two revisions.
+"""Compare the mailbox/USB operation stream of the driver (src/, or dkms/
+before T-070) between two revisions.
 
 tools/compare-objs.sh proves identity at machine-code level. Refactors that
 replace one call-site idiom by another (local macros -> gchd_mailbox.h,
@@ -40,12 +41,21 @@ if not KDIR:
     sys.exit('no kernel headers; set KDIR')
 
 
+def driver_dir(rev):
+    if rev == 'WORKTREE':
+        return 'src' if os.path.exists(os.path.join(TOP, 'src', 'core.c')) else 'dkms'
+    r = subprocess.call(['git', '-C', TOP, 'cat-file', '-e', rev + ':src/core.c'],
+                        stderr=subprocess.DEVNULL)
+    return 'src' if r == 0 else 'dkms'
+
+
 def export(rev, dest):
     os.makedirs(dest)
+    d = driver_dir(rev)
     if rev == 'WORKTREE':
-        subprocess.check_call(['cp', '-r', os.path.join(TOP, 'dkms') + '/.', dest])
+        subprocess.check_call(['cp', '-r', os.path.join(TOP, d) + '/.', dest])
     else:
-        a = subprocess.Popen(['git', '-C', TOP, 'archive', rev, 'dkms'], stdout=subprocess.PIPE)
+        a = subprocess.Popen(['git', '-C', TOP, 'archive', rev, d], stdout=subprocess.PIPE)
         subprocess.check_call(['tar', '-x', '-C', dest, '--strip-components=1'], stdin=a.stdout)
         a.wait()
 

@@ -1,5 +1,6 @@
 #!/bin/bash
-# Build dkms/ at two git revisions and compare the generated machine code.
+# Build the driver (src/, or dkms/ before T-070) at two git revisions and
+# compare the generated machine code.
 #
 # Used to prove that a cleanup/refactor (renames, macros, moved code) does not
 # change behaviour (RULES.md C9). Identical output means identical code.
@@ -12,7 +13,7 @@
 #              that are only codegen noise. Strict mode is the default and the
 #              stronger proof.
 #   OLD_REV  defaults to origin/dev
-#   NEW_REV  defaults to WORKTREE (the current, possibly uncommitted, dkms/)
+#   NEW_REV  defaults to WORKTREE (the current, possibly uncommitted, driver)
 # Env:     KDIR (default: /lib/modules/$(uname -r)/build, falls back to
 #          the newest /usr/src/linux-headers-*-generic)
 set -euo pipefail
@@ -38,12 +39,22 @@ fi
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
+driver_dir() { # rev -> src or dkms (the driver moved to src/ in T-070)
+	if [ "$1" = WORKTREE ]; then
+		[ -f "$TOP/src/core.c" ] && echo src || echo dkms
+	else
+		git -C "$TOP" cat-file -e "$1:src/core.c" 2>/dev/null && echo src || echo dkms
+	fi
+}
+
 export_tree() { # rev dest
+	local dir
+	dir=$(driver_dir "$1")
 	mkdir -p "$2"
 	if [ "$1" = WORKTREE ]; then
-		cp -r "$TOP/dkms/." "$2/"
+		cp -r "$TOP/$dir/." "$2/"
 	else
-		git -C "$TOP" archive "$1" dkms | tar -x -C "$2" --strip-components=1
+		git -C "$TOP" archive "$1" "$dir" | tar -x -C "$2" --strip-components=1
 	fi
 }
 
