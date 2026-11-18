@@ -12,7 +12,7 @@ run bash "$INST" --uninstall --yes
 expect "no driver installed" "not found|ERROR" sh -c "modinfo elgato_gchd 2>&1"
 
 step "install with the firmware missing (extraction from the .msi)"
-prompt "Put Elgato's GameCaptureSetup*.msi into ~/Downloads or $REPO/firmware/ (it is needed now)."
+prompt "Put Elgato's GameCaptureSetup*.msi into $REPO/firmware/ (it is needed now)."
 run sudo rm -rf "$BAK"
 run sudo mv "$FW" "$BAK"
 run bash "$INST" --yes
