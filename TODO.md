@@ -40,6 +40,10 @@ Video modes and switching:
 - [ ] **T-031 [HW] (S)** STREAMOFF → STREAMON without closing.
 - [ ] **T-054 [HW] (S)** Source loss and return while capturing (worked by
       report; check the logs once).
+- [ ] **T-065 [HW] (S)** Console swap without a detected signal drop
+      (N64 → running PS1: `0x88:FA` stayed `6`): on S-video one restart of
+      ~7 s, on composite two restarts (240p, then 576i). Treat `E7` bit 7
+      with an unlocked `CA` like a drop (wait for 50 Hz).
 - [ ] 288p capture start (recording wanted; the driver uses the apply block
       of the 576i → 288p change).
 
