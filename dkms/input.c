@@ -599,6 +599,7 @@ static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
 static int gchd_prepare_analog_detection(struct gchd *d);
 static int gchd_be_retrigger(struct gchd *d);
 static int gchd_encoder_program(struct gchd *d);
+static void gchd_analog_note_std(struct gchd *d, u8 family, u8 e7);
 
 /*
  * Status poll of the back end while waiting for an analog source: the back
@@ -885,6 +886,7 @@ int gchd_probe_video_source(struct gchd *d)
     d->pal60_since = jiffies | 1;
    if (gchd_analog_pal60_hold(d, std, d->pal60_since, &d->pal60_logged))
     return -ENOLINK;
+   gchd_analog_note_std(d, 6, std);
    d->input_interlaced = mode != GCHD_DEC_LOCK_240P;
    dev_info(&d->intf->dev,
             "analog format initial status=0x%02x; configuring %s\n",
@@ -903,6 +905,7 @@ int gchd_probe_video_source(struct gchd *d)
     return -ENOLINK;
    }
    d->input_interlaced = mode != GCHD_DEC_LOCK_240P;
+   gchd_analog_note_std(d, 7, 0);
    dev_info(&d->intf->dev,
             "analog format initial status=0x%02x; configuring %s\n",
             mode, d->input_interlaced ? "576i" : "288p");
@@ -1236,6 +1239,18 @@ static int gchd_analog_backend(struct gchd *d, bool pal, bool status_reads)
  GCHD_DEC_R(d, 0xe7, v);
  GCHD_DEC_R(d, 0xf1, v);
  return 0;
+}
+
+/*
+ * Remember the analog standard of the selected input: 50 Hz family PAL,
+ * 60 Hz family PAL-60 when 0x88:E7 reports PAL colour (59), NTSC otherwise.
+ */
+static void gchd_analog_note_std(struct gchd *d, u8 family, u8 e7)
+{
+ if (d->input < 2)
+  return;
+ d->analog_std[d->input - 2] = family == 7 ? V4L2_STD_PAL :
+                               e7 == 0x59 ? V4L2_STD_PAL_60 : V4L2_STD_NTSC_M;
 }
 
 /* 0x88:0A for the decoder standard reported in 0x88:E7; 0 if unknown. */
@@ -1632,6 +1647,8 @@ int gchd_analog_family_reconfigure(struct gchd *d, bool hold)
  d->input_fps_num = family == 7 ? 50 : 60;
  d->input_fps_den = 1;
  d->input_interlaced = ca == 0x7e;
+ GCHD_DEC_R(d, 0xe7, v);
+ gchd_analog_note_std(d, family, v);
 
  /* Apply block of the locked family unless it is already loaded. */
  if (d->dec_applied != gchd_dec_apply_key(family, ca)) {

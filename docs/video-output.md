@@ -21,9 +21,9 @@ Stream parameters as programmed by the driver (`dkms/transcoder.c`):
 
 | Property | Value |
 |---|---|
-| Size | 720 × 480 (NTSC family) |
-| Coding | H.264, field-coded interlaced |
-| Field rate | 60000/1001 fields per second (NTSC) |
+| Size | 720 × 480 (60 Hz family), 720 × 576 (50 Hz family) |
+| Coding | H.264, field-coded interlaced, top field first |
+| Frame rate | 30000/1001 frames (60000/1001 fields) per second; 25 frames (50 fields) per second |
 
 A 240p source is carried in the same structure: each field contains one
 complete 240-line picture, so the stream has 60000/1001 progressive pictures
@@ -49,6 +49,9 @@ HDMI (0), Component (1), Composite (2) and S-Video (3).
 | Buffer content, MPEG | 348 transport-stream packets of 188 bytes (65 424 bytes) per buffer, as sent by the device without null packets, starting with a PAT packet after each stream start; contains video, audio (PID `0x010F`) and PSI |
 | I/O | Streaming (mmap) and `read()`; with `read()` the MPEG format is read like a transport-stream file |
 | Timestamps | H.264: decoding timestamp of the PES packet (DTS, or PTS if no DTS), converted to the monotonic clock and anchored at the first buffer of a stream. MPEG: time the buffer was completed (timing is carried in the stream) |
+| Format of composite and S-video | `V4L2_FIELD_INTERLACED_TB` (also for 240p/288p sources), frame rate (`VIDIOC_G_PARM`, `VIDIOC_ENUM_FRAMEINTERVALS`) 30000/1001 or 25/1. Before a source has been detected: the values of the standard last detected on that input while the module is loaded, NTSC before the first detection |
+| Analog standard | `VIDIOC_QUERYSTD`: `V4L2_STD_NTSC_M`, `V4L2_STD_PAL` or `V4L2_STD_PAL_60` (60 Hz with PAL colour) of the detected source, `V4L2_STD_UNKNOWN` while no source is detected. `VIDIOC_G_STD`: the last detected standard. `VIDIOC_S_STD` accepts these standards and changes nothing (the source decides). HDMI and component: `ENODATA` |
+| Input status | `VIDIOC_ENUMINPUT`: `V4L2_IN_ST_NO_SIGNAL` for the selected input while no source is detected; composite and S-video list the three standards |
 | Hardware start | `VIDIOC_STREAMON`; firmware is loaded and the input configured at this point |
 | Source changes | `V4L2_EVENT_SOURCE_CHANGE` is queued when the signal appears or is lost, and after a composite or S-video source changes between 480i and 240p or between 576i and 288p |
 | Analog mode change | 480i ↔ 240p: the encoder is stopped and restarted for the new mode (`composite.md` §4); the stream resumes with a new SPS after about 1.5 s. 576i ↔ 288p: only the decoder is reconfigured (`composite.md` §8); the stream continues |
