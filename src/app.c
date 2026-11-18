@@ -16,9 +16,10 @@
  * until the old device is closed, at most GCHD_APP_REPLUG_MS.
  *
  * The state is published in the sysfs attribute "app" of the USB interface:
- *   STATE APP-NODE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE
+ *   STATE APP-NODE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE
  * STATE is "streaming" while an application streams from the application
  * device, "idle" otherwise; "-" for a node that is not registered.
+ * STREAM-NODE is the H.264 device.
  */
 
 #include <linux/module.h>
@@ -665,12 +666,13 @@ static ssize_t app_show(struct device *dev, struct device_attribute *attr,
 		return -ENODEV;
 	mutex_lock(&d->app_lock);
 	a = d->app;
-	n = sysfs_emit(buf, "%s %s %u %u %u %u %s\n",
+	n = sysfs_emit(buf, "%s %s %u %u %u %u %s %s\n",
 		       a && READ_ONCE(a->streaming) ? "streaming" : "idle",
 		       a ? video_device_node_name(&a->vdev) : "-",
 		       d->app_width, d->app_height,
 		       d->app_rate.numerator, d->app_rate.denominator,
-		       video_device_node_name(&d->feed_vdev));
+		       video_device_node_name(&d->feed_vdev),
+		       video_device_node_name(&d->vdev));
 	mutex_unlock(&d->app_lock);
 	return n;
 }
