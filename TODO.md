@@ -101,6 +101,10 @@ settings above work on `dev`.
       see a format change (today ffplay keeps the window size of the first
       frames and shows later modes squeezed).
       Uses the MPEG-TS format with audio (done, 0.5.0).
+      The service also offers the input selection (the driver's private
+      "Input Source" menu control was removed in T-066: it changed the
+      input behind `v4l2-compliance`; `VIDIOC_S_INPUT` remains). guvcview
+      has no input selector of its own.
 
 ## Stage 2 — Component
 

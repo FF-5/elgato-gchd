@@ -14,12 +14,8 @@ MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("0.5.7");
 
-/* Private V4L2 menu control so GUI applications can select the connector. */
-#define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
+/* Private V4L2 control "Stretch SD Input". */
 #define V4L2_CID_GCHD_STRETCH (V4L2_CID_USER_BASE + 0x10f1)
-static const char * const gchd_input_menu[] = {
- "HDMI", "Component", "Composite", "S-Video", NULL,
-};
 
 /* Preserve the VB2 read/poll/mmap/ioctl operations while adding lifecycle hooks. */
 static void gchd_release_ref(struct kref *ref)
@@ -271,12 +267,6 @@ static void gchd_input_selection_enter(struct gchd *d)
  d->previous_input = 0;
  d->pal60_since = 0;
  d->pal60_logged = false;
-
- /*
-  * The control value is already kept in sync by gchd_set_input(). Do not
-  * call v4l2_ctrl_s_ctrl() here: open holds lifecycle_lock, and the control
-  * callback re-enters gchd_set_input(), which takes the same mutex.
-  */
  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
  WRITE_ONCE(d->detect_requested, true);
  schedule_delayed_work(&d->detect_work, 0);
@@ -1842,22 +1832,11 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 static int gchd_sinput(struct file *f, void *p, unsigned int i)
 {
  struct gchd *d = video_drvdata(f);
- struct v4l2_ctrl *ctrl;
- int r;
 
  /* Only the file handle that owns the capture buffers may switch inputs. */
  if (i != d->input && vb2_queue_is_busy(&d->vbq, f))
   return -EBUSY;
-
- r = gchd_set_input(d, i);
- if (r)
-  return r;
-
- /* Keep the GUI-visible menu and standard VIDIOC_S_INPUT API in sync. */
- ctrl = v4l2_ctrl_find(&d->ctrls, V4L2_CID_GCHD_INPUT_SOURCE);
- if (ctrl && ctrl->val != i)
-  return v4l2_ctrl_s_ctrl(ctrl, i);
- return 0;
+ return gchd_set_input(d, i);
 }
 
 /*
@@ -2279,14 +2258,6 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
  struct gchd *d = container_of(c->handler, struct gchd, ctrls);
  u8 level;
 
- switch (c->id) {
- case V4L2_CID_GCHD_INPUT_SOURCE:
-  /* As VIDIOC_S_INPUT: no input change while capture buffers exist. */
-  if (c->val != d->input && vb2_is_busy(&d->vbq))
-   return -EBUSY;
-  return gchd_set_input(d, c->val);
- }
-
  /*
   * Encoder settings: on composite and S-video a change while capturing
   * restarts the encoder (mode worker); other inputs only while stopped.
@@ -2465,7 +2436,7 @@ static int gchd_fop_release(struct file *file)
 int gchd_v4l2_register(struct gchd*d)
 {
  int r=v4l2_device_register(&d->intf->dev,&d->v4l2_dev);if(r)return r;
- v4l2_ctrl_handler_init(&d->ctrls,8);
+ v4l2_ctrl_handler_init(&d->ctrls,7);
  /* Control defaults are the remembered settings (gchd_settings_load()). */
  {
   unsigned int i, level_def = V4L2_MPEG_VIDEO_H264_LEVEL_4_1;
@@ -2501,22 +2472,6 @@ int gchd_v4l2_register(struct gchd*d)
 
   cfg.def = d->stretch;
   v4l2_ctrl_new_custom(&d->ctrls, &cfg, NULL);
- }
- {
-  struct v4l2_ctrl_config input_cfg = {
-   .ops = &gchd_ctrl_ops,
-   .id = V4L2_CID_GCHD_INPUT_SOURCE,
-   .name = "Input Source",
-   .type = V4L2_CTRL_TYPE_MENU,
-   .min = 0,
-   .max = ARRAY_SIZE(gchd_input_menu) - 2,
-   /* V4L2 menu controls use menu_skip_mask, not step. */
-   .step = 0,
-   .menu_skip_mask = 0,
-   .def = d->input,
-   .qmenu = gchd_input_menu,
-  };
-  v4l2_ctrl_new_custom(&d->ctrls, &input_cfg, NULL);
  }
  if(d->ctrls.error){r=d->ctrls.error;goto err;}
  memset(&d->vbq,0,sizeof(d->vbq));d->vbq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE;d->vbq.io_modes=VB2_MMAP|VB2_READ;d->vbq.timestamp_flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;d->vbq.dev=&d->intf->dev;
