@@ -16,7 +16,8 @@ set -u
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO=${GCHD_REPO:-$HOME/elgato-gchd}
-# Driver directory: src/ (dkms/ before T-070); resolved after the checkout.
+# Driver directory: src/driver/ (src/ before T-060, dkms/ before T-070);
+# resolved after the checkout.
 KSRC=
 DEV=${GCHD_DEV:-/dev/video0}
 TEST=${1:-}
@@ -99,7 +100,9 @@ build() {
 		run git checkout -q "$BRANCH" || exit 1
 	fi
 	run git pull -q --ff-only
-	if [ -f "$REPO/src/core.c" ]; then KSRC=$REPO/src; else KSRC=$REPO/dkms; fi
+	if [ -f "$REPO/src/driver/core.c" ]; then KSRC=$REPO/src/driver
+	elif [ -f "$REPO/src/core.c" ]; then KSRC=$REPO/src
+	else KSRC=$REPO/dkms; fi
 	log "commit: $(git log -1 --oneline)"
 	say "commit: $(git log -1 --oneline)"
 	if [ "$BUILD" = 1 ]; then
