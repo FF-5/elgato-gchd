@@ -132,7 +132,7 @@ run cat "$WORK/read5.txt"
 expect "reader kept the device through unplug/replug" "^0$" grep -c "No such device" "$WORK/read5.txt"
 expect "frames throughout (>= 900 in 45 s)" "frame= *(9[0-9]{2}|[0-9]{4})" cat "$WORK/read5.txt"
 find_h264_dev
-expect "Game Capture HD attached again" "^idle .* $(basename "$DEV")$" app_state
+expect "Game Capture HD attached again" "^idle .* $(basename "$DEV") [0-9]+ [0-9]+$" app_state
 run tail -10 "$WORK/bridge.log"
 
 step "guvcview"
