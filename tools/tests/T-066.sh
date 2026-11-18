@@ -11,7 +11,7 @@ expect "v4l2-compliance: no failures" "Failed: 0" v4l2-compliance -d "$DEV"
 step "DV timings on HDMI (no signal needed)"
 set_input 0
 expect "G_DV_TIMINGS works without a signal" "1280x720p60|Active width: 1280" v4l2-ctl -d "$DEV" --get-dv-timings
-expect "DV timings list" "1920x1080" v4l2-ctl -d "$DEV" --list-dv-timings
+expect "DV timings list" "Active width: 1920" v4l2-ctl -d "$DEV" --list-dv-timings
 expect "power present 0 without a signal" "power_present.*value=0" v4l2-ctl -d "$DEV" -l
 
 step "composite capture, input control refused while capturing"
