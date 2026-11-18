@@ -10,7 +10,7 @@
 MODULE_DESCRIPTION("Elgato Game Capture HD V4L2 driver");
 MODULE_AUTHOR("FF-5 / elgato-gchd contributors");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.4.0");
+MODULE_VERSION("0.4.1");
 
 /* Private V4L2 menu control so GUI applications can select the connector. */
 #define V4L2_CID_GCHD_INPUT_SOURCE (V4L2_CID_USER_BASE + 0x10f0)
@@ -1063,6 +1063,13 @@ static void gchd_mode_workfn(struct work_struct *work)
      (d->input_height != 480 && d->input_height != 576) ||
      !d->input_configured || !READ_ONCE(d->signal_present))
   goto out;
+
+ /* 50 Hz sources: retrigger the back end when its status flag is set. */
+ if (d->input_height == 576) {
+  r = gchd_analog_poll_backend(d);
+  if (r)
+   dev_dbg(&d->intf->dev, "back-end poll failed: %d\n", r);
+ }
 
  r = gchd_input_read_analog_mode(d, &target_interlaced);
  if (r == -EAGAIN)

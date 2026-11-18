@@ -125,6 +125,7 @@ struct gchd {
  u32 width, height, sizeimage;
  u32 input;
  u32 previous_input; /* Connector selected before the current input. */
+ bool dec_svideo; /* decoder 0x88:02 set for S-video; kept while plugged in */
  u32 input_width, input_height;
  u32 input_fps_num, input_fps_den;
  bool input_interlaced;
@@ -161,6 +162,7 @@ int gchd_input_read_analog_mode(struct gchd *, bool *);
 int gchd_analog_mode_pre_stop(struct gchd *, bool);
 int gchd_analog_mode_reconfigure(struct gchd *);
 int gchd_analog_pal_mode_change(struct gchd *, bool);
+int gchd_analog_poll_backend(struct gchd *);
 int gchd_common_block_a(struct gchd *);
 int gchd_common_block_b1(struct gchd *, bool);
 int gchd_common_block_b2(struct gchd *);

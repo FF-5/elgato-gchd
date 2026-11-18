@@ -16,6 +16,7 @@ MODULE_PARM_DESC(signal_active_retries, "Signal measurement retries when timing 
 module_param(signal_inactive_retries, uint, 0644);
 MODULE_PARM_DESC(signal_inactive_retries, "Signal measurement retries when timing is not detected");
 module_param(signal_poll_delay_ms, uint, 0644);
+
 MODULE_PARM_DESC(signal_poll_delay_ms, "Delay in milliseconds between signal measurement batches");
 
 static bool gchd_hdmi_timing_valid(u32 value)
@@ -243,8 +244,9 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  u8 v;
 
 
- /* Exact continuation of configureDevice() after 0x89 0x89 0xfb. */
+ /* Continuation after the 0x88:FB read. */
  GCHD_DEC_W(d, 0x02, 0xc9);
+ d->dec_svideo = false;
  GCHD_DEC_W(d, 0x14, 0xd2);
  GCHD_DEC_W(d, 0x3c, 0x6b);
  GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
@@ -275,6 +277,7 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  GCHD_DEC_W(d, 0x06, 0x08);
 
  GCHD_DEC_W(d, 0x02, 0xc9);
+ d->dec_svideo = false;
  GCHD_DEC_W(d, 0x14, 0xd2);
  GCHD_DEC_W(d, 0x3c, 0x6b);
  GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
@@ -592,6 +595,22 @@ static int gchd_hdmi_read_signal(struct gchd *d, u32 *sum6463, u32 *count6463,
  * never repeats the long encoder-start sequence or timing-dependent setup.
  */
 static int gchd_prepare_analog_detection(struct gchd *d);
+static int gchd_be_retrigger(struct gchd *d);
+
+/*
+ * Status poll of the back end while waiting for an analog source. On
+ * S-video, the back end is retriggered when GCHD_BE_STATUS_FLAG is set.
+ */
+static int gchd_be_poll_status(struct gchd *d)
+{
+ u8 v;
+
+ GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
+ if (d->input != 3 || !(v & GCHD_BE_STATUS_FLAG))
+  return 0;
+ dev_dbg(&d->intf->dev, "back-end status 0x%02x while polling; retrigger\n", v);
+ return gchd_be_retrigger(d);
+}
 
 /*
  * General input setup runs after INPUT_SELECTION and before SOURCE_DETECTION.
@@ -632,22 +651,30 @@ static int gchd_prepare_analog_detection(struct gchd *d)
   * initial FD poll directly to 0x06=08 and the F8 read.
   * The discriminator is applied in late configuration after detection.
   *
-  * S-video needs its distinct decoder mode before detection. When switching
-  * from S-video back to composite, C9 + D2 are written as an
-  * analog-to-analog transition prefix.
+  * S-video needs its distinct decoder mode before detection. The decoder
+  * keeps its setting until the device loses power (also across closing and
+  * reopening). After S-video, composite gets the S-video-to-composite
+  * sequence instead: 02 = C9, 14 = D2, 3C = 6B, a pause, 28 = 88, 03 = 28.
   */
  if (d->input == 3) {
   GCHD_DEC_W(d, 0x02, 0xdc);
+  d->dec_svideo = true;
   GCHD_DEC_W(d, 0x14, 0xd2);
   GCHD_DEC_W(d, 0x28, 0x88);
- } else if (d->input == 2 && d->previous_input == 3) {
+ } else if (d->input == 2 && d->dec_svideo) {
   GCHD_DEC_W(d, 0x02, 0xc9);
+  d->dec_svideo = false;
   GCHD_DEC_W(d, 0x14, 0xd2);
+  GCHD_DEC_W(d, 0x3c, 0x6b);
+  msleep(220);
+  GCHD_DEC_W(d, 0x28, 0x88);
+  goto route;
  }
  GCHD_DEC_W(d, 0x06, 0x08);
 
  GCHD_DEC_R(d, 0xf8, reply);
 
+route:
  GCHD_DEC_W(d, 0x03, 0x28);
  GCHD_FE_W(d, 0xb3, 0x33);
  GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xce);
@@ -682,7 +709,9 @@ static int gchd_prepare_analog_detection(struct gchd *d)
   int cycle;
   for (cycle = 0; cycle < 2; ++cycle) {
    GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, reply);
-   GCHD_BE_R(d, 0xf5, reply);
+   r = gchd_be_poll_status(d);
+   if (r)
+    return r;
    if (cycle == 0)
     usleep_range(50000, 70000);
   }
@@ -799,6 +828,9 @@ int gchd_probe_video_source(struct gchd *d)
    * deadlocks the 240p path; CA/E7 polling follows family detection.
    */
   GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
+  r = gchd_be_poll_status(d);
+  if (r)
+   return r;
   dev_info(&d->intf->dev,
            "gchd-diag detect %s: pre-config raw_status=0x%02x mode=0x%x\n",
            d->input == 2 ? "composite" : "s-video", v, v & 0x0f);
@@ -1206,6 +1238,16 @@ static int gchd_pal_apply(struct gchd *d, bool interlaced)
  * 576i <-> 288p while capturing: decoder apply block, then one back-end
  * retrigger. The encoder keeps running.
  */
+int gchd_analog_poll_backend(struct gchd *d)
+{
+ u8 v;
+
+ GCHD_BE_R(d, GCHD_BE_REG_STATUS, v);
+ if (!(v & GCHD_BE_STATUS_FLAG))
+  return 0;
+ return gchd_be_retrigger(d);
+}
+
 int gchd_analog_pal_mode_change(struct gchd *d, bool interlaced)
 {
  u8 v;
@@ -1230,6 +1272,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
  /* Composite and S-Video share the assumed 0x4E:0x51=0xEC route.
   * Select the decoder's distinct luma/chroma input mode separately. */
  GCHD_DEC_W(d, 0x02, d->input == 3 ? 0xdc : 0xc9);
+ d->dec_svideo = d->input == 3;
  GCHD_DEC_W(d, 0x3c, 0x6b);
 
  GCHD_AUX_W(d, 0x41, 0x37); GCHD_AUX_W(d, 0x4a, 0xb7); GCHD_AUX_W(d, 0x4b, 0xb7);
@@ -1745,9 +1788,18 @@ int gchd_input_configure_idle(struct gchd *d)
 int gchd_input_check_mode(struct gchd *d)
 {
  bool interlaced;
+ u8 family;
 
  if (d->input < 2 || (d->input_height != 480 && d->input_height != 576))
   return 0;
+ GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, family);
+ family &= 0x0f;
+ if ((family == 6 && d->input_height == 576) ||
+     (family == 7 && d->input_height == 480)) {
+  dev_info(&d->intf->dev, "source changed to %s during setup; configuring again\n",
+           family == 7 ? "50 Hz" : "60 Hz");
+  return -EAGAIN;
+ }
  if (gchd_input_read_analog_mode(d, &interlaced) ||
      interlaced == d->input_interlaced)
   return 0;
