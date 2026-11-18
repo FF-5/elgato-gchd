@@ -193,6 +193,16 @@ then:              NULL, STOP
 
 Total time from the trigger to START: about 3 s.
 
+During this start-up phase the decoder reports `0x88:E7 = 59` (60 Hz with
+PAL colour) or `E7` with bit 7 set. The driver waits up to 5 s for such a
+signal to change to 50 Hz, both at the capture start and during a family
+change, so that capture starts in the console's final mode. A source that
+stays at 60 Hz is captured after that wait.
+
+Applications that size their window from the first frames (for example
+ffplay) show the picture squeezed or stretched after a family change while
+capturing; restarting the application shows it correctly.
+
 ## 9. Decoder apply block
 
 The writes `0x88:07 = 8A`, `08 = 9B`, `09 = 7A`, `28 = …` followed by a read
