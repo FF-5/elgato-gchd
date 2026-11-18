@@ -7,7 +7,7 @@ MB86M01). In the encoding state (SCMD state `0x02`) it sends an MPEG-2
 transport stream on bulk IN endpoint `0x81`. Encoding is done entirely on the
 device.
 
-Stream parameters as programmed by the driver (`dkms/transcoder.c`):
+Stream parameters as programmed by the driver (`src/transcoder.c`):
 
 | Item | Value |
 |---|---|

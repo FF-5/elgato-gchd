@@ -3,8 +3,9 @@
 **Development-only file** (never merged to `master`, RULES B2).
 
 This repository develops `elgato_gchd`, a Linux V4L2/DKMS kernel driver (C,
-in `dkms/`) for the Elgato Game Capture HD, plus its product documentation
-(`docs/`). The C++ userspace driver in `src/` is read-only reference
+in `src/`) for the Elgato Game Capture HD, plus its product documentation
+(`docs/`). The C++ userspace program of the original project was removed
+(T-070); it stays in the git history (before T-070) as read-only reference
 material.
 
 ## At the start of every session
@@ -36,15 +37,14 @@ material.
   file and time go in the commit message, never in code comments (RULES D3,
   E10).
 - Build-check every change:
-  `make -C /usr/src/linux-headers-6.8.0-*-generic M=$PWD/dkms modules W=1`
+  `make -C /usr/src/linux-headers-6.8.0-*-generic M=$PWD/src modules W=1`
   (no warnings). Headers can be installed with
   `apt-get install linux-headers-6.8.0-<n>-generic`.
 - Refactors are proven code-identical with the scripts on the `tools`
   branch (`git show origin/tools:tools/compare-objs.sh`).
-- Documentation (`docs/`, `dkms/README.md`) is neutral product
+- Documentation (`docs/`, `src/README.md`, top-level `README.md`) is neutral product
   documentation (RULES C).
-- Protected files and what may change in them (userspace program,
-  `CMakeLists.txt`, top-level `README.md`, ...): RULES B4.
+- Credits and licence files: RULES B4.
 
 ## Branches
 
