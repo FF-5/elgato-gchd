@@ -224,6 +224,21 @@ set_fmt() {
 	run v4l2-ctl -d "$DEV" -v "width=$1,height=$2,pixelformat=${3:-MPEG}"
 }
 
+# expect DESCRIPTION REGEX COMMAND...: PASS when the output matches REGEX
+# (grep -E), FAIL otherwise.
+expect() {
+	local desc=$1 re=$2 out
+	shift 2
+	log "\$ $*"
+	out=$("$@" 2>&1)
+	printf '%s\n' "$out" >> "$LOG"
+	if printf '%s\n' "$out" | grep -qE "$re"; then
+		result PASS "$desc"
+	else
+		result FAIL "$desc (expected /$re/, got: $(printf '%s' "$out" | tr '\n' ' ' | cut -c1-160))"
+	fi
+}
+
 # set_ctrl NAME=VALUE[,NAME=VALUE...] (v4l2-ctl control names)
 set_ctrl() {
 	run v4l2-ctl -d "$DEV" -c "$1"
