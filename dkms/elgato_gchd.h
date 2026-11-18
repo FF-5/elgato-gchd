@@ -104,6 +104,8 @@ struct gchd {
  u8 *ts_out;          /* transport-stream buffer being filled */
  size_t ts_out_len;
  bool wait_pat;       /* TS delivery starts at the next PAT packet */
+ bool ts_v_started;   /* video PES start seen since the PAT */
+ bool ts_a_started;   /* audio PES start seen since the PAT */
  u16 ts_partial_len;
  bool streaming; /* V4L2 queue delivery only. */
  bool capture_active; /* Hardware capture is active while a source is present. */

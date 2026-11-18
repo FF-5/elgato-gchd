@@ -126,6 +126,17 @@ settings above work on `dev`.
       and settings. Recorded so far: `hdmi/gchd_output_switch_hdmi` (1080p60
       source, output sizes; `docs/hdmi.md §4`).
 
+## Stage 4 — Picture and audio settings (after HDMI, after the release)
+
+- [ ] **T-080 [WIN+HW] (M)** Picture settings of the Windows application
+      (brightness, contrast, saturation, hue, sharpness, as offered) and
+      audio settings (volume/gain, audio input selection, as offered). First
+      find out for each whether it is sent to the device or applied by the
+      application: one Windows recording per setting (reduced with the
+      bulk-OUT filter), changing it while capturing. Settings that reach the
+      device become V4L2 controls (`V4L2_CID_BRIGHTNESS`, …, audio via the
+      TS stream); application-side settings are not driver features.
+
 ## Later
 
 - [ ] **T-062 (S)** Original-HD family (`0044/004e/0051`): needs a tester.

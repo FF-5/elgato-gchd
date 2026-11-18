@@ -270,7 +270,8 @@ static int gchd_queue_pes(struct gchd *d, const u8 *pes, size_t n)
 /*
  * Transport-stream delivery: whole packets except null packets, starting at
  * a PAT packet after each stream (re)start, collected into buffers of
- * GCHD_TS_BUF_PACKETS packets.
+ * GCHD_TS_BUF_PACKETS packets. Video and audio start with a complete PES
+ * packet.
  */
 static void gchd_ts_out(struct gchd *d, const u8 *p)
 {
@@ -286,6 +287,19 @@ static void gchd_ts_out(struct gchd *d, const u8 *p)
   if (pid != GCHD_TS_PID_PAT)
    return;
   WRITE_ONCE(d->wait_pat, false);
+  d->ts_v_started = false;
+  d->ts_a_started = false;
+ }
+ /* Drop the tail of a PES packet that started before the PAT. */
+ if (pid == GCHD_TS_PID_VIDEO || pid == GCHD_TS_PID_AUDIO) {
+  bool *started = pid == GCHD_TS_PID_VIDEO ? &d->ts_v_started :
+                                             &d->ts_a_started;
+
+  if (!*started) {
+   if (!(p[1] & 0x40))
+    return;
+   *started = true;
+  }
  }
  memcpy(d->ts_out + d->ts_out_len, p, GCHD_TS_PACKET);
  d->ts_out_len += GCHD_TS_PACKET;
