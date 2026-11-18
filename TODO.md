@@ -35,8 +35,6 @@ Video modes and switching:
 
 - [ ] **T-044 [HW] (S)** Reopening while the previous stop is still
       running failed once; make a new open wait for it.
-- [ ] **T-047 [HW] (S)** `hardware shutdown on last close failed: -5` after
-      a session in which no source was detected.
 - [ ] **T-031 [HW] (S)** STREAMOFF → STREAMON without closing.
 - [ ] **T-054 [HW] (S)** Source loss and return while capturing (worked by
       report; check the logs once).
