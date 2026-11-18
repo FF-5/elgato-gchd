@@ -1,8 +1,10 @@
 # T-060: application device "Elgato Game Capture HD" (registered while the
-# module is loaded, YUYV, the source size and rate only, no scaling) fed by
-# service/gchd-bridge: capture device only on while an application streams,
-# format follows the source while idle, input change, unplug/replug while
-# reading ("Please connect" picture), audio, idle CPU, guvcview.
+# module is loaded, YUYV, the encoder's output sizes of the input, never
+# scaled) fed by service/gchd-bridge: capture device only on while an
+# application streams, format follows the source while idle, remembered
+# standard, picture stands still after an NTSC/PAL change while streaming,
+# 640x480 from the encoder, input change, unplug/replug ("Please connect"),
+# audio, idle CPU, guvcview.
 # Needs: pactl (PipeWire or PulseAudio), guvcview. PS1 (PAL) and N64 (NTSC).
 
 BRIDGE="$REPO/service/gchd-bridge"
@@ -38,15 +40,19 @@ sink_streams() {
 
 step "driver: application device registered at module load"
 run sh -c "pkill -f 'gchd-bridge run'; sudo modprobe -r v4l2loopback; true"
+run sudo install -m 0644 "$REPO/udev-rules/56-elgato-gchd-settings.rules" /etc/udev/rules.d/
+run sudo udevadm control --reload
 load_module replug
 run v4l2-ctl --list-devices
 expect "H.264 device found by name" "Card type *: Elgato Game Capture HD \(H.264\)" v4l2-ctl -d "$DEV" -D
-expect "application device idle, Game Capture HD attached" "^idle [0-9]+ [0-9]+ [0-9]+ [0-9]+ video[0-9]+ $(basename "$DEV")$" app_state
-expect "one size offered (the source size)" "^1$" sh -c "v4l2-ctl -d $(app_dev) --list-formats-ext | grep -c 'Size: Discrete'"
+expect "application device idle, Game Capture HD attached" "^idle [0-9]+ [0-9]+ [0-9]+ [0-9]+ video[0-9]+ $(basename "$DEV") 0 0$" app_state
 
 step "bridge idle: capture device off"
 prompt "PS1 on composite, game running."
 set_input 2
+sleep 1
+run v4l2-ctl -d "$(app_dev)" --list-formats-ext
+expect "composite: three sizes (source size, 640x480, 480x360)" "720x(480|576).*640x480.*480x360" sh -c "v4l2-ctl -d $(app_dev) --list-formats-ext | tr '\n' ' '"
 bash "$BRIDGE" run >> "$WORK/bridge.log" 2>&1 &
 BRIDGE_PID=$!
 sleep 3
@@ -59,15 +65,16 @@ T1=$(cpu_ticks "$BRIDGE_PID")
 log "bridge CPU while idle: $((T1 - T0)) ticks in 20 s"
 expect "bridge sleeps while idle (< 5 ticks = 0.05 s CPU in 20 s)" "^[0-4]$" echo $((T1 - T0))
 
-step "first read (format before detection), then the format follows the source"
+step "first read after loading: PAL detected while streaming 720x480, then the format follows"
+run cat /etc/modprobe.d/elgato-gchd-settings.conf
 app_read 12 > "$WORK/read1.txt"
 run cat "$WORK/read1.txt"
-expect "frames delivered (>= 200 in 12 s)" "frame= *([2-9][0-9]{2}|[0-9]{4})" cat "$WORK/read1.txt"
 expect "reader not cut off (no 'No such device')" "^0$" grep -c "No such device" "$WORK/read1.txt"
+run tail -6 "$WORK/bridge.log"
 sleep 4
 run app_state
 expect "idle format now the PAL source: 720x576, 50 frames/s" "^idle 720 576 50 1 " app_state
-run tail -6 "$WORK/bridge.log"
+expect "PAL remembered for composite" "std_composite=2" cat /etc/modprobe.d/elgato-gchd-settings.conf
 
 step "read the source format: 720x576 YUYV, about 50 frames/s"
 app_read 15 > "$WORK/read2.txt"
@@ -76,11 +83,14 @@ expect "stream YUYV 720x576" "yuyv422.*720x576" cat "$WORK/read2.txt"
 expect "frame count >= 450 in 15 s" "frame= *(4[5-9][0-9]|[5-9][0-9]{2}|[0-9]{4})" cat "$WORK/read2.txt"
 expect "capture device started" "starting hardware boot" sudo dmesg
 
-step "application asks for 1280x720: gets the source size (no scaling)"
-app_read 10 1280x720 > "$WORK/read3.txt"
+step "application selects 640x480: the encoder delivers it (no scaling)"
+app_read 10 640x480 > "$WORK/read3.txt"
 run cat "$WORK/read3.txt"
-expect "stream YUYV 720x576" "yuyv422.*720x576" cat "$WORK/read3.txt"
-expect "frames delivered (>= 250 in 10 s)" "frame= *([2-9][5-9][0-9]|[3-9][0-9]{2}|[0-9]{4})" cat "$WORK/read3.txt"
+expect "stream YUYV 640x480, 25 frames/s" "yuyv422.*640x480.*25 fps" cat "$WORK/read3.txt"
+expect "frames delivered (>= 150 in 10 s)" "frame= *(1[5-9][0-9]|[2-9][0-9]{2}|[0-9]{4})" cat "$WORK/read3.txt"
+run tail -4 "$WORK/bridge.log"
+run v4l2-ctl -d "$(app_dev)" -v width=720,height=576
+expect "720x576 selected again" "^idle 720 576 50 1 " app_state
 
 step "application closed: capture device off"
 sleep 6
@@ -126,18 +136,21 @@ expect "Game Capture HD attached again" "^idle .* $(basename "$DEV")$" app_state
 run tail -10 "$WORK/bridge.log"
 
 step "guvcview"
-prompt "Start in a second terminal: guvcview -d $(app_dev)   (leave it open)"
+prompt "Start in a second terminal: guvcview -d $(app_dev)   (leave it open; resolution 720x576 if it asks)"
 confirm "guvcview shows the PS1 picture, smooth, without interlacing lines?"
 prompt "Swap the PS1 for the N64 (NTSC) while guvcview stays open; wait about 15 s."
 run app_state
-confirm "guvcview shows the N64 picture without reopening (unscaled, black bars at top and bottom)?"
+confirm "the picture stands still (never squeezed, cropped or with borders), and guvcview did not close or show an error?"
+prompt "In guvcview select 720x480 (Video tab, resolution), or close and reopen guvcview; wait about 10 s."
+confirm "guvcview shows the N64 picture (720x480)?"
+expect "NTSC remembered for composite" "std_composite=1" cat /etc/modprobe.d/elgato-gchd-settings.conf
 prompt "Unplug the Elgato while guvcview stays open; wait about 5 s."
 confirm "guvcview shows 'Please connect the Elgato Game Capture HD'?"
 prompt "Plug the Elgato in again; wait about 15 s."
 confirm "guvcview shows the N64 picture again?"
 prompt "Close guvcview."
 sleep 3
-expect "idle format follows the NTSC source after closing" "^idle 720 480 60000 1001 " app_state
+expect "idle format: the NTSC source 720x480, 59.94 frames/s" "^idle 720 480 60000 1001 " app_state
 run tail -20 "$WORK/bridge.log"
 
 step "bridge stopped"
