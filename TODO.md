@@ -18,7 +18,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.4): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.5): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -30,7 +30,9 @@ on the `traces` branch.
   while one captures. Output sizes 720×480/576 (interlaced), 640×480 and
   480×360 (progressive, transport output 2 on endpoint 0x84). Bitrate
   (2-15 Mbit/s, CBR/VBR) and stretch as V4L2 controls, changeable while
-  capturing (encoder restart).
+  capturing (encoder restart). All settings remembered across replug,
+  module reload and reboot (module parameters, udev rule of ours writing
+  modprobe.d).
   Formats: H.264 (video only) and MPEG-TS with MP2 audio (`read()`,
   `ffplay -f mpegts /dev/video0`). Sources: N64 (NTSC), PS1 (PAL; the decoder
   reports 60 Hz for a few seconds after power-on and reset, also with the
@@ -67,12 +69,6 @@ Output and settings (`docs/composite.md §10`):
       control still switches inputs for any process while another one
       captures (S_INPUT returns EBUSY since fd8426b). Needed for
       guvcview/OBS robustness (T-060).
-- [ ] **T-064 (M)** Remembered settings: HDMI and defaults on first use
-      after installation, afterwards the last input and all settings
-      (output size, format, bitrate, mode, stretch, H.264 profile/level),
-      also across replug, module reload and reboot (maintainer: all
-      settings, not only the input). Module parameters + uevent + udev rule
-      of ours writing modprobe.d.
 
 Stage 1 is done when composite and S-video, NTSC and PAL, all modes and
 settings above work on `dev`.
