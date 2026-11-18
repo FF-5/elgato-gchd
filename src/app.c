@@ -9,16 +9,17 @@
  * connected or not; the first connected Game Capture HD is attached to it.
  *
  * The frames are written into the frame input device (an output device) by
- * a userspace program that decodes the stream of the attached device and
- * scales it to the format of the application device; the driver copies each
- * written frame into the next queued buffer of the application device. No
- * decoding takes place in the kernel.
+ * a userspace program that decodes the stream of the attached device; the
+ * driver copies each written frame into the next queued buffer of the
+ * application device. No decoding takes place in the kernel.
  *
- * The application chooses the size and frame rate from a fixed list. While
- * no application has buffers allocated, the format follows the detected
- * source, so that an application sees the source format first. While an
- * application streams, the format does not change; a source change is
- * reported with V4L2_EVENT_SOURCE_CHANGE.
+ * The format is the size and frame rate of the detected source (one frame
+ * per field for interlaced sources); it is the only format offered. While
+ * no application has buffers allocated, it follows the source. While an
+ * application streams, it does not change: a source change is reported
+ * with V4L2_EVENT_SOURCE_CHANGE, and the userspace program places the new
+ * picture unscaled in the frame (black borders or cropped) until the
+ * application opens the device again.
  *
  * The state is published in the sysfs attribute "gchd_state" of the
  * application device:
@@ -41,15 +42,6 @@
 struct gchd_app_buf {
 	struct vb2_v4l2_buffer vb;
 	struct list_head list;
-};
-
-static const struct v4l2_frmsize_discrete gchd_app_sizes[] = {
-	{ 1920, 1080 }, { 1280, 720 }, { 720, 576 }, { 720, 480 }, { 640, 480 },
-};
-
-/* Frames per second. */
-static const struct v4l2_fract gchd_app_rates[] = {
-	{ 60, 1 }, { 60000, 1001 }, { 50, 1 }, { 30000, 1001 }, { 25, 1 },
 };
 
 static struct gchd_app {
@@ -100,44 +92,6 @@ static void gchd_app_pix(u32 width, u32 height, struct v4l2_pix_format *p)
 	p->sizeimage = width * height * 2;
 	p->colorspace = height > 576 ? V4L2_COLORSPACE_REC709 :
 				       V4L2_COLORSPACE_SMPTE170M;
-}
-
-/* The listed size nearest to WIDTH x HEIGHT. */
-static const struct v4l2_frmsize_discrete *gchd_app_size(u32 width, u32 height)
-{
-	const struct v4l2_frmsize_discrete *best = &gchd_app_sizes[0];
-	unsigned int i, dist, dbest = UINT_MAX;
-
-	for (i = 0; i < ARRAY_SIZE(gchd_app_sizes); i++) {
-		dist = abs((int)gchd_app_sizes[i].width - (int)width) +
-		       abs((int)gchd_app_sizes[i].height - (int)height);
-		if (dist < dbest) {
-			dbest = dist;
-			best = &gchd_app_sizes[i];
-		}
-	}
-	return best;
-}
-
-/* The listed rate nearest to NUM/DEN frames per second. */
-static struct v4l2_fract gchd_app_rate(u32 num, u32 den)
-{
-	u64 want, have, dist, dbest = U64_MAX;
-	unsigned int i, best = 0;
-
-	if (!num || !den)
-		return gchd_app_rates[1];
-	want = div_u64((u64)num * 1000, den);
-	for (i = 0; i < ARRAY_SIZE(gchd_app_rates); i++) {
-		have = div_u64((u64)gchd_app_rates[i].numerator * 1000,
-			       gchd_app_rates[i].denominator);
-		dist = have > want ? have - want : want - have;
-		if (dist < dbest) {
-			dbest = dist;
-			best = i;
-		}
-	}
-	return gchd_app_rates[best];
 }
 
 /* ------------------------------------------------------------ app queue */
@@ -265,53 +219,27 @@ static int gchd_app_g_fmt(struct file *f, void *p, struct v4l2_format *x)
 	return 0;
 }
 
-static int gchd_app_try_fmt(struct file *f, void *p, struct v4l2_format *x)
-{
-	const struct v4l2_frmsize_discrete *s =
-		gchd_app_size(x->fmt.pix.width, x->fmt.pix.height);
-
-	gchd_app_pix(s->width, s->height, &x->fmt.pix);
-	return 0;
-}
-
-static int gchd_app_s_fmt(struct file *f, void *p, struct v4l2_format *x)
-{
-	gchd_app_try_fmt(f, p, x);
-	if (x->fmt.pix.width == app.width && x->fmt.pix.height == app.height)
-		return 0;
-	if (vb2_is_busy(&app.q))
-		return -EBUSY;
-	app.width = x->fmt.pix.width;
-	app.height = x->fmt.pix.height;
-	gchd_app_notify();
-	return 0;
-}
-
+/* One size and one frame rate: those of the source. */
 static int gchd_app_framesizes(struct file *f, void *p,
 			       struct v4l2_frmsizeenum *s)
 {
-	if (s->index >= ARRAY_SIZE(gchd_app_sizes) ||
-	    s->pixel_format != V4L2_PIX_FMT_YUYV)
+	if (s->index || s->pixel_format != V4L2_PIX_FMT_YUYV)
 		return -EINVAL;
 	s->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-	s->discrete = gchd_app_sizes[s->index];
+	s->discrete.width = app.width;
+	s->discrete.height = app.height;
 	return 0;
 }
 
 static int gchd_app_frameintervals(struct file *f, void *p,
 				   struct v4l2_frmivalenum *iv)
 {
-	const struct v4l2_frmsize_discrete *s;
-
-	if (iv->index >= ARRAY_SIZE(gchd_app_rates) ||
-	    iv->pixel_format != V4L2_PIX_FMT_YUYV)
-		return -EINVAL;
-	s = gchd_app_size(iv->width, iv->height);
-	if (s->width != iv->width || s->height != iv->height)
+	if (iv->index || iv->pixel_format != V4L2_PIX_FMT_YUYV ||
+	    iv->width != app.width || iv->height != app.height)
 		return -EINVAL;
 	iv->type = V4L2_FRMIVAL_TYPE_DISCRETE;
-	iv->discrete.numerator = gchd_app_rates[iv->index].denominator;
-	iv->discrete.denominator = gchd_app_rates[iv->index].numerator;
+	iv->discrete.numerator = app.rate.denominator;
+	iv->discrete.denominator = app.rate.numerator;
 	return 0;
 }
 
@@ -325,22 +253,6 @@ static int gchd_app_g_parm(struct file *f, void *p, struct v4l2_streamparm *s)
 	s->parm.capture.timeperframe.denominator = app.rate.numerator;
 	s->parm.capture.readbuffers = 2;
 	return 0;
-}
-
-static int gchd_app_s_parm(struct file *f, void *p, struct v4l2_streamparm *s)
-{
-	struct v4l2_fract *t = &s->parm.capture.timeperframe;
-	struct v4l2_fract rate;
-
-	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-		return -EINVAL;
-	rate = gchd_app_rate(t->denominator, t->numerator);
-	if ((rate.numerator != app.rate.numerator ||
-	     rate.denominator != app.rate.denominator) && !vb2_is_busy(&app.q)) {
-		app.rate = rate;
-		gchd_app_notify();
-	}
-	return gchd_app_g_parm(f, p, s);
 }
 
 /* The attached Game Capture HD with a reference, or NULL. */
@@ -442,12 +354,12 @@ static const struct v4l2_ioctl_ops gchd_app_ioctl = {
 	.vidioc_querycap = gchd_app_querycap,
 	.vidioc_enum_fmt_vid_cap = gchd_app_enum_fmt,
 	.vidioc_g_fmt_vid_cap = gchd_app_g_fmt,
-	.vidioc_s_fmt_vid_cap = gchd_app_s_fmt,
-	.vidioc_try_fmt_vid_cap = gchd_app_try_fmt,
+	.vidioc_s_fmt_vid_cap = gchd_app_g_fmt,
+	.vidioc_try_fmt_vid_cap = gchd_app_g_fmt,
 	.vidioc_enum_framesizes = gchd_app_framesizes,
 	.vidioc_enum_frameintervals = gchd_app_frameintervals,
 	.vidioc_g_parm = gchd_app_g_parm,
-	.vidioc_s_parm = gchd_app_s_parm,
+	.vidioc_s_parm = gchd_app_g_parm,
 	.vidioc_enum_input = gchd_app_enum_input,
 	.vidioc_g_input = gchd_app_g_input,
 	.vidioc_s_input = gchd_app_s_input,
@@ -487,35 +399,35 @@ static void gchd_app_update_workfn(struct work_struct *work)
 		.type = V4L2_EVENT_SOURCE_CHANGE,
 		.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION,
 	};
-	const struct v4l2_frmsize_discrete *s;
-	struct v4l2_fract src_rate, rate;
+	struct v4l2_fract rate;
 	struct gchd *d;
+	bool known, changed = false;
 	u32 w, h;
-	bool known;
 
 	d = gchd_app_get();
 	if (!d)
 		return;
-	known = gchd_source_format(d, &w, &h, &src_rate);
+	known = gchd_source_format(d, &w, &h, &rate);
 	gchd_put(d);
-	if (!known)
+	if (!known || !rate.numerator || !rate.denominator)
 		return;
-	s = gchd_app_size(w, h);
-	rate = gchd_app_rate(src_rate.numerator, src_rate.denominator);
 
 	mutex_lock(&app.lock);
-	if (s->width != app.width || s->height != app.height ||
+	if (w != app.width || h != app.height ||
 	    rate.numerator != app.rate.numerator ||
 	    rate.denominator != app.rate.denominator) {
 		if (!vb2_is_busy(&app.q)) {
-			app.width = s->width;
-			app.height = s->height;
+			app.width = w;
+			app.height = h;
 			app.rate = rate;
+			changed = true;
 		}
 		v4l2_event_queue(&app.vdev, &ev);
 	}
 	mutex_unlock(&app.lock);
-	gchd_app_notify();
+	/* Notify only real changes (a uevent makes udev open the device). */
+	if (changed)
+		gchd_app_notify();
 }
 
 void gchd_app_update(struct gchd *d)
@@ -756,7 +668,8 @@ int gchd_app_register(void)
 	INIT_WORK(&app.update_work, gchd_app_update_workfn);
 	app.width = 720;
 	app.height = 480;
-	app.rate = gchd_app_rates[1];
+	app.rate.numerator = 60000;
+	app.rate.denominator = 1001;
 	app.feed_width = app.width;
 	app.feed_height = app.height;
 

@@ -16,12 +16,14 @@
 # application device:
 #   STATE WIDTH HEIGHT RATE-NUM RATE-DEN FEED-NODE STREAM-NODE
 # While STATE is "streaming" (an application streams from the application
-# device), the service writes YUYV frames of the format the application
-# chose into the frame input device: from the H.264 device STREAM-NODE of
+# device), the service writes YUYV frames of that format (the source
+# format) into the frame input device: from the H.264 device STREAM-NODE of
 # the attached Game Capture HD (decoded, deinterlaced one frame per field,
-# scaled, with the audio to the audio source), or a black picture while no
-# "Please connect" picture while no Game Capture HD is attached. When the
-# application stops, ffmpeg stops and the capture device switches off.
+# not scaled; after a source change while streaming the picture is placed
+# in the middle, with black borders or cropped; the audio goes to the audio
+# source), or a "Please connect" picture while no Game Capture HD is
+# attached. When the application stops, ffmpeg stops and the capture device
+# switches off.
 #
 # The service sleeps until the driver reports a change (a "change" uevent of
 # the application device, through udevadm monitor); without udevadm it
@@ -121,8 +123,10 @@ stop_pipeline() {
 	msg "capture stopped"
 }
 
-# Decode the transport stream, deinterlace, scale to the application
-# format, write YUYV frames to the feed device and the audio to the sink.
+# Decode the transport stream, deinterlace, place the picture 1:1 in the
+# application format (unchanged when the sizes match; centred with black
+# borders or cropped after a source change while streaming), write YUYV
+# frames to the feed device and the audio to the sink.
 start_pipeline() {	# start_pipeline TS FEED W H NUM DEN
 	local audio=()
 	v4l2-ctl -d "$1" -v "width=$3,height=$4,pixelformat=MPEG" >/dev/null 2>&1 ||
@@ -133,7 +137,7 @@ start_pipeline() {	# start_pipeline TS FEED W H NUM DEN
 	ffmpeg -hide_banner -loglevel error -nostdin \
 		-fflags nobuffer -probesize 1000000 -analyzeduration 1000000 \
 		-f mpegts -i "$1" \
-		-map 0:v:0 -vf "$DEINTERLACE,scale=$3:$4,setsar=1,fps=$5/$6,format=yuyv422" \
+		-map 0:v:0 -vf "$DEINTERLACE,crop='min(iw,$3)':'min(ih,$4)',pad=$3:$4:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=$5/$6,format=yuyv422" \
 		-f v4l2 "$2" "${audio[@]}" &
 	PID=$!
 	msg "capture: $1 -> $2 ($3x$4, $5/$6 frames/s)"
@@ -169,7 +173,11 @@ monitor_start() {
 wait_change() {	# wait_change SECONDS
 	if [ -n "$MON_PID" ] && kill -0 "$MON_PID" 2>/dev/null; then
 		read -r -t "$1" -u "$MON_FD" _ || return 0
-		while read -r -t 0.05 -u "$MON_FD" _; do :; done
+		# Read what else is queued (bounded: a burst does not keep us here).
+		local _n
+		for _n in $(seq 50); do
+			read -r -t 0.05 -u "$MON_FD" _ || break
+		done
 	else
 		sleep "$POLL" &
 		wait $! 2>/dev/null

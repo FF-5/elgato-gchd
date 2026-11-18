@@ -79,7 +79,7 @@ hand.
   stream; inputs HDMI (0), Component (1), Composite (2), S-Video (3). The
   hardware is initialized on `VIDIOC_STREAMON`.
 - "Elgato Game Capture HD", while the module is loaded: uncompressed YUYV
-  frames for applications in the size and rate the application selects,
+  frames for applications in the size and rate of the source (unscaled),
   written into "Elgato Game Capture HD (frame input)" by a userspace
   program (`service/gchd-bridge`); state in the sysfs attribute
   `gchd_state` of the device.

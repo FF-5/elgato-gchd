@@ -56,10 +56,10 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
       applications: they need uncompressed frames and a separate audio
       source; decoding is not allowed in the kernel (RULES E2). The driver
       registers an application device ("Elgato Game Capture HD", YUYV) at
-      module load, independent of the USB device, with sizes chosen by
-      the application (format follows the source while idle); it is fed
-      through a frame input device by `service/gchd-bridge` (ffmpeg:
-      decode, deinterlace one frame per field, scale), which runs only
+      module load, independent of the USB device, in the source size and
+      rate only (no scaling; format follows the source while idle); it is
+      fed through a frame input device by `service/gchd-bridge` (ffmpeg:
+      decode, deinterlace one frame per field, 1:1), which runs only
       while an application streams (black picture without a device).
       Audio as a PipeWire/PulseAudio source. Decisions (maintainer
       2026-11-18): shell + ffmpeg first, modular, replaceable by something

@@ -76,16 +76,14 @@ the module is loaded and stays registered while the module is loaded,
 whether a Game Capture HD is connected or not; the first connected Game
 Capture HD is attached to it. The driver does not decode the stream: a
 userspace program reads the transport stream of the attached device,
-decodes it, scales it to the format of the application device and writes
-the frames into the frame input device; the driver copies each written
+decodes it and writes the frames into the frame input device; the driver copies each written
 frame into the next queued buffer of the application device. Frames
 written while no buffer is queued are dropped.
 
 | Item | Behaviour |
 |---|---|
-| Format | `V4L2_PIX_FMT_YUYV`, `V4L2_FIELD_NONE`; sizes (`VIDIOC_ENUM_FRAMESIZES`) 1920 × 1080, 1280 × 720, 720 × 576, 720 × 480, 640 × 480; frame rates (`VIDIOC_ENUM_FRAMEINTERVALS`, `VIDIOC_S_PARM`) 60, 59.94, 50, 29.97 and 25 per second. `VIDIOC_S_FMT` selects the nearest listed size; `EBUSY` for another size while buffers are allocated |
-| Format before a selection | While no buffers are allocated, the format follows the detected source of the attached device: the source size (720 × 480 also for 240p, 720 × 576 also for 288p, the HDMI/component mode size) and rate (composite and S-video: 50 or 59.94, one frame per field). After loading: 720 × 480 at 59.94 |
-| Source changes while streaming | The format does not change (the frames are scaled to it); `V4L2_EVENT_SOURCE_CHANGE` is queued |
+| Format | `V4L2_PIX_FMT_YUYV`, `V4L2_FIELD_NONE`, the size and frame rate of the detected source of the attached device: 720 × 480 (also 240p) at 59.94 or 720 × 576 (also 288p) at 50 frames per second for composite and S-video (one frame per field), the mode size and rate for HDMI and component. It is the only format offered (`VIDIOC_ENUM_FRAMESIZES`, `VIDIOC_ENUM_FRAMEINTERVALS`); `VIDIOC_S_FMT` and `VIDIOC_S_PARM` return it. The frames are not scaled |
+| Format changes | While no buffers are allocated, the format follows the source (after loading: 720 × 480 at 59.94). While an application streams, the format does not change and `V4L2_EVENT_SOURCE_CHANGE` is queued; the userspace program places the new picture unscaled in the middle of the frame (black borders, or cropped) until the application opens the device again |
 | Inputs | HDMI (0), Component (1), Composite (2), S-Video (3) of the attached device; `VIDIOC_S_INPUT` selects the input (also while capturing). Without an attached device the inputs report `V4L2_IN_ST_NO_POWER` |
 | I/O | Streaming (mmap, userptr) and `read()`; timestamps: monotonic clock at the copy |
 | Frame input device | Output device, `V4L2_PIX_FMT_YUYV` of the application format (`VIDIOC_S_FMT` sets it; `EBUSY` for another size while buffers exist), streaming and `write()`; one buffer or `write()` of one frame size per frame (a buffer queued with 0 bytes counts as a whole frame) |
