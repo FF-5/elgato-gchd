@@ -1073,7 +1073,7 @@ processor_state_ready:
  return 0;
 }
 
-int gchd_hw_shutdown(struct gchd *d)
+static int gchd_hw_shutdown_steps(struct gchd *d, const char **step)
 {
  int r;
  u16 state;
@@ -1087,12 +1087,14 @@ int gchd_hw_shutdown(struct gchd *d)
   * actually in START/NULL, and do not run the teardown sequence twice when
   * the processor is already reset or still in boot state.
   */
+ *step = "read state";
  r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
  if (r)
   return r;
  state &= GCHD_STATE_MASK;
 
  if (state == GCHD_STATE_START || state == GCHD_STATE_NULL) {
+  *step = "stream stop (NULL, STOP)";
   r = gchd_stream_stop(d);
   if (r)
    return r;
@@ -1109,6 +1111,7 @@ int gchd_hw_shutdown(struct gchd *d)
   return 0;
  }
 
+ *step = "decoder and enable writes";
  /* Pre-shutdown decoder sequence. */
  GCHD_DEC_W(d, 0x06, 0x86);
  GCHD_DEC_R(d, 0xf8, v);
@@ -1122,9 +1125,11 @@ int gchd_hw_shutdown(struct gchd *d)
  /* Read the state before disabling output. */
  r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &state);
  if (r) return r;
+ *step = "output disable";
  r = gchd_transcoder_output_enable(d, false);
  if (r) return r;
 
+ *step = "INIT";
  r = gchd_scmd(d, GCHD_SCMD_INIT, GCHD_SCMD_INIT_NO_RELOAD, 0x0000);
  if (r) return r;
 
@@ -1134,6 +1139,7 @@ int gchd_hw_shutdown(struct gchd *d)
  d->hw_enable_state = 0;
  d->saved_enable_state = 0;
 
+ *step = "processor off";
  r = gchd_do_enable(d, GCHD_EB_FIRMWARE_PROCESSOR, 0);
  if (r) return r;
 
@@ -1149,11 +1155,13 @@ int gchd_hw_shutdown(struct gchd *d)
  if (r) return r;
  state &= GCHD_STATE_MASK;
  if (state != GCHD_STATE_IDLE) {
+  *step = "IDLE";
   r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) return r;
  }
 
  /* RESET is the final close-time transition to a known boot state. */
+ *step = "RESET";
  r = gchd_state_cmd(d, GCHD_SCMD_RESET, 1, 0, GCHD_STATE_SHUTDOWN);
  if (r) return r;
 
@@ -1161,4 +1169,27 @@ int gchd_hw_shutdown(struct gchd *d)
  d->hw_enable_register = 0;
  d->saved_enable_state = 0;
  return 0;
+}
+
+/* Shutdown with the failing step and the device state logged. */
+int gchd_hw_shutdown(struct gchd *d)
+{
+ const char *step = "start";
+ u16 before = 0xffff, after = 0xffff;
+ int r;
+
+ if (!d->udev)
+  return 0;
+ gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &before);
+ r = gchd_hw_shutdown_steps(d, &step);
+ gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_SCMD_STATE, &after);
+ if (r)
+  dev_warn(&d->intf->dev,
+           "hardware shutdown failed at step '%s': %d (state 0x%04x before, 0x%04x now)\n",
+           step, r, before, after);
+ else
+  dev_info(&d->intf->dev,
+           "hardware shutdown done (state 0x%04x before, 0x%04x now)\n",
+           before, after);
+ return r;
 }
