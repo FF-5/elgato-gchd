@@ -32,8 +32,7 @@ H.264 or MPEG-TS with audio. Closing is not clean in every case:
 
 ## Hardware test (maintainer)
 
-Build and load (once); `git log -1 --oneline` must show the commit named in
-the status line of the findings below, or later:
+Build and load (once); `git log -1 --oneline` must show 9e098d3 or later:
 
 ```sh
 cd ~/elgato-gchd && git fetch origin && git checkout fix/close-lifecycle && git pull
@@ -57,6 +56,8 @@ sudo dmesg | grep -E "shutdown|close|SCMD timeout|state-change|START failed|life
 ```
 
 ## Findings
+
+- Diagnostic build: 9e098d3.
 
 ## Maintainer comments
 
