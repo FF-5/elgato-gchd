@@ -85,6 +85,15 @@ static v4l2_std_id gchd_analog_std(const struct gchd *d)
  return std ? std : V4L2_STD_NTSC_M;
 }
 
+/*
+ * Standards can be enumerated only on composite and S-video. tvnorms is set
+ * at registration so that the standard ioctls exist, and follows the input.
+ */
+static void gchd_update_tvnorms(struct gchd *d)
+{
+ d->vdev.tvnorms = d->input >= 2 ? GCHD_ANALOG_STDS : 0;
+}
+
 /* Field order of the encoded analog stream: top field first (both families). */
 static enum v4l2_field gchd_field(const struct gchd *d)
 {
@@ -129,6 +138,7 @@ static void gchd_input_selection_enter(struct gchd *d)
 {
  mutex_lock(&gchd_last_input_lock);
  d->input = gchd_last_input <= 3 ? gchd_last_input : 0;
+ gchd_update_tvnorms(d);
  mutex_unlock(&gchd_last_input_lock);
 
  /* A new open starts from the common HDMI/default route. */
@@ -1608,6 +1618,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  d->ts_partial_len = 0;
  d->previous_input = d->input;
  d->input = i;
+ gchd_update_tvnorms(d);
  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
  mutex_lock(&gchd_last_input_lock);
  gchd_last_input = i;
@@ -1747,8 +1758,9 @@ static int gchd_enum_dv_timings(struct file *f, void *p,
 }
 
 static int gchd_querycap(struct file*f,void*p,struct v4l2_capability*c)
-{strscpy(c->driver,"elgato-gchd",sizeof(c->driver));strscpy(c->card,"Elgato Game Capture HD",sizeof(c->card));
- strscpy(c->bus_info,"usb",sizeof(c->bus_info));c->device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_STREAMING|V4L2_CAP_READWRITE;c->capabilities=c->device_caps|V4L2_CAP_DEVICE_CAPS;return 0;}
+{struct gchd *d = video_drvdata(f);
+ strscpy(c->driver,"elgato-gchd",sizeof(c->driver));strscpy(c->card,"Elgato Game Capture HD",sizeof(c->card));
+ usb_make_path(d->udev,c->bus_info,sizeof(c->bus_info));c->device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_STREAMING|V4L2_CAP_READWRITE;c->capabilities=c->device_caps|V4L2_CAP_DEVICE_CAPS;return 0;}
 
 static int gchd_enum(struct file*f,void*p,struct v4l2_fmtdesc*x)
 {
@@ -1951,6 +1963,8 @@ static int gchd_g_parm(struct file *f, void *p, struct v4l2_streamparm *a)
   return -EINVAL;
  memset(&a->parm.capture, 0, sizeof(a->parm.capture));
  a->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
+ /* Buffers used by read() (vb2 file I/O). */
+ a->parm.capture.readbuffers = 2;
  if (d->input >= 2) {
   bool pal = d->input_height ? d->input_height == 576 :
                                gchd_std_is_50hz(gchd_analog_std(d));
@@ -2197,7 +2211,9 @@ int gchd_v4l2_register(struct gchd*d)
  gchd_fops.release = gchd_fop_release;
  d->vdev.tvnorms=GCHD_ANALOG_STDS;d->vdev.fops=&gchd_fops;d->vdev.ioctl_ops=&gchd_ioctl;d->vdev.queue=&d->vbq;d->vdev.lock=&d->lock;
  d->vdev.ctrl_handler=&d->ctrls;d->vdev.device_caps=V4L2_CAP_VIDEO_CAPTURE|V4L2_CAP_STREAMING|V4L2_CAP_READWRITE;video_set_drvdata(&d->vdev,d);
- r=video_register_device(&d->vdev,VFL_TYPE_VIDEO,-1);if(r)goto err;return 0;
+ r=video_register_device(&d->vdev,VFL_TYPE_VIDEO,-1);if(r)goto err;
+ gchd_update_tvnorms(d);
+ return 0;
 err:v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);return r;
 }
 void gchd_v4l2_unregister(struct gchd*d){video_unregister_device(&d->vdev);v4l2_ctrl_handler_free(&d->ctrls);v4l2_device_unregister(&d->v4l2_dev);}
