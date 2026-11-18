@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** small sizes give no picture; dmesg needed
+- **Status:** scaled output via switch from standard (1b1b8d0); hardware test
 - **Type:** driver feature
 - **Branch:** `feat/output-size` (from `dev` 0.5.2)
 - **TODO items:** T-055 (stage 1)
@@ -35,7 +35,7 @@ Recorded (`docs/composite.md §10`, recordings in `traces/composite/`:
 
 ## Hardware test (maintainer)
 
-Build and load; `git log -1 --oneline` must show b5d4a79 or later:
+Build and load; `git log -1 --oneline` must show 1b1b8d0 or later:
 
 ```sh
 cd ~/elgato-gchd && git fetch origin && git checkout feat/output-size && git pull
@@ -47,35 +47,38 @@ sudo insmod ./elgato_gchd.ko
 v4l2-ctl -d /dev/video0 -i 2
 ```
 
-PS1 on composite, game running. Two terminals.
+PS1 on composite, game running. For each size: set it, start ffplay,
+wait 15 s, close (Ctrl+C):
 
-1. Terminal 1:
+```sh
+sudo dmesg -C
+v4l2-ctl -d /dev/video0 -v width=640,height=480,pixelformat=MPEG
+ffplay -f mpegts /dev/video0
+```
 
-   ```sh
-   sudo dmesg -C
-   v4l2-ctl -d /dev/video0 -v width=640,height=480,pixelformat=MPEG
-   ffplay -f mpegts /dev/video0
-   ```
+1. 640 × 480 (above), 2. 480 × 360 (`width=480,height=360`),
+3. standard (`width=720,height=576`).
 
-2. Wait 20 s. **While ffplay still hangs**, terminal 2:
+Expected: dmesg "switching output size: 0 -> 1" (or 2) about 0.3 s after
+the first START, then "analog mode now 576i, output 1"; ffplay's
+`Stream #0:0` line shows 640x480 / 480x360. If ffplay hangs, take the log
+in a second terminal before Ctrl+C. Paste the ffplay stream lines and the
+complete output of:
 
-   ```sh
-   sudo dmesg | grep -vE "bulk-IN data|firmware chunk|SCMD write succeeded|SCMD interrupt|callbacks suppressed" > ~/gchd-640.txt
-   ps -o pid,stat,wchan:32,cmd -C ffplay >> ~/gchd-640.txt
-   cat ~/gchd-640.txt
-   ```
-
-   Paste the whole output (`START poll` lines are kept on purpose).
-3. Then Ctrl+C in terminal 1 (unplug only if it does not return), and
-   append `sudo dmesg | tail -50`.
+```sh
+sudo dmesg | grep -vE "bulk-IN data|firmware chunk|SCMD write succeeded|SCMD interrupt|callbacks suppressed|no analog family|pre-config raw_status|retrying detection"
+```
 
 ## Findings
 - b5d4a79 test (PS1 composite): format and ENUM_FRAMESIZES correct
   (640×480 / 480×360, field None; source size 720×480 before the first
   detection in the session). With 640×480 and 480×360 ffplay never got a
   stream and could not be ended without unplugging; the standard size
-  worked (720×576, 25 fps). The dmesg part of the comment was empty, so it
-  is not known whether START completed or where data went; log requested.
+  worked (720×576, 25 fps). (Correction: the dmesg was there; I overlooked
+  it.) It shows START refused by the device with the output-2 block
+  (`SCMD timeout ... readback=0x0400`, twice), then a completion wait that
+  never ended (the hang). Windows enters output 2 only from a running
+  capture (all recordings); 1b1b8d0 does the same and bounds the wait.
 
 ## Maintainer comments
 
