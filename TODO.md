@@ -35,7 +35,6 @@ Video modes and switching:
 
 - [ ] **T-044 [HW] (S)** Reopening while the previous stop is still
       running failed once; make a new open wait for it.
-- [ ] **T-031 [HW] (S)** STREAMOFF → STREAMON without closing.
 - [ ] **T-054 [HW] (S)** Source loss and return while capturing (worked by
       report; check the logs once).
 - [ ] **T-065 [HW] (S)** Console swap without a detected signal drop
@@ -63,8 +62,6 @@ Output and settings (`docs/composite.md §10`):
 - [ ] **T-022 [OFF] (S)** Field order/`V4L2_FIELD_INTERLACED` reporting
       for 480i/576i/240p/288p.
 - [ ] **T-042 [OFF] (S)** Report the current analog mode to userspace.
-- [ ] **T-045 [OFF] (S)** ffplay on close: "VIDIOC_QBUF: Bad file
-      descriptor", "Some buffers are still owned by the caller".
 - [ ] **T-064 (M)** Input persistence: HDMI on first use after
       installation, afterwards the last selected input, also across module
       reloads and reboots (today only while the module stays loaded). Plan:
