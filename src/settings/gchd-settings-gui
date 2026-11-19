@@ -161,6 +161,7 @@ class Window(Gtk.Window):
         buttons.pack_end(close, False, False, 0)
         box.pack_end(buttons, False, False, 0)
         self.pending = 0  # device commands running
+        self.status_timer = 0
 
         self.load()
         GLib.timeout_add(REFRESH_MS, self.refresh)
@@ -194,8 +195,8 @@ class Window(Gtk.Window):
             if vals is None:
                 self.dev = None
                 self.device_label.set_text("not found")
-                self.status.set_text("No Elgato Game Capture HD found (driver "
-                                     "loaded, device plugged in?).")
+                self.notify("No Elgato Game Capture HD found (driver "
+                            "loaded, device plugged in?).", keep=True)
                 self.set_controls(False)
                 return
             was_missing = self.dev is None
@@ -226,10 +227,25 @@ class Window(Gtk.Window):
                 (i for i, p in enumerate(PROFILES) if p[1] == vals["profile"]), 0))
             if self.stretch.get_active() != bool(vals["stretch"]):
                 self.stretch.set_active(bool(vals["stretch"]))
-            if not quiet or was_missing:
-                self.status.set_text("Changes apply at once and are kept.")
+            if was_missing:
+                self.notify("")
         finally:
             self.loading = False
+
+    def notify(self, text, keep=False):
+        """Notification next to the Close button; gone after 3 s unless
+        KEEP (a state such as a missing device, or a change under way)."""
+        if self.status_timer:
+            GLib.source_remove(self.status_timer)
+            self.status_timer = 0
+        self.status.set_text(text)
+        if text and not keep:
+            self.status_timer = GLib.timeout_add(3000, self.clear_status)
+
+    def clear_status(self):
+        self.status_timer = 0
+        self.status.set_text("")
+        return False
 
     @staticmethod
     def set_active(combo, index):
@@ -248,7 +264,7 @@ class Window(Gtk.Window):
             return
         dev = self.dev
         self.pending += 1
-        self.status.set_text("Changing " + what.lower() + " ...")
+        self.notify("Changing " + what.lower() + " ...", keep=True)
 
         def work():
             rc, out = dev.run(*args)
@@ -259,9 +275,9 @@ class Window(Gtk.Window):
     def applied(self, what, rc, out):
         self.pending -= 1
         if rc == 0:
-            self.status.set_text(what + " changed.")
+            self.notify(what + " changed.")
         else:
-            self.status.set_text(what + " not changed.")
+            self.notify(what + " not changed.")
             dialog = Gtk.MessageDialog(transient_for=self, modal=True,
                                        message_type=Gtk.MessageType.WARNING,
                                        buttons=Gtk.ButtonsType.OK,

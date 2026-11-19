@@ -37,6 +37,13 @@ properties.
   3.00–7.23 for the source size and 640 × 480, 2.00–7.50 for 480 × 360
   (VBR only); CBR as the bitrate, 7.00–11.25 (11.25 is the observed CBR
   setting). The slider range follows the mode and the output size.
+- **No signal:** when no pictures arrive for 0.5 s and the driver reports
+  no signal on the selected input (another input chosen, the source
+  switched off), the source shows a black picture of the last size
+  instead of the last picture. A setting change (encoder restart) keeps
+  the last picture.
+- **Log:** the picture size and the stream's sample aspect ratio are
+  logged when they change (`[gchd] picture ...`).
 - **Capture device on/off:** the device captures while the source is shown
   anywhere in OBS: in the program or preview, in a projector or multiview,
   in another scene that is shown, or in the preview of its properties

@@ -166,7 +166,7 @@ struct gchd {
  u8 h264_level;
  /* Encoder settings per group: [0] HDMI/component, [1] composite/S-video. */
  struct gchd_group {
-  u16 bitrate[2];  /* kbit/s per bitrate mode ([0] VBR, [1] CBR), 0 automatic */
+  u16 bitrate[3];  /* kbit/s, 0 automatic: [0] VBR, [1] CBR, [2] 480 x 360 (VBR) */
   u8 bitrate_mode; /* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
   u8 profile;      /* V4L2_MPEG_VIDEO_H264_PROFILE_* */
   u8 level;        /* level x10, 0 automatic */

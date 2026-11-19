@@ -52,6 +52,7 @@ sudo dkms install elgato-gchd/0.5.8
 | `bitrate_mode` | 1 | Composite/S-video bitrate mode: 0 VBR, 1 CBR. |
 | `bitrate_cbr` | 0 | Composite/S-video: last CBR bitrate in kbit/s, 0 automatic. |
 | `bitrate_vbr` | 0 | Composite/S-video: last VBR bitrate in kbit/s (the control value, twice the average), 0 automatic. |
+| `bitrate_small` | 0 | Composite/S-video: last bitrate of the 480 × 360 output (VBR only) in kbit/s, 0 automatic. |
 | `stretch` | 0 | Stretch standard-definition input (composite/S-video). |
 | `h264_profile` | 4 | Composite/S-video H.264 profile (V4L2 value): 0 baseline, 2 main, 4 high. |
 | `h264_level` | 0 | Composite/S-video H.264 level × 10 (30–51), 0 automatic. |
@@ -70,9 +71,11 @@ Composite and S-video share one group of settings, HDMI and component
 another: bitrate mode, the bitrate of each mode, H.264 profile and level.
 Switching between composite and S-video changes none of them; switching to
 HDMI or component loads that group's values into the controls (and back).
-The driver keeps a bitrate per mode: a change of `video_bitrate_mode` loads
-the bitrate last set in that mode, and `video_bitrate` then changes the
-bitrate of the mode in use. Output size and stretch apply to composite and
+The driver keeps a bitrate per mode, and one for the 480 × 360 output
+(VBR only, its own range): a change of `video_bitrate_mode` or of the
+output size loads the bitrate last set there, and `video_bitrate` then
+changes the bitrate in use. The bitrate control is volatile: reading it
+always gives the bitrate in use. Output size and stretch apply to composite and
 S-video only.
 
 ## Remembered settings

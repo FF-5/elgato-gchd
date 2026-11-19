@@ -69,7 +69,7 @@ struct gchd_vals {
 struct gchd_mem {
 	bool known;
 	int mode;
-	double rate[2];		/* [V4L2_MPEG_VIDEO_BITRATE_MODE_VBR/_CBR] */
+	double rate[3];		/* kept bitrates (see gchd_slot), 0 unknown */
 	int profile;
 };
 
@@ -100,6 +100,10 @@ struct gchd_src {
 	volatile bool stop;
 	bool shown;
 	bool warned_format;
+	int pic_w, pic_h, sar_num, sar_den; /* last logged picture */
+	uint64_t last_video;	/* os_gettime_ns() of the last picture */
+	uint64_t last_check;	/* last signal check without pictures */
+	bool blanked;		/* black picture shown (no signal) */
 	bool created;
 	int fd;
 };
@@ -165,10 +169,15 @@ static int gchd_group(int input)
 	return input >= 2 ? 1 : 0;
 }
 
-/* Bitrate mode in effect: 480x360 is VBR only. */
-static int gchd_eff_mode(int output, int mode)
+/*
+ * The driver's kept bitrate in use: 0 VBR, 1 CBR, 2 480x360 (VBR only,
+ * its own range).
+ */
+static int gchd_slot(int output, int mode)
 {
-	return output == 2 ? V4L2_MPEG_VIDEO_BITRATE_MODE_VBR : mode;
+	if (output == 2)
+		return 2;
+	return mode == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR ? 1 : 0;
 }
 
 static bool gchd_rate_equal(double a, double b)
@@ -340,25 +349,80 @@ static void gchd_vals_to_settings(const struct gchd_vals *v,
 		obs_data_set_bool(st, "stretch", v->stretch);
 	if (!old || gchd_group(v->input) != gchd_group(old->input))
 		obs_data_set_int(st, "shown_group", gchd_group(v->input));
-	if (!old || gchd_eff_mode(v->output, v->mode) !=
-			    gchd_eff_mode(old->output, old->mode))
-		obs_data_set_int(st, "shown_eff",
-				 gchd_eff_mode(v->output, v->mode));
+	if (!old || gchd_slot(v->output, v->mode) !=
+			    gchd_slot(old->output, old->mode))
+		obs_data_set_int(st, "shown_slot",
+				 gchd_slot(v->output, v->mode));
 }
 
 /* Remember the group's values read from the device (lock held). */
 static void gchd_mem_note(struct gchd_src *s, const struct gchd_vals *v)
 {
 	struct gchd_mem *m = &s->mem[gchd_group(v->input)];
-	int eff = gchd_eff_mode(v->output, v->mode);
 
 	m->known = true;
 	m->mode = v->mode;
-	m->rate[eff ? 1 : 0] = v->rate;
+	m->rate[gchd_slot(v->output, v->mode)] = v->rate;
 	m->profile = v->profile;
 }
 
 /* ------------------------------------------------------------ decoding */
+
+/* The selected input has no signal (driver's input status). */
+static bool gchd_no_signal(int fd)
+{
+	struct v4l2_input in = { 0 };
+	unsigned int i;
+
+	if (ioctl(fd, VIDIOC_G_INPUT, &i) < 0)
+		return false;
+	in.index = i;
+	return ioctl(fd, VIDIOC_ENUMINPUT, &in) == 0 &&
+	       (in.status & V4L2_IN_ST_NO_SIGNAL);
+}
+
+/*
+ * No pictures for 0.5 s and no signal on the input (another input chosen,
+ * source switched off): a black picture of the last size instead of the
+ * last picture. Gaps of a setting change (encoder restart) keep the last
+ * picture.
+ */
+static void gchd_check_blank(struct gchd_src *s)
+{
+	uint64_t now = os_gettime_ns();
+	struct obs_source_frame2 frame = { 0 };
+	uint8_t *buf;
+	size_t y;
+
+	if (s->blanked || !s->pic_w || !s->pic_h ||
+	    now - s->last_video < 500000000ULL ||
+	    now - s->last_check < 500000000ULL)
+		return;
+	s->last_check = now;
+	if (!gchd_no_signal(s->fd))
+		return;
+	y = (size_t)s->pic_w * (size_t)s->pic_h;
+	buf = bmalloc(y + y / 2);
+	memset(buf, 16, y);
+	memset(buf + y, 128, y / 2);
+	frame.data[0] = buf;
+	frame.data[1] = buf + y;
+	frame.data[2] = buf + y + y / 4;
+	frame.linesize[0] = (uint32_t)s->pic_w;
+	frame.linesize[1] = frame.linesize[2] = (uint32_t)s->pic_w / 2;
+	frame.width = (uint32_t)s->pic_w;
+	frame.height = (uint32_t)s->pic_h;
+	frame.format = VIDEO_FORMAT_I420;
+	frame.range = VIDEO_RANGE_PARTIAL;
+	frame.timestamp = now;
+	video_format_get_parameters(VIDEO_CS_601, frame.range,
+				    frame.color_matrix, frame.color_range_min,
+				    frame.color_range_max);
+	obs_source_output_video2(s->source, &frame);
+	bfree(buf);
+	s->blanked = true;
+	blog(LOG_INFO, "[gchd] no signal: black picture");
+}
 
 /* Read from the device without blocking the stop request. */
 static int gchd_read(void *opaque, uint8_t *buf, int size)
@@ -369,6 +433,7 @@ static int gchd_read(void *opaque, uint8_t *buf, int size)
 		struct pollfd p = { .fd = s->fd, .events = POLLIN };
 		ssize_t n;
 
+		gchd_check_blank(s);
 		if (poll(&p, 1, 100) <= 0)
 			continue;
 		n = read(s->fd, buf, (size_t)size);
@@ -437,6 +502,18 @@ static void gchd_out_video(struct gchd_src *s, AVFrame *f, uint64_t ts)
 		s->warned_format = true;
 		return;
 	}
+	if (f->width != s->pic_w || f->height != s->pic_h ||
+	    f->sample_aspect_ratio.num != s->sar_num ||
+	    f->sample_aspect_ratio.den != s->sar_den) {
+		s->pic_w = f->width;
+		s->pic_h = f->height;
+		s->sar_num = f->sample_aspect_ratio.num;
+		s->sar_den = f->sample_aspect_ratio.den;
+		blog(LOG_INFO, "[gchd] picture %dx%d, sample aspect ratio %d:%d",
+		     s->pic_w, s->pic_h, s->sar_num, s->sar_den);
+	}
+	s->last_video = os_gettime_ns();
+	s->blanked = false;
 	for (int i = 0; i < 3; i++) {
 		frame.data[i] = f->data[i];
 		frame.linesize[i] = (uint32_t)f->linesize[i];
@@ -501,6 +578,8 @@ static void gchd_session(struct gchd_src *s, const char *path)
 	unsigned char *buf;
 	int vi = -1, ai = -1;
 
+	s->last_video = os_gettime_ns();
+	s->blanked = false;
 	s->fd = open(path, O_RDWR | O_NONBLOCK);
 	if (s->fd < 0) {
 		blog(LOG_WARNING, "[gchd] %s: %s", path, strerror(errno));
@@ -838,7 +917,7 @@ static void gchd_defaults(obs_data_t *settings)
 				 V4L2_MPEG_VIDEO_H264_PROFILE_HIGH);
 	obs_data_set_default_bool(settings, "stretch", false);
 	obs_data_set_default_int(settings, "shown_group", -1);
-	obs_data_set_default_int(settings, "shown_eff", -1);
+	obs_data_set_default_int(settings, "shown_slot", -1);
 }
 
 /*
@@ -857,7 +936,7 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 	int o = (int)obs_data_get_int(settings, "output");
 	bool mobile, vbr;
 	double lo, hi, def, r;
-	int eff;
+	int slot;
 
 	UNUSED_PARAMETER(p);
 	if (o < 0 || o > 2)
@@ -881,24 +960,24 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 			pthread_mutex_unlock(&s->lock);
 		}
 		obs_data_set_int(settings, "shown_group", g);
-		obs_data_set_int(settings, "shown_eff", -1);
+		obs_data_set_int(settings, "shown_slot", -1);
 	}
 
-	eff = gchd_eff_mode(o, (int)obs_data_get_int(settings, "bitrate_mode"));
-	vbr = eff == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
+	slot = gchd_slot(o, (int)obs_data_get_int(settings, "bitrate_mode"));
+	vbr = slot != 1;
 	lo = vbr ? gchd_vbr_min[o] : GCHD_CBR_MIN;
 	hi = vbr ? gchd_vbr_max[o] : GCHD_CBR_MAX;
 	def = vbr ? gchd_vbr_def[o] : GCHD_CBR_DEF;
 	r = obs_data_get_double(settings, "rate");
 
-	/* Other bitrate mode: show the bitrate last used in it. */
-	if (eff != obs_data_get_int(settings, "shown_eff")) {
+	/* Other bitrate mode or 480x360: show the bitrate last used there. */
+	if (slot != obs_data_get_int(settings, "shown_slot")) {
 		double known = 0.0;
 
 		if (s) {
 			pthread_mutex_lock(&s->lock);
 			if (s->mem[g].known)
-				known = s->mem[g].rate[vbr ? 0 : 1];
+				known = s->mem[g].rate[slot];
 			pthread_mutex_unlock(&s->lock);
 		}
 		if (known > 0.0)
@@ -907,7 +986,7 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 			r = def;
 		obs_data_set_double(settings, "rate", r);
 		obs_data_set_double(settings, "shown_rate", r);
-		obs_data_set_int(settings, "shown_eff", eff);
+		obs_data_set_int(settings, "shown_slot", slot);
 	} else if (r < lo - 1e-6 || r > hi + 1e-6) {
 		obs_data_set_double(settings, "rate", def);
 	}
