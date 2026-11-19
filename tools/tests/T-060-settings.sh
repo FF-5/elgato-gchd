@@ -5,7 +5,8 @@
 # Two groups: composite/S-video and HDMI/component keep their own bitrate
 # mode, bitrates, H.264 profile and level; the driver keeps a bitrate per
 # mode (CBR and VBR). Output size, stretch and bitrate are shown for
-# composite/S-video only. Slider in Mbit/s (VBR: average 3.00-7.23,
+# composite/S-video only. The window applies a slider when it is
+# released; OBS's properties apply on OK. Slider in Mbit/s (VBR: average 3.00-7.23,
 # 480x360 2.00-7.50; CBR 7.00-11.25).
 # Needs: OBS with the plugin, a console on composite.
 
@@ -51,11 +52,13 @@ run v4l2-ctl -d $D -c video_bitrate=11250000
 
 step "window: values, labels, slider, status line"
 prompt "Open 'Elgato Game Capture HD Settings' from the application menu."
-confirm "Input Composite, Output size just a resolution (720x480 or 720x576), Constant (CBR), slider at '11.25 Mbit/s', High, Stretch off?"
+confirm "Input Composite, Output size '720x480 NTSC / 720x576 PAL', Constant (CBR), slider at '11.25 Mbit/s', High, Stretch off?"
 confirm "the status text sits on the same line as the Close button?"
 prompt "Open the Output size list (then close it with Escape)."
-confirm "only resolutions in the list (720x480 or 720x576, 640x480, 480x360), no 'Source size'?"
-prompt "Move the slider to about 9.00 and release it; wait 3 s."
+confirm "the list is '720x480 NTSC / 720x576 PAL', '640x480', '480x360' (no 'Source size')?"
+prompt "Hold the slider and move it slowly back and forth for about 10 s, ending at about 9.00; watch the status text; then release it."
+confirm "no 'Changing'/'changed' message while you held the slider, 'Bitrate changed.' once after the release?"
+prompt "Wait 3 s."
 expect "CBR about 9000 kbit/s" "^near" rate_near 9000
 prompt "Bitrate mode Variable (VBR); wait 3 s."
 confirm "the slider shows the last VBR bitrate, 5.00 Mbit/s (range 3.00 to 7.23)?"
@@ -70,7 +73,7 @@ prompt "Output size 480x360; wait 3 s."
 confirm "status text 'Output size changed.'; mode Variable (VBR) and locked, slider 2.00 to 7.50?"
 prompt "Output size 640x480; wait 3 s."
 confirm "status text 'Output size changed.'; mode still Variable (VBR) at about 4.00?"
-prompt "Output size back to the first resolution; Bitrate mode Constant (CBR); wait 3 s."
+prompt "Output size '720x480 NTSC / 720x576 PAL'; Bitrate mode Constant (CBR); wait 3 s."
 confirm "slider at 11.25 again (CBR remembered)?"
 
 step "groups: composite/S-video share, HDMI/component have their own"
@@ -101,10 +104,12 @@ expect "window: VBR about 10000 kbit/s (5.00 shown)" "^near" rate_near 10000
 prompt "Close OBS if open. Start OBS (the scene with the source 'Elgato Game Capture HD'); open the source's properties."
 run obs_log 5
 expect "plugin read the device's settings (VBR)" "properties: device settings read: input 2, output 0, mode 0" obs_log 5
-confirm "OBS: Composite, the resolution (no 'Source size'), Variable (VBR), about 5.00, Stretch off; mode list says just 'Constant (CBR)' / 'Variable (VBR)'?"
-prompt "In OBS's properties choose Bitrate mode Constant (CBR); wait 3 s."
+confirm "OBS: Composite, '720x480 NTSC / 720x576 PAL', Variable (VBR), about 5.00, Stretch off; mode list says just 'Constant (CBR)' / 'Variable (VBR)'?"
+prompt "In OBS's properties choose Bitrate mode Constant (CBR)."
 confirm "OBS's slider jumps to 10.00 (the last CBR bitrate), not 11.25?"
-prompt "Back to Variable (VBR); move the slider to about 6.00 -> OK. Wait 3 s."
+prompt "Back to Variable (VBR); hold the slider and move it back and forth for about 10 s, ending at about 6.00; release; wait 3 s (properties still open)."
+expect "nothing applied while the properties are open (still VBR about 10000)" "^near" rate_near 10000
+prompt "Press OK. Wait 3 s."
 expect "OBS: VBR about 12000 kbit/s (6.00 shown)" "^near" rate_near 12000
 confirm "the settings window shows about 6.00 by itself?"
 prompt "In OBS's properties choose Output size 640x480 -> OK. Wait about 8 s."
@@ -113,10 +118,12 @@ expect "bitrate not overwritten by the size change" "^near" rate_near 12000
 confirm "OBS shows the picture at 640x480, and the settings window shows 640x480 by itself?"
 prompt "In OBS's properties choose Input HDMI (do not press OK yet)."
 confirm "OBS hides Output size, Stretch, Bitrate mode and Bitrate?"
-prompt "Press Cancel. In the settings window: Stretch on, the first Output size, slider 4.00; wait 8 s."
+prompt "Press Cancel."
+expect "Cancel applied nothing (still 640x480)" "640/480" v4l2-ctl -d $D -V
+prompt "In the settings window: Stretch on, Output size '720x480 NTSC / 720x576 PAL', slider 4.00; wait 8 s."
 expect "window: stretch on" "stretch_sd_input: 1" v4l2-ctl -d $D -C stretch_sd_input
 prompt "In OBS open the source's properties again."
-confirm "OBS's properties show the first resolution, about 4.00, Stretch on?"
+confirm "OBS's properties show '720x480 NTSC / 720x576 PAL', about 4.00, Stretch on?"
 prompt "Close the properties with Cancel. In the settings window choose Input 'S-Video'; wait 5 s."
 confirm "no message box, OBS's picture went to S-Video (no signal) at once?"
 prompt "In the settings window choose Input 'Composite' and Stretch off; wait 8 s."
