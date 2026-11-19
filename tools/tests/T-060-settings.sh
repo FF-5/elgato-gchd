@@ -1,49 +1,52 @@
-# T-060 (settings window): gchd-settings-gui ("Elgato Game Capture HD
-# Settings" in the application menu): installed with the driver part,
-# shows the device's settings, changes are applied and remembered, input
-# change refused with an explanation while OBS captures.
+# T-060 (settings): settings window gchd-settings-gui and OBS plugin.
+# Driver settings can be changed by any program at any time (also while
+# OBS captures, applied live); the OBS plugin keeps its own settings and
+# sets the device's settings back when its capture ends; the window shows
+# changes made elsewhere (refresh 1.5 s); bitrate slider in Mbit/s (VBR:
+# average 3.00-7.23, 480x360 2.00-7.50; CBR 7.00-11.25).
 # Needs: OBS with the plugin, a console on composite.
 
 INST="$REPO/install-driver.sh"
+LOGS="$HOME/.config/obs-studio/logs"
+obs_log() { grep -h '\[gchd\]' "$LOGS/$(ls -t "$LOGS" | head -1)" | tail -"$1"; }
 
-step "install the driver part (window, menu entry)"
+step "install the driver part and the plugin"
 run sudo rmmod elgato_gchd
-run bash "$INST" --driver --yes --in-terminal < /dev/null
-expect "settings window installed" "gchd-settings-gui" ls /usr/local/bin/gchd-settings-gui
-expect "menu entry installed" "elgato-gchd-settings.desktop" ls /usr/local/share/applications/elgato-gchd-settings.desktop
+run bash "$INST" --all --yes --in-terminal < /dev/null
 prompt "Unplug the Elgato and plug it in again; wait 5 s."
-run v4l2-ctl -d /dev/elgato-gchd -i 2 -v width=720,height=480 -c video_bitrate=11250000,video_bitrate_mode=1,h264_profile=4,stretch_sd_input=0
+expect "v4l2-compliance: no failures" "Failed: 0" v4l2-compliance -d /dev/elgato-gchd
+run v4l2-ctl -d /dev/elgato-gchd -i 2 -v width=720,height=480,pixelformat=MPEG -c video_bitrate=11250000,video_bitrate_mode=1,h264_profile=4,stretch_sd_input=0
 
-step "window: show and change the settings"
-prompt "Open 'Elgato Game Capture HD Settings' from the application menu (or run gchd-settings-gui)."
-confirm "the window shows Device /dev/elgato-gchd, Input Composite, Output size Source size, Bitrate mode Constant (CBR) 11250, the slider greyed out ('11250 kbit/s constant'), High, Stretch off?"
-prompt "In the window: Bitrate mode Variable (VBR); try to move the slider to both ends."
-confirm "the slider goes from 6000 to 14460 kbit/s and shows the average (half)?"
+step "window: values, slider, refresh"
+prompt "Open 'Elgato Game Capture HD Settings' from the application menu."
+confirm "Input Composite, Source size, Constant (CBR), slider at '11.25 Mbit/s' (no other words), High, Stretch off; no Refresh button?"
+prompt "Bitrate mode Variable (VBR); move the slider to both ends, then to about 4.00."
+confirm "VBR slider from 3.00 to 7.23 Mbit/s?"
+expect "VBR about 8000 kbit/s (4.00 shown)" "video_bitrate: [78][0-9]{6}" v4l2-ctl -d /dev/elgato-gchd -C video_bitrate
 prompt "Output size 480x360."
-confirm "Bitrate mode is now Variable (VBR) and cannot be changed, and the slider goes from 4000 to 15000?"
-prompt "In the window: Output size 640x480, Bitrate mode Variable (VBR), Bitrate slider to about 8000, H.264 profile Main, Stretch on."
-expect "output size 640x480" "640/480" v4l2-ctl -d /dev/elgato-gchd -V
-expect "bitrate about 8000 kbit/s" "video_bitrate: [78][0-9]{6}" v4l2-ctl -d /dev/elgato-gchd -C video_bitrate
-expect "bitrate mode VBR" "video_bitrate_mode: 0" v4l2-ctl -d /dev/elgato-gchd -C video_bitrate_mode
-expect "profile Main" "h264_profile: 2" v4l2-ctl -d /dev/elgato-gchd -C h264_profile
-expect "stretch on" "stretch_sd_input: 1" v4l2-ctl -d /dev/elgato-gchd -C stretch_sd_input
-sleep 2
-expect "settings remembered (modprobe.d)" "output=1.*bitrate=[78][0-9]{3}.*bitrate_mode=0.*stretch=1.*h264_profile=2" cat /etc/modprobe.d/elgato-gchd-settings.conf
-prompt "In the window set them back: Source size, Bitrate mode Constant (CBR), High, Stretch off. Leave the window open."
-expect "CBR 11250 again" "video_bitrate: 11250000" v4l2-ctl -d /dev/elgato-gchd -C video_bitrate
+confirm "mode Variable (VBR) and locked, slider 2.00 to 7.50?"
+prompt "Output size Source size, Bitrate mode Constant (CBR), slider to the left end."
+confirm "CBR slider from 7.00 to 11.25?"
+expect "CBR 7000 kbit/s" "video_bitrate: 7000000" v4l2-ctl -d /dev/elgato-gchd -C video_bitrate
+run v4l2-ctl -d /dev/elgato-gchd -i 3 -c video_bitrate=11250000
+prompt "Leave the window open; wait 3 s."
+confirm "the window now shows Input S-Video and CBR 11.25 by itself (changed from the terminal)?"
+run v4l2-ctl -d /dev/elgato-gchd -i 2
 
-step "window while OBS captures"
-prompt "Close OBS completely if it is open. Then start OBS; the scene with the source 'Elgato Game Capture HD' must show the PS1/N64 picture. Wait until the picture moves."
-expect "OBS captures (capture device started)" "starting hardware boot" sudo dmesg
-run sh -c "grep -h '\\[gchd\\]' $HOME/.config/obs-studio/logs/\$(ls -t $HOME/.config/obs-studio/logs | head -1) | tail -5"
-prompt "In the settings window choose Input 'S-Video'."
-confirm "a message box said 'Input not changed' (a program is capturing), and after OK the Input shows Composite again?"
-expect "input still composite" "Video input : 2" v4l2-ctl -d /dev/elgato-gchd -I
-prompt "In the settings window choose Bitrate mode Variable (VBR) and move the slider to about 6000; wait 5 s."
-expect "bitrate changed while capturing" "video_bitrate: 6[0-9]{6}" v4l2-ctl -d /dev/elgato-gchd -C video_bitrate
-confirm "OBS kept showing the moving picture (a short pause is normal)?"
-prompt "In the settings window choose Bitrate mode Constant (CBR); close the settings window."
-prompt "In OBS open the properties of the source 'Elgato Game Capture HD': choose Bitrate mode Variable (VBR), then Output size 480x360 and back to the source size."
-confirm "OBS: the bitrate slider appears only for VBR (6000-14460), the mode is hidden for 480x360 (slider 4000-15000)?"
-prompt "Set Bitrate mode Constant (CBR), Output size Source size -> OK; close OBS."
-run sh -c "grep -h '\\[gchd\\]' $HOME/.config/obs-studio/logs/\$(ls -t $HOME/.config/obs-studio/logs | head -1) | tail -20"
+step "OBS: own settings, live changes from the window"
+prompt "Close OBS if open. Start OBS; open the properties of the source 'Elgato Game Capture HD': Input Composite, Output size Source size, Bitrate mode Variable (VBR) -> OK. Wait until the picture moves."
+expect "OBS captures" "starting hardware boot" sudo dmesg
+confirm "OBS properties: a 'Bitrate' slider was shown in Mbit/s (VBR 3.00-7.23)?"
+expect "OBS applied VBR" "video_bitrate_mode: 0" v4l2-ctl -d /dev/elgato-gchd -C video_bitrate_mode
+prompt "In the settings window choose Input 'S-Video' (OBS keeps capturing); wait 5 s."
+confirm "no message box, OBS's picture went to S-Video (no signal) at once?"
+expect "input S-Video while OBS captures" "Video input : 3" v4l2-ctl -d /dev/elgato-gchd -I
+prompt "In the settings window choose Input 'Composite'; wait 8 s."
+confirm "OBS shows the console again?"
+prompt "In the settings window choose Output size 640x480; wait 8 s."
+confirm "OBS shows the picture at 640x480 (Edit Transform: base 640x480) without reopening anything?"
+prompt "In the settings window choose Output size Source size; wait 8 s. Then close OBS completely; wait 5 s."
+run obs_log 15
+expect "OBS's VBR was set back to the driver's CBR after OBS closed" "video_bitrate_mode: 1" v4l2-ctl -d /dev/elgato-gchd -C video_bitrate_mode
+confirm "the settings window shows the device's own settings again (CBR), and the input chosen in the window (Composite)?"
+prompt "Close the settings window."
