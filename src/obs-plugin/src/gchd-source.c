@@ -65,11 +65,10 @@ struct gchd_vals {
 	bool stretch;
 };
 
-/* The driver's values of a setting group as last read (index: mode). */
+/* The values the driver keeps for a setting group (its module parameters). */
 struct gchd_mem {
-	bool known;
 	int mode;
-	double rate[3];		/* kept bitrates (see gchd_slot), 0 unknown */
+	double rate[3];		/* kept bitrates as shown (see gchd_slot) */
 	int profile;
 };
 
@@ -86,8 +85,7 @@ struct gchd_src {
 	struct gchd_vals dlg;	/* mode, rate, profile the properties set
 				   themselves (not the user's changes) */
 	bool have_base;
-	struct gchd_mem mem[2];	/* [0] HDMI/component, [1] composite/S-video */
-	pthread_mutex_t lock;	/* device, cur, base, dlg, mem, apply_pending */
+	pthread_mutex_t lock;	/* device, cur, base, dlg, apply_pending */
 	pthread_t worker;	/* applies and synchronises the settings */
 	bool worker_running;
 	volatile bool worker_stop;
@@ -101,6 +99,9 @@ struct gchd_src {
 	bool shown;
 	bool warned_format;
 	int pic_w, pic_h, sar_num, sar_den; /* last logged picture */
+	int show_w;		/* width shown (widened when stretched) */
+	uint8_t *wide;		/* widened picture */
+	size_t wide_size;
 	uint64_t last_video;	/* os_gettime_ns() of the last picture */
 	uint64_t last_check;	/* last signal check without pictures */
 	bool blanked;		/* black picture shown (no signal) */
@@ -355,15 +356,56 @@ static void gchd_vals_to_settings(const struct gchd_vals *v,
 				 gchd_slot(v->output, v->mode));
 }
 
-/* Remember the group's values read from the device (lock held). */
-static void gchd_mem_note(struct gchd_src *s, const struct gchd_vals *v)
+static long gchd_param(const char *name)
 {
-	struct gchd_mem *m = &s->mem[gchd_group(v->input)];
+	char path[128], buf[32];
+	FILE *f;
+	long v = -1;
 
-	m->known = true;
-	m->mode = v->mode;
-	m->rate[gchd_slot(v->output, v->mode)] = v->rate;
-	m->profile = v->profile;
+	snprintf(path, sizeof(path), "/sys/module/elgato_gchd/parameters/%s",
+		 name);
+	f = fopen(path, "r");
+	if (!f)
+		return -1;
+	if (fgets(buf, sizeof(buf), f))
+		v = strtol(buf, NULL, 10);
+	fclose(f);
+	return v;
+}
+
+/*
+ * The values the driver keeps for group G (1 composite/S-video, 0
+ * HDMI/component), from its module parameters; false if not readable.
+ * A bitrate of 0 is the encoder's default (11250 kbit/s, 15000 for
+ * 480x360).
+ */
+static bool gchd_kept(int g, struct gchd_mem *m)
+{
+	const char *pre = g ? "" : "hd_";
+	static const char *const names[] = { "bitrate_vbr", "bitrate_cbr",
+					      "bitrate_small" };
+	char name[40];
+	long v;
+
+	snprintf(name, sizeof(name), "%sbitrate_mode", pre);
+	v = gchd_param(name);
+	if (v < 0)
+		return false;
+	m->mode = v ? V4L2_MPEG_VIDEO_BITRATE_MODE_CBR :
+		      V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
+	for (int i = 0; i < 3; i++) {
+		long kb;
+
+		snprintf(name, sizeof(name), "%s%s", pre, names[i]);
+		kb = g || i < 2 ? gchd_param(name) : 0;
+		if (kb <= 0)
+			kb = i == 2 ? 15000 : 11250;
+		m->rate[i] = i == 1 ? kb / 1000.0 : kb / 2000.0;
+	}
+	snprintf(name, sizeof(name), "%sh264_profile", pre);
+	v = gchd_param(name);
+	m->profile = v >= 0 ? (int)v : V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
+	return true;
 }
 
 /* ------------------------------------------------------------ decoding */
@@ -401,16 +443,16 @@ static void gchd_check_blank(struct gchd_src *s)
 	s->last_check = now;
 	if (!gchd_no_signal(s->fd))
 		return;
-	y = (size_t)s->pic_w * (size_t)s->pic_h;
+	y = (size_t)s->show_w * (size_t)s->pic_h;
 	buf = bmalloc(y + y / 2);
 	memset(buf, 16, y);
 	memset(buf + y, 128, y / 2);
 	frame.data[0] = buf;
 	frame.data[1] = buf + y;
 	frame.data[2] = buf + y + y / 4;
-	frame.linesize[0] = (uint32_t)s->pic_w;
-	frame.linesize[1] = frame.linesize[2] = (uint32_t)s->pic_w / 2;
-	frame.width = (uint32_t)s->pic_w;
+	frame.linesize[0] = (uint32_t)s->show_w;
+	frame.linesize[1] = frame.linesize[2] = (uint32_t)s->show_w / 2;
+	frame.width = (uint32_t)s->show_w;
 	frame.height = (uint32_t)s->pic_h;
 	frame.format = VIDEO_FORMAT_I420;
 	frame.range = VIDEO_RANGE_PARTIAL;
@@ -489,6 +531,41 @@ static uint64_t gchd_ts(struct gchd_clock *c, int64_t pts, AVRational tb)
 	return c->base_ns + (uint64_t)((us - c->base_us) * 1000);
 }
 
+/* One plane widened from SW to DW pixels per row (linear). */
+static void gchd_hscale(const uint8_t *src, int sw, int sls, uint8_t *dst,
+			int dw, int rows)
+{
+	int step = (int)(((int64_t)sw << 16) / dw);
+
+	for (int y = 0; y < rows; y++) {
+		const uint8_t *in = src + (size_t)y * (size_t)sls;
+		uint8_t *out = dst + (size_t)y * (size_t)dw;
+		int pos = step / 2 - 32768;
+
+		for (int x = 0; x < dw; x++, pos += step) {
+			int i = pos < 0 ? 0 : pos >> 16;
+			int fr = pos < 0 ? 0 : pos & 0xffff;
+			int a = in[i], b = in[i + 1 < sw ? i + 1 : sw - 1];
+
+			out[x] = (uint8_t)(a + (((b - a) * fr) >> 16));
+		}
+	}
+}
+
+/*
+ * Width shown: a stretched picture (stretch SD input: the stream signals a
+ * wide sample aspect ratio, display aspect above 1.6) is widened by it, as
+ * players do (720x480 at 40:33 -> 872x480); other pictures as they are.
+ */
+static int gchd_show_width(const AVFrame *f)
+{
+	int64_t n = f->sample_aspect_ratio.num, d = f->sample_aspect_ratio.den;
+
+	if (n <= 0 || d <= 0 || 10 * f->width * n <= 16 * f->height * d)
+		return f->width;
+	return (int)(((int64_t)f->width * n / d + 1) & ~1);
+}
+
 static void gchd_out_video(struct gchd_src *s, AVFrame *f, uint64_t ts)
 {
 	struct obs_source_frame2 frame = { 0 };
@@ -509,16 +586,41 @@ static void gchd_out_video(struct gchd_src *s, AVFrame *f, uint64_t ts)
 		s->pic_h = f->height;
 		s->sar_num = f->sample_aspect_ratio.num;
 		s->sar_den = f->sample_aspect_ratio.den;
-		blog(LOG_INFO, "[gchd] picture %dx%d, sample aspect ratio %d:%d",
-		     s->pic_w, s->pic_h, s->sar_num, s->sar_den);
+		s->show_w = gchd_show_width(f);
+		blog(LOG_INFO,
+		     "[gchd] picture %dx%d, sample aspect ratio %d:%d, shown %dx%d",
+		     s->pic_w, s->pic_h, s->sar_num, s->sar_den, s->show_w,
+		     s->pic_h);
 	}
 	s->last_video = os_gettime_ns();
 	s->blanked = false;
-	for (int i = 0; i < 3; i++) {
-		frame.data[i] = f->data[i];
-		frame.linesize[i] = (uint32_t)f->linesize[i];
+	if (s->show_w != f->width) {
+		size_t y = (size_t)s->show_w * (size_t)f->height;
+		size_t need = y + y / 2;
+
+		if (s->wide_size < need) {
+			bfree(s->wide);
+			s->wide = bmalloc(need);
+			s->wide_size = need;
+		}
+		gchd_hscale(f->data[0], f->width, f->linesize[0], s->wide,
+			    s->show_w, f->height);
+		gchd_hscale(f->data[1], f->width / 2, f->linesize[1],
+			    s->wide + y, s->show_w / 2, f->height / 2);
+		gchd_hscale(f->data[2], f->width / 2, f->linesize[2],
+			    s->wide + y + y / 4, s->show_w / 2, f->height / 2);
+		frame.data[0] = s->wide;
+		frame.data[1] = s->wide + y;
+		frame.data[2] = s->wide + y + y / 4;
+		frame.linesize[0] = (uint32_t)s->show_w;
+		frame.linesize[1] = frame.linesize[2] = (uint32_t)s->show_w / 2;
+	} else {
+		for (int i = 0; i < 3; i++) {
+			frame.data[i] = f->data[i];
+			frame.linesize[i] = (uint32_t)f->linesize[i];
+		}
 	}
-	frame.width = (uint32_t)f->width;
+	frame.width = (uint32_t)s->show_w;
 	frame.height = (uint32_t)f->height;
 	frame.format = VIDEO_FORMAT_I420;
 	frame.range = f->format == AV_PIX_FMT_YUVJ420P ? VIDEO_RANGE_FULL :
@@ -794,7 +896,6 @@ static void *gchd_worker(void *data)
 				bool push = false, had = false;
 
 				pthread_mutex_lock(&s->lock);
-				gchd_mem_note(s, &v);
 				/* A newer change waits: leave it alone. */
 				if (!s->apply_pending) {
 					/* Only values the source does not have yet. */
@@ -884,6 +985,7 @@ static void gchd_destroy(void *data)
 		pthread_join(s->worker, NULL);
 	}
 	pthread_mutex_destroy(&s->lock);
+	bfree(s->wide);
 	bfree(s->device);
 	bfree(s);
 }
@@ -929,9 +1031,10 @@ static void gchd_defaults(obs_data_t *settings)
 static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 				  obs_data_t *settings)
 {
-	struct gchd_src *s = obs_properties_get_param(props);
 	int input = (int)obs_data_get_int(settings, "input");
 	int g = gchd_group(input);
+	struct gchd_mem kept;
+	bool have = gchd_kept(g, &kept);
 	bool analog = input >= 2;
 	int o = (int)obs_data_get_int(settings, "output");
 	bool mobile, vbr;
@@ -945,19 +1048,11 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 
 	/* Other setting group: show the values the driver keeps for it. */
 	if (g != obs_data_get_int(settings, "shown_group")) {
-		if (s) {
-			pthread_mutex_lock(&s->lock);
-			if (s->mem[g].known) {
-				obs_data_set_int(settings, "bitrate_mode",
-						 s->mem[g].mode);
-				obs_data_set_int(settings, "shown_mode",
-						 s->mem[g].mode);
-				obs_data_set_int(settings, "profile",
-						 s->mem[g].profile);
-				obs_data_set_int(settings, "shown_profile",
-						 s->mem[g].profile);
-			}
-			pthread_mutex_unlock(&s->lock);
+		if (have) {
+			obs_data_set_int(settings, "bitrate_mode", kept.mode);
+			obs_data_set_int(settings, "shown_mode", kept.mode);
+			obs_data_set_int(settings, "profile", kept.profile);
+			obs_data_set_int(settings, "shown_profile", kept.profile);
 		}
 		obs_data_set_int(settings, "shown_group", g);
 		obs_data_set_int(settings, "shown_slot", -1);
@@ -972,16 +1067,8 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 
 	/* Other bitrate mode or 480x360: show the bitrate last used there. */
 	if (slot != obs_data_get_int(settings, "shown_slot")) {
-		double known = 0.0;
-
-		if (s) {
-			pthread_mutex_lock(&s->lock);
-			if (s->mem[g].known)
-				known = s->mem[g].rate[slot];
-			pthread_mutex_unlock(&s->lock);
-		}
-		if (known > 0.0)
-			r = known;
+		if (have)
+			r = kept.rate[slot];
 		if (r < lo - 1e-6 || r > hi + 1e-6)
 			r = def;
 		obs_data_set_double(settings, "rate", r);
@@ -1007,7 +1094,6 @@ static obs_properties_t *gchd_properties(void *data)
 	obs_property_t *p;
 	char path[300];
 
-	obs_properties_set_param(props, data, NULL);
 
 	/* Show the device's current (shared) settings. */
 	if (data) {
@@ -1029,7 +1115,6 @@ static obs_properties_t *gchd_properties(void *data)
 				goto read_done;
 			gchd_vals_to_settings(&v, NULL, settings);
 			pthread_mutex_lock(&s->lock);
-			gchd_mem_note(s, &v);
 			s->cur = v;
 			s->base = v;
 			s->dlg = v;

@@ -30,7 +30,7 @@ properties.
   differ from the device are sent, so values the dialog still shows from
   before never overwrite a change made elsewhere. A change of bitrate
   mode or input group shows the bitrate (and mode, profile) the driver
-  keeps for it; a new bitrate mode is sent alone and the driver uses its
+  keeps for it (read from its module parameters); a new bitrate mode is sent alone and the driver uses its
   kept bitrate unless the slider was moved.
 - **Bitrate:** shown in Mbit/s as in the observed settings
   (`docs/composite.md` §10): VBR as the average (half the bitrate),
@@ -42,8 +42,12 @@ properties.
   switched off), the source shows a black picture of the last size
   instead of the last picture. A setting change (encoder restart) keeps
   the last picture.
-- **Log:** the picture size and the stream's sample aspect ratio are
-  logged when they change (`[gchd] picture ...`).
+- **Stretch SD input:** the device keeps the picture size and signals a
+  16:9 sample aspect ratio; OBS does not use it, so the source widens a
+  stretched picture itself (720 × 480 → 872 × 480, 720 × 576 → 1048 × 576).
+  Other pictures are passed as they are.
+- **Log:** the picture size, the stream's sample aspect ratio and the size
+  shown are logged when they change (`[gchd] picture ...`).
 - **Capture device on/off:** the device captures while the source is shown
   anywhere in OBS: in the program or preview, in a projector or multiview,
   in another scene that is shown, or in the preview of its properties
