@@ -6,7 +6,8 @@
 # mode, bitrates, H.264 profile and level; the driver keeps a bitrate per
 # mode (CBR and VBR). Output size, stretch and bitrate are shown for
 # composite/S-video only. The window applies a slider when it is
-# released; OBS's properties apply on OK. Slider in Mbit/s (VBR: average 3.00-7.23,
+# released; OBS's properties apply 0.5 s after the last change (live
+# preview), Cancel sets the earlier values again. Slider in Mbit/s (VBR: average 3.00-7.23,
 # 480x360 2.00-7.50; CBR 7.00-11.25).
 # Needs: OBS with the plugin, a console on composite.
 
@@ -108,7 +109,9 @@ confirm "OBS: Composite, '720x480 NTSC / 720x576 PAL', Variable (VBR), about 5.0
 prompt "In OBS's properties choose Bitrate mode Constant (CBR)."
 confirm "OBS's slider jumps to 10.00 (the last CBR bitrate), not 11.25?"
 prompt "Back to Variable (VBR); hold the slider and move it back and forth for about 10 s, ending at about 6.00; release; wait 3 s (properties still open)."
-expect "nothing applied while the properties are open (still VBR about 10000)" "^near" rate_near 10000
+expect "applied while the properties are open (VBR about 12000)" "^near" rate_near 12000
+run obs_log 6
+confirm "the preview in the properties kept running while you moved the slider (short pause after each stop is fine)?"
 prompt "Press OK. Wait 3 s."
 expect "OBS: VBR about 12000 kbit/s (6.00 shown)" "^near" rate_near 12000
 confirm "the settings window shows about 6.00 by itself?"
@@ -116,10 +119,12 @@ prompt "In OBS's properties choose Output size 640x480 -> OK. Wait about 8 s."
 expect "OBS's output size reached the device" "640/480" v4l2-ctl -d $D -V
 expect "bitrate not overwritten by the size change" "^near" rate_near 12000
 confirm "OBS shows the picture at 640x480, and the settings window shows 640x480 by itself?"
-prompt "In OBS's properties choose Input HDMI (do not press OK yet)."
-confirm "OBS hides Output size, Stretch, Bitrate mode and Bitrate?"
-prompt "Press Cancel."
-expect "Cancel applied nothing (still 640x480)" "640/480" v4l2-ctl -d $D -V
+prompt "In OBS's properties choose Input HDMI (do not press OK); wait 3 s."
+confirm "OBS hides Output size, Stretch, Bitrate mode and Bitrate; the preview shows HDMI (no signal)?"
+prompt "Press Cancel. Wait 5 s."
+expect "Cancel set Composite again" "Video input : 2" v4l2-ctl -d $D -I
+expect "Cancel kept 640x480" "640/480" v4l2-ctl -d $D -V
+expect "Cancel kept the bitrate" "^near" rate_near 12000
 prompt "In the settings window: Stretch on, Output size '720x480 NTSC / 720x576 PAL', slider 4.00; wait 8 s."
 expect "window: stretch on" "stretch_sd_input: 1" v4l2-ctl -d $D -C stretch_sd_input
 prompt "In OBS open the source's properties again."
