@@ -9,4 +9,4 @@
 # Forget the settings: delete /etc/modprobe.d/elgato-gchd-settings.conf.
 
 ACTION=="change", SUBSYSTEM=="usb", ENV{GCHD_INPUT}=="?*", \
-  RUN+="/bin/sh -c 'echo options elgato_gchd input=$env{GCHD_INPUT} output=$env{GCHD_OUTPUT} format=$env{GCHD_FORMAT} bitrate=$env{GCHD_BITRATE} bitrate_mode=$env{GCHD_BITRATE_MODE} stretch=$env{GCHD_STRETCH} h264_profile=$env{GCHD_H264_PROFILE} h264_level=$env{GCHD_H264_LEVEL} std_composite=$env{GCHD_STD_COMPOSITE} std_svideo=$env{GCHD_STD_SVIDEO} > /etc/modprobe.d/elgato-gchd-settings.conf'"
+  RUN+="/bin/sh -c 'echo options elgato_gchd input=$env{GCHD_INPUT} output=$env{GCHD_OUTPUT} format=$env{GCHD_FORMAT} bitrate_mode=$env{GCHD_BITRATE_MODE} bitrate_cbr=$env{GCHD_BITRATE_CBR} bitrate_vbr=$env{GCHD_BITRATE_VBR} stretch=$env{GCHD_STRETCH} h264_profile=$env{GCHD_H264_PROFILE} h264_level=$env{GCHD_H264_LEVEL} std_composite=$env{GCHD_STD_COMPOSITE} std_svideo=$env{GCHD_STD_SVIDEO} hd_bitrate_mode=$env{GCHD_HD_BITRATE_MODE} hd_bitrate_cbr=$env{GCHD_HD_BITRATE_CBR} hd_bitrate_vbr=$env{GCHD_HD_BITRATE_VBR} hd_h264_profile=$env{GCHD_HD_H264_PROFILE} hd_h264_level=$env{GCHD_HD_H264_LEVEL} > /etc/modprobe.d/elgato-gchd-settings.conf'"

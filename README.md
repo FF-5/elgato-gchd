@@ -103,7 +103,9 @@ input format `mpegts`; deinterlacing in the source's context menu.
 changes the input, output size and encoder settings in a window (menus,
 bitrate slider, switch); the driver remembers them. Changes apply at once,
 also to a running capture, and the window shows changes made by other
-programs. Without a desktop:
+programs. Composite and S-video share one group of settings, HDMI and
+component another; each bitrate mode keeps its last bitrate. Settings that
+do not apply to the selected input are hidden. Without a desktop:
 [`src/settings/gchd-settings`](src/settings/gchd-settings) (text menu) or
 `v4l2-ctl`.
 

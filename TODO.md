@@ -64,8 +64,10 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
       `feat/app-bridge`). Plugin, device name and settings tool accepted
       on hardware (T-060-obs 16/16); installer with three install types
       (everything, driver, OBS plugin; maintainer 2026-11-18) accepted
-      (13/13). Settings window (GTK) instead of the text menu: hardware
-      test open.
+      (13/13). Settings window (GTK) instead of the text menu; one global
+      setting shared by the window, the terminal and the OBS plugin; two
+      setting groups (composite/S-video, HDMI/component) with the last
+      bitrate per mode: hardware test open.
 
 ## Stage 2 — Component
 
@@ -76,7 +78,9 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
 
 ## Stage 3 — HDMI
 
-- [ ] **T-050 [WIN+HW] (L)** HDMI, all modes, mode changes, output sizes
+- [ ] **T-050 [WIN+HW] (L)** HDMI, all modes (with component: show
+      the bitrate settings of the HDMI/component group in the settings
+      window and the OBS plugin, with the limits of the recordings), mode changes, output sizes
       and settings. Recorded so far: `hdmi/gchd_output_switch_hdmi` (1080p60
       source, output sizes; `docs/hdmi.md §4`).
 

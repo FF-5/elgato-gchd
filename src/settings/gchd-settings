@@ -35,6 +35,12 @@ DEV=${1:-$(find_dev)} || die "no Elgato Game Capture HD found (driver loaded, de
 
 ctrl_get() { v4l2-ctl -d "$DEV" -C "$1" 2>/dev/null | sed -n 's/.*: //p'; }
 input_get() { v4l2-ctl -d "$DEV" -I 2>/dev/null | sed -n 's/^Video input *: *\([0-9]\).*/\1/p'; }
+# 720x576 after a 50 Hz composite/S-video standard (V4L2_STD_625_50), else 720x480.
+source_size() {
+	local std
+	std=$(v4l2-ctl -d "$DEV" -S 2>/dev/null | sed -n 's/.*= *0x\([0-9a-fA-F]*\).*/\1/p')
+	if [ -n "$std" ] && (( 0x$std & 0x00ff06ff )); then echo 720x576; else echo 720x480; fi
+}
 size_get() { v4l2-ctl -d "$DEV" -V 2>/dev/null | sed -n 's#.*Width/Height *: *\([0-9]*\)/\([0-9]*\).*#\1x\2#p'; }
 
 # Run a v4l2-ctl change; on "busy" explain that a program is capturing.
@@ -66,7 +72,7 @@ menu_output() {
 	case "$cur" in 640x480) n=1 ;; 480x360) n=2 ;; *) n=0 ;; esac
 	n=$(whiptail --title "$TITLE" --default-item "$n" --menu \
 		"Output size (composite and S-video)" 14 60 3 \
-		0 "Source size (720x480 NTSC / 720x576 PAL)" \
+		0 "$(source_size)" \
 		1 "640x480" 2 "480x360" 3>&1 1>&2 2>&3) || return
 	case "$n" in
 	1) w=640 h=480 ;; 2) w=480 h=360 ;; *) w=720 h=480 ;;
@@ -112,14 +118,19 @@ menu_stretch() {
 while :; do
 	inputs=(HDMI Component Composite S-Video)
 	i=$(input_get)
+	items=(input "Input: ${inputs[${i:-0}]}")
+	# Output size, bitrate and stretch: composite/S-video only.
+	if [ "${i:-0}" -ge 2 ]; then
+		items+=(output "Output size: $(size_get)"
+			bitrate "Bitrate: $(( $(ctrl_get video_bitrate || echo 0) / 1000 )) kbit/s"
+			mode "Bitrate mode: $( [ "$(ctrl_get video_bitrate_mode)" = 0 ] && echo VBR || echo CBR )")
+	fi
+	items+=(profile "H.264 profile: $(ctrl_get h264_profile)")
+	if [ "${i:-0}" -ge 2 ]; then
+		items+=(stretch "Stretch SD input: $( [ "$(ctrl_get stretch_sd_input)" = 1 ] && echo on || echo off )")
+	fi
 	choice=$(whiptail --title "$TITLE ($DEV)" --menu "Settings (remembered by the driver)" 18 70 7 \
-		input "Input: ${inputs[${i:-0}]}" \
-		output "Output size: $(size_get)" \
-		bitrate "Bitrate: $(( $(ctrl_get video_bitrate || echo 0) / 1000 )) kbit/s" \
-		mode "Bitrate mode: $( [ "$(ctrl_get video_bitrate_mode)" = 0 ] && echo VBR || echo CBR )" \
-		profile "H.264 profile: $(ctrl_get h264_profile)" \
-		stretch "Stretch SD input: $( [ "$(ctrl_get stretch_sd_input)" = 1 ] && echo on || echo off )" \
-		quit "Quit" 3>&1 1>&2 2>&3) || break
+		"${items[@]}" quit "Quit" 3>&1 1>&2 2>&3) || break
 	case "$choice" in
 	input) menu_input ;;
 	output) menu_output ;;

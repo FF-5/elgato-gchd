@@ -6,9 +6,11 @@
  * decodes video and audio with FFmpeg and passes them to OBS. The device is
  * found by its driver in sysfs; the input, output size and encoder settings are
  * driver's settings, shared with every other program: the properties show
- * the device's current values, and a change in the properties is applied
- * to the device at once (also while capturing) and remembered by the
- * driver. The capture device runs while the source is shown. Deinterlacing is OBS's
+ * the device's current values; a change is applied to the device 0.5 s
+ * after the last change (also while capturing) and remembered by the
+ * driver; changes made elsewhere are taken over every 1.5 s. All device
+ * settings calls run in a worker thread, never in OBS's user interface.
+ * The capture device runs while the source is shown. Deinterlacing is OBS's
  * own (Yadif 2x, top field first, set once when the source is created).
  */
 
@@ -61,7 +63,11 @@ struct gchd_vals {
 	double rate;		/* Mbit/s as shown (VBR: average) */
 	int profile;		/* V4L2_MPEG_VIDEO_H264_PROFILE_* */
 	bool stretch;
+	bool pal;		/* composite/S-video standard 50 Hz (not a setting) */
 };
+
+#define GCHD_APPLY_DELAY_NS 500000000ULL /* after the last change */
+#define GCHD_SYNC_NS 1500000000ULL	 /* device read interval */
 
 struct gchd_src {
 	obs_source_t *source;
@@ -71,6 +77,12 @@ struct gchd_src {
 	struct gchd_vals cur;	/* the source's settings */
 	struct gchd_vals base;	/* the device's values at the last sync or apply */
 	bool have_base;
+	pthread_mutex_t lock;	/* device, cur, base, apply_* */
+	pthread_t worker;	/* applies and synchronises the settings */
+	bool worker_running;
+	volatile bool worker_stop;
+	bool apply_pending;
+	uint64_t apply_at;	/* os_gettime_ns() of the debounced apply */
 
 	/* capture */
 	pthread_t thread;
@@ -138,16 +150,28 @@ static int gchd_kbps(double shown, bool vbr)
 	return (int)(shown * 100.0 + 0.5) * (vbr ? 20 : 10);
 }
 
-/*
- * Apply the settings that changed since the last sync or apply (all when
- * there is none), so that a stale value of the source never overwrites a
- * setting changed elsewhere. The device applies them also while capturing.
- */
-static void gchd_apply_changes(struct gchd_src *s, int fd)
+/* Same settings (the standard is not a setting). */
+static bool gchd_vals_equal(const struct gchd_vals *a, const struct gchd_vals *b)
 {
-	const struct gchd_vals *v = &s->cur, *b = &s->base;
-	bool all = !s->have_base;
+	return a->input == b->input && a->output == b->output &&
+	       a->mode == b->mode && a->profile == b->profile &&
+	       a->stretch == b->stretch &&
+	       (int)(a->rate * 100.0 + 0.5) == (int)(b->rate * 100.0 + 0.5);
+}
+
+/*
+ * Apply the settings V that differ from B (all with ALL), so that a stale
+ * value of the source never overwrites a setting changed elsewhere. A new
+ * bitrate mode is sent alone: the driver then uses the bitrate last set in
+ * that mode (read back afterwards). 480x360 is VBR only.
+ */
+static void gchd_apply_changes(int fd, const struct gchd_vals *v,
+			       const struct gchd_vals *b, bool all)
+{
 	int o = v->output >= 0 && v->output <= 2 ? v->output : 0;
+	bool analog = v->input >= 2;
+	bool vbr = o == 2 || v->mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
+	bool mode_changed = all || v->mode != b->mode || (o == 2) != (b->output == 2);
 
 	if (all || v->input != b->input) {
 		unsigned int input = (unsigned int)v->input, now = 99;
@@ -159,7 +183,7 @@ static void gchd_apply_changes(struct gchd_src *s, int fd)
 				     strerror(errno));
 		}
 	}
-	if (v->input >= 2 && (all || v->output != b->output)) {
+	if (analog && (all || v->output != b->output)) {
 		static const unsigned int w[] = { 720, 640, 480 };
 		static const unsigned int h[] = { 480, 480, 360 };
 		struct v4l2_format fmt = { .type = V4L2_BUF_TYPE_VIDEO_CAPTURE };
@@ -172,26 +196,22 @@ static void gchd_apply_changes(struct gchd_src *s, int fd)
 				     strerror(errno));
 		}
 	}
-	if (v->input >= 2 && (all || v->mode != b->mode || v->output != b->output ||
-			      (int)(v->rate * 100.0 + 0.5) !=
-				      (int)(b->rate * 100.0 + 0.5))) {
-		bool vbr = o == 2 || v->mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
+	if (analog && mode_changed) {
+		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
+			  vbr ? V4L2_MPEG_VIDEO_BITRATE_MODE_VBR :
+				V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
+	} else if (analog && (int)(v->rate * 100.0 + 0.5) !=
+				     (int)(b->rate * 100.0 + 0.5)) {
 		double lo = vbr ? gchd_vbr_min[o] : GCHD_CBR_MIN;
 		double hi = vbr ? gchd_vbr_max[o] : GCHD_CBR_MAX;
 		double r = v->rate < lo ? lo : v->rate > hi ? hi : v->rate;
 
-		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
-			  vbr ? V4L2_MPEG_VIDEO_BITRATE_MODE_VBR :
-				V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
-		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE,
-			  gchd_kbps(r, vbr) * 1000);
+		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE, gchd_kbps(r, vbr) * 1000);
 	}
 	if (all || v->profile != b->profile)
 		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_H264_PROFILE, v->profile);
-	if (v->input >= 2 && (all || v->stretch != b->stretch))
+	if (analog && (all || v->stretch != b->stretch))
 		gchd_ctrl(fd, GCHD_CID_STRETCH, v->stretch);
-	s->base = s->cur;
-	s->have_base = true;
 }
 
 /* The transport stream format, keeping the device's output size. */
@@ -248,6 +268,12 @@ static bool gchd_read_device(const char *path, struct gchd_vals *v)
 	c.id = GCHD_CID_STRETCH;
 	if (ioctl(fd, VIDIOC_G_CTRL, &c) == 0)
 		v->stretch = c.value != 0;
+	{
+		v4l2_std_id std = 0;
+
+		v->pal = ioctl(fd, VIDIOC_G_STD, &std) == 0 &&
+			 (std & V4L2_STD_625_50);
+	}
 	close(fd);
 	return true;
 }
@@ -480,6 +506,8 @@ out:
 	s->fd = -1;
 }
 
+static bool gchd_path(struct gchd_src *s, char *path, size_t size);
+
 static void *gchd_thread(void *data)
 {
 	struct gchd_src *s = data;
@@ -490,9 +518,7 @@ static void *gchd_thread(void *data)
 	os_set_thread_name("gchd-capture");
 	blog(LOG_INFO, "[gchd] capture started (source shown)");
 	while (!s->stop) {
-		if (s->device && *s->device)
-			snprintf(path, sizeof(path), "%s", s->device);
-		else if (!gchd_find(path, sizeof(path)))
+		if (!gchd_path(s, path, sizeof(path)))
 			path[0] = 0;
 		if (path[0]) {
 			told = false;
@@ -545,23 +571,105 @@ static const char *gchd_get_name(void *unused)
 /* Device path: the chosen one, else the first device of the driver. */
 static bool gchd_path(struct gchd_src *s, char *path, size_t size)
 {
-	if (s->device && *s->device) {
+	bool chosen;
+
+	pthread_mutex_lock(&s->lock);
+	chosen = s->device && *s->device;
+	if (chosen)
 		snprintf(path, size, "%s", s->device);
-		return true;
-	}
-	return gchd_find(path, size);
+	pthread_mutex_unlock(&s->lock);
+	return chosen || gchd_find(path, size);
+}
+
+/* Hand device values to OBS (the source's settings; update() follows). */
+static void gchd_push_settings(struct gchd_src *s, const struct gchd_vals *v)
+{
+	obs_data_t *d = obs_data_create();
+
+	gchd_vals_to_settings(v, d);
+	obs_source_update(s->source, d);
+	obs_data_release(d);
+	/* An open properties dialog shows the new values (queued to its thread). */
+	obs_source_update_properties(s->source);
 }
 
 /*
- * Settings from the properties: applied to the device at once (the capture
- * continues). Not when the source is created (OBS start): the device keeps
- * its own (shared) settings then.
+ * Worker: applies the settings 0.5 s after the last change and takes over
+ * changes made elsewhere every 1.5 s. Device calls only here.
+ */
+static void *gchd_worker(void *data)
+{
+	struct gchd_src *s = data;
+	uint64_t next_sync = 0;
+
+	os_set_thread_name("gchd-settings");
+	while (!s->worker_stop) {
+		uint64_t now = os_gettime_ns();
+		struct gchd_vals cur, base, v;
+		bool apply = false, all = false, sync = false;
+		char path[300];
+
+		pthread_mutex_lock(&s->lock);
+		if (s->apply_pending && now >= s->apply_at) {
+			apply = true;
+			s->apply_pending = false;
+			cur = s->cur;
+			base = s->base;
+			all = !s->have_base;
+		} else if (!s->apply_pending && now >= next_sync) {
+			sync = true;
+		}
+		pthread_mutex_unlock(&s->lock);
+
+		if ((apply || sync) && gchd_path(s, path, sizeof(path))) {
+			if (apply) {
+				int fd = open(path, O_RDWR | O_NONBLOCK);
+
+				if (fd >= 0) {
+					gchd_apply_changes(fd, &cur, &base, all);
+					close(fd);
+					blog(LOG_INFO,
+					     "[gchd] settings applied: input %d, output %d, mode %d, %.2f Mbit/s, profile %d, stretch %d",
+					     cur.input, cur.output, cur.mode, cur.rate,
+					     cur.profile, cur.stretch);
+				}
+			}
+			v = apply ? cur : base;
+			if (gchd_read_device(path, &v)) {
+				bool push = false;
+
+				pthread_mutex_lock(&s->lock);
+				/* A newer change waits: leave it alone. */
+				if (!s->apply_pending) {
+					/* Only values the source does not have yet. */
+					push = !s->have_base ||
+					       !gchd_vals_equal(&v, &s->cur);
+					s->base = v;
+					s->cur = v;
+					s->have_base = true;
+				}
+				pthread_mutex_unlock(&s->lock);
+				if (push)
+					gchd_push_settings(s, &v);
+			}
+			next_sync = os_gettime_ns() + GCHD_SYNC_NS;
+		}
+		os_sleep_ms(100);
+	}
+	return NULL;
+}
+
+/*
+ * Settings from the properties (or taken over by the worker): a change
+ * against the device's values is applied by the worker 0.5 s after the last
+ * one. Nothing is applied when the source is created (OBS start): the
+ * device keeps its own (shared) settings.
  */
 static void gchd_update(void *data, obs_data_t *settings)
 {
 	struct gchd_src *s = data;
-	char path[300];
 
+	pthread_mutex_lock(&s->lock);
 	bfree(s->device);
 	s->device = bstrdup(obs_data_get_string(settings, "device"));
 	s->cur.input = (int)obs_data_get_int(settings, "input");
@@ -570,18 +678,11 @@ static void gchd_update(void *data, obs_data_t *settings)
 	s->cur.mode = (int)obs_data_get_int(settings, "bitrate_mode");
 	s->cur.profile = (int)obs_data_get_int(settings, "profile");
 	s->cur.stretch = obs_data_get_bool(settings, "stretch");
-	if (s->created && gchd_path(s, path, sizeof(path))) {
-		int fd = open(path, O_RDWR | O_NONBLOCK);
-
-		if (fd >= 0) {
-			gchd_apply_changes(s, fd);
-			close(fd);
-			blog(LOG_INFO,
-			     "[gchd] settings applied: input %d, output %d, mode %d, %.2f Mbit/s, profile %d, stretch %d",
-			     s->cur.input, s->cur.output, s->cur.mode, s->cur.rate,
-			     s->cur.profile, s->cur.stretch);
-		}
+	if (s->created && s->have_base && !gchd_vals_equal(&s->cur, &s->base)) {
+		s->apply_pending = true;
+		s->apply_at = os_gettime_ns() + GCHD_APPLY_DELAY_NS;
 	}
+	pthread_mutex_unlock(&s->lock);
 }
 
 static void *gchd_create(obs_data_t *settings, obs_source_t *source)
@@ -590,6 +691,7 @@ static void *gchd_create(obs_data_t *settings, obs_source_t *source)
 
 	s->source = source;
 	s->fd = -1;
+	pthread_mutex_init(&s->lock, NULL);
 	/* OBS deinterlacing, once (the user can change it afterwards). */
 	if (!obs_data_get_bool(settings, "deinterlace_set")) {
 		obs_source_set_deinterlace_mode(source,
@@ -599,20 +701,11 @@ static void *gchd_create(obs_data_t *settings, obs_source_t *source)
 		obs_data_set_bool(settings, "deinterlace_set", true);
 	}
 	gchd_update(s, settings);
-	{
-		/* The device's settings are the shared ones: show them. */
-		char path[300];
-		struct gchd_vals v = s->cur;
-
-		if (gchd_path(s, path, sizeof(path)) &&
-		    gchd_read_device(path, &v)) {
-			gchd_vals_to_settings(&v, settings);
-			s->cur = v;
-			s->base = v;
-			s->have_base = true;
-		}
-	}
 	s->created = true;
+	/* The worker reads the device's (shared) settings at once. */
+	s->worker_stop = false;
+	if (pthread_create(&s->worker, NULL, gchd_worker, s) == 0)
+		s->worker_running = true;
 	return s;
 }
 
@@ -621,6 +714,11 @@ static void gchd_destroy(void *data)
 	struct gchd_src *s = data;
 
 	gchd_stop(s);
+	if (s->worker_running) {
+		s->worker_stop = true;
+		pthread_join(s->worker, NULL);
+	}
+	pthread_mutex_destroy(&s->lock);
 	bfree(s->device);
 	bfree(s);
 }
@@ -696,19 +794,27 @@ static obs_properties_t *gchd_properties(void *data)
 	obs_properties_t *props = obs_properties_create();
 	obs_property_t *p;
 	char path[300];
+	bool pal = false;
 
 	/* Show the device's current (shared) settings. */
 	if (data) {
 		struct gchd_src *s = data;
 		obs_data_t *settings = obs_source_get_settings(s->source);
-		struct gchd_vals v = s->cur;
+		struct gchd_vals v;
 
+		pthread_mutex_lock(&s->lock);
+		v = s->cur;
+		pthread_mutex_unlock(&s->lock);
 		if (gchd_path(s, path, sizeof(path)) &&
 		    gchd_read_device(path, &v)) {
 			gchd_vals_to_settings(&v, settings);
+			pthread_mutex_lock(&s->lock);
 			s->cur = v;
 			s->base = v;
 			s->have_base = true;
+			s->apply_pending = false;
+			pthread_mutex_unlock(&s->lock);
+			pal = v.pal;
 			blog(LOG_INFO,
 			     "[gchd] properties: device settings read: input %d, output %d, mode %d, %.2f Mbit/s",
 			     v.input, v.output, v.mode, v.rate);
@@ -732,14 +838,15 @@ static obs_properties_t *gchd_properties(void *data)
 
 	p = obs_properties_add_list(props, "output", "Output size",
 				    OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(p, "Source size (720x480 / 720x576)", 0);
+	/* The source size of the last detected standard. */
+	obs_property_list_add_int(p, pal ? "720x576" : "720x480", 0);
 	obs_property_list_add_int(p, "640x480", 1);
 	obs_property_list_add_int(p, "480x360", 2);
 	obs_property_set_modified_callback(p, gchd_settings_changed);
 
 	p = obs_properties_add_list(props, "bitrate_mode", "Bitrate mode",
 				    OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(p, "Constant (CBR), 11250 kbit/s",
+	obs_property_list_add_int(p, "Constant (CBR)",
 				  V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
 	obs_property_list_add_int(p, "Variable (VBR)",
 				  V4L2_MPEG_VIDEO_BITRATE_MODE_VBR);
