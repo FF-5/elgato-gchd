@@ -136,8 +136,10 @@ userspace service turns the driver's stream into such a device.
 23. (Maintainer, 2026-11-19) Labels: bitrate mode "Constant (CBR)" /
     "Variable (VBR)" only; output sizes "720x480 NTSC / 720x576 PAL",
     "640x480", "480x360" (no "Source size", no detection).
-25. (Maintainer, 2026-11-19) A bitrate slider is applied once, when it is
-    released (users set exact values and may drag for a long time).
+25. (Maintainer, 2026-11-19) The settings window applies a bitrate slider
+    once, when it is released (users set exact values and may drag for a
+    long time). OBS's properties preview changes live: applied 0.5 s
+    after the last change (OBS does not report the release).
 24. (Maintainer, 2026-11-19) Settings window: the status text on the
     line of the Close button; every change (also output size) reported
     there.
@@ -192,18 +194,21 @@ parameters `bitrate_cbr`, `bitrate_vbr`, `hd_bitrate_mode`,
 files. A mode change loads that mode's bitrate into the bitrate control;
 an input change to the other group loads that group into the controls.
 
-OBS plugin: the properties defer their updates
-(`OBS_PROPERTIES_DEFER_UPDATE`): OBS 30 calls the source's update once on
-OK and not at all on Cancel (without the flag it calls it for every
-slider step; a plugin cannot see the slider's release). A worker thread
-does all device calls: applies the values changed in the dialog, then
-reads the device back; every 1.5 s it takes over changes made elsewhere
-into the settings (only the changed keys, without update, so an open
-dialog keeps the user's other edits). The dialog fills in the mode,
-bitrate and profile the driver keeps when the user changes the mode or
-the input group (from the plugin's last reads); such filled-in values are
-not sent. Checked offline: callback sequence (CBR → 9.00, VBR → 4.00,
-HDMI → its own values), the defer flag, stream decoding.
+OBS plugin: OBS 30 calls the source's update for every change in the
+properties dialog, every slider step, and with the old settings on
+Cancel; a plugin cannot see a slider's release (deferring the updates to
+OK, `OBS_PROPERTIES_DEFER_UPDATE`, was tried and dropped: no preview). A
+worker thread does all device calls: applies 0.5 s after the last change
+the values that differ from the device, then reads the device back;
+every 1.5 s it takes over changes made elsewhere into the settings (only
+the changed keys) and reloads an open dialog (not while a change of the
+user waits). The dialog fills in the mode, bitrate and profile the driver
+keeps when the user changes the mode or the input group (from the
+plugin's last reads); such filled-in values are not sent. Checked
+offline: callback sequence (CBR → 9.00, VBR → 4.00, HDMI → its own
+values); what is sent for a drag, a mode change with and without a moved
+slider, Cancel of each, group changes with and without a profile change;
+stream decoding.
 
 Installer (`install-driver.sh`): asks what to install (everything,
 kernel driver, OBS plugin) or takes `--all`, `--driver`, `--obs`; the
