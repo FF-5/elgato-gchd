@@ -164,6 +164,8 @@ struct gchd {
  u32 bitrate;
  u8 h264_profile;
  u8 h264_level;
+ bool mark_rx;   /* timing: mark the first stream data after START */
+ bool mark_user; /* timing: mark the first buffer after START */
 };
 
 int gchd_enable_analog(struct gchd *);
@@ -220,5 +222,7 @@ int gchd_v4l2_register(struct gchd *);
 void gchd_v4l2_unregister(struct gchd *);
 extern const struct v4l2_file_operations vb2_fops;
 void gchd_remember_std(struct gchd *);
+__printf(2, 3) void gchd_mark(struct gchd *, const char *, ...);
+void gchd_mark_start(struct gchd *);
 
 #endif

@@ -177,6 +177,38 @@ MODULE_PARM_DESC(h264_profile, "H.264 profile (V4L2 value): 0 baseline, 2 main, 
 static unsigned int gchd_set_level;
 module_param_named(h264_level, gchd_set_level, uint, 0644);
 MODULE_PARM_DESC(h264_level, "H.264 level x10 (30-51), 0 automatic");
+/*
+ * Latency marks for benchmarks: "gchd-timing: <microseconds> <event>" at
+ * requests, device commands and their completion, and the first stream
+ * data after START.
+ */
+static bool gchd_timing;
+module_param_named(timing, gchd_timing, bool, 0644);
+MODULE_PARM_DESC(timing, "Log latency marks (gchd-timing) for benchmarks");
+
+void gchd_mark(struct gchd *d, const char *fmt, ...)
+{
+ char event[96];
+ va_list ap;
+
+ if (!READ_ONCE(gchd_timing))
+  return;
+ va_start(ap, fmt);
+ vsnprintf(event, sizeof(event), fmt, ap);
+ va_end(ap);
+ dev_info(&d->intf->dev, "gchd-timing: %llu %s\n",
+          (unsigned long long)(ktime_get_ns() / 1000), event);
+}
+
+/* After START: mark the first stream data and the first buffer. */
+void gchd_mark_start(struct gchd *d)
+{
+ if (!READ_ONCE(gchd_timing))
+  return;
+ WRITE_ONCE(d->mark_rx, true);
+ WRITE_ONCE(d->mark_user, true);
+}
+
 static unsigned int gchd_set_std[2];
 module_param_named(std_composite, gchd_set_std[0], uint, 0644);
 MODULE_PARM_DESC(std_composite, "Last standard on composite: 0 unknown, 1 NTSC (60 Hz), 2 PAL (50 Hz)");
@@ -719,6 +751,10 @@ static void gchd_deliver(struct gchd *d)
    b->vb.field=gchd_field(d);
    dev_dbg(&d->intf->dev, "delivered V4L2 buffer: sequence=%llu bytes=%zu sizeimage=%u\n",
            (unsigned long long)f->sequence, f->len, d->sizeimage);
+   if (READ_ONCE(d->mark_user)) {
+    WRITE_ONCE(d->mark_user, false);
+    gchd_mark(d, "stream first-buffer");
+   }
    vb2_buffer_done(&b->vb.vb2_buf,VB2_BUF_STATE_DONE);
   }
   kvfree(f->data);kfree(f);
@@ -925,8 +961,13 @@ static int gchd_rx(void *arg)
              done->urb->actual_length);
    rx_aux_bytes += done->urb->actual_length;
   }
-  if (done->urb->actual_length > 0)
+  if (done->urb->actual_length > 0) {
    rx_bytes += done->urb->actual_length;
+   if (READ_ONCE(d->mark_rx)) {
+    WRITE_ONCE(d->mark_rx, false);
+    gchd_mark(d, "stream first-data ep=0x%02x", done->endpoint);
+   }
+  }
   else
    rx_empty++;
 
@@ -1178,6 +1219,7 @@ static void gchd_detection_worker(struct work_struct *work)
   }
 
   d->input_prepared = true;
+  gchd_mark(d, "source detected");
   dev_info(&d->intf->dev,
            "signal detected: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
            d->input, d->input_width, d->input_height, d->input_fps_num,
@@ -1338,6 +1380,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   dev_info(&d->intf->dev, "encoder restart: output %u -> %u%s\n",
            d->out_active, d->analog_out,
            READ_ONCE(d->enc_dirty) ? ", settings changed" : "");
+  gchd_mark(d, "restart encoder");
   output_change = true;
   goto stop_and_restart;
  }
@@ -1364,6 +1407,7 @@ static void gchd_mode_workfn(struct work_struct *work)
     std = 0;
    if ((std & 0x80) || d->family_mismatch >= 2) {
     d->family_mismatch = 0;
+    gchd_mark(d, "source family-change");
     dev_info(&d->intf->dev,
              "decoder status changed while capturing (FA=%x CA=%02x E7=%02x); configuring again\n",
              family, lock, std);
@@ -1402,6 +1446,7 @@ static void gchd_mode_workfn(struct work_struct *work)
 
  if (d->input_height == 576) {
   /* 576i <-> 288p: decoder only, the encoder keeps running. */
+  gchd_mark(d, "source mode-change");
   dev_info(&d->intf->dev, "analog mode change detected: %s -> %s\n",
            d->input_interlaced ? "576i" : "288p",
            target_interlaced ? "576i" : "288p");
@@ -1423,7 +1468,8 @@ static void gchd_mode_workfn(struct work_struct *work)
   goto reschedule;
  }
 
- dev_info(&d->intf->dev, "analog mode change detected: %s -> %s\n",
+ gchd_mark(d, "source mode-change");
+  dev_info(&d->intf->dev, "analog mode change detected: %s -> %s\n",
           d->input_interlaced ? "480i" : "240p",
           target_interlaced ? "480i" : "240p");
 
@@ -1567,6 +1613,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
  struct gchd *d = vb2_get_drv_priv(q);
  int r = 0;
 
+ gchd_mark(d, "request capture-start");
  mutex_lock(&d->lifecycle_lock);
  if (d->disconnected) {
   r = -ENODEV;
@@ -1646,6 +1693,7 @@ static void gchd_stop(struct vb2_queue *q)
 {
  struct gchd *d = vb2_get_drv_priv(q);
 
+ gchd_mark(d, "request capture-stop");
  /* STREAMOFF stops buffer delivery, not hardware capture or source monitoring. */
  WRITE_ONCE(d->streaming, false);
  gchd_return_queued(d, VB2_BUF_STATE_ERROR);
@@ -1865,6 +1913,7 @@ static int gchd_sinput(struct file *f, void *p, unsigned int i)
 {
  struct gchd *d = video_drvdata(f);
 
+ gchd_mark(d, "request input %u", i);
  return gchd_set_input(d, i);
 }
 
@@ -2198,6 +2247,7 @@ static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
    return -EBUSY;
   out = gchd_analog_out_for(x->fmt.pix.width, x->fmt.pix.height);
   if (out != d->analog_out) {
+   gchd_mark(d, "request output %ux%u", x->fmt.pix.width, x->fmt.pix.height);
    d->analog_out = out;
    gchd_settings_save(d);
    if (d->streaming)
@@ -2350,6 +2400,7 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
  gchd_settings_save(d);
  if (d->streaming) {
   WRITE_ONCE(d->enc_dirty, true);
+  gchd_mark(d, "request control 0x%x", c->id);
   mod_delayed_work(system_wq, &d->mode_work, 0);
  }
  return 0;

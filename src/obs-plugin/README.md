@@ -17,12 +17,10 @@ properties.
   when the source is created (Deinterlacing in the source's context menu).
 - **Properties:** input (HDMI, component, composite, S-video), output size
   of composite and S-video (source size, 640 × 480, 480 × 360), bitrate
-  mode and bitrate, H.264 profile, stretch of SD input. They are OBS's own
-  settings: applied to the device when the capture starts (a change
-  restarts the capture, about 3 s); when the capture ends, the device's
-  settings from before are set again, except those another program
-  changed meanwhile. Other programs and the settings window can change the
-  device while OBS captures; the change applies to OBS's picture at once.
+  mode and bitrate, H.264 profile, stretch of SD input. They are the
+  driver's settings, shared with the settings window and other programs:
+  the properties show the device's current values; a change is applied to
+  the device at once, also while capturing, and remembered by the driver.
 - **Bitrate:** shown in Mbit/s as in the observed settings
   (`docs/composite.md` §10): VBR as the average (half the bitrate),
   3.00–7.23 for the source size and 640 × 480, 2.00–7.50 for 480 × 360

@@ -45,6 +45,7 @@ sudo dkms install elgato-gchd/0.5.8
 | `signal_active_retries` | 3 | Signal measurement retries when timing is detected. |
 | `signal_inactive_retries` | 1 | Signal measurement retries when no timing is detected. |
 | `signal_poll_delay_ms` | 200 | Delay between signal measurement batches. |
+| `timing` | `N` | Log latency marks (`gchd-timing: <µs> <event>`): requests, device commands and their completion, source changes, first stream data and first buffer after START. |
 | `input` | 0 | Input at load: 0 HDMI, 1 component, 2 composite, 3 S-video. |
 | `output` | 0 | Composite/S-video output size: 0 source size, 1 640 × 480, 2 480 × 360. |
 | `format` | 0 | Pixel format: 0 H.264, 1 MPEG transport stream. |

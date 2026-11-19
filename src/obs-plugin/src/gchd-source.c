@@ -5,10 +5,10 @@
  * Reads the MPEG transport stream of the elgato_gchd driver's video device,
  * decodes video and audio with FFmpeg and passes them to OBS. The device is
  * found by its driver in sysfs; the input, output size and encoder settings are
- * properties of the source (OBS's own settings) and are applied to the
- * device with V4L2 ioctls when the capture starts; when it ends, the device
- * settings found before are set again, except those another program changed
- * meanwhile. The capture device runs while the source is shown. Deinterlacing is OBS's
+ * driver's settings, shared with every other program: the properties show
+ * the device's current values, and a change in the properties is applied
+ * to the device at once (also while capturing) and remembered by the
+ * driver. The capture device runs while the source is shown. Deinterlacing is OBS's
  * own (Yadif 2x, top field first, set once when the source is created).
  */
 
@@ -71,6 +71,7 @@ struct gchd_src {
 	volatile bool stop;
 	bool shown;
 	bool warned_format;
+	bool created;
 	int fd;
 };
 
@@ -131,11 +132,14 @@ static void gchd_ctrl(int fd, unsigned int id, int value)
 static void gchd_apply(struct gchd_src *s, int fd)
 {
 	struct v4l2_format fmt = { .type = V4L2_BUF_TYPE_VIDEO_CAPTURE };
-	unsigned int input = (unsigned int)s->input;
+	unsigned int input = (unsigned int)s->input, cur = 99;
 
-	if (ioctl(fd, VIDIOC_S_INPUT, &input) < 0)
-		blog(LOG_WARNING, "[gchd] input %u: %s", input,
-		     strerror(errno));
+	/* Only a different input: selecting the same one re-detects it. */
+	if (ioctl(fd, VIDIOC_G_INPUT, &cur) < 0 || cur != input) {
+		if (ioctl(fd, VIDIOC_S_INPUT, &input) < 0)
+			blog(LOG_WARNING, "[gchd] input %u: %s", input,
+			     strerror(errno));
+	}
 	if (ioctl(fd, VIDIOC_G_FMT, &fmt) == 0) {
 		fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MPEG;
 		if (s->input >= 2) {
@@ -171,86 +175,61 @@ static void gchd_apply(struct gchd_src *s, int fd)
 		gchd_ctrl(fd, GCHD_CID_STRETCH, s->stretch);
 }
 
-/* ------------------------------------------------------------ device settings */
-
-/* Device settings the source changes, to set them back afterwards. */
-struct gchd_dev_settings {
-	bool ok;
-	unsigned int input;
-	struct v4l2_pix_format pix;
-	int ctrl[5];
-};
-
-static const unsigned int gchd_ctrl_ids[5] = {
-	V4L2_CID_MPEG_VIDEO_BITRATE_MODE, V4L2_CID_MPEG_VIDEO_BITRATE,
-	V4L2_CID_MPEG_VIDEO_H264_PROFILE, GCHD_CID_STRETCH,
-	V4L2_CID_MPEG_VIDEO_H264_LEVEL,
-};
-
-static void gchd_settings_read(int fd, struct gchd_dev_settings *v)
+/* The transport stream format, keeping the device's output size. */
+static void gchd_set_mpeg(int fd)
 {
 	struct v4l2_format fmt = { .type = V4L2_BUF_TYPE_VIDEO_CAPTURE };
 
-	memset(v, 0, sizeof(*v));
-	if (ioctl(fd, VIDIOC_G_INPUT, &v->input) < 0 ||
-	    ioctl(fd, VIDIOC_G_FMT, &fmt) < 0)
+	if (ioctl(fd, VIDIOC_G_FMT, &fmt) < 0)
 		return;
-	v->pix = fmt.fmt.pix;
-	for (int i = 0; i < 5; i++) {
-		struct v4l2_control c = { .id = gchd_ctrl_ids[i] };
-
-		v->ctrl[i] = ioctl(fd, VIDIOC_G_CTRL, &c) == 0 ? c.value : -1;
-	}
-	v->ok = true;
+	if (fmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MPEG)
+		return;
+	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MPEG;
+	if (ioctl(fd, VIDIOC_S_FMT, &fmt) < 0)
+		blog(LOG_WARNING, "[gchd] format: %s", strerror(errno));
 }
 
 /*
- * Set back the settings found before the capture (BEFORE), where the device
- * still has the source's values (APPLIED): a change by another program
- * while the source captured stays.
+ * The device's settings into the source's settings (the properties show
+ * them). Composite/S-video bitrate as shown: VBR the average.
  */
-static void gchd_settings_restore(const char *path,
-				  const struct gchd_dev_settings *before,
-				  const struct gchd_dev_settings *applied)
+static void gchd_read_device(obs_data_t *settings, const char *path)
 {
-	struct gchd_dev_settings now;
-	int fd;
+	struct v4l2_format fmt = { .type = V4L2_BUF_TYPE_VIDEO_CAPTURE };
+	struct v4l2_control c;
+	unsigned int input = 0;
+	int fd, mode = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR, kb = 11250, out = 0;
 
-	if (!before->ok || !applied->ok)
-		return;
 	fd = open(path, O_RDWR | O_NONBLOCK);
 	if (fd < 0)
 		return;
-	gchd_settings_read(fd, &now);
-	if (now.ok) {
-		if (now.input == applied->input && before->input != now.input) {
-			unsigned int in = before->input;
-
-			ioctl(fd, VIDIOC_S_INPUT, &in);
-		}
-		if (now.pix.width == applied->pix.width &&
-		    now.pix.height == applied->pix.height &&
-		    now.pix.pixelformat == applied->pix.pixelformat &&
-		    (before->pix.width != now.pix.width ||
-		     before->pix.height != now.pix.height ||
-		     before->pix.pixelformat != now.pix.pixelformat)) {
-			struct v4l2_format fmt = {
-				.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
-			};
-
-			fmt.fmt.pix = before->pix;
-			ioctl(fd, VIDIOC_S_FMT, &fmt);
-		}
-		for (int i = 0; i < 5; i++) {
-			struct v4l2_control c = { .id = gchd_ctrl_ids[i],
-						  .value = before->ctrl[i] };
-
-			if (before->ctrl[i] < 0 || now.ctrl[i] != applied->ctrl[i] ||
-			    now.ctrl[i] == before->ctrl[i])
-				continue;
-			ioctl(fd, VIDIOC_S_CTRL, &c);
-		}
+	if (ioctl(fd, VIDIOC_G_INPUT, &input) == 0)
+		obs_data_set_int(settings, "input", input);
+	if (ioctl(fd, VIDIOC_G_FMT, &fmt) == 0) {
+		if (fmt.fmt.pix.width == 640 && fmt.fmt.pix.height == 480)
+			out = 1;
+		else if (fmt.fmt.pix.width == 480 && fmt.fmt.pix.height == 360)
+			out = 2;
+		obs_data_set_int(settings, "output", out);
 	}
+	c.id = V4L2_CID_MPEG_VIDEO_BITRATE_MODE;
+	if (ioctl(fd, VIDIOC_G_CTRL, &c) == 0)
+		mode = c.value;
+	c.id = V4L2_CID_MPEG_VIDEO_BITRATE;
+	if (ioctl(fd, VIDIOC_G_CTRL, &c) == 0)
+		kb = c.value / 1000;
+	if (out == 2)
+		mode = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
+	obs_data_set_int(settings, "bitrate_mode", mode);
+	obs_data_set_double(settings, "rate",
+			    mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR ?
+				    kb / 2000.0 : kb / 1000.0);
+	c.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE;
+	if (ioctl(fd, VIDIOC_G_CTRL, &c) == 0)
+		obs_data_set_int(settings, "profile", c.value);
+	c.id = GCHD_CID_STRETCH;
+	if (ioctl(fd, VIDIOC_G_CTRL, &c) == 0)
+		obs_data_set_bool(settings, "stretch", c.value);
 	close(fd);
 }
 
@@ -394,7 +373,6 @@ static void gchd_session(struct gchd_src *s, const char *path)
 	AVFrame *frm = av_frame_alloc();
 	AVDictionary *opt = NULL;
 	struct gchd_clock clock = { 0 };
-	struct gchd_dev_settings before = { 0 }, applied = { 0 };
 	unsigned char *buf;
 	int vi = -1, ai = -1;
 
@@ -403,9 +381,7 @@ static void gchd_session(struct gchd_src *s, const char *path)
 		blog(LOG_WARNING, "[gchd] %s: %s", path, strerror(errno));
 		goto out;
 	}
-	gchd_settings_read(s->fd, &before);
-	gchd_apply(s, s->fd);
-	gchd_settings_read(s->fd, &applied);
+	gchd_set_mpeg(s->fd);
 
 	buf = av_malloc(GCHD_IO_SIZE);
 	io = buf ? avio_alloc_context(buf, GCHD_IO_SIZE, 0, s, gchd_read, NULL,
@@ -473,8 +449,6 @@ out:
 	if (s->fd >= 0)
 		close(s->fd);
 	s->fd = -1;
-	/* The device's own settings again (OBS keeps its settings itself). */
-	gchd_settings_restore(path, &before, &applied);
 }
 
 static void *gchd_thread(void *data)
@@ -539,13 +513,26 @@ static const char *gchd_get_name(void *unused)
 	return "Elgato Game Capture HD";
 }
 
+/* Device path: the chosen one, else the first device of the driver. */
+static bool gchd_path(struct gchd_src *s, char *path, size_t size)
+{
+	if (s->device && *s->device) {
+		snprintf(path, size, "%s", s->device);
+		return true;
+	}
+	return gchd_find(path, size);
+}
+
+/*
+ * Settings from the properties: applied to the device at once (the capture
+ * continues). Not when the source is created (OBS start): the device keeps
+ * its own (shared) settings then.
+ */
 static void gchd_update(void *data, obs_data_t *settings)
 {
 	struct gchd_src *s = data;
-	bool running = s->thread_running;
+	char path[300];
 
-	if (running)
-		gchd_stop(s);
 	bfree(s->device);
 	s->device = bstrdup(obs_data_get_string(settings, "device"));
 	s->input = (int)obs_data_get_int(settings, "input");
@@ -554,8 +541,14 @@ static void gchd_update(void *data, obs_data_t *settings)
 	s->bitrate_mode = (int)obs_data_get_int(settings, "bitrate_mode");
 	s->profile = (int)obs_data_get_int(settings, "profile");
 	s->stretch = obs_data_get_bool(settings, "stretch");
-	if (running || s->shown)
-		gchd_start(s);
+	if (s->created && gchd_path(s, path, sizeof(path))) {
+		int fd = open(path, O_RDWR | O_NONBLOCK);
+
+		if (fd >= 0) {
+			gchd_apply(s, fd);
+			close(fd);
+		}
+	}
 }
 
 static void *gchd_create(obs_data_t *settings, obs_source_t *source)
@@ -573,6 +566,7 @@ static void *gchd_create(obs_data_t *settings, obs_source_t *source)
 		obs_data_set_bool(settings, "deinterlace_set", true);
 	}
 	gchd_update(s, settings);
+	s->created = true;
 	return s;
 }
 
@@ -657,7 +651,15 @@ static obs_properties_t *gchd_properties(void *data)
 	obs_property_t *p;
 	char path[300];
 
-	UNUSED_PARAMETER(data);
+	/* Show the device's current (shared) settings. */
+	if (data) {
+		struct gchd_src *s = data;
+		obs_data_t *settings = obs_source_get_settings(s->source);
+
+		if (gchd_path(s, path, sizeof(path)))
+			gchd_read_device(settings, path);
+		obs_data_release(settings);
+	}
 	p = obs_properties_add_list(props, "device", "Device",
 				    OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
 	obs_property_list_add_string(p, gchd_find(path, sizeof(path)) ?

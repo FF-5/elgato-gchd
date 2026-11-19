@@ -118,6 +118,15 @@ userspace service turns the driver's stream into such a device.
     every 1–2 s (no Refresh button); bitrate slider always shown, in
     Mbit/s: VBR the average (half the bitrate), CBR the bitrate with the
     range 7.00–11.25 (movable; below 11.25 not recorded). Same in OBS.
+19. (Maintainer, 2026-11-19, replaces the separate OBS settings of 17)
+    One global setting for everything: the OBS plugin's properties show
+    and change the driver's settings like the settings window and the
+    terminal; changes apply live from any program. (The previous test may
+    have run an older plugin build.)
+20. (Maintainer, 2026-11-19) Latency benchmark: a table of latencies per
+    operation (capture start, setting change, source change, ... to the
+    first stream data), averaged, to find where the driver is slower than
+    the Windows software.
 
 ## Implementation
 
@@ -165,19 +174,39 @@ builds, installs and uninstalls the plugin (temporary home folder).
 
 ## Hardware test (maintainer)
 
-Settings window: OBS with the plugin, a console on composite.
+1. Benchmark (a console on composite; prompts for three console resets):
 
 ```sh
 cd ~ && git -C elgato-gchd fetch origin
 git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
-mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-060-settings.sh > tests/T-060-settings.sh
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-bench.sh > tests/T-bench.sh
+bash gchd-test.sh T-bench --branch feat/app-bridge
+```
+
+Paste the tables at the end (also in `timing.md` in the log folder).
+
+2. Settings, one global setting (OBS with the plugin, a console on
+   composite):
+
+```sh
+git -C elgato-gchd show origin/tools:tools/tests/T-060-settings.sh > tests/T-060-settings.sh
 bash gchd-test.sh T-060-settings --branch feat/app-bridge
 ```
 
-Paste the summary; on FAILs the log.
-
 ## Findings
 
+- Benchmark platform: driver module parameter `timing` (off by default)
+  logs `gchd-timing: <µs> <event>` at requests (capture start/stop,
+  control, output size, input), source changes (mode, family, detected),
+  every SCMD sent (IDLE, INIT, NULL, STOP, START), state completions,
+  firmware ready, the first stream data and the first buffer after START.
+  `tools/gchd-timing.py` turns them into tables (count, avg, min, max per
+  phase); for the recordings it measures change sequences from the NULL
+  command. Recordings (26 change sequences in four composite
+  recordings): NULL → STOP 1150 ms on average (646–1590), NULL → START
+  2295 ms (1673–2766). The recordings contain no bulk IN data, so the
+  time from START to the first stream data is measured for the driver
+  only. Benchmark test `T-bench`.
 - T-060-settings (a45cf10): 11 PASS, 4 FAIL. (1) "(average" cut off in
   the slider label: the label is now only the number. (2) OBS started
   without a picture: the plugin's own input setting was S-Video. (3) The
