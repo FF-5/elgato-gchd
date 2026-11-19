@@ -30,6 +30,17 @@ rate_near() {
 		echo "video_bitrate $v"
 	fi
 }
+# stretch_shot ON: 6 s with stretch_sd_input=ON; aspect ratio of the stream
+# and one picture (~/gchd-test-logs/stretch-ON.png).
+stretch_shot() {
+	local f=/tmp/gchd-stretch-$1.ts png="$HOME/gchd-test-logs/stretch-$1.png"
+	v4l2-ctl -d $D -v pixelformat=MPEG -c stretch_sd_input="$1"
+	timeout 6 cat $D > "$f"
+	ffprobe -v error -select_streams v:0 -show_entries \
+		stream=width,height,sample_aspect_ratio,display_aspect_ratio -of default=nw=1 "$f" | tr '\n' ' '
+	ffmpeg -v error -y -ss 4 -i "$f" -frames:v 1 "$png" && echo "picture $png"
+	rm -f "$f"
+}
 irq_clean() {
 	if sudo dmesg | grep -q "Disabling IRQ"; then
 		sudo dmesg | grep -B2 -A2 "Disabling IRQ" | tail -8
@@ -50,15 +61,18 @@ run v4l2-ctl -d $D -c video_bitrate_mode=0
 run v4l2-ctl -d $D -c video_bitrate=10000000
 run v4l2-ctl -d $D -c video_bitrate_mode=1
 run v4l2-ctl -d $D -c video_bitrate=11250000
+# 480x360 keeps its own bitrate: 7.50 (15000 kbit/s).
+run v4l2-ctl -d $D -v width=480,height=360 -c video_bitrate=15000000
+run v4l2-ctl -d $D -v width=720,height=480
+expect "720x480: CBR 11250 again" "video_bitrate: 11250000" v4l2-ctl -d $D -C video_bitrate
 
 step "window: values, labels, slider, status line"
 prompt "Open 'Elgato Game Capture HD Settings' from the application menu."
-confirm "Input Composite, Output size '720x480 NTSC / 720x576 PAL', Constant (CBR), slider at '11.25 Mbit/s', High, Stretch off?"
-confirm "the status text sits on the same line as the Close button?"
+confirm "Input Composite, Output size '720x480 NTSC / 720x576 PAL', Constant (CBR), slider at '11.25 Mbit/s', High, Stretch off; no text next to the Close button?"
 prompt "Open the Output size list (then close it with Escape)."
 confirm "the list is '720x480 NTSC / 720x576 PAL', '640x480', '480x360' (no 'Source size')?"
 prompt "Hold the slider and move it slowly back and forth for about 10 s, ending at about 9.00; watch the status text; then release it."
-confirm "no 'Changing'/'changed' message while you held the slider, 'Bitrate changed.' once after the release?"
+confirm "no 'Changing'/'changed' message while you held the slider; 'Bitrate changed.' once after the release, on the line of the Close button, gone after about 3 s?"
 prompt "Wait 3 s."
 expect "CBR about 9000 kbit/s" "^near" rate_near 9000
 prompt "Bitrate mode Variable (VBR); wait 3 s."
@@ -71,11 +85,16 @@ prompt "Move the slider fully to the right and release it; wait 3 s."
 confirm "the slider stays at 11.25 (not 11.24)?"
 expect "CBR 11250 kbit/s exactly" "video_bitrate: 11250000" v4l2-ctl -d $D -C video_bitrate
 prompt "Output size 480x360; wait 3 s."
-confirm "status text 'Output size changed.'; mode Variable (VBR) and locked, slider 2.00 to 7.50?"
-prompt "Output size 640x480; wait 3 s."
-confirm "status text 'Output size changed.'; mode still Variable (VBR) at about 4.00?"
+confirm "'Output size changed.'; mode Variable (VBR) and locked, slider range 2.00 to 7.50 at 7.50 (480x360 keeps its own bitrate)?"
+prompt "Move the slider to about 2.00 and release it; then Output size 640x480; wait 3 s."
+confirm "'Output size changed.'; Variable (VBR) at about 4.00 again (the VBR bitrate of the other sizes)?"
+expect "VBR 8000 kbit/s for 640x480" "^near" rate_near 8000
+prompt "Output size 480x360; wait 3 s."
+confirm "back at about 2.00 (480x360's own bitrate)?"
+expect "480x360 kept 4000 kbit/s" "^near" rate_near 4000
 prompt "Output size '720x480 NTSC / 720x576 PAL'; Bitrate mode Constant (CBR); wait 3 s."
 confirm "slider at 11.25 again (CBR remembered)?"
+expect "CBR 11250 remembered" "video_bitrate: 11250000" v4l2-ctl -d $D -C video_bitrate
 
 step "groups: composite/S-video share, HDMI/component have their own"
 prompt "Stretch on; Bitrate mode Variable (VBR). Then Input S-Video; wait 5 s."
@@ -120,7 +139,7 @@ expect "OBS's output size reached the device" "640/480" v4l2-ctl -d $D -V
 expect "bitrate not overwritten by the size change" "^near" rate_near 12000
 confirm "OBS shows the picture at 640x480, and the settings window shows 640x480 by itself?"
 prompt "In OBS's properties choose Input HDMI (do not press OK); wait 3 s."
-confirm "OBS hides Output size, Stretch, Bitrate mode and Bitrate; the preview shows HDMI (no signal)?"
+confirm "OBS hides Output size, Stretch, Bitrate mode and Bitrate; the preview turned black (HDMI, no signal)?"
 prompt "Press Cancel. Wait 5 s."
 expect "Cancel set Composite again" "Video input : 2" v4l2-ctl -d $D -I
 expect "Cancel kept 640x480" "640/480" v4l2-ctl -d $D -V
@@ -130,12 +149,19 @@ expect "window: stretch on" "stretch_sd_input: 1" v4l2-ctl -d $D -C stretch_sd_i
 prompt "In OBS open the source's properties again."
 confirm "OBS's properties show '720x480 NTSC / 720x576 PAL', about 4.00, Stretch on?"
 prompt "Close the properties with Cancel. In the settings window choose Input 'S-Video'; wait 5 s."
-confirm "no message box, OBS's picture went to S-Video (no signal) at once?"
+confirm "no message box; OBS's picture turned black (same size) within about 1 s?"
 prompt "In the settings window choose Input 'Composite' and Stretch off; wait 8 s."
 confirm "OBS shows the console again?"
 prompt "Close OBS completely; wait 5 s."
 expect "settings stay after OBS closed (VBR about 8000 kbit/s)" "^near" rate_near 8000
 expect "VBR stays" "video_bitrate_mode: 0" v4l2-ctl -d $D -C video_bitrate_mode
 run obs_log 20
+
+step "stretch SD input: what changes in the stream"
+prompt "The console on composite, showing a picture with a clear shape (a menu, a circle). OBS closed, settings window: Composite, '720x480 NTSC / 720x576 PAL'."
+run stretch_shot 0
+run stretch_shot 1
+confirm "open ~/gchd-test-logs/stretch-0.png and stretch-1.png: does the picture differ in shape or borders (not only the game moving)? Note what differs."
+run v4l2-ctl -d $D -c stretch_sd_input=0
 expect "no USB interrupt disabled by the kernel" "^clean" irq_clean
 prompt "In the settings window choose Bitrate mode Constant (CBR), slider 11.25; close the window."
