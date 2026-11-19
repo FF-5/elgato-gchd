@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-2.0
 """Elgato Game Capture HD settings: a window with the settings of the
-elgato_gchd driver (input, output size, bitrate, bitrate mode, H.264
-profile, stretch of SD input). Changes are applied at once; the driver
-remembers them. Input and output size can be changed only while no program
-captures from the device.
+elgato_gchd driver (input, output size, bitrate mode and bitrate, H.264
+profile, stretch of SD input). Changes are applied at once, also while a
+program captures, and the driver remembers them. The window shows changes
+made by other programs (it reads the device every 1.5 s).
 
     gchd-settings-gui [DEVICE]   DEVICE: default /dev/elgato-gchd, else the
                                  first device of the driver
@@ -25,20 +25,19 @@ from gi.repository import GLib, Gtk, Pango  # noqa: E402
 TITLE = "Elgato Game Capture HD"
 INPUTS = ["HDMI", "Component", "Composite", "S-Video"]
 OUTPUTS = [("Source size (720x480 NTSC / 720x576 PAL)", 720, 480),
-           ("640x480", 640, 480), ("480x360", 480, 360)]
-MODES = [("Constant (CBR), 11250 kbit/s", 1), ("Variable (VBR)", 0)]
-
-# Bitrate settings as the device's capture application uses them for
-# composite and S-video (kbit/s): CBR only at 11250; VBR from 6000 to
-# 14460 for the standard and 640x480 sizes, 4000 to 15000 for 480x360
-# (always VBR).
-CBR_KBPS = 11250
-VBR_RANGE = {0: (6000, 14460), 1: (6000, 14460), 2: (4000, 15000)}
-STEP_KBPS = 20
+           ("640x480", 640, 480), ("480x360 (VBR only)", 480, 360)]
+MODES = [("Constant (CBR)", 1), ("Variable (VBR)", 0)]
 PROFILES = [("High", 4), ("Main", 2), ("Baseline", 0)]
-BUSY_TEXT = ("A program is capturing from the device: input and output size "
-             "can be changed only while no program captures (for example "
-             "hide the source in OBS).")
+REFRESH_MS = 1500
+
+# Bitrate of composite and S-video in Mbit/s as the device's capture
+# application shows it: VBR as the average (half the bitrate): 3.0-7.23
+# (bitrate 6000-14460 kbit/s) for the standard and 640x480 sizes, 2.0-7.5
+# (4000-15000) for 480x360, which is always VBR; CBR as the bitrate:
+# 7.0-11.25 (the application uses 11250 only).
+STEP_KBPS = 20
+VBR_RANGE = {0: (3.0, 7.23, 7.0), 1: (3.0, 7.23, 7.0), 2: (2.0, 7.5, 7.5)}
+CBR_RANGE = (7.0, 11.25, 11.25)
 
 
 def find_device():
@@ -67,20 +66,27 @@ class Device:
                            capture_output=True, text=True)
         return p.returncode, p.stdout + p.stderr
 
-    def ctrl(self, name, default=None):
-        rc, out = self.run("-C", name)
-        m = re.search(r":\s*(-?\d+)", out)
-        return int(m.group(1)) if rc == 0 and m else default
+    def read(self):
+        """All settings in one call, or None when the device is gone."""
+        rc, out = self.run("-I", "-V", "-C",
+                           "video_bitrate,video_bitrate_mode,h264_profile,"
+                           "stretch_sd_input")
+        if rc != 0:
+            return None
 
-    def input(self):
-        rc, out = self.run("-I")
-        m = re.search(r"Video input\s*:\s*(\d)", out)
-        return int(m.group(1)) if rc == 0 and m else 0
+        def num(pattern, default):
+            m = re.search(pattern, out)
+            return int(m.group(1)) if m else default
 
-    def size(self):
-        rc, out = self.run("-V")
         m = re.search(r"Width/Height\s*:\s*(\d+)/(\d+)", out)
-        return (int(m.group(1)), int(m.group(2))) if rc == 0 and m else None
+        return {
+            "input": num(r"Video input\s*:\s*(\d)", 0),
+            "size": (int(m.group(1)), int(m.group(2))) if m else None,
+            "bitrate": num(r"video_bitrate:\s*(\d+)", 11250000),
+            "mode": num(r"video_bitrate_mode:\s*(\d+)", 1),
+            "profile": num(r"h264_profile:\s*(\d+)", 4),
+            "stretch": num(r"stretch_sd_input:\s*(\d+)", 0),
+        }
 
 
 class Window(Gtk.Window):
@@ -88,19 +94,19 @@ class Window(Gtk.Window):
         super().__init__(title=TITLE + " Settings")
         self.set_border_width(12)
         self.set_default_size(480, -1)
+        self.fixed_path = path
         self.dev = None
         self.loading = False
-        self.bitrate_timer = 0
+        self.dragging = False
+        self.rate_timer = 0
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.add(box)
-
         grid = Gtk.Grid(column_spacing=12, row_spacing=8)
         box.pack_start(grid, False, False, 0)
 
         def label(text, row):
-            lab = Gtk.Label(label=text, xalign=0)
-            grid.attach(lab, 0, row, 1, 1)
+            grid.attach(Gtk.Label(label=text, xalign=0), 0, row, 1, 1)
 
         def combo(items, row, handler):
             c = Gtk.ComboBoxText()
@@ -115,26 +121,27 @@ class Window(Gtk.Window):
         self.device_label = Gtk.Label(xalign=0)
         self.device_label.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
         grid.attach(self.device_label, 1, 0, 1, 1)
-
         label("Input", 1)
         self.input = combo(INPUTS, 1, self.on_input)
         label("Output size", 2)
         self.output = combo([o[0] for o in OUTPUTS], 2, self.on_output)
-
         label("Bitrate mode", 3)
         self.mode = combo([m[0] for m in MODES], 3, self.on_mode)
 
-        label("Bitrate (VBR)", 4)
-        self.bitrate = Gtk.Scale.new_with_range(
-            Gtk.Orientation.HORIZONTAL, 6000, 14460, STEP_KBPS)
-        self.bitrate.set_digits(0)
-        self.bitrate.set_value_pos(Gtk.PositionType.BOTTOM)
-        self.bitrate.connect("format-value", self.format_bitrate)
-        self.bitrate.connect("value-changed", self.on_bitrate)
-        grid.attach(self.bitrate, 1, 4, 1, 1)
+        label("Bitrate", 4)
+        self.rate = Gtk.Scale.new_with_range(
+            Gtk.Orientation.HORIZONTAL, CBR_RANGE[0], CBR_RANGE[1], 0.01)
+        self.rate.set_digits(2)
+        self.rate.set_value_pos(Gtk.PositionType.RIGHT)
+        self.rate.connect("format-value",
+                          lambda _s, v: "%.2f Mbit/s" % v)
+        self.rate.connect("value-changed", self.on_rate)
+        self.rate.connect("button-press-event", self.on_press)
+        self.rate.connect("button-release-event", self.on_release)
+        grid.attach(self.rate, 1, 4, 1, 1)
+
         label("H.264 profile", 5)
         self.profile = combo([p[0] for p in PROFILES], 5, self.on_profile)
-
         label("Stretch SD input", 6)
         self.stretch = Gtk.Switch(halign=Gtk.Align.START)
         self.stretch.connect("notify::active", self.on_stretch)
@@ -143,167 +150,173 @@ class Window(Gtk.Window):
         self.status = Gtk.Label(xalign=0, wrap=True)
         self.status.set_max_width_chars(60)
         box.pack_start(self.status, False, False, 0)
-
-        buttons = Gtk.Box(spacing=6)
-        refresh = Gtk.Button(label="Refresh")
-        refresh.connect("clicked", lambda _b: self.load())
         close = Gtk.Button(label="Close")
         close.connect("clicked", lambda _b: self.close())
+        buttons = Gtk.Box(spacing=6)
         buttons.pack_end(close, False, False, 0)
-        buttons.pack_end(refresh, False, False, 0)
         box.pack_end(buttons, False, False, 0)
 
-        self.fixed_path = path
         self.load()
+        GLib.timeout_add(REFRESH_MS, self.refresh)
 
     # ------------------------------------------------------------ state
 
-    def say(self, text):
-        self.status.set_text(text)
+    def busy_with_user(self):
+        """True while the user is changing something (no refresh then)."""
+        if self.dragging or self.rate_timer:
+            return True
+        return any(c.get_property("popup-shown")
+                   for c in (self.input, self.output, self.mode, self.profile))
 
-    def load(self):
+    def refresh(self):
+        if not self.busy_with_user():
+            self.load(quiet=True)
+        return True
+
+    def rate_range(self):
+        out = max(self.output.get_active(), 0)
+        if out == 2 or self.mode.get_active() == 1:
+            return VBR_RANGE[out]
+        return CBR_RANGE
+
+    def load(self, quiet=False):
         """Read the device's settings into the widgets."""
         path = self.fixed_path or find_device()
+        vals = Device(path).read() if path and os.path.exists(path) else None
         self.loading = True
         try:
-            if not path or not os.path.exists(path):
+            if vals is None:
                 self.dev = None
                 self.device_label.set_text("not found")
-                self.say("No Elgato Game Capture HD found: driver loaded, "
-                         "device plugged in? Then press Refresh.")
+                self.status.set_text("No Elgato Game Capture HD found (driver "
+                                     "loaded, device plugged in?).")
                 self.set_controls(False)
                 return
+            was_missing = self.dev is None
             self.dev = Device(path)
             self.device_label.set_text(path)
             self.set_controls(True)
-            inp = self.dev.input()
-            self.input.set_active(inp)
-            size = self.dev.size()
-            out = 0
-            if size == (640, 480):
-                out = 1
-            elif size == (480, 360):
-                out = 2
-            self.output.set_active(out)
-            self.output.set_sensitive(inp >= 2)
-            self.stretch.set_sensitive(inp >= 2)
-            mode = self.dev.ctrl("video_bitrate_mode", 1)
-            self.mode.set_active(0 if mode == 1 else 1)
-            self.bitrate.set_value(self.dev.ctrl("video_bitrate", 11250000) / 1000)
-            self.update_bitrate_controls()
-            prof = self.dev.ctrl("h264_profile", 4)
-            self.profile.set_active(
-                next((i for i, p in enumerate(PROFILES) if p[1] == prof), 0))
-            self.stretch.set_active(bool(self.dev.ctrl("stretch_sd_input", 0)))
-            self.say("Changes are applied at once and remembered by the driver.")
+            self.set_active(self.input, vals["input"])
+            out = {(640, 480): 1, (480, 360): 2}.get(vals["size"], 0)
+            self.set_active(self.output, out)
+            analog = vals["input"] >= 2
+            self.output.set_sensitive(analog)
+            self.stretch.set_sensitive(analog)
+            mobile = analog and out == 2
+            self.set_active(self.mode, 1 if mobile or vals["mode"] == 0 else 0)
+            self.mode.set_sensitive(not mobile)
+            lo, hi, _ = self.rate_range()
+            vbr = self.mode.get_active() == 1
+            shown = vals["bitrate"] / (2000000 if vbr else 1000000)
+            adj = self.rate.get_adjustment()
+            adj.set_lower(lo)
+            adj.set_upper(hi)
+            if abs(self.rate.get_value() - shown) > 0.005:
+                self.rate.set_value(min(max(shown, lo), hi))
+            self.set_active(self.profile, next(
+                (i for i, p in enumerate(PROFILES) if p[1] == vals["profile"]), 0))
+            if self.stretch.get_active() != bool(vals["stretch"]):
+                self.stretch.set_active(bool(vals["stretch"]))
+            if not quiet or was_missing:
+                self.status.set_text("Changes are applied at once and "
+                                     "remembered by the driver.")
         finally:
             self.loading = False
 
+    @staticmethod
+    def set_active(combo, index):
+        if combo.get_active() != index:
+            combo.set_active(index)
+
     def set_controls(self, on):
-        for w in (self.input, self.output, self.bitrate, self.mode,
+        for w in (self.input, self.output, self.rate, self.mode,
                   self.profile, self.stretch):
             w.set_sensitive(on)
 
     def apply(self, what, *args):
-        """Run a change; on 'busy' explain and reload."""
+        """Run a change; show a message box on an error."""
         if self.loading or not self.dev:
             return True
         rc, out = self.dev.run(*args)
         if rc == 0:
-            self.say(what + " changed.")
+            self.status.set_text(what + " changed.")
             return True
-        text = BUSY_TEXT if "busy" in out.lower() else what + ": " + out.strip()
-        self.say(text)
+        self.status.set_text(what + ": " + out.strip())
         dialog = Gtk.MessageDialog(transient_for=self, modal=True,
                                    message_type=Gtk.MessageType.WARNING,
                                    buttons=Gtk.ButtonsType.OK,
                                    text=what + " not changed")
-        dialog.format_secondary_text(text)
+        dialog.format_secondary_text(out.strip())
         dialog.run()
         dialog.destroy()
-        GLib.idle_add(self.load_keep_status)
+        GLib.idle_add(lambda: self.load(quiet=True) and False)
         return False
-
-    def load_keep_status(self):
-        text = self.status.get_text()
-        self.load()
-        self.say(text)
-        return False
-
-    def vbr_range(self):
-        return VBR_RANGE.get(max(self.output.get_active(), 0), VBR_RANGE[0])
-
-    def format_bitrate(self, _scale, value):
-        if self.mode.get_active() != 1:
-            return "%d kbit/s constant" % CBR_KBPS
-        return "%d kbit/s (average %.1f Mbit/s)" % (value, value / 2000)
-
-    def update_bitrate_controls(self):
-        """Mode and slider limits for the output size (480x360: VBR only)."""
-        mobile = self.output.get_active() == 2 and self.input.get_active() >= 2
-        if mobile and self.mode.get_active() != 1:
-            self.mode.set_active(1)
-        self.mode.set_sensitive(self.dev is not None and not mobile)
-        lo, hi = self.vbr_range()
-        adj = self.bitrate.get_adjustment()
-        adj.set_lower(lo)
-        adj.set_upper(hi)
-        if not lo <= self.bitrate.get_value() <= hi:
-            self.bitrate.set_value(min(max(self.bitrate.get_value(), lo), hi))
-        vbr = self.mode.get_active() == 1
-        self.bitrate.set_sensitive(self.dev is not None and vbr)
 
     def apply_rate(self):
-        """Bitrate mode and value as the capture application sets them."""
-        if self.loading or not self.dev:
-            return
-        if self.mode.get_active() == 1:
-            kb = int(round(self.bitrate.get_value() / STEP_KBPS)) * STEP_KBPS
-            self.apply("Bitrate", "-c", "video_bitrate_mode=0,video_bitrate=%d"
-                       % (kb * 1000))
-        else:
-            self.apply("Bitrate", "-c", "video_bitrate_mode=1,video_bitrate=%d"
-                       % (CBR_KBPS * 1000))
+        """Bitrate mode and bitrate (kbit/s from the shown Mbit/s)."""
+        lo, hi, default = self.rate_range()
+        value = self.rate.get_value()
+        if not lo - 1e-6 <= value <= hi + 1e-6:
+            value = default
+        vbr = self.mode.get_active() == 1 or self.output.get_active() == 2
+        kb = int(round(value * (2000 if vbr else 1000) / STEP_KBPS)) * STEP_KBPS
+        self.apply("Bitrate", "-c", "video_bitrate_mode=%d,video_bitrate=%d"
+                   % (0 if vbr else 1, kb * 1000))
+
+    def limits_changed(self):
+        """New slider range after a mode or size change; default if outside."""
+        lo, hi, default = self.rate_range()
+        self.loading = True
+        adj = self.rate.get_adjustment()
+        adj.set_lower(lo)
+        adj.set_upper(hi)
+        if not lo - 1e-6 <= self.rate.get_value() <= hi + 1e-6:
+            self.rate.set_value(default)
+        self.loading = False
+        self.apply_rate()
 
     # ------------------------------------------------------------ handlers
 
     def on_input(self, c):
-        i = c.get_active()
-        if i < 0:
-            return
-        if self.apply("Input", "-i", str(i)):
-            GLib.idle_add(self.load_keep_status)
+        if c.get_active() >= 0:
+            self.apply("Input", "-i", str(c.get_active()))
 
     def on_output(self, c):
         i = c.get_active()
-        if i < 0:
+        if i < 0 or self.loading:
             return
         _, w, h = OUTPUTS[i]
         if self.apply("Output size", "-v", "width=%d,height=%d" % (w, h)):
-            self.loading, was = True, self.loading
-            self.update_bitrate_controls()
-            self.loading = was
-            self.apply_rate()
-
-    def on_bitrate(self, s):
-        if self.loading:
-            return
-        if self.bitrate_timer:
-            GLib.source_remove(self.bitrate_timer)
-        self.bitrate_timer = GLib.timeout_add(400, self.apply_bitrate)
-
-    def apply_bitrate(self):
-        self.bitrate_timer = 0
-        self.apply_rate()
-        return False
+            self.loading = True
+            if i == 2:
+                self.mode.set_active(1)
+            self.mode.set_sensitive(i != 2)
+            self.loading = False
+            self.limits_changed()
 
     def on_mode(self, c):
-        if c.get_active() < 0 or self.loading:
+        if c.get_active() >= 0 and not self.loading:
+            self.limits_changed()
+
+    def on_press(self, *_args):
+        self.dragging = True
+        return False
+
+    def on_release(self, *_args):
+        self.dragging = False
+        return False
+
+    def on_rate(self, _s):
+        if self.loading:
             return
-        self.loading = True
-        self.update_bitrate_controls()
-        self.loading = False
+        if self.rate_timer:
+            GLib.source_remove(self.rate_timer)
+        self.rate_timer = GLib.timeout_add(400, self.rate_timeout)
+
+    def rate_timeout(self):
+        self.rate_timer = 0
         self.apply_rate()
+        return False
 
     def on_profile(self, c):
         i = c.get_active()

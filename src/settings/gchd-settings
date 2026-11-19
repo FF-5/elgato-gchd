@@ -8,8 +8,7 @@
 #   gchd-settings [DEVICE]      DEVICE: default /dev/elgato-gchd, else the
 #                               first device of the driver
 #
-# Input and output size can be changed only while no program captures from
-# the device; the other settings also while capturing.
+# Changes apply at once, also to a running capture.
 #
 # Needs: whiptail (package whiptail), v4l2-ctl (package v4l-utils).
 

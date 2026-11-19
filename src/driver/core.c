@@ -1856,13 +1856,15 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  return 0;
 }
 
+/*
+ * Any file handle may switch the input, also while another one captures:
+ * the capture continues with the new input (settings tools next to a
+ * capturing application).
+ */
 static int gchd_sinput(struct file *f, void *p, unsigned int i)
 {
  struct gchd *d = video_drvdata(f);
 
- /* Only the file handle that owns the capture buffers may switch inputs. */
- if (i != d->input && vb2_queue_is_busy(&d->vbq, f))
-  return -EBUSY;
  return gchd_set_input(d, i);
 }
 
@@ -2184,8 +2186,25 @@ static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
  struct gchd*d=video_drvdata(f);
  const struct gchd_mode *m;
 
- if (vb2_is_busy(&d->vbq))
-  return -EBUSY;
+ if (vb2_is_busy(&d->vbq)) {
+  u8 out;
+
+  /*
+   * Composite/S-video while buffers exist (any file handle): another
+   * output size is applied to the running capture by an encoder restart
+   * (mode worker); the negotiated format of the buffers stays.
+   */
+  if (d->input < 2 || x->fmt.pix.pixelformat != d->pixfmt)
+   return -EBUSY;
+  out = gchd_analog_out_for(x->fmt.pix.width, x->fmt.pix.height);
+  if (out != d->analog_out) {
+   d->analog_out = out;
+   gchd_settings_save(d);
+   if (d->streaming)
+    mod_delayed_work(system_wq, &d->mode_work, 0);
+  }
+  return gchd_gfmt(f, p, x);
+ }
 
  m = gchd_adjust_fmt(d, &x->fmt.pix);
  if (d->input >= 2)
