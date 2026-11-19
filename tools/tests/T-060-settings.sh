@@ -30,15 +30,14 @@ rate_near() {
 		echo "video_bitrate $v"
 	fi
 }
-# stretch_shot ON: 6 s with stretch_sd_input=ON; aspect ratio of the stream
-# and one picture (~/gchd-test-logs/stretch-ON.png).
+# stretch_shot ON: 6 s with stretch_sd_input=ON; aspect ratio of the stream.
 stretch_shot() {
-	local f=/tmp/gchd-stretch-$1.ts png="$HOME/gchd-test-logs/stretch-$1.png"
-	v4l2-ctl -d $D -v pixelformat=MPEG -c stretch_sd_input="$1"
+	local f=/tmp/gchd-stretch-$1.ts
+	v4l2-ctl -d $D -v pixelformat=MPEG
+	v4l2-ctl -d $D -c stretch_sd_input="$1"
 	timeout 6 cat $D > "$f"
 	ffprobe -v error -select_streams v:0 -show_entries \
-		stream=width,height,sample_aspect_ratio,display_aspect_ratio -of default=nw=1 "$f" | tr '\n' ' '
-	ffmpeg -v error -y -ss 4 -i "$f" -frames:v 1 "$png" && echo "picture $png"
+		stream=width,height,sample_aspect_ratio,display_aspect_ratio -of default=nw=1 "$f" | head -4 | tr '\n' ' '
 	rm -f "$f"
 }
 irq_clean() {
@@ -56,13 +55,17 @@ run bash "$INST" --all --yes --in-terminal < /dev/null
 prompt "Unplug the Elgato and plug it in again; wait 5 s."
 expect "v4l2-compliance: no failures" "Failed: 0" v4l2-compliance -d $D
 # Mode and bitrate in separate calls: a mode change loads that mode's bitrate.
-run v4l2-ctl -d $D -i 2 -v width=720,height=480,pixelformat=MPEG -c h264_profile=4,stretch_sd_input=0
+run v4l2-ctl -d $D -i 2
+run v4l2-ctl -d $D -v width=720,height=480,pixelformat=MPEG
+run v4l2-ctl -d $D -c h264_profile=4,stretch_sd_input=0
 run v4l2-ctl -d $D -c video_bitrate_mode=0
 run v4l2-ctl -d $D -c video_bitrate=10000000
 run v4l2-ctl -d $D -c video_bitrate_mode=1
 run v4l2-ctl -d $D -c video_bitrate=11250000
-# 480x360 keeps its own bitrate: 7.50 (15000 kbit/s).
-run v4l2-ctl -d $D -v width=480,height=360 -c video_bitrate=15000000
+# 480x360 keeps its own bitrate: 7.50 (15000 kbit/s). One option per call:
+# v4l2-ctl sets the controls (-c) before the input (-i) and format (-v).
+run v4l2-ctl -d $D -v width=480,height=360
+run v4l2-ctl -d $D -c video_bitrate=15000000
 run v4l2-ctl -d $D -v width=720,height=480
 expect "720x480: CBR 11250 again" "video_bitrate: 11250000" v4l2-ctl -d $D -C video_bitrate
 
@@ -85,7 +88,7 @@ prompt "Move the slider fully to the right and release it; wait 3 s."
 confirm "the slider stays at 11.25 (not 11.24)?"
 expect "CBR 11250 kbit/s exactly" "video_bitrate: 11250000" v4l2-ctl -d $D -C video_bitrate
 prompt "Output size 480x360; wait 3 s."
-confirm "'Output size changed.'; mode Variable (VBR) and locked, slider range 2.00 to 7.50 at 7.50 (480x360 keeps its own bitrate)?"
+confirm "only 'Output size changed.' (no 'Bitrate mode changed.'); mode Variable (VBR) and locked, slider range 2.00 to 7.50 at 7.50 (480x360 keeps its own bitrate)?"
 prompt "Move the slider to about 2.00 and release it; then Output size 640x480; wait 3 s."
 confirm "'Output size changed.'; Variable (VBR) at about 4.00 again (the VBR bitrate of the other sizes)?"
 expect "VBR 8000 kbit/s for 640x480" "^near" rate_near 8000
@@ -112,19 +115,20 @@ expect "composite group kept High" "h264_profile: 4" v4l2-ctl -d $D -C h264_prof
 run v4l2-ctl -d $D -i 0
 expect "HDMI group kept Main" "h264_profile: 2" v4l2-ctl -d $D -C h264_profile
 run v4l2-ctl -d $D -c h264_profile=4
-run v4l2-ctl -d $D -i 3 -c video_bitrate_mode=1
+run v4l2-ctl -d $D -i 3
+run v4l2-ctl -d $D -c video_bitrate_mode=1
 run v4l2-ctl -d $D -c video_bitrate=10000000
 prompt "Leave the window open; wait 3 s."
 confirm "the window now shows Input S-Video and CBR 10.00 by itself (changed from the terminal)?"
-run v4l2-ctl -d $D -i 2 -c stretch_sd_input=0
+run v4l2-ctl -d $D -i 2
+run v4l2-ctl -d $D -c stretch_sd_input=0
 
 step "OBS: the same settings, changes in both directions"
 prompt "In the settings window: Bitrate mode Variable (VBR), slider 5.00."
 expect "window: VBR about 10000 kbit/s (5.00 shown)" "^near" rate_near 10000
 prompt "Close OBS if open. Start OBS (the scene with the source 'Elgato Game Capture HD'); open the source's properties."
-run obs_log 5
-expect "plugin read the device's settings (VBR)" "properties: device settings read: input 2, output 0, mode 0" obs_log 5
 confirm "OBS: Composite, '720x480 NTSC / 720x576 PAL', Variable (VBR), about 5.00, Stretch off; mode list says just 'Constant (CBR)' / 'Variable (VBR)'?"
+expect "plugin read the device's settings (VBR)" "properties: device settings read: input 2, output 0, mode 0" obs_log 8
 prompt "In OBS's properties choose Bitrate mode Constant (CBR)."
 confirm "OBS's slider jumps to 10.00 (the last CBR bitrate), not 11.25?"
 prompt "Back to Variable (VBR); hold the slider and move it back and forth for about 10 s, ending at about 6.00; release; wait 3 s (properties still open)."
@@ -157,11 +161,17 @@ expect "settings stay after OBS closed (VBR about 8000 kbit/s)" "^near" rate_nea
 expect "VBR stays" "video_bitrate_mode: 0" v4l2-ctl -d $D -C video_bitrate_mode
 run obs_log 20
 
-step "stretch SD input: what changes in the stream"
-prompt "The console on composite, showing a picture with a clear shape (a menu, a circle). OBS closed, settings window: Composite, '720x480 NTSC / 720x576 PAL'."
-run stretch_shot 0
-run stretch_shot 1
-confirm "open ~/gchd-test-logs/stretch-0.png and stretch-1.png: does the picture differ in shape or borders (not only the game moving)? Note what differs."
+step "stretch SD input"
+prompt "The console on composite with a picture with a clear shape (a menu, a circle). OBS closed; settings window: Composite, '720x480 NTSC / 720x576 PAL', Stretch off."
+expect "stretch off: 4:3 aspect ratio in the stream" "sample_aspect_ratio=(10:11|12:11|8:9|16:15)" stretch_shot 0
+expect "stretch on: 16:9 aspect ratio in the stream" "sample_aspect_ratio=(40:33|16:11|32:27|64:45)" stretch_shot 1
 run v4l2-ctl -d $D -c stretch_sd_input=0
+prompt "Start OBS (source 'Elgato Game Capture HD' shown). In the settings window: Stretch on; wait 5 s."
+expect "OBS widens the stretched picture" "shown (8[0-9][0-9]x480|10[0-9][0-9]x576)" obs_log 3
+confirm "the picture in OBS is wider (16:9 shape; the source's red frame wider)?"
+prompt "Stretch off; wait 5 s."
+expect "OBS shows the normal picture" "shown 720x(480|576)" obs_log 3
+confirm "the picture is back to its normal shape and size?"
+prompt "Close OBS."
 expect "no USB interrupt disabled by the kernel" "^clean" irq_clean
 prompt "In the settings window choose Bitrate mode Constant (CBR), slider 11.25; close the window."
