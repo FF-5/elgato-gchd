@@ -134,8 +134,10 @@ userspace service turns the driver's stream into such a device.
 22. (Maintainer, 2026-11-19) Each bitrate mode keeps its last bitrate per
     group: VBR → CBR returns to the last CBR bitrate, not the maximum.
 23. (Maintainer, 2026-11-19) Labels: bitrate mode "Constant (CBR)" /
-    "Variable (VBR)" only; output size names are the resolutions only
-    (720x480 or 720x576, 640x480, 480x360).
+    "Variable (VBR)" only; output sizes "720x480 NTSC / 720x576 PAL",
+    "640x480", "480x360" (no "Source size", no detection).
+25. (Maintainer, 2026-11-19) A bitrate slider is applied once, when it is
+    released (users set exact values and may drag for a long time).
 24. (Maintainer, 2026-11-19) Settings window: the status text on the
     line of the Close button; every change (also output size) reported
     there.
@@ -176,7 +178,10 @@ change sends only the mode and shows the bitrate the driver remembered
 for it. Installed with the driver part (offers python3-gi,
 gir1.2-gtk-3.0, v4l-utils). Checked here on a virtual screen with a
 stand-in v4l2-ctl that keeps groups and per-mode bitrates (labels,
-hidden rows, mode switch VBR → CBR back to 9.00, output-size message).
+hidden rows, mode switch VBR → CBR back to 9.00, output-size message,
+a 3 s drag applied once on release). The slider is applied when the
+mouse button is released; keys and the mouse wheel 0.4 s after the last
+step.
 The text menu `gchd-settings` shows the same items.
 
 Setting groups (driver): `grp[2]` (HDMI/component, composite/S-video)
@@ -187,11 +192,18 @@ parameters `bitrate_cbr`, `bitrate_vbr`, `hd_bitrate_mode`,
 files. A mode change loads that mode's bitrate into the bitrate control;
 an input change to the other group loads that group into the controls.
 
-OBS plugin: a worker thread does all device calls: applies a change 0.5 s
-after the last edit (OBS calls the source's update for every slider step
-while the dialog is open), only the values that changed against the last
-read of the device, then reads the device back; every 1.5 s it takes over
-changes made elsewhere and refreshes an open properties dialog.
+OBS plugin: the properties defer their updates
+(`OBS_PROPERTIES_DEFER_UPDATE`): OBS 30 calls the source's update once on
+OK and not at all on Cancel (without the flag it calls it for every
+slider step; a plugin cannot see the slider's release). A worker thread
+does all device calls: applies the values changed in the dialog, then
+reads the device back; every 1.5 s it takes over changes made elsewhere
+into the settings (only the changed keys, without update, so an open
+dialog keeps the user's other edits). The dialog fills in the mode,
+bitrate and profile the driver keeps when the user changes the mode or
+the input group (from the plugin's last reads); such filled-in values are
+not sent. Checked offline: callback sequence (CBR → 9.00, VBR → 4.00,
+HDMI → its own values), the defer flag, stream decoding.
 
 Installer (`install-driver.sh`): asks what to install (everything,
 kernel driver, OBS plugin) or takes `--all`, `--driver`, `--obs`; the
@@ -257,7 +269,8 @@ bash gchd-test.sh T-060-settings --branch feat/app-bridge
   test now accepts ±60 kbit/s. (3) OBS calls the source's update for each
   slider step while the properties are open, so every step was applied
   (encoder restarts, ioctls in OBS's UI thread): now a worker applies
-  0.5 s after the last change. Requests (decisions 21–24) implemented.
+  0.5 s after the last change (replaced: applied on OK, decision 25).
+  Requests (decisions 21–25) implemented.
 - Benchmark platform: driver module parameter `timing` (off by default)
   logs `gchd-timing: <µs> <event>` at requests (capture start/stop,
   control, output size, input), source changes (mode, family, detected),

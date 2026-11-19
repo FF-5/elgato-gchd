@@ -16,18 +16,20 @@ properties.
 - **Deinterlacing:** OBS deinterlacing, set to Yadif 2x, top field first
   when the source is created (Deinterlacing in the source's context menu).
 - **Properties:** input (HDMI, component, composite, S-video), output size
-  of composite and S-video (720 × 480 or 720 × 576 after the last detected
-  standard, 640 × 480, 480 × 360), bitrate mode and bitrate, H.264
-  profile, stretch of SD input. Output size, bitrate mode, bitrate and
-  stretch are hidden for HDMI and component. They are the driver's
-  settings, shared with the settings window and other programs: the
-  properties show the device's current values and follow changes made
-  elsewhere (checked every 1.5 s); a change is applied to the device
-  0.5 s after the last edit (a slider being moved is applied once), also
-  while capturing, and remembered by the driver. Only changed values are
-  sent, so values the properties still show from before never overwrite a
-  change made elsewhere. A new bitrate mode is sent alone: the driver then
-  uses the bitrate last set in that mode, and the slider shows it.
+  of composite and S-video (720x480 NTSC / 720x576 PAL, 640 × 480,
+  480 × 360), bitrate mode and bitrate, H.264 profile, stretch of SD
+  input. Output size, bitrate mode, bitrate and stretch are hidden for
+  HDMI and component. They are the driver's settings, shared with the
+  settings window and other programs: the properties show the device's
+  values when they open, and the source takes over changes made elsewhere
+  every 1.5 s. Changes are applied with OK (also while capturing; Cancel
+  changes nothing) and remembered by the driver; OBS does not tell a
+  plugin when a slider is released, so the dialog applies nothing while
+  it is open. Only the values changed in the dialog are sent, so values it
+  still shows from before never overwrite a change made elsewhere. A
+  change of bitrate mode or input group shows the bitrate (and mode,
+  profile) the driver keeps for it; a new bitrate mode is sent alone and
+  the driver uses its kept bitrate unless the slider was moved.
 - **Bitrate:** shown in Mbit/s as in the observed settings
   (`docs/composite.md` §10): VBR as the average (half the bitrate),
   3.00–7.23 for the source size and 640 × 480, 2.00–7.50 for 480 × 360

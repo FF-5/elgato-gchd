@@ -35,12 +35,6 @@ DEV=${1:-$(find_dev)} || die "no Elgato Game Capture HD found (driver loaded, de
 
 ctrl_get() { v4l2-ctl -d "$DEV" -C "$1" 2>/dev/null | sed -n 's/.*: //p'; }
 input_get() { v4l2-ctl -d "$DEV" -I 2>/dev/null | sed -n 's/^Video input *: *\([0-9]\).*/\1/p'; }
-# 720x576 after a 50 Hz composite/S-video standard (V4L2_STD_625_50), else 720x480.
-source_size() {
-	local std
-	std=$(v4l2-ctl -d "$DEV" -S 2>/dev/null | sed -n 's/.*= *0x\([0-9a-fA-F]*\).*/\1/p')
-	if [ -n "$std" ] && (( 0x$std & 0x00ff06ff )); then echo 720x576; else echo 720x480; fi
-}
 size_get() { v4l2-ctl -d "$DEV" -V 2>/dev/null | sed -n 's#.*Width/Height *: *\([0-9]*\)/\([0-9]*\).*#\1x\2#p'; }
 
 # Run a v4l2-ctl change; on "busy" explain that a program is capturing.
@@ -72,7 +66,7 @@ menu_output() {
 	case "$cur" in 640x480) n=1 ;; 480x360) n=2 ;; *) n=0 ;; esac
 	n=$(whiptail --title "$TITLE" --default-item "$n" --menu \
 		"Output size (composite and S-video)" 14 60 3 \
-		0 "$(source_size)" \
+		0 "720x480 NTSC / 720x576 PAL" \
 		1 "640x480" 2 "480x360" 3>&1 1>&2 2>&3) || return
 	case "$n" in
 	1) w=640 h=480 ;; 2) w=480 h=360 ;; *) w=720 h=480 ;;
