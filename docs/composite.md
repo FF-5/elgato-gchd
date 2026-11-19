@@ -248,7 +248,7 @@ restarts the encoder (§4 steps 5–8) unless noted.
 | Standard, lower bitrate | `v_rate_mode = 1`, `v_max_cpb_delay = 10`; for example `v_bitrate = 6000`, max `5400`, average `3000`, min `600`, `system_rate = 6898`; or `14040` / `12636` / `7020` / `3510`, `system_rate = 15524` |
 | Standard, 640 × 480 | 640 × 480, `v_ip_format = 2`, `v_gop_size = 6`, level 30, transport output 2 |
 | Mobile | 480 × 360, `v_ip_format = 2`, `v_gop_size = 6`, `v_rate_mode = 1`, `v_max_cpb_delay = 10`, level 22, transport output 2; bitrate from `4000` / `3600` / `2000` / `0` (`system_rate = 4753`) to `15000` / `13500` / `7500` / `3750` (`system_rate = 16554`) |
-| Stretch standard-definition input | `v_in_source_type = 2` instead of `3`; nothing else changes |
+| Stretch standard-definition input | `v_in_source_type = 2` instead of `3`; nothing else changes. The encoded picture keeps its size; the stream's sample aspect ratio becomes 40:33 instead of 10:11 at 720 × 480 (display aspect 16:9 instead of 4:3), so players that follow it show the picture horizontally stretched |
 | Cropping (overscan) | no control transfers; bulk OUT (`0x02`) not recorded |
 | HD output sizes (1280 × 720, 1920 × 1080) | no control transfers, the encoder stays at 720 × 576; bulk OUT (`0x02`) not recorded |
 
@@ -260,8 +260,12 @@ Bitrate values follow the setting B (kbit/s, `v_bitrate`): maximum
 application's bitrate slider shows the average B/2 for VBR; its upper end
 is CBR (`v_rate_mode 0`, `v_max_cpb_delay 3`) at B = 11250, shown as
 11.3 Mbit/s, every other position VBR (`1`, `10`): standard and 640 × 480
-from B = 6000 (shown 3.0) to about 14000, mobile 4000 to 15000 (always
-VBR). The encoder is restarted for every change.
+from B = 6000 (shown 3.0) to 14460 (shown 7.2; the middle of the slider,
+shown about 7.0, is VBR with B between 13980 and 14460), mobile 4000 to
+15000 (always VBR; changing from mobile to 640 × 480 sets CBR 11250 again).
+CBR occurs only at B = 11250. Positions between the middle and the CBR end
+of the slider were not recorded (**Unknown** whether VBR goes above 14460).
+The encoder is restarted for every change.
 
 GOP size: 12 (50 Hz) or 14 (60 Hz) for the standard size, 6 (50 Hz) or 8
 (60 Hz) for 640 × 480 and 480 × 360. `v_vinpelclk` is 1 with a 50 Hz source

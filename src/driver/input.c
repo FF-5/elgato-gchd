@@ -1251,6 +1251,8 @@ static void gchd_analog_note_std(struct gchd *d, u8 family)
  if (d->input < 2)
   return;
  d->analog_std[d->input - 2] = family == 7 ? V4L2_STD_PAL : V4L2_STD_NTSC_M;
+ /* Remembered across module loads (module parameters, udev rule). */
+ gchd_remember_std(d);
 }
 
 /* 0x88:0A for the decoder standard reported in 0x88:E7; 0 if unknown. */

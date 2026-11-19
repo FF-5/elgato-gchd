@@ -164,6 +164,17 @@ struct gchd {
  u32 bitrate;
  u8 h264_profile;
  u8 h264_level;
+ /* Encoder settings per group: [0] HDMI/component, [1] composite/S-video. */
+ struct gchd_group {
+  u16 bitrate[3];  /* kbit/s, 0 automatic: [0] VBR, [1] CBR, [2] 480 x 360 (VBR) */
+  u8 bitrate_mode; /* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
+  u8 profile;      /* V4L2_MPEG_VIDEO_H264_PROFILE_* */
+  u8 level;        /* level x10, 0 automatic */
+ } grp[2];
+ struct v4l2_ctrl *ctrl_bitrate, *ctrl_mode, *ctrl_profile, *ctrl_level;
+ bool ctrl_sync; /* controls set by the driver itself */
+ bool mark_rx;   /* timing: mark the first stream data after START */
+ bool mark_user; /* timing: mark the first buffer after START */
 };
 
 int gchd_enable_analog(struct gchd *);
@@ -219,5 +230,8 @@ void gchd_ring_free(struct gchd_ring *);
 int gchd_v4l2_register(struct gchd *);
 void gchd_v4l2_unregister(struct gchd *);
 extern const struct v4l2_file_operations vb2_fops;
+void gchd_remember_std(struct gchd *);
+__printf(2, 3) void gchd_mark(struct gchd *, const char *, ...);
+void gchd_mark_start(struct gchd *);
 
 #endif

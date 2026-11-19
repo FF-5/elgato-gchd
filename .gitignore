@@ -1,5 +1,5 @@
 build
-# kernel build files (builds in src/)
+# kernel build files (builds in src/driver/)
 *.o
 *.ko
 *.mod

@@ -1,0 +1,8 @@
+# Fixed name for the video device of the elgato_gchd kernel driver:
+# /dev/elgato-gchd (for example as the input of OBS's Media Source with the
+# input format "mpegts", or for ffmpeg/ffplay).
+#
+# Install: copy to /etc/udev/rules.d/ and run "udevadm control --reload",
+# then plug the device in again.
+
+SUBSYSTEM=="video4linux", KERNEL=="video*", DRIVERS=="elgato_gchd", SYMLINK+="elgato-gchd"

@@ -1,0 +1,137 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+#
+# gchd-settings: settings of the Elgato Game Capture HD (elgato_gchd
+# driver) in a text menu: input, output size, bitrate, bitrate mode,
+# H.264 profile, stretch of SD input. The driver remembers the settings.
+#
+#   gchd-settings [DEVICE]      DEVICE: default /dev/elgato-gchd, else the
+#                               first device of the driver
+#
+# Changes apply at once, also to a running capture.
+#
+# Needs: whiptail (package whiptail), v4l2-ctl (package v4l-utils).
+
+set -u
+
+TITLE="Elgato Game Capture HD"
+
+die() { echo "gchd-settings: $*" >&2; exit 1; }
+
+find_dev() {
+	local v drv
+	[ -e /dev/elgato-gchd ] && { echo /dev/elgato-gchd; return 0; }
+	for v in /sys/class/video4linux/video*; do
+		drv=$(basename "$(readlink -f "$v/device/driver" 2>/dev/null)")
+		[ "$drv" = elgato_gchd ] && { echo "/dev/$(basename "$v")"; return 0; }
+	done
+	return 1
+}
+
+command -v whiptail >/dev/null || die "whiptail is needed (package whiptail)"
+command -v v4l2-ctl >/dev/null || die "v4l2-ctl is needed (package v4l-utils)"
+DEV=${1:-$(find_dev)} || die "no Elgato Game Capture HD found (driver loaded, device plugged in?)"
+[ -e "$DEV" ] || die "$DEV not found"
+
+ctrl_get() { v4l2-ctl -d "$DEV" -C "$1" 2>/dev/null | sed -n 's/.*: //p'; }
+input_get() { v4l2-ctl -d "$DEV" -I 2>/dev/null | sed -n 's/^Video input *: *\([0-9]\).*/\1/p'; }
+size_get() { v4l2-ctl -d "$DEV" -V 2>/dev/null | sed -n 's#.*Width/Height *: *\([0-9]*\)/\([0-9]*\).*#\1x\2#p'; }
+
+# Run a v4l2-ctl change; on "busy" explain that a program is capturing.
+apply() {	# apply DESCRIPTION ARGS...
+	local desc=$1 out
+	shift
+	if out=$(v4l2-ctl -d "$DEV" "$@" 2>&1); then
+		return 0
+	fi
+	if printf '%s' "$out" | grep -qi busy; then
+		whiptail --title "$TITLE" --msgbox "$desc cannot be changed while a program captures from the device. Stop the capture (for example hide the source in OBS) and try again." 10 70
+	else
+		whiptail --title "$TITLE" --msgbox "$desc: $out" 10 70
+	fi
+	return 1
+}
+
+menu_input() {
+	local cur n
+	cur=$(input_get)
+	n=$(whiptail --title "$TITLE" --default-item "${cur:-2}" --menu "Input" 14 50 4 \
+		0 HDMI 1 Component 2 Composite 3 S-Video 3>&1 1>&2 2>&3) || return
+	apply "The input" -i "$n"
+}
+
+menu_output() {
+	local cur n w h
+	cur=$(size_get)
+	case "$cur" in 640x480) n=1 ;; 480x360) n=2 ;; *) n=0 ;; esac
+	n=$(whiptail --title "$TITLE" --default-item "$n" --menu \
+		"Output size (composite and S-video)" 14 60 3 \
+		0 "720x480 NTSC / 720x576 PAL" \
+		1 "640x480" 2 "480x360" 3>&1 1>&2 2>&3) || return
+	case "$n" in
+	1) w=640 h=480 ;; 2) w=480 h=360 ;; *) w=720 h=480 ;;
+	esac
+	apply "The output size" -v "width=$w,height=$h"
+}
+
+menu_bitrate() {
+	local cur kb
+	cur=$(ctrl_get video_bitrate)
+	kb=$(whiptail --title "$TITLE" --inputbox \
+		"Bitrate in kbit/s (2000-15000 for composite/S-video)" 10 60 \
+		"$((${cur:-11250000} / 1000))" 3>&1 1>&2 2>&3) || return
+	[[ "$kb" =~ ^[0-9]+$ ]] || { whiptail --msgbox "Not a number: $kb" 8 40; return; }
+	apply "The bitrate" -c "video_bitrate=$((kb * 1000))"
+}
+
+menu_mode() {
+	local cur n
+	cur=$(ctrl_get video_bitrate_mode)
+	n=$(whiptail --title "$TITLE" --default-item "${cur:-1}" --menu "Bitrate mode" 12 50 2 \
+		1 "Constant (CBR)" 0 "Variable (VBR)" 3>&1 1>&2 2>&3) || return
+	apply "The bitrate mode" -c "video_bitrate_mode=$n"
+}
+
+menu_profile() {
+	local cur n
+	cur=$(ctrl_get h264_profile)
+	n=$(whiptail --title "$TITLE" --default-item "${cur:-4}" --menu "H.264 profile" 13 50 3 \
+		4 High 2 Main 0 Baseline 3>&1 1>&2 2>&3) || return
+	apply "The H.264 profile" -c "h264_profile=$n"
+}
+
+menu_stretch() {
+	local cur n
+	cur=$(ctrl_get stretch_sd_input)
+	n=$(whiptail --title "$TITLE" --default-item "${cur:-0}" --menu \
+		"Stretch SD input (composite and S-video)" 12 50 2 \
+		0 Off 1 On 3>&1 1>&2 2>&3) || return
+	apply "Stretch" -c "stretch_sd_input=$n"
+}
+
+while :; do
+	inputs=(HDMI Component Composite S-Video)
+	i=$(input_get)
+	items=(input "Input: ${inputs[${i:-0}]}")
+	# Output size, bitrate and stretch: composite/S-video only.
+	if [ "${i:-0}" -ge 2 ]; then
+		items+=(output "Output size: $(size_get)"
+			bitrate "Bitrate: $(( $(ctrl_get video_bitrate || echo 0) / 1000 )) kbit/s"
+			mode "Bitrate mode: $( [ "$(ctrl_get video_bitrate_mode)" = 0 ] && echo VBR || echo CBR )")
+	fi
+	items+=(profile "H.264 profile: $(ctrl_get h264_profile)")
+	if [ "${i:-0}" -ge 2 ]; then
+		items+=(stretch "Stretch SD input: $( [ "$(ctrl_get stretch_sd_input)" = 1 ] && echo on || echo off )")
+	fi
+	choice=$(whiptail --title "$TITLE ($DEV)" --menu "Settings (remembered by the driver)" 18 70 7 \
+		"${items[@]}" quit "Quit" 3>&1 1>&2 2>&3) || break
+	case "$choice" in
+	input) menu_input ;;
+	output) menu_output ;;
+	bitrate) menu_bitrate ;;
+	mode) menu_mode ;;
+	profile) menu_profile ;;
+	stretch) menu_stretch ;;
+	*) break ;;
+	esac
+done

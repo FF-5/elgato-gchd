@@ -457,6 +457,16 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
   r = gchd_ctrl_write(d, GCHD_REQ_SCMD, 0, 0, payload_old, 6);
  if (r)
   return r;
+ if (command == GCHD_SCMD_STATE_CHANGE)
+  gchd_mark(d, "scmd %s", data == GCHD_STATE_START ? "START" :
+                           data == GCHD_STATE_STOP ? "STOP" :
+                           data == GCHD_STATE_NULL ? "NULL" : "STATE");
+ else
+  gchd_mark(d, "scmd %s mode=%02x", command == GCHD_SCMD_IDLE ? "IDLE" :
+                                    command == GCHD_SCMD_INIT ? "INIT" : "OTHER",
+            mode);
+ if (command == GCHD_SCMD_STATE_CHANGE && data == GCHD_STATE_START)
+  gchd_mark_start(d);
 
  if (d->family == GCHD_FAMILY_HDNEW &&
      (command == GCHD_SCMD_IDLE || command == GCHD_SCMD_INIT ||
@@ -647,6 +657,8 @@ int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
   return r;
 
  r = gchd_complete_state_change(d, current_state, expected);
+ if (!r)
+  gchd_mark(d, "state 0x%02x reached", expected);
  if (r && command == GCHD_SCMD_STATE_CHANGE && expected == GCHD_STATE_START) {
   u16 state = 0xffff, enable_state = 0xffff, enable = 0xffff;
   u16 completion = 0xffff;
@@ -761,6 +773,7 @@ int gchd_stream_stop(struct gchd *d)
  if (r) return r;
  r = gchd_complete_state_change_draining(d, GCHD_STATE_START, GCHD_STATE_NULL);
  if (r) return r;
+ gchd_mark(d, "state NULL reached");
  r = gchd_drain_stream(d, 20);
  if (r) return r;
 
@@ -768,6 +781,7 @@ int gchd_stream_stop(struct gchd *d)
  if (r) return r;
  r = gchd_complete_state_change_draining(d, GCHD_STATE_NULL, GCHD_STATE_STOP);
  if (r) return r;
+ gchd_mark(d, "state STOP reached");
  /* Successful STOP keeps input configuration for the next STREAMON. */
  if (READ_ONCE(d->rx_thread))
   return 0;
@@ -1093,6 +1107,7 @@ int gchd_hw_init(struct gchd *d)
 
 processor_state_ready:
  dev_info(&d->intf->dev, "device idle, processor state 0x%06x\n", magic);
+ gchd_mark(d, "firmware ready");
  return 0;
 }
 

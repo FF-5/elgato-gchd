@@ -2,7 +2,7 @@
 
 Linux kernel driver for the Elgato Game Capture HD (`0fd9:0044`,
 `0fd9:004e`, `0fd9:0051`, `0fd9:005d`). The USB protocol is described in
-[`../docs`](../docs).
+[`../../docs`](../../docs).
 
 > **Status:** composite and S-video are supported (NTSC and PAL, all modes,
 > output sizes, bitrate); component and HDMI are in development.
@@ -32,8 +32,8 @@ sudo insmod elgato_gchd.ko
 DKMS:
 
 ```sh
-sudo dkms add ./src
-sudo dkms install elgato-gchd/0.5.8
+sudo dkms add ./src/driver
+sudo dkms install elgato-gchd/0.5.9
 ```
 
 ## Module parameters
@@ -45,27 +45,51 @@ sudo dkms install elgato-gchd/0.5.8
 | `signal_active_retries` | 3 | Signal measurement retries when timing is detected. |
 | `signal_inactive_retries` | 1 | Signal measurement retries when no timing is detected. |
 | `signal_poll_delay_ms` | 200 | Delay between signal measurement batches. |
+| `timing` | `N` | Log latency marks (`gchd-timing: <µs> <event>`): requests, device commands and their completion, source changes, first stream data and first buffer after START. |
 | `input` | 0 | Input at load: 0 HDMI, 1 component, 2 composite, 3 S-video. |
-| `output` | 0 | Composite/S-video output size: 0 source size, 1 640 × 480, 2 480 × 360. |
+| `output` | 0 | Composite/S-video output size: 0 source size (720 × 480 or 720 × 576), 1 640 × 480, 2 480 × 360. |
 | `format` | 0 | Pixel format: 0 H.264, 1 MPEG transport stream. |
-| `bitrate` | 0 | Video bitrate in kbit/s, 0 automatic. |
-| `bitrate_mode` | 1 | 0 VBR, 1 CBR. |
+| `bitrate_mode` | 1 | Composite/S-video bitrate mode: 0 VBR, 1 CBR. |
+| `bitrate_cbr` | 0 | Composite/S-video: last CBR bitrate in kbit/s, 0 automatic. |
+| `bitrate_vbr` | 0 | Composite/S-video: last VBR bitrate in kbit/s (the control value, twice the average), 0 automatic. |
+| `bitrate_small` | 0 | Composite/S-video: last bitrate of the 480 × 360 output (VBR only) in kbit/s, 0 automatic. |
 | `stretch` | 0 | Stretch standard-definition input (composite/S-video). |
-| `h264_profile` | 4 | V4L2 H.264 profile: 0 baseline, 2 main, 4 high. |
-| `h264_level` | 0 | H.264 level × 10 (30–51), 0 automatic. |
+| `h264_profile` | 4 | Composite/S-video H.264 profile (V4L2 value): 0 baseline, 2 main, 4 high. |
+| `h264_level` | 0 | Composite/S-video H.264 level × 10 (30–51), 0 automatic. |
+| `std_composite` | 0 | Last standard detected on composite: 0 unknown, 1 NTSC (60 Hz), 2 PAL (50 Hz); sets the format before the first detection. |
+| `std_svideo` | 0 | The same for S-video. |
+| `hd_bitrate_mode` | 1 | HDMI/component bitrate mode: 0 VBR, 1 CBR. |
+| `hd_bitrate_cbr` | 0 | HDMI/component: last CBR bitrate in kbit/s, 0 automatic. |
+| `hd_bitrate_vbr` | 0 | HDMI/component: last VBR bitrate in kbit/s, 0 automatic. |
+| `hd_h264_profile` | 4 | HDMI/component H.264 profile (V4L2 value). |
+| `hd_h264_level` | 0 | HDMI/component H.264 level × 10 (30–51), 0 automatic. |
+| `bitrate` | 0 | Older settings files: the composite/S-video bitrate in kbit/s for the mode in use; read only when `bitrate_cbr` and `bitrate_vbr` are 0. |
+
+### Setting groups
+
+Composite and S-video share one group of settings, HDMI and component
+another: bitrate mode, the bitrate of each mode, H.264 profile and level.
+Switching between composite and S-video changes none of them; switching to
+HDMI or component loads that group's values into the controls (and back).
+The driver keeps a bitrate per mode, and one for the 480 × 360 output
+(VBR only, its own range): a change of `video_bitrate_mode` or of the
+output size loads the bitrate last set there, and `video_bitrate` then
+changes the bitrate in use. The bitrate control is volatile: reading it
+always gives the bitrate in use. Output size and stretch apply to composite and
+S-video only.
 
 ## Remembered settings
 
-The parameters from `input` to `h264_level` hold the settings in use. When
-an application changes one of them, the driver updates the parameters and
-sends a `change` uevent with all values. The udev rule
-[`../udev-rules/56-elgato-gchd-settings.rules`](../udev-rules/56-elgato-gchd-settings.rules)
+The parameters from `input` to `hd_h264_level` hold the settings in use. When
+an application changes one of them (or a new standard is detected), the
+driver updates the parameters and sends a `change` uevent with all values. The udev rule
+[`../../udev-rules/56-elgato-gchd-settings.rules`](../../udev-rules/56-elgato-gchd-settings.rules)
 writes them to `/etc/modprobe.d/elgato-gchd-settings.conf`, so the next load
 (unplug and replug, module reload, reboot) starts with the same settings.
 Without settings (first use) the driver starts with HDMI and the defaults.
 
 ```sh
-sudo cp ../udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
+sudo cp ../../udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
 ```
 
@@ -77,7 +101,7 @@ hand.
 
 Inputs: HDMI (0), Component (1), Composite (2), S-Video (3). The hardware is
 initialized on `VIDIOC_STREAMON`. The output format is described in
-[`../docs/video-output.md`](../docs/video-output.md).
+[`../../docs/video-output.md`](../../docs/video-output.md).
 
 ## Source layout
 

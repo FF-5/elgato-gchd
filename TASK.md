@@ -1,86 +1,59 @@
-# TASK T-060 — guvcview, OBS and similar applications
+# TASK T-096 — Stretch SD input as in the Windows software
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** analysis; maintainer decisions needed (see "Open questions")
-- **Type:** new userspace component (service) next to the driver
-- **Branch:** `feat/app-bridge` (from `dev` 0.5.8), created when the
-  decisions are made
-- **TODO items:** T-060 (stage 1b)
+- **Status:** waiting for evidence from the Windows software (TODO R12)
+- **Type:** fix (driver and/or OBS plugin)
+- **Branch:** `fix/stretch` (from `dev` 0.5.9), created when the evidence
+  is in
+- **TODO items:** T-096 (stage 1b)
 
 ## Why
 
-The driver delivers H.264 or an MPEG transport stream (H.264 + MP2 audio).
-guvcview, OBS's V4L2 source, browsers and video-call programs expect a
-V4L2 device with uncompressed frames (YUYV/NV12) and a separate audio
-source. Decoding is not allowed in the kernel (RULES E2), so a small
-userspace service turns the driver's stream into such a device.
+"Stretch SD input" is meant for games that offer a 16:9 output by
+squashing the picture horizontally into 4:3, so that a widescreen TV
+stretches it back. In the Windows software the output size stays the same
+and the picture is visibly stretched (maintainer, 2026-11-19). With the
+driver, OBS's Media Source shows no difference.
 
-## Goal (acceptance criteria, draft)
+## What is known
 
-1. A second video device, named "Elgato Game Capture HD", offers
-   uncompressed frames (YUYV and/or NV12) at a fixed size for the session,
-   deinterlaced (480i/576i) or line-doubled (240p/288p).
-2. An audio source of the same name in PipeWire/PulseAudio, in sync with
-   the picture.
-3. The service starts when an application opens the device and releases
-   the capture device when no application uses it (or after a delay).
-4. A source change (NTSC ↔ PAL, 480i ↔ 240p, console swap) does not change
-   the format the applications see; the picture is scaled and the aspect
-   ratio kept.
-5. The input can be selected without `v4l2-ctl` (the driver's menu control
-   was removed in T-066).
-6. Works in guvcview and OBS (V4L2 source and audio capture) with PS1 (PAL)
-   and N64 (NTSC) on composite; installed by `install-driver.sh`, removed by
-   `--uninstall`.
+- The USB recording `traces/composite/gchd_288p_stretch_input_small`:
+  the only change is the encoder field `v_in_source_type = 2` instead of
+  `3` (`docs/composite.md §10`). The driver sends the same.
+- Driver capture (T-060-settings, c8c8944, NTSC N64, 720 × 480): the
+  encoded size stays 720 × 480; the stream's sample aspect ratio changes
+  from 10:11 (display 4:3) to 40:33 (display 16:9), also when stretch is
+  switched while capturing. Players that follow the aspect ratio
+  (ffplay at the start of a stream) show it stretched; OBS's Media Source
+  and OBS itself ignore it.
+- The OBS plugin widens a picture with a 16:9 aspect ratio itself
+  (720 × 480 → 872 × 480, 720 × 576 → 1048 × 576), so the source in OBS
+  gets wider (accepted as a stop-gap, T-060). The maintainer is not sure
+  this matches the Windows software.
 
-## Plan (draft)
+## Evidence needed (TODO R12)
 
-1. Building blocks: `v4l2loopback` (DKMS package of the distributions,
-   `exclusive_caps=1`, `card_label`), ffmpeg (or GStreamer) for decoding,
-   deinterlacing (`yadif`/`bwdif`) and scaling, a PipeWire/PulseAudio
-   pipe or null sink for the audio.
-2. Prototype as a shell script with ffmpeg: driver TS node → decode →
-   v4l2loopback + audio; measure latency and CPU load.
-3. Start on demand: systemd user service or udev rule; detection of
-   an application opening the loopback device (v4l2loopback events, or the
-   service always running while the Elgato is plugged in).
-4. Input selection: a small command, a desktop entry, or a control on the
-   loopback device.
-5. Installer integration and documentation (`docs/`).
+With a picture of known shape (a menu, a circle; best a game with a 16:9
+option), in the Windows software:
 
-## Open questions (maintainer)
+1. Screenshots of the preview with stretch off and on.
+2. A short recording saved by the software with stretch off and one with
+   it on (the files themselves: their size and aspect ratio show whether
+   the software rescales the picture or only keeps the aspect ratio).
 
-1. Language of the service: shell + ffmpeg (simplest, depends on the
-   ffmpeg command line), Python + GStreamer, or C with libav*. Proposal:
-   start with shell + ffmpeg, change only if latency or the start/stop
-   behaviour needs it.
-2. Always running while the device is plugged in (simple, the device and
-   the encoder run all the time), or only while an application reads the
-   loopback device (more work, depends on v4l2loopback)? Proposal: on
-   demand.
-3. Output size of the loopback device: 1280×720 (fits the later HDMI
-   modes, scaled up from SD) or the source size 720×480/576 (no
-   scaling, but the size depends on the first source)? Proposal: 1280×720
-   now, configurable.
-4. Folder name in the repository (proposal: `service/`).
+## Goal (acceptance criteria, draft — after the evidence)
+
+1. With stretch on, the picture looks as in the Windows software in the
+   OBS plugin, OBS's Media Source (`/dev/elgato-gchd`) and ffplay.
+2. With stretch off, nothing changes from today.
+3. Output size settings unchanged.
 
 ## Hardware test (maintainer)
 
-Written with the implementation.
+Written once the evidence is in.
 
 ## Findings
 
-- T-066 accepted: gchd-test.sh T-066 6/6 PASS on 978d3fc
-  (`v4l2-compliance` 0 failures; DV timings on HDMI without a signal; DV
-  timings list; power-present 0; PAL composite 720×576 capture; input
-  change from another process refused). Merged as 0.5.8.
-
 ## Maintainer comments
 
-1. I want to aim for performance so ultimately I would want what is fastest. As long as it's modular enough that can be replaced by something else, I'm fine with your suggestion for now.
-2. Yes, having the device for too long (specially when nothing is being captured) makes it quite hot, so only when it's needed.
-3. Ideally I would like it to be the same as the source. Can't this be restarted and reconfigured on every input/output-res change?
-4. Yes, I'm fine with this name.
-
-Can you also check for obsolete items in TODO.md? Besides the already deleted branches, there are some thing under tooling that seems to be obsolete and traces that are no longer needed that are just making the TODO unnecessary long.

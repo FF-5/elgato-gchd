@@ -39,16 +39,28 @@ tested. Not supported: Game Capture HD60, HD60 S, HD60 Pro.
    ./install-driver.sh
    ```
 
-   It checks for the firmware in `/lib/firmware/gchd/` and extracts it
-   from the installer file when missing (it stops if that fails), builds
-   the driver in `build/`, installs it with DKMS (when available; the
-   driver is then rebuilt after kernel updates), installs the udev rule
-   that remembers the settings, and loads the driver. Missing packages
-   (kernel headers, compiler, `dkms`, `7z`) are named and can be
+   It asks what to install: everything, the kernel driver only, or the
+   OBS plugin only (`--all`, `--driver`, `--obs` choose without asking).
+
+   - **Kernel driver:** checks for the firmware in `/lib/firmware/gchd/`
+     and extracts it from the installer file when missing (it stops if
+     that fails), builds the driver in `build/`, installs it with DKMS
+     (when available; the driver is then rebuilt after kernel updates),
+     installs the udev rules (remembered settings, device name
+     `/dev/elgato-gchd`) and the settings window (application menu) and
+     text menu, and loads the driver.
+   - **OBS plugin:** builds the plugin in `build/obs-plugin` and installs
+     it for the current user (`~/.config/obs-studio/plugins`). It needs
+     the kernel driver and an OBS installed from the distribution (an OBS
+     Flatpak cannot load it).
+
+   Missing packages (kernel headers, compiler, `dkms`, `7z`, `whiptail`,
+   `v4l-utils`, the GTK 3 Python bindings,
+   the OBS and FFmpeg development packages, `cmake`) are named and can be
    installed on request.
 
-Remove the driver with `./install-driver.sh --uninstall` (the firmware is
-kept).
+Remove everything with `./install-driver.sh --uninstall`, or one part with
+`--uninstall --driver` or `--uninstall --obs` (the firmware is kept).
 
 ### Manual installation
 
@@ -61,30 +73,57 @@ sudo firmware/extract_firmware_windows path/to/GameCaptureSetup.msi
 Driver with DKMS, and the udev rule:
 
 ```sh
-sudo dkms add ./src
-sudo dkms install elgato-gchd/0.5.8
+sudo dkms add ./src/driver
+sudo dkms install elgato-gchd/0.5.9
 sudo modprobe elgato_gchd
-sudo cp udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
+sudo cp udev-rules/55-elgato-gchd-device.rules udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
 ```
 
-Firmware files and a build without DKMS: see [`src/README.md`](src/README.md).
+OBS plugin: see [`src/obs-plugin/README.md`](src/obs-plugin/README.md).
+
+Firmware files and a build without DKMS: see [`src/driver/README.md`](src/driver/README.md).
 
 ## Use
+
+### OBS Studio
+
+The OBS source "Elgato Game Capture HD" ([`src/obs-plugin`](src/obs-plugin))
+finds the device by itself and offers the input, output size and encoder
+settings in its properties; video and audio are decoded in OBS. Without
+the plugin, OBS's *Media Source* can be used: untick *Local File*, input
+`/dev/elgato-gchd` (with the udev rule
+[`udev-rules/55-elgato-gchd-device.rules`](udev-rules/55-elgato-gchd-device.rules)),
+input format `mpegts`; deinterlacing in the source's context menu.
+
+### Settings
+
+"Elgato Game Capture HD Settings" in the application menu
+([`src/settings/gchd-settings-gui`](src/settings/gchd-settings-gui))
+changes the input, output size and encoder settings in a window (menus,
+bitrate slider, switch); the driver remembers them. Changes apply at once,
+also to a running capture, and the window shows changes made by other
+programs. Composite and S-video share one group of settings, HDMI and
+component another; each bitrate mode keeps its last bitrate. Settings that
+do not apply to the selected input are hidden. Without a desktop:
+[`src/settings/gchd-settings`](src/settings/gchd-settings) (text menu) or
+`v4l2-ctl`.
+
+### Command line
 
 Select the input (0 HDMI, 1 component, 2 composite, 3 S-video) and watch
 the transport stream with audio:
 
 ```sh
-v4l2-ctl -d /dev/video0 -i 2
-v4l2-ctl -d /dev/video0 -v pixelformat=MPEG
-ffplay -f mpegts /dev/video0
+v4l2-ctl -d /dev/elgato-gchd -i 2
+v4l2-ctl -d /dev/elgato-gchd -v pixelformat=MPEG
+ffplay -f mpegts /dev/elgato-gchd
 ```
 
 Record it:
 
 ```sh
-ffmpeg -f mpegts -i /dev/video0 -c copy capture.ts
+ffmpeg -f mpegts -i /dev/elgato-gchd -c copy capture.ts
 ```
 
 The output size (720 × 480/576, 640 × 480, 480 × 360), bitrate and other
@@ -93,7 +132,7 @@ see [`docs/video-output.md`](docs/video-output.md).
 
 ## Documentation
 
-- [`src/README.md`](src/README.md): build, module parameters, remembered
+- [`src/driver/README.md`](src/driver/README.md): build, module parameters, remembered
   settings
 - [`docs/`](docs/): video output, the device protocol per input
 
