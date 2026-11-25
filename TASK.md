@@ -1,72 +1,59 @@
-# TASK T-096 — Stretch SD input as in the Windows software
+# TASK T-051 — Component input, all modes
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** waiting for evidence from the Windows software (TODO R12)
-- **Type:** fix (driver and/or OBS plugin)
-- **Branch:** `fix/stretch` (from `dev` 0.5.9), created when the evidence
-  is in
-- **TODO items:** T-096 (stage 1b)
+- **Status:** analysis of the component recording (offline) first
+- **Type:** driver feature (stage 2)
+- **Branch:** `feat/component` (from `dev` 0.5.10)
+- **TODO items:** T-051 (stage 2)
 
 ## Why
 
-"Stretch SD input" is meant for games that offer a 16:9 output by
-squashing the picture horizontally into 4:3, so that a widescreen TV
-stretches it back. In the Windows software the output size stays the same
-and the picture is visibly stretched (maintainer, 2026-11-19). With the
-driver, OBS's Media Source shows no difference.
+Component input is selectable, but its configuration still follows older
+code (the "C++ blocks"): front end, back end and encoder values were never
+compared with a recording with a source, and component capture with a
+source has not been confirmed (`docs/component.md §3`). Stage 2 brings
+component to the level of composite and S-video (RULES D7: within an
+input, the lowest mode first).
 
-## What is known
+## Goal (acceptance criteria, draft)
 
-- The USB recording `traces/composite/gchd_288p_stretch_input_small`:
-  the only change is the encoder field `v_in_source_type = 2` instead of
-  `3` (`docs/composite.md §10`). The driver sends the same.
-- Driver capture (T-060-settings, c8c8944, NTSC N64, 720 × 480): the
-  encoded size stays 720 × 480; the stream's sample aspect ratio changes
-  from 10:11 (display 4:3) to 40:33 (display 16:9), also when stretch is
-  switched while capturing. Players that follow the aspect ratio
-  (ffplay at the start of a stream) show it stretched; OBS's Media Source
-  and OBS itself ignore it.
-- The OBS plugin widens a picture with a 16:9 aspect ratio itself
-  (720 × 480 → 872 × 480, 720 × 576 → 1048 × 576), so the source in OBS
-  gets wider (accepted as a stop-gap, T-060). The maintainer is not sure
-  this matches the Windows software.
+1. Every mode the device offers on component is detected and captured
+   with the recorded configuration: 480i, 480p, 576i, 576p, 720p, 1080i,
+   1080p30 (USB 2.0 limit, maintainer).
+2. Mode changes while capturing, as recorded.
+3. Output sizes and the "Allow 50/60fps" option of the Windows software,
+   as recorded.
+4. Encoder settings of the HDMI/component group (bitrate, mode, profile)
+   with the limits of the recordings; shown in the settings window and
+   the OBS plugin.
+5. V4L2 reporting (DV timings, size, frame rate, field order) right for
+   each mode; `v4l2-compliance` without failures.
 
-## Evidence needed (TODO R12)
+## Evidence
 
-With a picture of known shape (a menu, a circle; best a game with a 16:9
-option), in the Windows software:
+- `traces/component/gchd_component_modes_output-sizes_5060fps_small_part1`
+  and `_part2` (2026-11-25, decoded `.ops.txt` next to them): 576i, then
+  576p, 720p, 1080i, 1080p; output sizes; "Allow 50/60fps" on and off;
+  order not noted (maintainer).
+- No recording of 480i/480p yet (TODO R7).
 
-1. Screenshots of the preview with stretch off and on.
-2. A short recording saved by the software with stretch off and one with
-   it on (the files themselves: their size and aspect ratio show whether
-   the software rescales the picture or only keeps the aspect ratio).
+## Plan
 
-## Goal (acceptance criteria, draft — after the evidence)
-
-1. With stretch on, the picture looks as in the Windows software in the
-   OBS plugin, OBS's Media Source (`/dev/elgato-gchd`) and ffplay.
-2. With stretch off, nothing changes from today.
-3. Output size settings unchanged.
+1. Split the recording into its change sequences (NULL … START), read the
+   detection values (`0x9C:68/67`), the front-end and back-end writes and
+   the encoder fields per sequence, and name each sequence (mode, output
+   size, 50/60 fps option). Result: an analysis note on `traces` and a
+   table in `docs/component.md`.
+2. Ask for single-option recordings where the sequence is unclear.
+3. Compare with the driver's component path; change one item at a time
+   (RULES D5), 576i first.
 
 ## Hardware test (maintainer)
 
-Written once the evidence is in.
+Written with the first driver change.
 
 ## Findings
 
 ## Maintainer comments
 
-Check the diff text file I uploaded to traces for an analysis on recordings made with the "Flashback" option from the Windows software. I believe these are recorded straight from the device output without any processing, but I'm not 100% sure.
-
-Additionally I uploaded a trace for component input. I did these things:
-- Changed input from 576i to: 576p, 720p, 1080i, 1080p (remember that the device does only 1080p30 because of USB2.0 limitations).
-- I played around with output sizes.
-- I played around with the "Allow 50/60fps" checkbox setting.
-I can't give you a precise order in which I did everything. I'm hoping you can maybe figure out what is what and if you need some more precise tracing I can do some traces turning just a single option on and off.
-
-I'm also starting to think what is best to ship as a kernel module and I think we need to separate 3 things:
-- core components of the module
-- GUI for the settings
-- OBS plugin
-I think the installer has to install the core module as a base and GUI and OBS plugin are optional. The script needs to ask the user which optional components it wants to install.

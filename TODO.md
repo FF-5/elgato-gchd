@@ -19,7 +19,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.9): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.10): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -48,7 +48,11 @@ on the `traces` branch.
   settings window and text menu, installer with three install types. One
   global setting shared by all programs; two setting groups
   (composite/S-video, HDMI/component); kept bitrate per mode and for
-  480 × 360; changes from any program apply live.
+  480 × 360; changes from any program apply live. Installer: the core
+  (driver) always, the settings programs and the OBS plugin optional
+  (T-096). Stretch SD input as in the Windows software (size kept, 16:9
+  aspect ratio in the stream; the OBS plugin widens, OBS's Media Source
+  cannot).
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller. Once the
   guest kernel disabled the controller's interrupt ("irq 20: nobody
   cared", "Disabling IRQ #20"): USB then very slow, captures stall; only
@@ -58,19 +62,8 @@ on the `traces` branch.
 
 Stage 1 (composite and S-video, 0.5.6), driver-only layout (T-070),
 licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
-0.5.8), OBS and other applications (T-060, 0.5.9). Test results: `logs/hardware-test-log.md` on the `traces` branch.
-
-## Stage 1b — Applications (guvcview, OBS)
-
-- [ ] **T-096 [WIN+HW] (S)** Stretch SD input as in the Windows
-      software (maintainer, 2026-11-19). For games that squash a 16:9
-      picture into 4:3: the output size stays, the picture is shown
-      horizontally stretched. Found (T-060): the device keeps the encoded
-      size (720 × 480) and changes only the stream's sample aspect ratio
-      (10:11 → 40:33); OBS's Media Source ignores it, so nothing changes
-      there; the OBS plugin widens such pictures itself (872 × 480). Open:
-      what the Windows software shows and records (R12), then the same
-      behaviour here (driver, plugin, Media Source).
+0.5.8), OBS and other applications (T-060, 0.5.9), stretch as in the
+Windows software and optional installer parts (T-096, 0.5.10). Test results: `logs/hardware-test-log.md` on the `traces` branch.
 
 ## Stage 2 — Component
 
@@ -143,6 +136,7 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
       state 2026-11-18): `cherry3`; merged into `dev`: `chore/src-layout`,
       `feat/bitrate`, `feat/format-reporting`, `feat/input-persistence`,
       `feat/installer`, `feat/output-size`, `feat/ts-audio`, `feat/app-bridge`,
+      `fix/stretch`,
       `fix/analog-robustness`, `fix/close-lifecycle`, `fix/v4l2-compliance`.
 
 ## Known differences between the driver and the recordings
@@ -171,8 +165,7 @@ a short note what was done and when (seconds) helps.
 
 | # | Recording | For | Status |
 |---|---|---|---|
-| R7 | Component with a signal: every mode (480i, 480p, 576i, 576p, 720p, 1080i), mode changes, output sizes, bitrate | stage 2, T-051 | **needed** at stage 2 |
+| R7 | Component with a signal: every mode (480i, 480p, 576i, 576p, 720p, 1080i), mode changes, output sizes, bitrate | stage 2, T-051 | 576i–1080p, output sizes, "Allow 50/60fps" recorded (`traces/component/gchd_component_modes_output-sizes_5060fps_small_part1/2`, 2026-11-25); 480i/480p and single-option recordings if the analysis needs them |
 | R8 | HDMI with a signal: every mode, mode changes, output sizes, bitrate | stage 3, T-050 | **needed** at stage 3 (1080p60 output sizes exist) |
 | R11 | Composite, standard size and 640 × 480: bitrate slider at about ¾ and just before the right end (the CBR position), a few seconds each, values shown noted | Bitrate range above B = 14460 (VBR maximum) | needed (until then the settings windows offer the observed range: CBR 7.00–11.25, VBR average 3.00–7.23) |
-| R12 | Stretch SD input in the Windows software, with a picture of known shape (a menu, a circle; best a game with a 16:9 option): screenshots of the preview with stretch off and on, and a short recording saved by the software with each; no USB recording needed (the encoder side is recorded) | T-096 | **needed** next |
 | R9 | One recording per picture/audio setting changed while capturing; for the audio gain: single steps with the displayed dB noted (e.g. −12, −6, 0, +6, +12 dB, pause between them) | stage 4, T-080 | needed after the release (gain registers known: `composite.md` §11) |
