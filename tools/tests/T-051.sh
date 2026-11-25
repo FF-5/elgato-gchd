@@ -1,7 +1,9 @@
 # T-051 (first step): component, encoder values of the Windows software
 # per source mode at the standard output size (bitrate, GOP, level,
-# system_rate, colour, v_vinpelclk, 1080p30 timing). Each mode is captured
-# after selecting the input again (the driver detects the mode then).
+# system_rate, colour, v_vinpelclk, 1080p30 timing). A live viewer runs
+# while the source's output is changed in its own menu; then a 10 s
+# capture is checked. The input is selected again before each start (the
+# driver detects the source mode then).
 # Needs: a component source that can switch between 576i, 576p, 720p,
 # 1080i and 1080p (and 480i/480p if it can).
 
@@ -19,19 +21,40 @@ comp_cap() {
 	echo "$info ~${kbps} kbit/s errors=$(ffmpeg -v error -i $f -f null - 2>&1 | wc -l)"
 	rm -f $f
 }
+# Live viewer: ffplay restarted whenever it ends (window closed, stream
+# ended), so the source's own menus can be used while watching.
+VSTOP=/tmp/gchd-viewer-stop
+viewer_start() {
+	rm -f $VSTOP
+	( while [ ! -e $VSTOP ]; do
+		v4l2-ctl -d $D -i 1 >/dev/null 2>&1
+		ffplay -loglevel error -autoexit -window_title "Elgato component" -f mpegts $D >/dev/null 2>&1
+		sleep 1
+	  done ) &
+	VIEWER=$!
+}
+viewer_stop() {
+	touch $VSTOP
+	pkill -f "window_title Elgato component" 2>/dev/null
+	wait $VIEWER 2>/dev/null
+	sleep 2
+}
 mode() {	# mode NAME W H FIELD
 	step "component $1"
-	prompt "Set the component source to $1 (game or menu on screen); wait 5 s."
-	set_input 1
-	run v4l2-ctl -d $D -I -V
-	expect "$1: stream ${2}x${3}, field order $4" "width=$2 height=$3 .*field_order=$4" comp_cap
+	viewer_start
+	prompt "A window 'Elgato component' shows the PS3. In the PS3's menu set its video output to $1. If the picture freezes or disappears after the change, close the window: it reopens with a fresh detection. Press Enter when the window shows the PS3 in $1."
 	confirm "$1: is the picture right (no colour cast, sharp, motion smooth)?"
+	viewer_stop
+	set_input 1
+	expect "$1: stream ${2}x${3}, field order $4" "width=$2 height=$3 .*field_order=$4" comp_cap
+	run sh -c "sudo dmesg | grep 'signal detected: input=1' | tail -1"
 }
 
 step "load module (fresh plug-in)"
 load_module replug
 set_input 2
 set_fmt 720 480 MPEG
+set_input 1
 
 mode 576i 720 576 tt
 mode 576p 720 576 progressive
