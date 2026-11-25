@@ -2,8 +2,9 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** recording analysed; encoder values per mode in the driver;
-  hardware test T-051 (first step) open
+- **Status:** encoder values per mode accepted on hardware (576i, 576p,
+  720p, 1080i, 1080p30); next: front end and back end, HD output sizes
+  and the 50/60 fps option, mode changes while capturing, 480i/480p
 - **Type:** driver feature (stage 2)
 - **Branch:** `feat/component` (from `dev` 0.5.10)
 - **TODO items:** T-051 (stage 2)
@@ -80,7 +81,7 @@ input, the lowest mode first).
 
 ## Next
 
-1. Hardware test of the encoder values (below).
+1. ~~Hardware test of the encoder values~~ accepted (third run).
 2. Front end and back end per mode: compare the rest of the recorded
    sequence (front-end colour tables, back end `98`, bridge `0900:0018`)
    with the driver's component path.
@@ -125,21 +126,11 @@ bash gchd-test.sh T-051 --branch feat/component
   is not the test build; the test checks level and colour per mode; the
   480 step is left out until the maintainer records 480i/480p. Rule G7:
   test files contain only what is not yet accepted.
+- T-051 (29c5497), third run, test build loaded: 10/10 PASS. All five
+  modes detected and captured with the recorded encoder values (576i
+  720×576 tt level 31 SMPTE 170M; 576p progressive level 30; 720p
+  level 40 BT.709; 1080i tt level 40 BT.709; 1080p progressive level 40
+  BT.709), picture right in each (maintainer).
 
 ## Maintainer comments
 
-Summary of the test:
-
-=== summary (T-051, 29c5497 TASK: T-051 second run (installed driver loaded instead of the test build; baseline); RULES G7: tests contain only what is not yet accepted)
-PASS | step 2 component 576i | 576i: is the picture right (colours as on a TV, sharp, motion smooth)?
-PASS | step 2 component 576i | 576i: stream 720x576 tt, level 31, colour smpte170m (encoder values as recorded)
-PASS | step 3 component 576p | 576p: is the picture right (colours as on a TV, sharp, motion smooth)?
-PASS | step 3 component 576p | 576p: stream 720x576 progressive, level 30, colour smpte170m (encoder values as recorded)
-PASS | step 4 component 720p | 720p: is the picture right (colours as on a TV, sharp, motion smooth)?
-PASS | step 4 component 720p | 720p: stream 1280x720 progressive, level 40, colour bt709 (encoder values as recorded)
-PASS | step 5 component 1080i | 1080i: is the picture right (colours as on a TV, sharp, motion smooth)?
-PASS | step 5 component 1080i | 1080i: stream 1920x1080 tt, level 40, colour bt709 (encoder values as recorded)
-PASS | step 6 component 1080p | 1080p: is the picture right (colours as on a TV, sharp, motion smooth)?
-PASS | step 6 component 1080p | 1080p: stream 1920x1080 progressive, level 40, colour bt709 (encoder values as recorded)
-
-FAIL: 0  WARN: 0
