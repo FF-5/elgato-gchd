@@ -1,12 +1,10 @@
-# T-051 (first step): component, encoder values of the Windows software
-# per source mode at the standard output size (bitrate, GOP, level,
-# system_rate, colour, v_vinpelclk, 1080p30 timing); checked in the stream:
-# size, field order, level, colour primaries. 480i/480p later. A live viewer runs
-# while the source's output is changed in its own menu; then a 10 s
-# capture is checked. The input is selected again before each start (the
-# driver detects the source mode then).
+# T-051: component, front end and back end as in the Windows software's
+# recordings (mode configuration sequence, back-end pulses until settled),
+# with the encoder values accepted on 2026-11-26. Per mode: size, field
+# order, level and colour primaries checked in the stream, picture judged
+# in a live viewer while the source's output is changed in its own menu.
 # Needs: a component source that can switch between 576i, 576p, 720p,
-# 1080i and 1080p.
+# 1080i and 1080p. 480i/480p later.
 
 D=$DEV
 # comp_cap W H FIELD: 10 s capture; size, field order, frame rate, aspect
@@ -58,8 +56,6 @@ set_input 2
 set_fmt 720 480 MPEG
 set_input 1
 
-# Captured with the driver of dev 0.5.10 (old encoder values) on
-# 2026-11-26: 576p, 720p, 1080i, 1080p right. Now the recorded values.
 mode 576i 720 576 tt 31 smpte170m "In the PS3's video output settings untick 576p (the PS3 sends the highest resolution ticked)."
 mode 576p 720 576 progressive 30 smpte170m
 mode 720p 1280 720 progressive 40 bt709
