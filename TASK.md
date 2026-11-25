@@ -57,3 +57,10 @@ Written once the evidence is in.
 
 ## Maintainer comments
 
+Check the diff text file I uploaded to traces for an analysis on recordings made with the "Flashback" option from the Windows software. I believe these are recorded straight from the device output without any processing, but I'm not 100% sure.
+
+Additionally I uploaded a trace for component input. I did these things:
+- Changed input from 576i to: 576p, 720p, 1080i, 1080p (remember that the device does only 1080p30 because of USB2.0 limitations).
+- I played around with output sizes.
+- I played around with the "Allow 50/60fps" checkbox setting.
+I can't give you a precise order in which I did everything. I'm hoping you can maybe figure out what is what and if you need some more precise tracing I can do some traces turning just a single option on and off.
