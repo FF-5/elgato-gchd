@@ -128,3 +128,18 @@ bash gchd-test.sh T-051 --branch feat/component
 
 ## Maintainer comments
 
+Summary of the test:
+
+=== summary (T-051, 29c5497 TASK: T-051 second run (installed driver loaded instead of the test build; baseline); RULES G7: tests contain only what is not yet accepted)
+PASS | step 2 component 576i | 576i: is the picture right (colours as on a TV, sharp, motion smooth)?
+PASS | step 2 component 576i | 576i: stream 720x576 tt, level 31, colour smpte170m (encoder values as recorded)
+PASS | step 3 component 576p | 576p: is the picture right (colours as on a TV, sharp, motion smooth)?
+PASS | step 3 component 576p | 576p: stream 720x576 progressive, level 30, colour smpte170m (encoder values as recorded)
+PASS | step 4 component 720p | 720p: is the picture right (colours as on a TV, sharp, motion smooth)?
+PASS | step 4 component 720p | 720p: stream 1280x720 progressive, level 40, colour bt709 (encoder values as recorded)
+PASS | step 5 component 1080i | 1080i: is the picture right (colours as on a TV, sharp, motion smooth)?
+PASS | step 5 component 1080i | 1080i: stream 1920x1080 tt, level 40, colour bt709 (encoder values as recorded)
+PASS | step 6 component 1080p | 1080p: is the picture right (colours as on a TV, sharp, motion smooth)?
+PASS | step 6 component 1080p | 1080p: stream 1920x1080 progressive, level 40, colour bt709 (encoder values as recorded)
+
+FAIL: 0  WARN: 0
