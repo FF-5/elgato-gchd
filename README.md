@@ -19,6 +19,10 @@ Each recording `<name>.pcapng` has a decoded listing `<name>.ops.txt`
 (`tools/gchd-pcap-ops.py` on the `tools` branch). Recordings named
 `*_noinput_*` start without a source; the source is switched on later and
 capture starts. Most recordings end shortly after the first stream data.
+Recordings split by the capture tool are named `*_part1`, `*_part2`, … in
+time order. `*_ffprobe.txt` files are not USB recordings: `ffprobe` output
+of files saved by the Windows software (for example its "Flashback"
+recording), to compare the stream it stores with the driver's.
 
 Recordings that are too large can be reduced. Keep bulk OUT (endpoint
 `0x02`), drop only the incoming stream:
