@@ -245,6 +245,7 @@ struct gchd_enc_cfg {
  u8 out;   /* GCHD_OUT_STANDARD, GCHD_OUT_640X480 or GCHD_OUT_MOBILE */
  bool vbr; /* v_rate_mode 1, v_max_cpb_delay 10 */
  bool vinpelclk;
+ bool half_rate; /* stream timing 60000/1001 (30 frames per second) */
 };
 
 /*
@@ -360,8 +361,8 @@ static int gchd_transcoder_write_start(struct gchd *d,
  GCHD_TC_SET(d, GCHD_TC_V_H264_PROFILE_BL, c->profile);
  GCHD_TC_SET(d, GCHD_TC_V_H264_LEVEL_BL, min_t(u8, c->level, 31));
  GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_H_BL, 0);
- GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_L_BL, 0);
- GCHD_TC_SET(d, GCHD_TC_NUM_UNITS_IN_TICK_BL, 0);
+ GCHD_TC_SET(d, GCHD_TC_TIME_SCALE_L_BL, c->half_rate ? 60000 : 0);
+ GCHD_TC_SET(d, GCHD_TC_NUM_UNITS_IN_TICK_BL, c->half_rate ? 1001 : 0);
  GCHD_TC_SET(d, GCHD_TC_ACH_SEL_BL, 0);
  GCHD_TC_SET(d, GCHD_TC_E_MPEG_PROTECT_BL, 0);
  GCHD_TC_SET(d, GCHD_TC_E_MPEG_MODE_BL, 0);
@@ -439,6 +440,36 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
  }
  /* Scaled outputs: GOP 6 at 50 Hz, 8 at 60 Hz; else 12 / 14. */
  u16 gop = out != GCHD_OUT_STANDARD ? (fps == 50 ? 6 : 8) : (fps + 10) / 5;
+ /*
+  * Component, per source mode (docs/component.md §4): default bitrate
+  * 11250 kbit/s (480i/576i), 15000 (480p/576p), 26250 (720p), 30000
+  * (1080i/1080p); maximum 90 %, average 50 %, minimum 25 % (35 % from
+  * 26250); progressive 50/60 frames per second SD: GOP 6 / 8; 1080p30
+  * signalled as 30000/1001.
+  */
+ bool comp = d->input == 1;
+ bool comp_sd_p = comp && src_height <= 576 && !d->input_interlaced;
+ u32 comp_system_rate = 0;
+ u8 comp_level = 0;
+
+ if (comp) {
+  u32 def = src_height == 1080 ? 30000 : src_height == 720 ? 26250 :
+            comp_sd_p ? 15000 : 11250;
+
+  bitrate = d->bitrate_forced ? clamp_t(u32, d->bitrate, 2000, 40000) : def;
+  auto_max_bitrate = bitrate * 9U / 10U;
+  auto_average_bitrate = bitrate / 2U;
+  auto_min_bitrate = bitrate >= 26250 ? bitrate * 35U / 100U : bitrate / 4U;
+  if (comp_sd_p)
+   gop = fps == 50 ? 6 : 8;
+  comp_level = src_height > 576 ? 40 : comp_sd_p ? 30 : 31;
+  /* floor(1.07285 * B + 461.7) at 50 Hz, + 469.7 at 60 Hz; progressive
+   * 50/60 frames per second: +43 / +51. */
+  comp_system_rate = ((u32)bitrate * 21457U +
+                      (fps == 50 ? 9234000U : 9394000U)) / 20000U;
+  if (!d->input_interlaced && fps >= 50)
+   comp_system_rate += fps == 50 ? 43 : 51;
+ }
  u16 anchor = 3;
  u8 profile;
  u8 level;
@@ -462,6 +493,8 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
   level = 22;
  } else if (d->input >= 2) {
   level = 31;
+ } else if (comp) {
+  level = comp_level;
  } else {
   u32 frame_mb = (width * height) / (16U * 16U);
   u32 mbps = frame_mb * fps;
@@ -489,6 +522,10 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
 
  if (d->input >= 2)
   system_rate = analog_system_rate;
+ if (comp) {
+  system_rate = comp_system_rate;
+  colour = src_height > 576 ? 1 : 6; /* BT.709 / SMPTE 170M */
+ }
  u8 vformat;
 
  /* The input format code follows the source, also for scaled outputs. */
@@ -507,8 +544,9 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
    .min_bitrate = auto_min_bitrate, .system_rate = system_rate,
    .profile = profile, .level = level, .vformat = vformat,
    .out = out, .vbr = vbr,
-   /* Composite/S-video: 1 with a 50 Hz source, 0 with 60 Hz (all sizes). */
-   .vinpelclk = d->input >= 2 && fps == 50,
+   /* Composite/S-video and component: 1 with a 50 Hz source. */
+   .vinpelclk = d->input >= 1 && fps == 50,
+   .half_rate = comp && src_height == 1080 && !d->input_interlaced,
   };
 
   return gchd_transcoder_write_start(d, &c);

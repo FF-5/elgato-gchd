@@ -61,3 +61,37 @@ The driver configuration is implemented in `gchd_configure_component_exact()`
 
 Component capture with a source present has not yet been confirmed by a
 trace.
+
+## 4. Encoder settings per source mode (Observed)
+
+Recorded with the Windows software (576i, 576p, 720p, 1080i, 1080p30;
+output sizes; "Allow 50/60fps"). Detection values as in §3. All
+sequences CBR (`v_rate_mode 0`, `v_max_cpb_delay 3`), High profile
+(encoder value 1), `v_gop_struct 3`. `ts`: `time_scale_l_bl` /
+`num_units_in_tick_bl`; output 2: `v_ts_out2_mode = 1` (audio on output 2
+as well).
+
+| Source | Output | Frames/s | `v_format` | `v_ip_format` | `v_in_source_type` | `v_vinpelclk` | GOP | Bitrate B / max / ave / min (kbit/s) | Level (`_bl`) | `system_rate` | `ts` | TS output | Colour |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 576i | 720 × 576 | 25 (50 fields) | 5 | 0 | 3 | 1 | 12 | 11250 / 10125 / 5625 / 2812 | 31 (31) | 12531 | 0 / 0 | 1 | 6 |
+| 576p | 720 × 576 | 50 | 9 | 2 | 3 | 1 | 6 | 15000 / 13500 / 7500 / 3750 | 30 (30) | 16597 | 0 / 0 | 1 | 6 |
+| 720p | 1280 × 720 | 60 | 2 | 2 | 0 | 0 | 14 | 26250 / 23625 / 13125 / 9187 | 40 (31) | 28683 | 0 / 0 | 1 | 1 |
+| 720p, 50/60fps off | 1280 × 720 | 30 | 2 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 31 (31) | 16562 | 60000 / 1001 | 1 | 1 |
+| 720p | 640 × 480 | 30 | 2 | 2 | 0 | 0 | 8 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12539 | 60000 / 1001 | 2 | 1 |
+| 1080i | 1920 × 1080 | 30 (60 fields) | 0 | 0 | 0 | 0 | 14 | 30000 / 27000 / 15000 / 10500 | 40 (31) | 32655 | 0 / 0 | 1 | 1 |
+| 1080p30 | 1920 × 1080 | 30 | 32 | 2 | 0 | 0 | 8 | 30000 / 27000 / 15000 / 10500 | 40 (31) | 32655 | 60000 / 1001 | 1 | 1 |
+| 1080p30 | 1280 × 720 | 30 | 32 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 31 (31) | 16562 | 60000 / 1001 | 1 | 1 |
+| 1080p30 | 640 × 480 | 30 | 32 | 2 | 0 | 0 | 8 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12539 | 60000 / 1001 | 2 | 1 |
+
+Colour: `colour_primaries` and `matrix_coefficients` (6 SMPTE 170M, 1
+BT.709). Maximum 0.9·B, average B/2, minimum B/4, 0.35·B from 26250.
+`system_rate` = ⌊1.07285·B + 461.7⌋ with a 50 Hz source, ⌊1.07285·B +
+469.7⌋ with 60 Hz, plus 43 (576p) or 51 (720p60) for progressive 50/60
+frames per second. "Allow 50/60fps" off encodes a 60 Hz progressive
+source at 30 frames per second (GOP 8, signalled 60000/1001). An output
+size change is NULL, STOP, encoder fields, START without front-end
+writes. Not recorded: 480i, 480p, 576i/576p and 1080i with other output
+sizes or the option off.
+
+The driver uses these values at the standard output size; 480i and 480p
+follow the same rules (11250, GOP 14 / 15000, GOP 8), not yet confirmed.

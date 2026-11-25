@@ -2,7 +2,8 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** analysis of the component recording (offline) first
+- **Status:** recording analysed; encoder values per mode in the driver;
+  hardware test T-051 (first step) open
 - **Type:** driver feature (stage 2)
 - **Branch:** `feat/component` (from `dev` 0.5.10)
 - **TODO items:** T-051 (stage 2)
@@ -49,9 +50,49 @@ input, the lowest mode first).
 3. Compare with the driver's component path; change one item at a time
    (RULES D5), 576i first.
 
+## Done so far
+
+- Analysis (`traces/ANALYSIS-2026-11-25-component.md`): 19 change
+  sequences (source mode changes, output sizes, the 50/60 fps option),
+  encoder fields per mode and size, `docs/component.md §4`.
+- Detection values of the driver match the recording for all five modes;
+  the first front-end block per mode (`9C:01/02/03/05/06/07/1E/1F`,
+  `B2/B5`) matches as well.
+- Encoder (`src/driver/transcoder.c`), component at the standard output
+  size, now as recorded: bitrate 11250 / 15000 / 26250 / 30000 per mode
+  (was 15.625 kbit/s per pixel of width: 20000 at 720p, 11250 at 576p),
+  minimum 0.35·B from 26250, GOP 6 for 576p (was 12), level 30 / 31 / 40
+  (was the generic table: 31 / 32 / 42 / 41), `system_rate` from the
+  composite-type formula with the progressive surcharge (was
+  `1.075 × (B + 320) + 256`), colour BT.709 for HD and SMPTE 170M for SD
+  (was SMPTE 170M), `v_vinpelclk` 1 at 50 Hz (was 0), 1080p30 signalled
+  60000/1001. All recorded values reproduced (checked by calculation);
+  W=1 clean.
+
+## Next
+
+1. Hardware test of the encoder values (below).
+2. Front end and back end per mode: compare the rest of the recorded
+   sequence (front-end colour tables, back end `98`, bridge `0900:0018`)
+   with the driver's component path.
+3. Output sizes (1280 × 720, 640 × 480) and the 50/60 fps option for
+   HD inputs: V4L2 interface to be decided (output sizes like composite;
+   the option as a control).
+4. Mode changes while capturing (the Windows software restarts with the
+   new mode's values, sequence #17/#18).
+
+Wanted recordings (single option each, a few seconds per state): 480i
+and 480p; 576i/576p and 1080i with 1280 × 720 and 640 × 480 output; the
+50/60 fps option toggled on 576p, 720p (640 × 480) and 1080i.
+
 ## Hardware test (maintainer)
 
-Written with the first driver change.
+```sh
+cd ~ && git -C elgato-gchd fetch origin
+git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-051.sh > tests/T-051.sh
+bash gchd-test.sh T-051 --branch feat/component
+```
 
 ## Findings
 
