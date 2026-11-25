@@ -106,3 +106,38 @@ without front-end writes. Not recorded: 480i, 480p.
 
 The driver uses these values at the standard output size; 480i and 480p
 follow the same rules (11250, GOP 14 / 15000, GOP 8), not yet confirmed.
+
+## 5. Mode configuration sequence (Observed, driver)
+
+Recorded for 576i, 576p, 720p, 1080i and 1080p30 (source mode changes
+while capturing); the driver follows it at every capture start
+(`gchd_configure_component_exact()`):
+
+1. Input selection (capture start only): front-end bank and `0x51 = ED`,
+   then `0x24 = 0C`, `0x21 = C5`, `0x91 = C8`, `0x0E = 8C`, `0x11 = EC`,
+   `0x54 = FC`, `0x71 = 4C`, `0x04 = CC`.
+2. Mode detection (§3).
+3. Front end per mode: `0xB2`/`0xB5`, the timing block (`0x01`–`0x07`,
+   `0x1E`/`0x1F`), the common block (`0x10`–`0x3B`, `0x17 = C6`), the
+   second per-mode block (`0x39`, `0x2C`, `0x03`, `0x12`, `0x13`, `0x17`,
+   `0x20`, `0x21`, `0x40`, `0x80`–`0x86`), `0xB0`/`0xB1`/`0xAD`
+   (interlaced SD: `0xAD = CC`, `0xB0 = F9` twice, `0xB1 = CC`).
+4. Back end: `0x9C:AB = CC`, `0x98:04 = 95`, the per-mode back-end table
+   (`0x70`, `0x0F`, `0x90`, `0x91`, `0x95`–`0x97`, `0xA0`–`0xA3`), then
+   `0x72 = 88`, `0xC0 = 88`, `0x61 = 98`, `0x63 = 89`, `0x64 = 96`,
+   `0x65 = 88`, `0x04 = 8D`, `0x62 = 91`; pulses `0x0D = C8`, `0x0E =
+   (0x98:F5 & 0x10) | 0x05` and the same with bit 0 clear, repeated until
+   `0x98:F5` reads `72` (usually `05/04`, then `15/14`); `0x9C:0F = E4`.
+5. Front-end colour block (`0x08`–`0x0D`, `0x1E`/`0x1F`, `0x92`–`0xAA`).
+6. Final values per mode: `0xB2` (SD `CF`, HD `CC`), `0xB5` (720p,
+   1080i `CC`, others `C4`), `0x03` (576i `8C`, 576p `84`, 720p `8C`,
+   1080i `0C`, 1080p `04`), `0x04 = CC`, `0xE0 = CC`; pulses again when
+   the back end has not settled; `0x9C:0F = E4`.
+7. Encoder programming (§4), INIT, START.
+
+Not done by the driver: at a source mode change while capturing, the
+Windows software first sets the back end to neutral values (`0x98:70 =
+C8`, `0x90 = 88`, `0x91`–`0xA3 = 77`, `0xC0 = 80`, …) and steps
+`0x9C:04` through 16 or more values with `0x9C:E0 = 6C`, `8C` after each,
+before and after the new configuration (apparently a sampling-phase
+adjustment).

@@ -1700,10 +1700,12 @@ static int gchd_configure_component_exact(struct gchd *d)
   r = gchd_mail_seq(d, select_component, ARRAY_SIZE(select_component));
   if (r) return r;
  }
- GCHD_FE_R(d, 0x88, v); GCHD_FE_W(d, 0xb7, 0xce);
  r=gchd_do_enable(d,0,0); if(r)return r;
- GCHD_FE_W(d, 0x24, 0x0c); GCHD_FE_W(d, 0x21, 0xcd); GCHD_FE_W(d, 0x91, 0xc8); GCHD_FE_W(d, 0x0e, 0x8c);
- GCHD_FE_W(d, 0x11, 0xec); GCHD_FE_W(d, 0x71, 0x4c); GCHD_FE_W(d, 0x04, 0xcc);
+ GCHD_FE_W(d, GCHD_FE_REG_BANK, 0x4c); GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
+ GCHD_FE_W(d, 0x24, 0x0c); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_R(d, 0x1e, v);
+ GCHD_FE_W(d, 0x21, 0xc5); GCHD_FE_R(d, 0xae, v); GCHD_FE_W(d, 0x91, 0xc8); GCHD_FE_W(d, 0x0e, 0x8c);
+ GCHD_FE_W(d, 0x11, 0xec); GCHD_FE_R(d, 0x6b, v); GCHD_FE_W(d, 0x54, 0xfc); GCHD_FE_R(d, 0x4e, v);
+ GCHD_FE_W(d, 0x71, 0x4c); GCHD_FE_W(d, 0x04, 0xcc);
 
  for (i=0; i<max_t(unsigned int, 1, signal_active_retries); i++) {
   unsigned int retry_limit;
@@ -1795,7 +1797,7 @@ static int gchd_configure_component_exact(struct gchd *d)
  } else return -EINVAL;
 
  GCHD_FE_R(d, 0x2f, v); GCHD_FE_W(d, 0x10, 0x71); GCHD_FE_R(d, 0x30, v); GCHD_FE_W(d, 0x0f, 0xe4); GCHD_FE_W(d, 0x12, 0xc8); GCHD_FE_R(d, 0x28, v);
- GCHD_FE_W(d, 0x17, 0xce);
+ GCHD_FE_W(d, 0x17, 0xc6);
  if(d->input_height==480||d->input_height==576) GCHD_FE_W(d, 0x12, 0xc8); else GCHD_FE_W(d, 0x12, 0xcc);
  GCHD_FE_W(d, 0x13, 0xd8); GCHD_FE_W(d, 0x0b, 0x4c); GCHD_FE_W(d, 0x0c, 0xac); GCHD_FE_W(d, 0x0d, 0x4c);
  GCHD_FE_W(d, 0x1b, 0xcc); GCHD_FE_W(d, 0x1c, 0xcc); GCHD_FE_W(d, 0x1d, 0xcc); GCHD_FE_W(d, 0x18, 0xdc); GCHD_FE_W(d, 0x19, 0xdc);
@@ -1839,28 +1841,47 @@ static int gchd_configure_component_exact(struct gchd *d)
  }
 
  GCHD_FE_W(d, 0xb0, 0xe8); GCHD_FE_W(d, 0xb1, 0x0c);
- if(d->input_height==576 && d->input_interlaced) { GCHD_FE_W(d, 0xad, 0xcc); GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb1, 0xcc); }
- else if(d->input_height==480 && d->input_interlaced) { GCHD_FE_W(d, 0xad, 0xcc); GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb1, 0x4c); }
- else { GCHD_FE_W(d, 0xad, 0xc9); GCHD_FE_W(d, 0xb0, 0xe9); }
+ if(d->input_height==576 && d->input_interlaced) {
+  GCHD_FE_W(d, 0xad, 0xcc); GCHD_FE_R(d, 0x8f, v); GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb1, 0xcc);
+ } else if(d->input_height==480 && d->input_interlaced) {
+  GCHD_FE_W(d, 0xad, 0xcc); GCHD_FE_R(d, 0x8f, v); GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb1, 0x4c);
+ } else {
+  GCHD_FE_W(d, 0xad, 0xc9); GCHD_FE_R(d, 0x8f, v); GCHD_FE_W(d, 0xb0, 0xe9);
+ }
+
+ /*
+  * Back end for the mode (docs/component.md §5): mode table, the common
+  * back-end values, then pulses until the status settles.
+  */
+ GCHD_FE_W(d, 0xab, 0xcc); GCHD_BE_W(d, 0x04, 0x95);
+ r=gchd_setup_subblock_exact(d); if(r)return r;
+ GCHD_BE_RX(d, 0x89); GCHD_BE_W(d, 0x72, 0x88); GCHD_BE_W(d, 0xc0, 0x88);
+ GCHD_BE_W(d, 0x61, 0x98); GCHD_BE_W(d, 0x63, 0x89); GCHD_BE_W(d, 0x64, 0x96);
+ GCHD_BE_W(d, 0x65, 0x88); GCHD_BE_RX(d, 0xff); GCHD_BE_W(d, 0x04, 0x8d);
+ GCHD_BE_W(d, 0x62, 0x91);
+ r=gchd_be_retrigger_settle(d); if(r)return r;
+ GCHD_FE_W(d, 0x0f, 0xe4);
 
  r=gchd_color_space_exact(d); if(r)return r;
  if(d->input_height==480 && d->input_interlaced) { GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb1, 0xcc); }
- GCHD_FE_W(d, 0xab, 0xcc); GCHD_BE_W(d, 0x04, 0x95);
- r=gchd_setup_subblock_exact(d); if(r)return r;
- r=gchd_common_block_b1(d,false); if(r)return r;
 
- GCHD_BE_R(d, 0xf5, v); GCHD_BE_R(d, 0xfd, v);
- GCHD_BE_R(d, 0xf5, v); GCHD_BE_R(d, 0xfc, v); GCHD_BE_R(d, 0xf3, v);
- GCHD_BE_W(d, 0x0c, 0x89); GCHD_BE_W(d, GCHD_BE_REG_RETRIGGER, GCHD_BE_RETRIGGER_VALUE); GCHD_BE_R(d, 0xf5, v);
- GCHD_BE_W(d, GCHD_BE_REG_PULSE, (u8)((v&0x10)|0x65)); GCHD_BE_W(d, GCHD_BE_REG_PULSE, (u8)((v&0x10)|0x64));
+ /* Final front-end values per mode, then wait for the back end again. */
+ GCHD_FE_R(d, 0x8d, v); GCHD_FE_R(d, 0x8a, v);
+ {
+  bool sd = d->input_height <= 576;
+  u8 b5 = (d->input_height == 720 || (d->input_height == 1080 && d->input_interlaced)) ? 0xcc : 0xc4;
+  u8 r03 = d->input_height == 1080 ? (d->input_interlaced ? 0x0c : 0x04) :
+           d->input_height == 720 ? 0x8c : d->input_interlaced ? 0x8c : 0x84;
+  u8 st;
 
- r=gchd_common_block_a(d); if(r)return r;
- r=gchd_setup_subblock_exact(d); if(r)return r;
- r=gchd_common_block_b1(d,d->input_height==1080 && !d->input_interlaced); if(r)return r;
- r=gchd_common_block_b2(d); if(r)return r;
- r=gchd_common_block_b3(d); if(r)return r;
+  GCHD_FE_W(d, 0xb2, sd ? 0xcf : 0xcc); GCHD_FE_W(d, 0xb5, b5);
+  GCHD_FE_W(d, 0x03, r03); GCHD_FE_W(d, 0x04, 0xcc); GCHD_FE_W(d, 0xe0, 0xcc);
+  r = gchd_be_wait_status(d, 500, &st); if (r) return r;
+  if (st != GCHD_BE_STATUS_SETTLED) {
+   r = gchd_be_retrigger_settle(d); if (r) return r;
+  }
+ }
  GCHD_FE_W(d, 0x0f, 0xe4);
- r=gchd_common_block_c(d); if(r)return r;
 
  return 0;
 

@@ -2,9 +2,9 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** encoder values per mode accepted on hardware (576i, 576p,
-  720p, 1080i, 1080p30); next: front end and back end, HD output sizes
-  and the 50/60 fps option, mode changes while capturing, 480i/480p
+- **Status:** encoder values per mode accepted on hardware; front end and
+  back end as recorded (hardware test open); next: HD output sizes and
+  the 50/60 fps option, mode changes while capturing, 480i/480p
 - **Type:** driver feature (stage 2)
 - **Branch:** `feat/component` (from `dev` 0.5.10)
 - **TODO items:** T-051 (stage 2)
@@ -82,9 +82,8 @@ input, the lowest mode first).
 ## Next
 
 1. ~~Hardware test of the encoder values~~ accepted (third run).
-2. Front end and back end per mode: compare the rest of the recorded
-   sequence (front-end colour tables, back end `98`, bridge `0900:0018`)
-   with the driver's component path.
+2. Front end and back end per mode: done offline (below); hardware test
+   open.
 3. Output sizes (1280 × 720, 640 × 480) and the 50/60 fps option for
    HD inputs: V4L2 interface to be decided (output sizes like composite;
    the option as a control).
@@ -131,6 +130,25 @@ bash gchd-test.sh T-051 --branch feat/component
   720×576 tt level 31 SMPTE 170M; 576p progressive level 30; 720p
   level 40 BT.709; 1080i tt level 40 BT.709; 1080p progressive level 40
   BT.709), picture right in each (maintainer).
+- Front end and back end (item 2): the driver's component configuration
+  run in userspace (`tools/drvemu`, the driver's own code with logged
+  mailbox writes, reads answered from the recording) and diffed with the
+  recorded mode changes. Front end: matched except `0x9C:17` (C6, was CE)
+  and the input-selection writes (`0x9C:21 = C5`, `0x54 = FC`, bank 4C
+  read instead of a second `0xB7 = CE`). Back end: the driver ran four
+  blocks of another input path (about 170 writes: `0x98:10`–`0x15` loops,
+  `0x58`–`0x65`, `0xE0`–`0xE4`, `0x68`–`0x6D`, `0xC1`/`0xC6`, …) that the
+  Windows software never writes for component, wrote `0x98:C0 = 89`
+  (recorded 88) and `0x0C = 89` (not recorded), and pulsed `75/74`
+  (recorded `05/04` then `15/14`, repeated until `0x98:F5 = 72`, as the
+  driver already does for composite); the back-end block came after the
+  colour block (recorded before), and the final per-mode front-end values
+  (`0xB2`, `0xB5`, `0x03`, `0x04`, `0xE0`) were missing. Now as recorded
+  (`docs/component.md §5`); drvemu: all five modes match apart from the
+  input selection (not in mode-change recordings) and the number of
+  pulses (depends on the status reads). Not done: the back-end reset and
+  the `0x9C:04` sweep the Windows software runs at a source mode change
+  while capturing (item 4).
 
 ## Maintainer comments
 
