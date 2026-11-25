@@ -84,9 +84,24 @@ input, the lowest mode first).
 1. ~~Hardware test of the encoder values~~ accepted (third run).
 2. Front end and back end per mode: done offline (below); hardware test
    open.
-3. Output sizes (1280 × 720, 640 × 480) and the 50/60 fps option for
-   HD inputs: V4L2 interface to be decided (output sizes like composite;
-   the option as a control).
+3. Output sizes and the 50/60 fps option. Recorded per source (encoder
+   size; "app" = the Windows software scales, the encoder keeps the
+   source size):
+
+   | Source | 1920 × 1080 | 1280 × 720 | 640 × 480 | 480 × 360 | "Allow 50/60fps" |
+   |---|---|---|---|---|---|
+   | 576i | app | app | 640 × 480 (with the software's SD option) | – | – |
+   | 576p | app | app | not recorded with the SD option | – | GOP 6 / 12 only |
+   | 720p | app? | 1280 × 720 | 640 × 480 (30) | not recorded | 60 / 30 at 1280 × 720 |
+   | 1080i | 1920 × 1080 | 1280 × 720 (60) | 640 × 480 | 480 × 360 | no effect |
+   | 1080p30 | 1920 × 1080 | 1280 × 720 | 640 × 480 | 480 × 360 | no effect (30) |
+
+   Planned interface, like composite: `VIDIOC_S_FMT` chooses the output
+   size among the sizes the current source allows (source size, 1280 ×
+   720, 640 × 480, 480 × 360; `VIDIOC_ENUM_FRAMESIZES` lists them), also
+   while capturing (encoder restart); a boolean control "Allow 50/60 fps"
+   (default on). Today `S_FMT` on HDMI/component selects the source mode
+   instead; the source mode belongs to `S_DV_TIMINGS`/detection.
 4. Mode changes while capturing (the Windows software restarts with the
    new mode's values, sequence #17/#18).
 
