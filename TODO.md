@@ -19,7 +19,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.9): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.10): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -48,7 +48,11 @@ on the `traces` branch.
   settings window and text menu, installer with three install types. One
   global setting shared by all programs; two setting groups
   (composite/S-video, HDMI/component); kept bitrate per mode and for
-  480 × 360; changes from any program apply live.
+  480 × 360; changes from any program apply live. Installer: the core
+  (driver) always, the settings programs and the OBS plugin optional
+  (T-096). Stretch SD input as in the Windows software (size kept, 16:9
+  aspect ratio in the stream; the OBS plugin widens, OBS's Media Source
+  cannot).
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller. Once the
   guest kernel disabled the controller's interrupt ("irq 20: nobody
   cared", "Disabling IRQ #20"): USB then very slow, captures stall; only
@@ -58,17 +62,8 @@ on the `traces` branch.
 
 Stage 1 (composite and S-video, 0.5.6), driver-only layout (T-070),
 licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
-0.5.8), OBS and other applications (T-060, 0.5.9). Test results: `logs/hardware-test-log.md` on the `traces` branch.
-
-## Stage 1b — Applications (guvcview, OBS)
-
-- [ ] **T-096 [HW] (S)** Stretch SD input as in the Windows software,
-      together with the installer parts (core always; settings programs
-      and OBS plugin optional, asked for; maintainer 2026-11-25). The
-      Windows software's files keep the size and store the 16:9 aspect
-      ratio like the driver's stream; OBS's Media Source ignores it
-      (documented), the OBS plugin widens. Branch `fix/stretch`;
-      hardware test T-096 open.
+0.5.8), OBS and other applications (T-060, 0.5.9), stretch as in the
+Windows software and optional installer parts (T-096, 0.5.10). Test results: `logs/hardware-test-log.md` on the `traces` branch.
 
 ## Stage 2 — Component
 
@@ -141,6 +136,7 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
       state 2026-11-18): `cherry3`; merged into `dev`: `chore/src-layout`,
       `feat/bitrate`, `feat/format-reporting`, `feat/input-persistence`,
       `feat/installer`, `feat/output-size`, `feat/ts-audio`, `feat/app-bridge`,
+      `fix/stretch`,
       `fix/analog-robustness`, `fix/close-lifecycle`, `fix/v4l2-compliance`.
 
 ## Known differences between the driver and the recordings

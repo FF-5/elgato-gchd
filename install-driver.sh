@@ -86,9 +86,11 @@ B=$'\e[1m'; R=$'\e[31m'; G=$'\e[32m'; N=$'\e[0m'
 step() { printf '\n%s==> %s%s\n' "$B" "$*" "$N"; }
 ok()   { printf '%s%s%s\n' "$G" "$*" "$N"; }
 die()  { printf '%sError: %s%s\n' "$R" "$*" "$N" >&2; exit 1; }
-ask()  { [ $ASSUME_YES = 1 ] && return 0; read -r -p "$* [y/N] " a; [[ "$a" == [yYjJ]* ]]; }
+# The question is printed (not read -p): it also shows when the answers
+# come from a pipe, and the answer is echoed then.
+ask()  { [ $ASSUME_YES = 1 ] && return 0; printf '%s [y/N] ' "$*"; read -r a; [ -t 0 ] || echo "$a"; [[ "$a" == [yYjJ]* ]]; }
 # ask_yes QUESTION: yes unless answered no (Enter = yes).
-ask_yes() { [ $ASSUME_YES = 1 ] && return 0; read -r -p "$* [Y/n] " a; [[ "$a" != [nN]* ]]; }
+ask_yes() { [ $ASSUME_YES = 1 ] && return 0; printf '%s [Y/n] ' "$*"; read -r a; [ -t 0 ] || echo "$a"; [[ "$a" != [nN]* ]]; }
 
 # Package names per package manager: install command, headers, dkms, 7z.
 pkg_cmd() {
