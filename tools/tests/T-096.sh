@@ -37,7 +37,7 @@ step "installer: questions answered with Enter (both optional parts)"
 run sh -c "printf '\n\n' | bash '$INST' --in-terminal"
 expect "settings window installed" "^present$" have /usr/local/bin/gchd-settings-gui
 expect "plugin installed" "^present$" have "$PLUG"
-confirm "the installer asked two questions (settings programs, OBS plugin), each with [Y/n]?"
+expect "the installer printed both questions" "Install the OBS plugin.*\\[Y/n\\]" sh -c "printf '\\n\\n' | bash '$INST' --in-terminal 2>&1 | grep 'Install the'"
 prompt "Unplug the Elgato and plug it in again; wait 5 s."
 
 step "stretch in ffplay"
