@@ -1,25 +1,29 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-2.0
 #
-# Install the Elgato Game Capture HD support: the elgato_gchd kernel driver
-# and/or the OBS plugin.
+# Install the Elgato Game Capture HD support. The core (kernel driver) is
+# always installed; the settings programs and the OBS plugin are optional.
 #
-#   ./install-driver.sh              install (or update); asks what to install
-#   ./install-driver.sh --all        kernel driver and OBS plugin
-#   ./install-driver.sh --driver     kernel driver only
-#   ./install-driver.sh --obs        OBS plugin only
-#   ./install-driver.sh --uninstall  remove everything (with --driver or
-#                                    --obs: only that part)
+#   ./install-driver.sh              install (or update) the core; asks for
+#                                    each optional part
+#   ./install-driver.sh --core       the core only
+#   ./install-driver.sh --settings   the core and the settings programs
+#   ./install-driver.sh --obs        the core and the OBS plugin
+#   ./install-driver.sh --all        the core and both optional parts
+#                                    (--settings --obs is the same)
+#   ./install-driver.sh --uninstall  remove everything (with --settings or
+#                                    --obs: only that optional part)
 #   ./install-driver.sh --yes        do not ask (installs everything and the
 #                                    packages it needs)
 #
-# Kernel driver: 1. firmware present? If not, extract it with firmware/
-# (stop when that fails). 2. build the module in build/. 3. install it
-# (DKMS when available), the udev rules (remembered settings, device name
-# /dev/elgato-gchd), the settings window gchd-settings-gui (application
-# menu) and the text menu gchd-settings, and load it.
+# Core: 1. firmware present? If not, extract it with firmware/ (stop when
+# that fails). 2. build the module in build/. 3. install it (DKMS when
+# available) and the udev rules (remembered settings, device name
+# /dev/elgato-gchd), and load it.
+# Settings programs: the settings window gchd-settings-gui (application
+# menu) and the text menu gchd-settings.
 # OBS plugin: build it in build/obs-plugin and install it for the current
-# user (~/.config/obs-studio/plugins); needs the kernel driver.
+# user (~/.config/obs-studio/plugins).
 # Can be started from a file manager: it opens a terminal window.
 
 set -u
@@ -43,17 +47,20 @@ OBS_BUILD=$BUILD/obs-plugin
 OBS_PLUGIN_DIR=$HOME/.config/obs-studio/plugins/obs-elgato-gchd
 ASSUME_YES=0
 ACTION=install
-PART=
+CHOSEN=0	# an option named the parts
+WITH_SETTINGS=0
+WITH_OBS=0
 
 for a in "$@"; do
 	case "$a" in
 	--uninstall) ACTION=uninstall ;;
-	--all) PART=all ;;
-	--driver) PART=driver ;;
-	--obs) PART=obs ;;
+	--all) CHOSEN=1; WITH_SETTINGS=1; WITH_OBS=1 ;;
+	--core|--driver) CHOSEN=1 ;;
+	--settings) CHOSEN=1; WITH_SETTINGS=1 ;;
+	--obs) CHOSEN=1; WITH_OBS=1 ;;
 	--yes|-y) ASSUME_YES=1 ;;
 	--in-terminal) ;;
-	-h|--help) sed -n '3,22p' "$0"; exit 0 ;;
+	-h|--help) sed -n '3,27p' "$0"; exit 0 ;;
 	*) echo "unknown option: $a"; exit 2 ;;
 	esac
 done
@@ -80,6 +87,8 @@ step() { printf '\n%s==> %s%s\n' "$B" "$*" "$N"; }
 ok()   { printf '%s%s%s\n' "$G" "$*" "$N"; }
 die()  { printf '%sError: %s%s\n' "$R" "$*" "$N" >&2; exit 1; }
 ask()  { [ $ASSUME_YES = 1 ] && return 0; read -r -p "$* [y/N] " a; [[ "$a" == [yYjJ]* ]]; }
+# ask_yes QUESTION: yes unless answered no (Enter = yes).
+ask_yes() { [ $ASSUME_YES = 1 ] && return 0; read -r -p "$* [Y/n] " a; [[ "$a" != [nN]* ]]; }
 
 # Package names per package manager: install command, headers, dkms, 7z.
 pkg_cmd() {
@@ -147,9 +156,14 @@ uninstall_driver() {
 	sudo rm -f "/lib/modules/$(uname -r)/updates/$MODULE.ko"
 	sudo depmod -a
 	sudo rm -f "/etc/udev/rules.d/$UDEV_RULE" "/etc/udev/rules.d/$UDEV_DEVICE_RULE" "$SETTINGS"
-	sudo rm -f "$SETTINGS_TOOL" "$SETTINGS_GUI" "$SETTINGS_DESKTOP"
 	sudo udevadm control --reload 2>/dev/null
 	ok "Driver removed. The firmware in $FIRMWARE_DIR was kept."
+}
+
+uninstall_settings() {
+	step "Removing the settings programs"
+	sudo rm -f "$SETTINGS_TOOL" "$SETTINGS_GUI" "$SETTINGS_DESKTOP"
+	ok "Settings programs removed (the driver keeps its settings)."
 }
 
 uninstall_obs() {
@@ -223,6 +237,13 @@ install_driver() {
 	sudo install -D -m 0644 "$HERE/udev-rules/$UDEV_DEVICE_RULE" "/etc/udev/rules.d/$UDEV_DEVICE_RULE"
 	sudo udevadm control --reload
 	ok "udev rules installed (settings are remembered; device name /dev/elgato-gchd)."
+	sudo modprobe "$MODULE" || die "the driver could not be loaded (see: sudo dmesg)."
+	ok "Driver loaded. Plug in the Game Capture HD; it appears as a /dev/video device."
+	echo "Watch: v4l2-ctl -d /dev/elgato-gchd -v pixelformat=MPEG && ffplay -f mpegts /dev/elgato-gchd"
+}
+
+install_settings() {
+	step "Settings programs"
 	sudo install -D -m 0755 "$HERE/src/settings/gchd-settings" "$SETTINGS_TOOL"
 	if ! command -v whiptail >/dev/null; then
 		cmd=$(pkg_cmd)
@@ -244,9 +265,6 @@ install_driver() {
 		fi
 	fi
 	ok "Settings installed: 'Elgato Game Capture HD Settings' in the application menu (gchd-settings-gui); text menu: gchd-settings"
-	sudo modprobe "$MODULE" || die "the driver could not be loaded (see: sudo dmesg)."
-	ok "Driver loaded. Plug in the Game Capture HD; it appears as a /dev/video device."
-	echo "Watch: v4l2-ctl -d /dev/elgato-gchd -v pixelformat=MPEG && ffplay -f mpegts /dev/elgato-gchd"
 }
 
 install_obs() {
@@ -258,8 +276,6 @@ install_obs() {
 		fi
 		echo "OBS was not found; the plugin is installed anyway (for an OBS installed later)."
 	fi
-	modinfo "$MODULE" >/dev/null 2>&1 ||
-		echo "Note: the kernel driver is not installed; the plugin needs it (./install-driver.sh --driver)."
 	need cmake command -v cmake
 	need pkgconfig command -v pkg-config
 	need obsdev pkg-config --exists libobs
@@ -274,36 +290,30 @@ install_obs() {
 	ok "OBS plugin installed in $OBS_PLUGIN_DIR. Restart OBS and add the source 'Elgato Game Capture HD'."
 }
 
-# What to install when no option says it.
-choose_part() {
-	local a
-	[ $ASSUME_YES = 1 ] && { PART=all; return; }
-	echo "${B}What should be installed?${N}"
-	echo "  1) Everything: kernel driver and OBS plugin"
-	echo "  2) Kernel driver only"
-	echo "  3) OBS plugin only (the kernel driver must be installed)"
-	read -r -p "Choice [1]: " a
-	case "$a" in
-	2) PART=driver ;;
-	3) PART=obs ;;
-	*) PART=all ;;
-	esac
+# Optional parts when no option names them: ask for each.
+choose_parts() {
+	[ $ASSUME_YES = 1 ] && { WITH_SETTINGS=1; WITH_OBS=1; return; }
+	echo "${B}The driver (core) is always installed. Optional parts:${N}"
+	ask_yes "Install the settings programs (settings window and text menu)?" && WITH_SETTINGS=1
+	ask_yes "Install the OBS plugin (source 'Elgato Game Capture HD')?" && WITH_OBS=1
+	return 0
 }
 
 case $ACTION in
 install)
-	[ -n "$PART" ] || choose_part
-	case $PART in
-	all) install_driver; install_obs ;;
-	driver) install_driver ;;
-	obs) install_obs ;;
-	esac
+	[ $CHOSEN = 1 ] || choose_parts
+	install_driver
+	if [ $WITH_SETTINGS = 1 ]; then install_settings; fi
+	if [ $WITH_OBS = 1 ]; then install_obs; fi
 	;;
 uninstall)
-	case ${PART:-all} in
-	all) uninstall_obs; uninstall_driver ;;
-	driver) uninstall_driver ;;
-	obs) uninstall_obs ;;
-	esac
+	if [ $WITH_SETTINGS = 1 ] || [ $WITH_OBS = 1 ]; then
+		if [ $WITH_SETTINGS = 1 ]; then uninstall_settings; fi
+		if [ $WITH_OBS = 1 ]; then uninstall_obs; fi
+	else
+		uninstall_obs
+		uninstall_settings
+		uninstall_driver
+	fi
 	;;
 esac

@@ -39,28 +39,34 @@ tested. Not supported: Game Capture HD60, HD60 S, HD60 Pro.
    ./install-driver.sh
    ```
 
-   It asks what to install: everything, the kernel driver only, or the
-   OBS plugin only (`--all`, `--driver`, `--obs` choose without asking).
+   It always installs the core (the kernel driver) and asks for each
+   optional part: the settings programs and the OBS plugin. Without
+   asking: `--core` (the core only), `--settings`, `--obs` (the core and
+   that part; both may be given), `--all` (everything).
 
-   - **Kernel driver:** checks for the firmware in `/lib/firmware/gchd/`
-     and extracts it from the installer file when missing (it stops if
-     that fails), builds the driver in `build/`, installs it with DKMS
-     (when available; the driver is then rebuilt after kernel updates),
-     installs the udev rules (remembered settings, device name
-     `/dev/elgato-gchd`) and the settings window (application menu) and
-     text menu, and loads the driver.
-   - **OBS plugin:** builds the plugin in `build/obs-plugin` and installs
-     it for the current user (`~/.config/obs-studio/plugins`). It needs
-     the kernel driver and an OBS installed from the distribution (an OBS
-     Flatpak cannot load it).
+   - **Core (kernel driver):** checks for the firmware in
+     `/lib/firmware/gchd/` and extracts it from the installer file when
+     missing (it stops if that fails), builds the driver in `build/`,
+     installs it with DKMS (when available; the driver is then rebuilt
+     after kernel updates), installs the udev rules (remembered settings,
+     device name `/dev/elgato-gchd`) and loads the driver.
+   - **Settings programs (optional):** the settings window ("Elgato Game
+     Capture HD Settings" in the application menu) and the text menu
+     `gchd-settings`. Without them the settings are changed with
+     `v4l2-ctl` (or in the OBS plugin's properties).
+   - **OBS plugin (optional):** builds the plugin in `build/obs-plugin`
+     and installs it for the current user
+     (`~/.config/obs-studio/plugins`). It needs an OBS installed from the
+     distribution (an OBS Flatpak cannot load it).
 
    Missing packages (kernel headers, compiler, `dkms`, `7z`, `whiptail`,
    `v4l-utils`, the GTK 3 Python bindings,
    the OBS and FFmpeg development packages, `cmake`) are named and can be
    installed on request.
 
-Remove everything with `./install-driver.sh --uninstall`, or one part with
-`--uninstall --driver` or `--uninstall --obs` (the firmware is kept).
+Remove everything with `./install-driver.sh --uninstall` (the firmware is
+kept), or one optional part with `--uninstall --settings` or
+`--uninstall --obs`.
 
 ### Manual installation
 
@@ -74,7 +80,7 @@ Driver with DKMS, and the udev rule:
 
 ```sh
 sudo dkms add ./src/driver
-sudo dkms install elgato-gchd/0.5.9
+sudo dkms install elgato-gchd/0.5.10
 sudo modprobe elgato_gchd
 sudo cp udev-rules/55-elgato-gchd-device.rules udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
@@ -94,7 +100,10 @@ settings in its properties; video and audio are decoded in OBS. Without
 the plugin, OBS's *Media Source* can be used: untick *Local File*, input
 `/dev/elgato-gchd` (with the udev rule
 [`udev-rules/55-elgato-gchd-device.rules`](udev-rules/55-elgato-gchd-device.rules)),
-input format `mpegts`; deinterlacing in the source's context menu.
+input format `mpegts`; deinterlacing in the source's context menu. The
+Media Source does not use the stream's aspect ratio: with *Stretch SD
+input* on, the picture keeps its 4:3 shape there (set the source's size in
+the scene instead); the plugin's source shows it stretched.
 
 ### Settings
 

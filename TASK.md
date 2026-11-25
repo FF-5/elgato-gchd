@@ -2,11 +2,12 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** waiting for evidence from the Windows software (TODO R12)
-- **Type:** fix (driver and/or OBS plugin)
-- **Branch:** `fix/stretch` (from `dev` 0.5.9), created when the evidence
-  is in
-- **TODO items:** T-096 (stage 1b)
+- **Status:** evidence in (Flashback files); implemented; hardware test
+  T-096 open
+- **Type:** fix (documentation, OBS plugin as is) and installer change
+- **Branch:** `fix/stretch` (from `dev` 0.5.9)
+- **TODO items:** T-096 (stage 1b); installer parts (maintainer,
+  2026-11-25)
 
 ## Why
 
@@ -32,41 +33,68 @@ driver, OBS's Media Source shows no difference.
   gets wider (accepted as a stop-gap, T-060). The maintainer is not sure
   this matches the Windows software.
 
-## Evidence needed (TODO R12)
+## Evidence (maintainer, 2026-11-25)
 
-With a picture of known shape (a menu, a circle; best a game with a 16:9
-option), in the Windows software:
+`traces/composite/gchd_PAL_composite_flashback_stretch_ffprobe.txt`:
+`ffprobe` of two files saved with the Windows software's "Flashback"
+option, PAL composite, stretch off and on. Both 720 × 576, H.264 High
+level 3.1, top field first; sample aspect ratio 12:11 (display 15:11, 4:3)
+without stretch, 16:11 (display 20:11, 16:9) with stretch. The Windows
+software stores the device's picture as it is (it repackages the stream:
+other stream IDs); its preview shows the aspect ratio. The driver's stream
+is the same (40:33 / 10:11 at 720 × 480, 16:11 / 12:11 at 720 × 576).
 
-1. Screenshots of the preview with stretch off and on.
-2. A short recording saved by the software with stretch off and one with
-   it on (the files themselves: their size and aspect ratio show whether
-   the software rescales the picture or only keeps the aspect ratio).
+## Decisions
 
-## Goal (acceptance criteria, draft — after the evidence)
+1. (Maintainer, 2026-11-25) Stretch: the output size stays, the picture is
+   shown stretched (as the Windows software's preview).
+2. (Maintainer, 2026-11-25) Installer: the core (kernel driver, firmware,
+   udev rules) is always installed; the settings programs and the OBS
+   plugin are optional, and the installer asks for each. Done together
+   with T-096.
 
-1. With stretch on, the picture looks as in the Windows software in the
-   OBS plugin, OBS's Media Source (`/dev/elgato-gchd`) and ffplay.
-2. With stretch off, nothing changes from today.
-3. Output size settings unchanged.
+## Goal (acceptance criteria)
+
+1. The driver's stream with stretch on and off is as the Windows
+   software's (size kept, 16:9 / 4:3 sample aspect ratio): already so.
+2. Players that follow the aspect ratio (ffplay) and the OBS plugin show a
+   stretched picture with stretch on; OBS's Media Source cannot (OBS does
+   not use the aspect ratio): documented in `README.md`.
+3. Installer: interactive installation asks for the settings programs and
+   the OBS plugin ([Y/n] each); `--core`, `--settings`, `--obs`, `--all`
+   without questions; `--uninstall` everything or with `--settings` /
+   `--obs` one optional part.
+
+## Implementation
+
+- Stretch: no driver change (the stream already matches the Windows
+  software). Documentation: `docs/composite.md §10` (Flashback files),
+  `docs/video-output.md` (aspect ratio of the stretch control),
+  `README.md` (Media Source), `src/obs-plugin/README.md`.
+- `install-driver.sh`: parts core, settings, OBS; `choose_parts` asks for
+  the optional ones; `install_settings` / `uninstall_settings` split from
+  the driver part; `--driver` kept as another name for `--core`. Checked
+  here with the install functions replaced by stubs: every option and the
+  answers (Enter, n) call the right parts, exit status 0; shellcheck
+  without warnings. Version 0.5.10.
 
 ## Hardware test (maintainer)
 
-Written once the evidence is in.
+```sh
+cd ~ && git -C elgato-gchd fetch origin
+git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-096.sh > tests/T-096.sh
+bash gchd-test.sh T-096 --branch fix/stretch
+```
 
 ## Findings
 
+- Component recording (maintainer, 2026-11-25):
+  `traces/component/gchd_component_modes_output-sizes_5060fps_small_part1`
+  and `_part2` (decoded listings next to them): 576i, then 576p, 720p,
+  1080i, 1080p (1080p30 only, USB 2.0), output sizes and the "Allow
+  50/60fps" option, order not noted. For T-051 (stage 2); single-option
+  recordings can be asked for then.
+
 ## Maintainer comments
 
-Check the diff text file I uploaded to traces for an analysis on recordings made with the "Flashback" option from the Windows software. I believe these are recorded straight from the device output without any processing, but I'm not 100% sure.
-
-Additionally I uploaded a trace for component input. I did these things:
-- Changed input from 576i to: 576p, 720p, 1080i, 1080p (remember that the device does only 1080p30 because of USB2.0 limitations).
-- I played around with output sizes.
-- I played around with the "Allow 50/60fps" checkbox setting.
-I can't give you a precise order in which I did everything. I'm hoping you can maybe figure out what is what and if you need some more precise tracing I can do some traces turning just a single option on and off.
-
-I'm also starting to think what is best to ship as a kernel module and I think we need to separate 3 things:
-- core components of the module
-- GUI for the settings
-- OBS plugin
-I think the installer has to install the core module as a base and GUI and OBS plugin are optional. The script needs to ask the user which optional components it wants to install.

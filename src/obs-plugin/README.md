@@ -42,10 +42,12 @@ properties.
   switched off), the source shows a black picture of the last size
   instead of the last picture. A setting change (encoder restart) keeps
   the last picture.
-- **Stretch SD input:** the device keeps the picture size and signals a
-  16:9 sample aspect ratio; OBS does not use it, so the source widens a
-  stretched picture itself (720 × 480 → 872 × 480, 720 × 576 → 1048 × 576).
-  Other pictures are passed as they are.
+- **Stretch SD input** (for games that squash a 16:9 picture into 4:3):
+  the device keeps the picture size and stores a 16:9 sample aspect ratio
+  in the stream, as the files the Windows software saves do; players that
+  follow it show the picture stretched. OBS does not use the aspect ratio,
+  so the source widens a stretched picture itself (720 × 480 → 872 × 480,
+  720 × 576 → 1048 × 576). Other pictures are passed as they are.
 - **Log:** the picture size, the stream's sample aspect ratio and the size
   shown are logged when they change (`[gchd] picture ...`).
 - **Capture device on/off:** the device captures while the source is shown
