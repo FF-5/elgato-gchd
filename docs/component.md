@@ -74,24 +74,35 @@ as well).
 | Source | Output | Frames/s | `v_format` | `v_ip_format` | `v_in_source_type` | `v_vinpelclk` | GOP | Bitrate B / max / ave / min (kbit/s) | Level (`_bl`) | `system_rate` | `ts` | TS output | Colour |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 576i | 720 × 576 | 25 (50 fields) | 5 | 0 | 3 | 1 | 12 | 11250 / 10125 / 5625 / 2812 | 31 (31) | 12531 | 0 / 0 | 1 | 6 |
+| 576i | 640 × 480 | 25 | 5 | 2 | 3 | 1 | 6 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12531 | 0 / 0 | 2 | 6 |
 | 576p | 720 × 576 | 50 | 9 | 2 | 3 | 1 | 6 | 15000 / 13500 / 7500 / 3750 | 30 (30) | 16597 | 0 / 0 | 1 | 6 |
+| 576p, 50/60fps off | 720 × 576 | 50 | 9 | 2 | 3 | 1 | 12 | 15000 / 13500 / 7500 / 3750 | 31 (31) | 16597 | 0 / 0 | 1 | 6 |
 | 720p | 1280 × 720 | 60 | 2 | 2 | 0 | 0 | 14 | 26250 / 23625 / 13125 / 9187 | 40 (31) | 28683 | 0 / 0 | 1 | 1 |
 | 720p, 50/60fps off | 1280 × 720 | 30 | 2 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 31 (31) | 16562 | 60000 / 1001 | 1 | 1 |
 | 720p | 640 × 480 | 30 | 2 | 2 | 0 | 0 | 8 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12539 | 60000 / 1001 | 2 | 1 |
 | 1080i | 1920 × 1080 | 30 (60 fields) | 0 | 0 | 0 | 0 | 14 | 30000 / 27000 / 15000 / 10500 | 40 (31) | 32655 | 0 / 0 | 1 | 1 |
+| 1080i | 1280 × 720 | 60 | 0 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 31 (31) | 16562 | 0 / 0 | 1 | 1 |
+| 1080i | 640 × 480 | — | 0 | 2 | 0 | 0 | 8 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12539 | 0 / 0 | 2 | 1 |
+| 1080i | 480 × 360 | — | 0 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 22 (22) | 16562 | 0 / 0 | 2 | 1 |
 | 1080p30 | 1920 × 1080 | 30 | 32 | 2 | 0 | 0 | 8 | 30000 / 27000 / 15000 / 10500 | 40 (31) | 32655 | 60000 / 1001 | 1 | 1 |
 | 1080p30 | 1280 × 720 | 30 | 32 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 31 (31) | 16562 | 60000 / 1001 | 1 | 1 |
 | 1080p30 | 640 × 480 | 30 | 32 | 2 | 0 | 0 | 8 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12539 | 60000 / 1001 | 2 | 1 |
+| 1080p30 | 480 × 360 | 30 | 32 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 22 (22) | 16562 | 60000 / 1001 | 2 | 1 |
 
 Colour: `colour_primaries` and `matrix_coefficients` (6 SMPTE 170M, 1
-BT.709). Maximum 0.9·B, average B/2, minimum B/4, 0.35·B from 26250.
-`system_rate` = ⌊1.07285·B + 461.7⌋ with a 50 Hz source, ⌊1.07285·B +
-469.7⌋ with 60 Hz, plus 43 (576p) or 51 (720p60) for progressive 50/60
-frames per second. "Allow 50/60fps" off encodes a 60 Hz progressive
-source at 30 frames per second (GOP 8, signalled 60000/1001). An output
-size change is NULL, STOP, encoder fields, START without front-end
-writes. Not recorded: 480i, 480p, 576i/576p and 1080i with other output
-sizes or the option off.
+BT.709). The values are the defaults of each output size; the bitrate
+slider of the Windows software changes B (seen: 576p 8000–15000, 720p
+14000–26250 at 60 and 8000–15000 at 30 frames per second, 1080i/1080p
+16000–30000). Maximum 0.9·B, average B/2, minimum 0 up to 4000, B/10
+below 10000, B/4 above, 0.35·B from 26250. `system_rate` = ⌊1.07285·B +
+461.7⌋ with a 50 Hz source, ⌊1.07285·B + 470.2⌋ with 60 Hz, plus 43
+(576p) or 51 (720p at 60 frames per second) for progressive 50/60 frames
+per second. "Allow 50/60fps": off encodes 720p at 30 frames per second
+(GOP 8, signalled 60000/1001); on 576p it switches GOP 6 / 12 only; no
+effect on 1080i and 1080p30. The 1280 × 720 and 1920 × 1080 output sizes
+of SD sources are scaled by the Windows software (the encoder stays at
+720 × 576). An output size change is NULL, STOP, encoder fields, START
+without front-end writes. Not recorded: 480i, 480p.
 
 The driver uses these values at the standard output size; 480i and 480p
 follow the same rules (11250, GOP 14 / 15000, GOP 8), not yet confirmed.
