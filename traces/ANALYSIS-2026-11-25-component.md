@@ -75,9 +75,11 @@ Readings:
   640×480), 15000 (576p, 1280×720 at 30), 26250 (1280×720 at 60), 30000
   (1920×1080). Maximum 0.9·B, average B/2, minimum B/4 below 26250 and
   0.35·B from 26250 (9187 / 10500).
-- `system_rate` = ⌊1.0728·B + 462⌋ at 50 Hz sources (12531, 16597),
-  ⌊1.0728·B + 470.6⌋ + 4…5 at 60 Hz (12539, 16562, 28683, 32655) — same
-  form as composite, to be fitted when more values are known.
+- `system_rate`: composite's formula ⌊1.0728·B + 462.1⌋ (50 Hz) /
+  ⌊1.0728·B + 470.6⌋ (60 Hz) gives 576i 12531, 1280×720 at 30 16562,
+  640×480 12539 exactly and 1080i/1080p30 32654 (recorded 32655). The
+  progressive 50/60 frames/s modes are higher: 576p 16597 (+43), 720p60
+  28683 (+52): more frames per second, more stream overhead.
 - 640×480 uses transport output 2 (audio too), as composite's scaled
   sizes.
 - An output-size change is NULL, STOP, encoder fields, START without
