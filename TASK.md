@@ -64,3 +64,9 @@ Additionally I uploaded a trace for component input. I did these things:
 - I played around with output sizes.
 - I played around with the "Allow 50/60fps" checkbox setting.
 I can't give you a precise order in which I did everything. I'm hoping you can maybe figure out what is what and if you need some more precise tracing I can do some traces turning just a single option on and off.
+
+I'm also starting to think what is best to ship as a kernel module and I think we need to separate 3 things:
+- core components of the module
+- GUI for the settings
+- OBS plugin
+I think the installer has to install the core module as a base and GUI and OBS plugin are optional. The script needs to ask the user which optional components it wants to install.
