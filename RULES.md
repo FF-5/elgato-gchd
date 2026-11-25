@@ -200,3 +200,7 @@ A task may be merged to `dev` only when all of these hold:
 6. Do not copy statements from task descriptions or conversations into the
    documentation; verify them against traces or code first, and record
    unverified information in `TODO.md`.
+7. A task's hardware test file contains only what is not yet accepted:
+   steps that passed are removed from the next run (maintainer,
+   2026-11-26). When the maintainer must change something on the source
+   (its menus), the test shows the live picture first.
