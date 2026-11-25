@@ -94,3 +94,67 @@ Readings:
 4. 720p 640×480 with the option on: the same 30 fps values?
 5. `9C:04` / `9C:E0` writes in #1, #14 and #18 (`9C:04` stepping EC, E0,
    F4, 88 in #14): a picture setting or a front-end adjustment?
+
+# Single-option recordings, 2026-11-25 (second upload)
+
+Recordings in `traces/component/` (decoded `.ops.txt` next to them):
+`gchd_component_576p_input_bitrate`, `_720p_input_bitrate`,
+`_1080i_input_bitrate`, `_1080p_input_bitrate` (one source mode, bitrate
+slider from maximum to minimum and back, the 50/60 fps option, output
+sizes), `_720_output`, `_480_output`, `_480_output_SD_option`,
+`_50-60fps_option`. Maintainer's notes: on 576p the 50/60 fps option had a
+visible effect only with the 720 or 1080 output; on 1080i the 720 output
+looked like 720p60 and the option did nothing; each output size has its
+own bitrate.
+
+Encoder settings per sequence (B / max / min in kbit/s; L level / `_bl`;
+ts `time_scale_l_bl` / `num_units_in_tick_bl`; out transport output):
+
+| Recording # | Source | Output | IP | GOP | B / max / min | L | system_rate | ts | out |
+|---|---|---|---|---|---|---|---|---|---|
+| 576p_bitrate 0 | 576p | 720×576 | 2 | 12 | 8000 / 7200 / 800 | 31/31 | 9087 | 0/0 | 1 |
+| 576p_bitrate 1 | 576p | 720×576 | 2 | 6 | 8000 / 7200 / 800 | 30/30 | 9087 | 0/0 | 1 |
+| 576p_bitrate 3, 5, 7 | 576p | 720×576 | 2 | 12 | 15000 / 13500 / 3750 | 31/31 | 16597 | 0/0 | 1 |
+| 576p_bitrate 4, 6 | 576p | 720×576 | 2 | 12 | 11250 / 10125 / 2812 | 31/31 | 12574 | 0/0 | 1 |
+| 720p_bitrate 0 | 720p | 1280×720 | 2 | 14 | 14000 / 12600 / 3500 | 40/31 | 15541 | 0/0 | 1 |
+| 720p_bitrate 1 | 720p | 1280×720 | 2 | 8 | 8000 / 7200 / 800 | 31/31 | 9053 | 60000/1001 | 1 |
+| 720p_bitrate 2 | 720p | 1280×720 | 2 | 8 | 15000 / 13500 / 3750 | 31/31 | 16562 | 60000/1001 | 1 |
+| 720p_bitrate 3 | 720p | 1280×720 | 2 | 14 | 26250 / 23625 / 9187 | 40/31 | 28683 | 0/0 | 1 |
+| 1080i_bitrate 1 | 1080i | 1920×1080 | 0 | 14 | 16000 / 14400 / 4000 | 40/31 | 17635 | 0/0 | 1 |
+| 1080i_bitrate 3; 720_output 4; 50-60 12 | 1080i | 1280×720 | 2 | 8 | 15000 / 13500 / 3750 | 31/31 | 16562 | 0/0 | 1 |
+| 1080i_bitrate 4; 480_output 3; 50-60 8 | 1080i | 640×480 | 2 | 8 | 11250 / 10125 / 2812 | 30/30 | 12539 | 0/0 | 2 |
+| 1080i_bitrate 5 | 1080i | 480×360 | 2 | 8 | 15000 / 13500 / 3750 | 22/22 | 16562 | 0/0 | 2 |
+| 1080p_bitrate 0 | 1080p30 | 1920×1080 | 2 | 8 | 16000 / 14400 / 4000 | 40/31 | 17635 | 60000/1001 | 1 |
+| 1080p_bitrate 2 | 1080p30 | 1280×720 | 2 | 8 | 15000 / 13500 / 3750 | 31/31 | 16562 | 60000/1001 | 1 |
+| 1080p_bitrate 3 | 1080p30 | 640×480 | 2 | 8 | 11250 / 10125 / 2812 | 30/30 | 12539 | 60000/1001 | 2 |
+| 1080p_bitrate 4 | 1080p30 | 480×360 | 2 | 8 | 15000 / 13500 / 3750 | 22/22 | 16562 | 60000/1001 | 2 |
+| 480_output_SD_option 0 | 576i | 640×480 | 2 | 6 | 11250 / 10125 / 2812 | 30/30 | 12531 | 0/0 | 2 |
+| 50-60 0, 2 / 1, 3 | 576p | 720×576 | 2 | 6 / 12 | 15000 / 13500 / 3750 | 30 / 31 | 16597 | 0/0 | 1 |
+| 50-60 5 | 720p | 640×480 | 2 | 8 | 11250 / 10125 / 2812 | 30/30 | 12539 | 60000/1001 | 2 |
+| 50-60 9 | 1080i | 1920×1080 | 0 | 14 | 30000 / 27000 / 10500 | 40/31 | 32655 | 0/0 | 1 |
+
+Readings:
+
+- Minimum bitrate as on composite (0 up to 4000, 10 % below 10000, 25 %
+  above) and 35 % from 26250: 800, 3500, 4000, 9187, 10500.
+- `system_rate` = ⌊1.07285·B + 461.7⌋ (50 Hz source) / ⌊1.07285·B +
+  470.2⌋ (60 Hz), plus 43 (576p) / 51 (720p at 60 frames per second) for
+  progressive 50/60 frames per second: all 14 distinct recorded values.
+  (The earlier +469.7 fitted the first recording only.)
+- 576p: the 50/60 fps option switches GOP 6 (on, level 30) / 12 (off,
+  level 31); the stream stays at 50 frames per second (`system_rate` with
+  the 576p addition in both). Its visible effect at the 720/1080 output
+  sizes is the Windows software's own scaling (the encoder stays at
+  720×576, as for composite's HD sizes).
+- 720p: option on 60 frames per second (GOP 14, level 40); off 30
+  (GOP 8, timing 60000/1001, level 31). Slider ranges seen: 14000–26250 at
+  60, 8000–15000 at 30.
+- 1080i: the option has no effect. Output 1280×720: GOP 8, 15000, no
+  timing fields (the 1080i field pairs give 60 pictures per second); 640×480
+  and 480×360 on transport output 2 (480×360 level 22, 15000 as
+  composite's mobile size). Slider range at 1920×1080: 16000–30000.
+- 1080p30: every output size signals 60000/1001; slider 16000–30000.
+- Sequences that start with the previous mode's values and are restarted
+  0.5–3 s later (e.g. `720_output` #3/#4, `480_output` #1/#2,
+  `50-60fps_option` #7/#8, #11/#12): the Windows software's first START
+  after a source change.

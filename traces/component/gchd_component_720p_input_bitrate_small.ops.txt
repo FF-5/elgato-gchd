@@ -1,0 +1,4077 @@
+   0.0010  MAIL_W port=BRIDGE 
+   0.0060  MAIL_R port=BRIDGE len=1 -> FA
+   0.0100  READ   9C:68 -> BF
+   0.0160  READ   9C:67 -> 59
+   0.0200  READ   9C:66 -> BA
+   0.0250  READ   9C:65 -> 95
+   0.0290  READ   9C:2B -> F8
+   0.0330  READ   9C:60 -> B2
+   0.0380  READ   98:F5 -> 72
+   0.0430  READ   98:F5 -> 72
+   0.0480  READ   98:F5 -> 72
+   0.0520  READ   98:F5 -> 72
+   0.0560  READ   98:F5 -> 72
+   0.0600  READ   98:F5 -> 72
+   0.0640  READ   98:F5 -> 72
+   0.0680  READ   98:F5 -> 72
+   0.0810  READ   98:F5 -> 72
+   0.0850  READ   98:F5 -> 72
+   0.0890  READ   98:F5 -> 72
+   0.1650  READ   98:F5 -> 72
+   0.1720  READ   98:F5 -> 72
+   0.1760  READ   98:F5 -> 72
+   0.1890  READ   98:F5 -> 72
+   0.2170  READ   98:F5 -> 72
+   0.2260  READ   98:F5 -> 72
+   0.2310  READ   98:F5 -> 72
+   0.2350  READ   98:F5 -> 72
+   0.2400  READ   98:F5 -> 72
+   0.2630  READ   98:F5 -> 72
+   0.2710  READ   98:F5 -> 72
+   0.2750  READ   98:F5 -> 72
+   0.2790  READ   98:F5 -> 72
+   0.2840  READ   98:F5 -> 72
+   0.2890  READ   98:F5 -> 72
+   0.3110  READ   98:F5 -> 72
+   0.3160  READ   98:F5 -> 72
+   0.3200  READ   98:F5 -> 72
+   0.3340  READ   98:F5 -> 72
+   0.3390  READ   98:F5 -> 72
+   0.8340  READ   9C:2B -> F8
+   0.8430  READ   9C:2A -> FA
+   0.8470  READ   9C:68 -> BF
+   0.8520  READ   9C:67 -> 58
+   0.8560  READ   9C:66 -> BA
+   0.8760  READ   9C:65 -> 95
+   0.8800  READ   9C:2B -> F8
+   0.8941  READ   9C:60 -> B2
+   0.8971  READ   98:F5 -> 72
+   0.9011  READ   98:F5 -> 72
+   0.9051  READ   98:F5 -> 72
+   0.9101  READ   98:F5 -> 72
+   0.9151  READ   98:F5 -> 72
+   0.9181  READ   98:F5 -> 72
+   0.9381  READ   98:F5 -> 72
+   0.9421  READ   98:F5 -> 72
+   0.9511  READ   98:F5 -> 72
+   0.9541  READ   98:F5 -> 72
+   0.9591  READ   98:F5 -> 72
+   0.9631  READ   98:F5 -> 72
+   0.9661  READ   98:F5 -> 72
+   0.9701  READ   98:F5 -> 72
+   0.9741  READ   98:F5 -> 72
+   0.9831  READ   98:F5 -> 72
+   0.9871  READ   98:F5 -> 72
+   1.0281  READ   98:F5 -> 72
+   1.0381  READ   98:F5 -> 72
+   1.0571  READ   98:F5 -> 72
+   1.6561  READ   9C:2B -> F8
+   1.6591  READ   9C:2A -> FA
+   1.6681  READ   9C:68 -> BF
+   1.6771  READ   9C:67 -> 59
+   1.6811  READ   9C:66 -> BA
+   1.6851  READ   9C:65 -> 95
+   1.6891  READ   9C:2B -> F8
+   1.6941  READ   9C:60 -> B2
+   1.6981  READ   98:F5 -> 72
+   1.7021  READ   98:F5 -> 72
+   1.7061  READ   98:F5 -> 72
+   1.7101  READ   98:F5 -> 72
+   1.7141  READ   98:F5 -> 72
+   1.7331  READ   98:F5 -> 72
+   1.7481  READ   98:F5 -> 72
+   1.7521  READ   98:F5 -> 72
+   1.7561  READ   98:F5 -> 72
+   1.7601  READ   98:F5 -> 72
+   1.7651  READ   98:F5 -> 72
+   1.7691  READ   98:F5 -> 72
+   1.7731  READ   98:F5 -> 72
+   1.7781  READ   98:F5 -> 72
+   1.7971  READ   98:F5 -> 72
+   1.8021  READ   98:F5 -> 72
+   1.8101  READ   98:F5 -> 72
+   1.8161  READ   98:F5 -> 72
+   1.8211  READ   98:F5 -> 72
+   1.8251  READ   98:F5 -> 72
+   1.8291  READ   98:F5 -> 72
+   1.8341  READ   98:F5 -> 72
+   1.8371  READ   98:F5 -> 72
+   1.8421  READ   98:F5 -> 72
+   1.8631  READ   98:F5 -> 72
+   1.8661  READ   98:F5 -> 72
+   1.8711  READ   98:F5 -> 72
+   1.8761  READ   98:F5 -> 72
+   1.8861  READ   98:F5 -> 72
+   1.8911  READ   98:F5 -> 72
+   1.8951  READ   98:F5 -> 72
+   2.4021  READ   9C:2B -> F8
+   2.4371  READ   9C:2A -> FA
+   2.4441  READ   9C:68 -> BF
+   2.4681  READ   9C:67 -> 59
+   2.4801  READ   9C:66 -> BA
+   2.4851  READ   9C:65 -> 95
+   2.4891  READ   9C:2B -> F8
+   2.4931  READ   9C:60 -> B2
+   2.4981  READ   98:F5 -> 72
+   2.5041  READ   98:F5 -> 72
+   2.5081  READ   98:F5 -> 72
+   2.5121  READ   98:F5 -> 72
+   2.5151  READ   98:F5 -> 72
+   2.5191  READ   98:F5 -> 72
+   2.5231  READ   98:F5 -> 72
+   2.5421  READ   98:F5 -> 72
+   2.5481  READ   98:F5 -> 72
+   2.5521  READ   98:F5 -> 72
+   2.5611  READ   98:F5 -> 72
+   2.5651  READ   98:F5 -> 72
+   2.5691  READ   98:F5 -> 72
+   2.5731  READ   98:F5 -> 72
+   2.5771  READ   98:F5 -> 72
+   2.5831  READ   98:F5 -> 72
+   2.5881  READ   98:F5 -> 72
+   2.6071  READ   98:F5 -> 72
+   2.6131  READ   98:F5 -> 72
+   2.6171  READ   98:F5 -> 72
+   2.6262  READ   98:F5 -> 72
+   2.6312  READ   98:F5 -> 72
+   2.6351  READ   98:F5 -> 72
+   2.6402  READ   98:F5 -> 72
+   2.6432  READ   98:F5 -> 72
+   2.6472  READ   98:F5 -> 72
+   2.6532  READ   98:F5 -> 72
+   2.6722  READ   98:F5 -> 72
+   2.6762  READ   98:F5 -> 72
+   2.6802  READ   98:F5 -> 72
+   2.6842  READ   98:F5 -> 72
+   3.1842  READ   9C:2B -> F8
+   3.1972  READ   9C:2A -> FA
+   3.2002  READ   9C:68 -> BF
+   3.2042  READ   9C:67 -> 59
+   3.2082  READ   9C:66 -> BA
+   3.2122  READ   9C:65 -> 95
+   3.2172  READ   9C:2B -> F8
+   3.2222  READ   9C:60 -> B2
+   3.2272  READ   98:F5 -> 72
+   3.2312  READ   98:F5 -> 72
+   3.2432  READ   98:F5 -> 72
+   3.2492  READ   98:F5 -> 72
+   3.2552  READ   98:F5 -> 72
+   3.2582  READ   98:F5 -> 72
+   3.2632  READ   98:F5 -> 72
+   3.2662  READ   98:F5 -> 72
+   3.2712  READ   98:F5 -> 72
+   3.2842  READ   98:F5 -> 72
+   3.2872  READ   98:F5 -> 72
+   3.2912  READ   98:F5 -> 72
+   3.2952  READ   98:F5 -> 72
+   3.3002  READ   98:F5 -> 72
+   3.3042  READ   98:F5 -> 72
+   3.3082  READ   98:F5 -> 72
+   3.3122  READ   98:F5 -> 72
+   3.3352  READ   98:F5 -> 72
+   3.3412  READ   98:F5 -> 72
+   3.3512  READ   98:F5 -> 72
+   3.3542  READ   98:F5 -> 72
+   3.3582  READ   98:F5 -> 72
+   3.3622  READ   98:F5 -> 72
+   3.3662  READ   98:F5 -> 72
+   3.3702  READ   98:F5 -> 72
+   3.3742  READ   98:F5 -> 72
+   3.3782  READ   98:F5 -> 72
+   3.3982  READ   98:F5 -> 72
+   3.4042  READ   98:F5 -> 72
+   3.4112  READ   98:F5 -> 72
+   3.4162  READ   98:F5 -> 72
+   3.8982  READ   9C:2B -> F8
+   3.9332  READ   9C:2A -> FA
+   3.9432  READ   9C:68 -> BF
+   3.9462  READ   9C:67 -> 5E
+   3.9582  READ   9C:66 -> BA
+   3.9672  READ   9C:65 -> 95
+   3.9722  READ   9C:2B -> F8
+   3.9772  READ   9C:60 -> B2
+   3.9812  READ   98:F5 -> 72
+   3.9842  READ   98:F5 -> 72
+   3.9892  READ   98:F5 -> 72
+   3.9922  READ   98:F5 -> 72
+   3.9962  READ   98:F5 -> 72
+   4.0012  READ   98:F5 -> 72
+   4.0192  READ   98:F5 -> 72
+   4.0252  READ   98:F5 -> 72
+   4.0282  READ   98:F5 -> 72
+   4.0382  READ   98:F5 -> 72
+   4.0442  READ   98:F5 -> 72
+   4.0482  READ   98:F5 -> 72
+   4.0532  READ   98:F5 -> 72
+   4.0592  READ   98:F5 -> 72
+   4.0632  READ   98:F5 -> 72
+   4.0842  READ   98:F5 -> 72
+   4.0882  READ   98:F5 -> 72
+   4.0962  READ   98:F5 -> 72
+   4.1092  READ   98:F5 -> 72
+   4.1122  READ   98:F5 -> 72
+   4.1182  READ   98:F5 -> 72
+   4.1222  READ   98:F5 -> 72
+   4.1262  READ   98:F5 -> 72
+   4.1312  READ   98:F5 -> 72
+   4.1342  READ   98:F5 -> 72
+   4.1552  READ   98:F5 -> 72
+   4.1592  READ   98:F5 -> 72
+   4.1682  READ   98:F5 -> 72
+   4.1722  READ   98:F5 -> 72
+   4.1762  READ   98:F5 -> 72
+   4.1812  READ   98:F5 -> 72
+   4.6853  READ   9C:2B -> F8
+   4.6913  READ   9C:2A -> FA
+   4.6953  READ   9C:68 -> BF
+   4.7093  READ   9C:67 -> 58
+   4.7143  READ   9C:66 -> BA
+   4.7203  READ   9C:65 -> 95
+   4.7253  READ   9C:2B -> F8
+   4.7313  READ   9C:60 -> B2
+   4.7353  READ   98:F5 -> 72
+   4.7443  READ   98:F5 -> 72
+   4.7483  READ   98:F5 -> 72
+   4.7533  READ   98:F5 -> 72
+   4.7583  READ   98:F5 -> 72
+   4.7613  READ   98:F5 -> 72
+   4.7653  READ   98:F5 -> 72
+   4.7693  READ   98:F5 -> 72
+   4.7733  READ   98:F5 -> 72
+   4.7933  READ   98:F5 -> 72
+   4.7973  READ   98:F5 -> 72
+   4.8023  READ   98:F5 -> 72
+   4.8113  READ   98:F5 -> 72
+   4.8173  READ   98:F5 -> 72
+   4.8203  READ   98:F5 -> 72
+   4.8253  READ   98:F5 -> 72
+   4.8293  READ   98:F5 -> 72
+   4.8343  READ   98:F5 -> 72
+   4.8373  READ   98:F5 -> 72
+   4.8583  READ   98:F5 -> 72
+   4.8613  READ   98:F5 -> 72
+   4.8713  READ   98:F5 -> 72
+   4.8743  READ   98:F5 -> 72
+   4.8783  READ   98:F5 -> 72
+   4.8823  READ   98:F5 -> 72
+   4.8883  READ   98:F5 -> 72
+   4.8923  READ   98:F5 -> 72
+   4.8963  READ   98:F5 -> 72
+   4.9173  READ   98:F5 -> 72
+   4.9233  READ   98:F5 -> 72
+   4.9263  READ   98:F5 -> 72
+   5.4353  READ   9C:2B -> F8
+   5.4433  READ   9C:2A -> FA
+   5.4493  READ   9C:68 -> BF
+   5.4533  READ   9C:67 -> 59
+   5.4583  READ   9C:66 -> BA
+   5.4783  READ   9C:65 -> 95
+   5.4833  READ   9C:2B -> F8
+   5.4923  READ   9C:60 -> B2
+   5.4963  READ   98:F5 -> 72
+   5.5013  READ   98:F5 -> 72
+   5.5043  READ   98:F5 -> 72
+   5.5093  READ   98:F5 -> 72
+   5.5133  READ   98:F5 -> 72
+   5.5183  READ   98:F5 -> 72
+   5.5223  READ   98:F5 -> 72
+   5.5263  READ   98:F5 -> 72
+   5.5483  READ   98:F5 -> 72
+   5.5523  READ   98:F5 -> 72
+   5.5653  READ   98:F5 -> 72
+   5.5693  READ   98:F5 -> 72
+   5.5733  READ   98:F5 -> 72
+   5.5783  READ   98:F5 -> 72
+   5.5823  READ   98:F5 -> 72
+   5.5863  READ   98:F5 -> 72
+   5.5913  READ   98:F5 -> 72
+   5.5943  READ   98:F5 -> 72
+   5.6143  READ   98:F5 -> 72
+   5.6183  READ   98:F5 -> 72
+   5.6233  READ   98:F5 -> 72
+   5.6323  READ   98:F5 -> 72
+   5.6383  READ   98:F5 -> 72
+   5.6433  READ   98:F5 -> 72
+   5.6483  READ   98:F5 -> 72
+   5.6533  READ   98:F5 -> 72
+   5.6583  READ   98:F5 -> 72
+   5.6623  READ   98:F5 -> 72
+   5.6663  READ   98:F5 -> 72
+   5.6713  READ   98:F5 -> 72
+   5.6743  READ   98:F5 -> 72
+   6.1874  READ   9C:2B -> F8
+   6.1914  READ   9C:2A -> FA
+   6.1994  READ   9C:68 -> BF
+   6.2034  READ   9C:67 -> 58
+   6.2084  READ   9C:66 -> BA
+   6.2134  READ   9C:65 -> 95
+   6.2174  READ   9C:2B -> F8
+   6.2224  READ   9C:60 -> B2
+   6.2274  READ   98:F5 -> 72
+   6.2414  READ   98:F5 -> 72
+   6.2444  READ   98:F5 -> 72
+   6.2494  READ   98:F5 -> 72
+   6.2544  READ   98:F5 -> 72
+   6.2584  READ   98:F5 -> 72
+   6.2684  READ   98:F5 -> 72
+   6.2724  READ   98:F5 -> 72
+   6.2774  READ   98:F5 -> 72
+   6.2824  READ   98:F5 -> 72
+   6.2864  READ   98:F5 -> 72
+   6.2904  READ   98:F5 -> 72
+   6.2944  READ   98:F5 -> 72
+   6.3144  READ   98:F5 -> 72
+   6.3194  READ   98:F5 -> 72
+   6.3224  READ   98:F5 -> 72
+   6.3324  READ   98:F5 -> 72
+   6.3364  READ   98:F5 -> 72
+   6.3404  READ   98:F5 -> 72
+   6.3444  READ   98:F5 -> 72
+   6.3494  READ   98:F5 -> 72
+   6.3534  READ   98:F5 -> 72
+   6.3574  READ   98:F5 -> 72
+   6.3614  READ   98:F5 -> 72
+   6.3664  READ   98:F5 -> 72
+   6.3744  READ   98:F5 -> 72
+   6.3794  READ   98:F5 -> 72
+   6.4004  READ   98:F5 -> 72
+   6.4044  READ   98:F5 -> 72
+   6.4164  READ   98:F5 -> 72
+   6.4234  READ   98:F5 -> 72
+   6.9324  READ   9C:2B -> F8
+   6.9384  READ   9C:2A -> FA
+   6.9424  READ   9C:68 -> BF
+   6.9614  READ   9C:67 -> 59
+   6.9664  READ   9C:66 -> BA
+   6.9714  READ   9C:65 -> 95
+   6.9804  READ   9C:2B -> F8
+   6.9854  READ   9C:60 -> B2
+   6.9894  READ   98:F5 -> 72
+   6.9934  READ   98:F5 -> 72
+   6.9984  READ   98:F5 -> 72
+   7.0034  READ   98:F5 -> 72
+   7.0224  READ   98:F5 -> 72
+   7.0274  READ   98:F5 -> 72
+   7.0414  READ   98:F5 -> 72
+   7.0494  READ   98:F5 -> 72
+   7.0534  READ   98:F5 -> 72
+   7.0584  READ   98:F5 -> 72
+   7.0634  READ   98:F5 -> 72
+   7.0684  READ   98:F5 -> 72
+   7.0734  READ   98:F5 -> 72
+   7.0784  READ   98:F5 -> 72
+   7.0824  READ   98:F5 -> 72
+   7.1024  READ   98:F5 -> 72
+   7.1054  READ   98:F5 -> 72
+   7.1094  READ   98:F5 -> 72
+   7.1194  READ   98:F5 -> 72
+   7.1244  READ   98:F5 -> 72
+   7.1284  READ   98:F5 -> 72
+   7.1324  READ   98:F5 -> 72
+   7.1364  READ   98:F5 -> 72
+   7.1404  READ   98:F5 -> 72
+   7.1444  READ   98:F5 -> 72
+   7.1484  READ   98:F5 -> 72
+   7.1674  READ   98:F5 -> 72
+   7.1714  READ   98:F5 -> 72
+   7.1794  READ   98:F5 -> 72
+   7.1854  READ   98:F5 -> 72
+   7.1894  READ   98:F5 -> 72
+   7.8344  SCMD   STATE_CHANGE mode=00 data=0004
+   8.0355  REG_R  0800:0014 -> 05 00
+   8.1355  REG_R  0800:2008 -> 00 02
+   8.1355  REG_R  0900:0074 -> 01 1A
+   8.1355  REG_R  0900:01b0 -> 03 D2
+   8.1855  REG_R  0800:2008 -> 00 02
+   8.1855  REG_R  0900:0074 -> 01 1A
+   8.1855  REG_R  0900:01b0 -> 03 D2
+   8.3235  REG_R  0800:2008 -> 00 02
+   8.3235  REG_R  0900:0074 -> 01 1A
+   8.3235  REG_R  0900:01b0 -> 03 D2
+   8.3765  REG_R  0800:2008 -> 00 02
+   8.3765  REG_R  0900:0074 -> 01 1A
+   8.3765  REG_R  0900:01b0 -> 03 D2
+   8.4275  REG_R  0800:2008 -> 00 04
+   8.4275  REG_R  0900:0074 -> 01 1E
+   8.4275  REG_R  0900:01b0 -> 03 D2
+   8.4275  REG_R  0800:2008 -> 00 04
+   8.4285  REG_R  0800:2008 -> 00 04
+   8.4285  REG_W  0900:0074 = 00 04
+   8.4285  REG_W  0900:01b0 = 00 00
+   8.4285  SCMD   STATE_CHANGE mode=00 data=0001
+   8.6305  REG_R  0800:0014 -> 05 00
+   8.7305  REG_R  0800:2008 -> 00 01
+   8.7305  REG_R  0900:0074 -> 01 1E
+   8.7305  REG_R  0900:01b0 -> 03 D2
+   8.7305  REG_R  0800:2008 -> 00 01
+   8.7315  REG_R  0800:2008 -> 00 01
+   8.7315  REG_W  0900:0074 = 00 04
+   8.7315  REG_W  0900:01b0 = 00 00
+   9.1295  READ   9C:2B -> F8
+   9.1335  READ   9C:2A -> FA
+   9.1375  READ   9C:68 -> BF
+   9.1415  READ   9C:67 -> 59
+   9.1455  READ   9C:66 -> BA
+   9.1495  READ   9C:65 -> 95
+   9.1535  READ   9C:2B -> F8
+   9.1575  READ   9C:60 -> B2
+   9.1615  READ   98:F5 -> 72
+   9.1655  READ   98:F5 -> 72
+   9.1695  READ   98:F5 -> 72
+   9.1735  READ   98:F5 -> 72
+   9.1775  READ   98:F5 -> 72
+   9.1815  READ   98:F5 -> 72
+   9.1855  READ   98:F5 -> 72
+   9.1905  READ   98:F5 -> 72
+   9.1945  READ   98:F5 -> 72
+   9.1985  READ   98:F5 -> 72
+   9.2025  READ   98:F5 -> 72
+   9.2065  READ   98:F5 -> 72
+   9.2105  READ   98:F5 -> 72
+   9.2145  READ   98:F5 -> 72
+   9.2185  READ   98:F5 -> 72
+   9.2225  READ   98:F5 -> 72
+   9.2265  READ   98:F5 -> 72
+   9.2305  READ   98:F5 -> 72
+   9.2345  READ   98:F5 -> 72
+   9.2385  READ   98:F5 -> 72
+   9.2425  READ   98:F5 -> 72
+   9.2465  READ   98:F5 -> 72
+   9.2505  READ   98:F5 -> 72
+   9.2545  READ   98:F5 -> 72
+   9.2585  READ   98:F5 -> 72
+   9.2625  READ   98:F5 -> 72
+   9.2665  READ   98:F5 -> 72
+   9.2705  READ   98:F5 -> 72
+   9.2745  READ   98:F5 -> 72
+   9.2785  READ   98:F5 -> 72
+   9.2835  READ   98:F5 -> 72
+   9.7276  SOC    1124 v_pid_out=4113
+   9.7276  SOC    1264 v_pid_out_ts_out2=4113
+   9.7276  SOC    1128 a_pid_out=271
+   9.7276  SOC    1268 a_pid_out_ts_out2=271
+   9.7276  SOC    1004 dma_sel_out=1
+   9.7286  SOC    1504 v_in_source_type=0
+   9.7286  SOC    1500 v_format=2
+   9.7286  SOC    1510 v_ip_format=2
+   9.7296  SOC    1504 tfrff=2
+   9.7296  SOC    1000 tbc_mode=1
+   9.7296  SOC    1000 tbc_mode=1
+   9.7296  SOC    1a00 a_sample=0
+   9.7296  SOC    1a08 ain_master=0
+   9.7296  SOC    1a08 ain_lsb_first=0
+   9.7296  SOC    1a08 ain_bit_posb=0
+   9.7296  SOC    1a08 amck_mode=1
+   9.7306  SOC    1a08 ain_dlength=2
+   9.7306  SOC    1a08 ain_lr_hlset=1
+   9.7316  SOC    1a08 ain_i2s=1
+   9.7316  SOC    1a08 ain_lrclk_sel=0
+   9.7316  SOC    1a08 ain_sclk_sel=0
+   9.7316  SOC    1a08 ain_bclk_sel=0
+   9.7326  SOC    1a08 ain_bclk_hl=0
+   9.7326  SOC    1a08 ain_offset_mode=0
+   9.7326  SOC    1a0c ain_offset=0
+   9.7326  SOC    1588 v_disable_aspect_ratio_info_present_flag=0
+   9.7336  SOC    1688 v_disable_aspect_ratio_info_present_flag_bl=0
+   9.7336  SOC    1570 v_pic_order_present_flag=1
+   9.7336  SOC    1670 v_pic_order_present_flag_bl=1
+   9.7336  SOC    1574 1574/15/1=0
+   9.7346  SOC    1574 v_max_cpb_delay=10
+   9.7346  SOC    1104 system_rate=15541
+   9.7346  SOC    1104 system_min_rate=0
+   9.7346  SOC    1510 v_cl_gop=1
+   9.7356  SOC    1518 v_gop_struct=3
+   9.7356  SOC    1518 v_gop_size=14
+   9.7356  SOC    1510 v_vlc_mode=0
+   9.7356  SOC    1514 v_vbr_converge_mode=0
+   9.7366  SOC    1510 v_rate_mode=1
+   9.7366  SOC    1530 v_bitrate=14000
+   9.7366  SOC    1534 v_max_bitrate=12600
+   9.7366  SOC    1534 v_ave_bitrate=7000
+   9.7376  SOC    1538 v_min_bitrate=3500
+   9.7376  SOC    152c v_hsize_out=1280
+   9.7376  SOC    152c v_vsize_out=720
+   9.7376  SOC    1000 v_vinpelclk=0
+   9.7386  SOC    1584 time_scale_h=0
+   9.7386  SOC    1584 time_scale_l=0
+   9.7386  SOC    1588 num_units_in_tick=0
+   9.7386  SOC    1518 v_idr_interval_h=0
+   9.7396  SOC    151c v_idr_interval_l=0
+   9.7396  SOC    151c 151c/0/5=0
+   9.7396  SOC    1524 v_h264_profile=1
+   9.7396  SOC    1524 v_h264_level=40
+   9.7406  SOC    1a00 a_sample=0
+   9.7406  SOC    1a14 e_mpeg_protect=0
+   9.7406  SOC    1a14 e_mpeg_mode=0
+   9.7406  SOC    1a14 e_mpeg_copyr=0
+   9.7416  SOC    1a14 e_mpeg_orig=1
+   9.7416  SOC    1a14 e_mpeg_emp=0
+   9.7416  SOC    1a04 a_bitrate=320
+   9.7416  SOC    1580 colour_description_present_flag=1
+   9.7426  SOC    1580 colour_primaries=1
+   9.7426  SOC    1580 transfer_characteristics=1
+   9.7426  SOC    1580 matrix_coefficients=1
+   9.7426  SOC    157c video_full_range_flag=0
+   9.7436  SOC    157c video_signal_type_present_flag=1
+   9.7436  SOC    157c video_format=5
+   9.7436  SOC    157c video_full_range_flag=0
+   9.7436  SOC    1674 1674/15/1=0
+   9.7446  SOC    1674 v_max_cpb_delay_bl=10
+   9.7446  SOC    1244 system_rate_ts_out2=15541
+   9.7446  SOC    1244 system_min_rate_ts_out2=0
+   9.7446  SOC    1610 v_cl_gop_bl=1
+   9.7456  SOC    1610 v_ip_format_bl=2
+   9.7456  SOC    1618 v_gop_struct_bl=3
+   9.7456  SOC    1618 v_gop_size_bl=14
+   9.7456  SOC    1610 v_vlc_mode_bl=0
+   9.7466  SOC    1610 v_rate_mode_bl=1
+   9.7466  SOC    1614 v_vbr_converge_mode_bl=0
+   9.7466  SOC    1630 v_bitrate_bl=14000
+   9.7466  SOC    1634 v_max_bitrate_bl=12600
+   9.7476  SOC    1634 v_ave_bitrate_bl=7000
+   9.7476  SOC    1638 v_min_bitrate_bl=3500
+   9.7476  SOC    1638 v_filler_bitrate_bl=0
+   9.7476  SOC    162c v_hsize_out_bl=1280
+   9.7486  SOC    162c v_vsize_out_bl=720
+   9.7486  SOC    1610 v_ip_format_bl=2
+   9.7486  SOC    1504 tfrff=2
+   9.7496  SOC    1618 v_idr_interval_h_bl=0
+   9.7496  SOC    161c v_idr_interval_l_bl=0
+   9.7496  SOC    161c 161c/0/5=0
+   9.7496  SOC    1624 v_h264_profile_bl=1
+   9.7506  SOC    1624 v_h264_level_bl=31
+   9.7506  SOC    1684 time_scale_h_bl=0
+   9.7506  SOC    1684 time_scale_l_bl=0
+   9.7506  SOC    1688 num_units_in_tick_bl=0
+   9.7516  SOC    1a24 ach_sel_bl=0
+   9.7516  SOC    1a34 e_mpeg_protect_bl=0
+   9.7516  SOC    1a34 e_mpeg_mode_bl=0
+   9.7516  SOC    1a34 e_mpeg_copyr_bl=0
+   9.7526  SOC    1a34 e_mpeg_orig_bl=1
+   9.7526  SOC    1a34 e_mpeg_emp_bl=0
+   9.7526  SOC    1a24 a_bitrate_bl=320
+   9.7526  SOC    1680 colour_description_present_flag_bl=1
+   9.7536  SOC    1680 colour_primaries_bl=1
+   9.7536  SOC    1680 transfer_characteristics_bl=1
+   9.7536  SOC    1680 matrix_coefficients_bl=1
+   9.7536  SOC    167c video_full_range_flag_bl=0
+   9.7546  SOC    167c video_signal_type_present_flag_bl=1
+   9.7546  SOC    167c video_format_bl=5
+   9.7546  SOC    167c video_full_range_flag_bl=0
+   9.7546  SOC    1008 sout_mode=0
+   9.7556  SOC    1008 sout2_mode=0
+   9.7556  SOC    1008 v_ts_out_mode=1
+   9.7556  SOC    100c a_ts_out_mode=2
+   9.7556  SOC    100c a_mode=3
+   9.7566  SOC    1008 v_ts_out2_mode=0
+   9.7566  SOC    100c a_ts_out2_mode=0
+   9.7566  SOC    100c a2_mode=0
+   9.7566  SCMD   INIT mode=A0 data=0000
+   9.7576  REG_R  0800:2008 -> 00 01
+   9.7576  SCMD   STATE_CHANGE mode=00 data=0002
+  10.0076  REG_R  0800:0014 -> 05 00
+  10.1266  REG_R  0800:2008 -> 00 01
+  10.1266  REG_R  0900:0074 -> 01 1E
+  10.1266  REG_R  0900:01b0 -> 03 D2
+  10.1276  REG_R  0800:2008 -> 00 01
+  10.1276  REG_R  0800:2008 -> 00 01
+  10.1276  REG_W  0900:0074 = 00 04
+  10.1276  REG_W  0900:01b0 = 00 00
+  10.1786  REG_R  0800:2008 -> 00 01
+  10.1786  REG_R  0900:0074 -> 01 1A
+  10.1786  REG_R  0900:01b0 -> 03 D2
+  10.2286  REG_R  0800:2008 -> 00 02
+  10.2286  REG_R  0900:0074 -> 01 1E
+  10.2286  REG_R  0900:01b0 -> 03 D2
+  10.2286  REG_R  0800:2008 -> 00 02
+  10.2296  REG_R  0800:2008 -> 00 02
+  10.2296  REG_W  0900:0074 = 00 04
+  10.2296  REG_W  0900:01b0 = 00 00
+  10.5326  READ   9C:2B -> F8
+  10.5396  READ   9C:2A -> FA
+  10.5436  READ   9C:68 -> BF
+  10.6236  READ   9C:67 -> 59
+  10.6296  READ   9C:66 -> BA
+  10.6336  READ   9C:65 -> 95
+  10.6456  READ   9C:2B -> F8
+  10.6496  READ   9C:60 -> B2
+  10.6536  READ   98:F5 -> 72
+  10.6586  READ   98:F5 -> 72
+  10.6636  READ   98:F5 -> 72
+  10.6676  READ   98:F5 -> 72
+  10.6716  READ   98:F5 -> 72
+  10.6756  READ   98:F5 -> 72
+  10.6946  READ   98:F5 -> 72
+  10.7006  READ   98:F5 -> 72
+  10.7046  READ   98:F5 -> 72
+  10.7086  READ   98:F5 -> 72
+  10.7206  READ   98:F5 -> 72
+  10.7246  READ   98:F5 -> 72
+  10.7286  READ   98:F5 -> 72
+  10.7326  READ   98:F5 -> 72
+  10.7366  READ   98:F5 -> 72
+  10.7406  READ   98:F5 -> 72
+  10.7446  READ   98:F5 -> 72
+  10.7486  READ   98:F5 -> 72
+  10.7536  READ   98:F5 -> 72
+  10.7586  READ   98:F5 -> 72
+  10.7626  READ   98:F5 -> 72
+  10.7666  READ   98:F5 -> 72
+  10.7706  READ   98:F5 -> 72
+  10.7746  READ   98:F5 -> 72
+  10.7786  READ   98:F5 -> 72
+  10.7836  READ   98:F5 -> 72
+  10.7886  READ   98:F5 -> 72
+  10.7926  READ   98:F5 -> 72
+  10.7966  READ   98:F5 -> 72
+  10.8006  READ   98:F5 -> 72
+  10.8046  READ   98:F5 -> 72
+  11.3296  READ   9C:2B -> F8
+  11.3336  READ   9C:2A -> FA
+  11.3376  READ   9C:68 -> BF
+  11.3416  READ   9C:67 -> 58
+  11.3456  READ   9C:66 -> BA
+  11.3496  READ   9C:65 -> 95
+  11.3536  READ   9C:2B -> F8
+  11.3586  READ   9C:60 -> B2
+  11.3656  READ   98:F5 -> 72
+  11.3716  READ   98:F5 -> 72
+  11.3756  READ   98:F5 -> 72
+  11.3797  READ   98:F5 -> 72
+  11.3837  READ   98:F5 -> 72
+  11.4047  READ   98:F5 -> 72
+  11.4087  READ   98:F5 -> 72
+  11.4137  READ   98:F5 -> 72
+  11.4187  READ   98:F5 -> 72
+  11.4227  READ   98:F5 -> 72
+  11.4267  READ   98:F5 -> 72
+  11.4307  READ   98:F5 -> 72
+  11.4347  READ   98:F5 -> 72
+  11.4387  READ   98:F5 -> 72
+  11.4437  READ   98:F5 -> 72
+  11.4487  READ   98:F5 -> 72
+  11.4527  READ   98:F5 -> 72
+  11.4567  READ   98:F5 -> 72
+  11.4607  READ   98:F5 -> 72
+  11.4647  READ   98:F5 -> 72
+  11.4687  READ   98:F5 -> 72
+  11.4897  READ   98:F5 -> 72
+  11.4957  READ   98:F5 -> 72
+  11.4997  READ   98:F5 -> 72
+  11.5037  READ   98:F5 -> 72
+  11.5087  READ   98:F5 -> 72
+  11.5127  READ   98:F5 -> 72
+  11.5167  READ   98:F5 -> 72
+  11.5207  READ   98:F5 -> 72
+  11.5287  READ   98:F5 -> 72
+  11.5377  READ   98:F5 -> 72
+  12.0297  READ   9C:2B -> F8
+  12.0337  READ   9C:2A -> FA
+  12.0387  READ   9C:68 -> BF
+  12.0437  READ   9C:67 -> 59
+  12.0487  READ   9C:66 -> BA
+  12.0617  READ   9C:65 -> 9A
+  12.0697  READ   9C:2B -> F8
+  12.0737  READ   9C:60 -> B2
+  12.0787  READ   98:F5 -> 72
+  12.0827  READ   98:F5 -> 72
+  12.0877  READ   98:F5 -> 72
+  12.0917  READ   98:F5 -> 72
+  12.0957  READ   98:F5 -> 72
+  12.0997  READ   98:F5 -> 72
+  12.1057  READ   98:F5 -> 72
+  12.1257  READ   98:F5 -> 72
+  12.1427  READ   98:F5 -> 72
+  12.1497  READ   98:F5 -> 72
+  12.1537  READ   98:F5 -> 72
+  12.1587  READ   98:F5 -> 72
+  12.1637  READ   98:F5 -> 72
+  12.1687  READ   98:F5 -> 72
+  12.1727  READ   98:F5 -> 72
+  12.1767  READ   98:F5 -> 72
+  12.1807  READ   98:F5 -> 72
+  12.1847  READ   98:F5 -> 72
+  12.1887  READ   98:F5 -> 72
+  12.1937  READ   98:F5 -> 72
+  12.1987  READ   98:F5 -> 72
+  12.2027  READ   98:F5 -> 72
+  12.2067  READ   98:F5 -> 72
+  12.2107  READ   98:F5 -> 72
+  12.2147  READ   98:F5 -> 72
+  12.2187  READ   98:F5 -> 72
+  12.2237  READ   98:F5 -> 72
+  12.2277  READ   98:F5 -> 72
+  12.2317  READ   98:F5 -> 72
+  12.2357  READ   98:F5 -> 72
+  12.2407  READ   98:F5 -> 72
+  12.7297  READ   9C:2B -> F8
+  12.7347  READ   9C:2A -> FA
+  12.7387  READ   9C:68 -> BF
+  12.7427  READ   9C:67 -> 59
+  12.7467  READ   9C:66 -> BA
+  12.7507  READ   9C:65 -> 95
+  12.7557  READ   9C:2B -> F8
+  12.7597  READ   9C:60 -> B2
+  12.7637  READ   98:F5 -> 72
+  12.7677  READ   98:F5 -> 72
+  12.7717  READ   98:F5 -> 72
+  12.7757  READ   98:F5 -> 72
+  12.7797  READ   98:F5 -> 72
+  12.7837  READ   98:F5 -> 72
+  12.7877  READ   98:F5 -> 72
+  12.7917  READ   98:F5 -> 72
+  12.7957  READ   98:F5 -> 72
+  12.7997  READ   98:F5 -> 72
+  12.8047  READ   98:F5 -> 72
+  12.8087  READ   98:F5 -> 72
+  12.8127  READ   98:F5 -> 72
+  12.8167  READ   98:F5 -> 72
+  12.8207  READ   98:F5 -> 72
+  12.8257  READ   98:F5 -> 72
+  12.8297  READ   98:F5 -> 72
+  12.8337  READ   98:F5 -> 72
+  12.8547  READ   98:F5 -> 72
+  12.8587  READ   98:F5 -> 72
+  12.8627  READ   98:F5 -> 72
+  12.8667  READ   98:F5 -> 72
+  12.8707  READ   98:F5 -> 72
+  12.8747  READ   98:F5 -> 72
+  12.8797  READ   98:F5 -> 72
+  12.8857  READ   98:F5 -> 72
+  12.8897  READ   98:F5 -> 72
+  12.8947  READ   98:F5 -> 72
+  12.8987  READ   98:F5 -> 72
+  12.9027  READ   98:F5 -> 72
+  12.9067  READ   98:F5 -> 72
+  13.3798  READ   9C:2B -> F8
+  13.3848  READ   9C:2A -> FA
+  13.4008  READ   9C:68 -> BF
+  13.4048  READ   9C:67 -> 58
+  13.4098  READ   9C:66 -> BA
+  13.4138  READ   9C:65 -> 9A
+  13.4178  READ   9C:2B -> F8
+  13.4218  READ   9C:60 -> B2
+  13.4258  READ   98:F5 -> 72
+  13.4298  READ   98:F5 -> 72
+  13.4348  READ   98:F5 -> 72
+  13.4388  READ   98:F5 -> 72
+  13.4438  READ   98:F5 -> 72
+  13.4478  READ   98:F5 -> 72
+  13.4528  READ   98:F5 -> 72
+  13.4568  READ   98:F5 -> 72
+  13.4608  READ   98:F5 -> 72
+  13.4648  READ   98:F5 -> 72
+  13.4688  READ   98:F5 -> 72
+  13.4728  READ   98:F5 -> 72
+  13.4768  READ   98:F5 -> 72
+  13.4818  READ   98:F5 -> 72
+  13.4858  READ   98:F5 -> 72
+  13.4898  READ   98:F5 -> 72
+  13.4938  READ   98:F5 -> 72
+  13.4978  READ   98:F5 -> 72
+  13.5028  READ   98:F5 -> 72
+  13.5078  READ   98:F5 -> 72
+  13.5128  READ   98:F5 -> 72
+  13.5168  READ   98:F5 -> 72
+  13.5208  READ   98:F5 -> 72
+  13.5248  READ   98:F5 -> 72
+  13.5298  READ   98:F5 -> 72
+  13.5338  READ   98:F5 -> 72
+  13.5428  READ   98:F5 -> 72
+  13.5468  READ   98:F5 -> 72
+  13.5508  READ   98:F5 -> 72
+  13.5548  READ   98:F5 -> 72
+  13.5588  READ   98:F5 -> 72
+  14.0308  READ   9C:2B -> F8
+  14.0358  READ   9C:2A -> FA
+  14.0398  READ   9C:68 -> BF
+  14.0438  READ   9C:67 -> 58
+  14.0488  READ   9C:66 -> BA
+  14.0528  READ   9C:65 -> 95
+  14.0568  READ   9C:2B -> F8
+  14.0608  READ   9C:60 -> B2
+  14.0648  READ   98:F5 -> 72
+  14.0698  READ   98:F5 -> 72
+  14.0738  READ   98:F5 -> 72
+  14.0778  READ   98:F5 -> 72
+  14.0988  READ   98:F5 -> 72
+  14.1028  READ   98:F5 -> 72
+  14.1068  READ   98:F5 -> 72
+  14.1118  READ   98:F5 -> 72
+  14.1158  READ   98:F5 -> 72
+  14.1198  READ   98:F5 -> 72
+  14.1238  READ   98:F5 -> 72
+  14.1278  READ   98:F5 -> 72
+  14.1318  READ   98:F5 -> 72
+  14.1368  READ   98:F5 -> 72
+  14.1418  READ   98:F5 -> 72
+  14.1448  READ   98:F5 -> 72
+  14.1498  READ   98:F5 -> 72
+  14.1548  READ   98:F5 -> 72
+  14.1598  READ   98:F5 -> 72
+  14.1638  READ   98:F5 -> 72
+  14.1678  READ   98:F5 -> 72
+  14.1738  READ   98:F5 -> 72
+  14.1788  READ   98:F5 -> 72
+  14.1828  READ   98:F5 -> 72
+  14.1868  READ   98:F5 -> 72
+  14.1918  READ   98:F5 -> 72
+  14.1958  READ   98:F5 -> 72
+  14.1998  READ   98:F5 -> 72
+  14.2048  READ   98:F5 -> 72
+  14.2098  READ   98:F5 -> 72
+  14.2138  READ   98:F5 -> 72
+  14.7948  READ   9C:2B -> F8
+  14.7998  READ   9C:2A -> FA
+  14.8048  READ   9C:68 -> BF
+  14.8098  READ   9C:67 -> 58
+  14.8138  READ   9C:66 -> BA
+  14.8188  READ   9C:65 -> 95
+  14.8228  READ   9C:2B -> F8
+  14.8268  READ   9C:60 -> B2
+  14.8308  READ   98:F5 -> 72
+  14.8348  READ   98:F5 -> 72
+  14.8408  READ   98:F5 -> 72
+  14.8448  READ   98:F5 -> 72
+  14.8508  READ   98:F5 -> 72
+  14.8558  READ   98:F5 -> 72
+  14.8598  READ   98:F5 -> 72
+  14.8639  READ   98:F5 -> 72
+  14.8688  READ   98:F5 -> 72
+  14.9069  READ   98:F5 -> 72
+  14.9109  READ   98:F5 -> 72
+  14.9149  READ   98:F5 -> 72
+  14.9199  READ   98:F5 -> 72
+  14.9259  READ   98:F5 -> 72
+  14.9299  READ   98:F5 -> 72
+  14.9349  READ   98:F5 -> 72
+  14.9389  READ   98:F5 -> 72
+  14.9429  READ   98:F5 -> 72
+  14.9469  READ   98:F5 -> 72
+  14.9509  READ   98:F5 -> 72
+  14.9549  READ   98:F5 -> 72
+  14.9599  READ   98:F5 -> 72
+  14.9639  READ   98:F5 -> 72
+  14.9689  READ   98:F5 -> 72
+  14.9729  READ   98:F5 -> 72
+  14.9769  READ   98:F5 -> 72
+  14.9899  READ   98:F5 -> 72
+  14.9969  READ   98:F5 -> 72
+  15.0009  READ   98:F5 -> 72
+  15.0049  READ   98:F5 -> 72
+  15.0099  READ   98:F5 -> 72
+  15.4889  READ   9C:2B -> F8
+  15.4939  READ   9C:2A -> FA
+  15.4979  READ   9C:68 -> BF
+  15.5119  READ   9C:67 -> 58
+  15.5199  READ   9C:66 -> BA
+  15.5239  READ   9C:65 -> 95
+  15.5289  READ   9C:2B -> F8
+  15.5329  READ   9C:60 -> B2
+  15.5369  READ   98:F5 -> 72
+  15.5409  READ   98:F5 -> 72
+  15.5449  READ   98:F5 -> 72
+  15.5499  READ   98:F5 -> 72
+  15.5539  READ   98:F5 -> 72
+  15.5589  READ   98:F5 -> 72
+  15.5629  READ   98:F5 -> 72
+  15.5959  READ   98:F5 -> 72
+  15.6019  READ   98:F5 -> 72
+  15.6059  READ   98:F5 -> 72
+  15.6099  READ   98:F5 -> 72
+  15.6159  READ   98:F5 -> 72
+  15.6199  READ   98:F5 -> 72
+  15.6239  READ   98:F5 -> 72
+  15.6289  READ   98:F5 -> 72
+  15.6329  READ   98:F5 -> 72
+  15.6369  READ   98:F5 -> 72
+  15.6419  READ   98:F5 -> 72
+  15.6469  READ   98:F5 -> 72
+  15.6509  READ   98:F5 -> 72
+  15.6549  READ   98:F5 -> 72
+  15.6599  READ   98:F5 -> 72
+  15.6639  READ   98:F5 -> 72
+  15.6689  READ   98:F5 -> 72
+  15.6739  READ   98:F5 -> 72
+  15.6799  READ   98:F5 -> 72
+  15.6899  READ   98:F5 -> 72
+  15.7739  READ   98:F5 -> 72
+  15.8089  READ   98:F5 -> 72
+  15.8139  READ   98:F5 -> 72
+  15.8339  READ   98:F5 -> 72
+  16.4119  READ   9C:2B -> F8
+  16.4419  READ   9C:2A -> FA
+  16.4469  READ   9C:68 -> BF
+  16.4509  READ   9C:67 -> 58
+  16.4549  READ   9C:66 -> BA
+  16.4599  READ   9C:65 -> 95
+  16.4649  READ   9C:2B -> F8
+  16.4699  READ   9C:60 -> B2
+  16.4739  READ   98:F5 -> 72
+  16.4789  READ   98:F5 -> 72
+  16.4839  READ   98:F5 -> 72
+  16.4879  READ   98:F5 -> 72
+  16.4919  READ   98:F5 -> 72
+  16.4969  READ   98:F5 -> 72
+  16.5009  READ   98:F5 -> 72
+  16.5239  READ   98:F5 -> 72
+  16.7460  READ   98:F5 -> 72
+  16.7670  READ   98:F5 -> 72
+  16.7730  READ   98:F5 -> 72
+  16.7790  READ   98:F5 -> 72
+  16.7980  READ   98:F5 -> 72
+  16.8140  READ   98:F5 -> 72
+  16.8210  READ   98:F5 -> 72
+  16.8260  READ   98:F5 -> 72
+  16.8310  READ   98:F5 -> 72
+  16.8360  READ   98:F5 -> 72
+  16.8420  READ   98:F5 -> 72
+  16.8640  READ   98:F5 -> 72
+  16.8690  READ   98:F5 -> 72
+  16.8750  READ   98:F5 -> 72
+  16.9110  READ   98:F5 -> 72
+  16.9180  READ   98:F5 -> 72
+  16.9250  READ   98:F5 -> 72
+  16.9290  READ   98:F5 -> 72
+  16.9340  READ   98:F5 -> 72
+  16.9530  READ   98:F5 -> 72
+  16.9590  READ   98:F5 -> 72
+  16.9640  READ   98:F5 -> 72
+  16.9680  READ   98:F5 -> 72
+  17.4980  READ   9C:2B -> F8
+  17.5020  READ   9C:2A -> FA
+  17.5210  READ   9C:68 -> BF
+  17.5270  READ   9C:67 -> 59
+  17.5640  READ   9C:66 -> BA
+  17.5690  READ   9C:65 -> 95
+  17.5930  READ   9C:2B -> F8
+  17.5980  READ   9C:60 -> B2
+  17.6030  READ   98:F5 -> 72
+  17.6320  READ   98:F5 -> 72
+  17.6390  READ   98:F5 -> 72
+  17.8930  READ   98:F5 -> 72
+  17.9380  READ   98:F5 -> 72
+  17.9560  READ   98:F5 -> 72
+  17.9810  READ   98:F5 -> 72
+  18.0070  READ   98:F5 -> 72
+  18.0240  READ   98:F5 -> 72
+  18.0300  READ   98:F5 -> 72
+  18.0400  READ   98:F5 -> 72
+  18.0440  READ   98:F5 -> 72
+  18.0490  READ   98:F5 -> 72
+  18.0530  READ   98:F5 -> 72
+  18.0580  READ   98:F5 -> 72
+  18.0670  READ   98:F5 -> 72
+  18.0730  READ   98:F5 -> 72
+  18.0810  READ   98:F5 -> 72
+  18.0890  READ   98:F5 -> 72
+  18.0970  READ   98:F5 -> 72
+  18.1010  READ   98:F5 -> 72
+  18.2420  READ   98:F5 -> 72
+  18.4071  READ   98:F5 -> 72
+  18.4311  READ   98:F5 -> 72
+  18.4351  READ   98:F5 -> 72
+  18.4531  READ   98:F5 -> 72
+  18.4581  READ   98:F5 -> 72
+  18.4631  READ   98:F5 -> 72
+  18.4681  READ   98:F5 -> 72
+  18.4721  READ   98:F5 -> 72
+  18.4761  READ   98:F5 -> 72
+  18.6391  SCMD   STATE_CHANGE mode=00 data=0004
+  18.8401  REG_R  0800:0014 -> 05 00
+  18.9401  REG_R  0800:2008 -> 00 02
+  18.9401  REG_R  0900:0074 -> 01 1A
+  18.9401  REG_R  0900:01b0 -> 03 D2
+  18.9901  REG_R  0800:2008 -> 00 02
+  18.9901  REG_R  0900:0074 -> 01 1A
+  18.9901  REG_R  0900:01b0 -> 03 D2
+  19.0401  REG_R  0800:2008 -> 00 02
+  19.0401  REG_R  0900:0074 -> 01 1A
+  19.0401  REG_R  0900:01b0 -> 03 D2
+  19.0901  REG_R  0800:2008 -> 00 02
+  19.0901  REG_R  0900:0074 -> 01 1A
+  19.0901  REG_R  0900:01b0 -> 03 D2
+  19.1401  REG_R  0800:2008 -> 00 02
+  19.1401  REG_R  0900:0074 -> 01 1A
+  19.1401  REG_R  0900:01b0 -> 03 D2
+  19.1901  REG_R  0800:2008 -> 00 02
+  19.1901  REG_R  0900:0074 -> 01 1A
+  19.1901  REG_R  0900:01b0 -> 03 D2
+  19.2401  REG_R  0800:2008 -> 00 02
+  19.2401  REG_R  0900:0074 -> 01 1A
+  19.2401  REG_R  0900:01b0 -> 03 D2
+  19.2901  REG_R  0800:2008 -> 00 02
+  19.2901  REG_R  0900:0074 -> 01 1A
+  19.2901  REG_R  0900:01b0 -> 03 D2
+  19.3401  REG_R  0800:2008 -> 00 02
+  19.3401  REG_R  0900:0074 -> 01 1A
+  19.3401  REG_R  0900:01b0 -> 03 D2
+  19.3911  REG_R  0800:2008 -> 00 02
+  19.3911  REG_R  0900:0074 -> 01 1A
+  19.3911  REG_R  0900:01b0 -> 03 D2
+  19.4411  REG_R  0800:2008 -> 00 02
+  19.4411  REG_R  0900:0074 -> 01 1A
+  19.4411  REG_R  0900:01b0 -> 03 D2
+  19.4921  REG_R  0800:2008 -> 00 02
+  19.4921  REG_R  0900:0074 -> 01 1A
+  19.4921  REG_R  0900:01b0 -> 03 D2
+  19.5421  REG_R  0800:2008 -> 00 02
+  19.5421  REG_R  0900:0074 -> 01 1A
+  19.5421  REG_R  0900:01b0 -> 03 D2
+  19.5921  REG_R  0800:2008 -> 00 02
+  19.5921  REG_R  0900:0074 -> 01 1A
+  19.5921  REG_R  0900:01b0 -> 03 D2
+  19.6421  REG_R  0800:2008 -> 00 02
+  19.6421  REG_R  0900:0074 -> 01 1A
+  19.6421  REG_R  0900:01b0 -> 03 D2
+  19.6921  REG_R  0800:2008 -> 00 02
+  19.6921  REG_R  0900:0074 -> 01 1A
+  19.6921  REG_R  0900:01b0 -> 03 D2
+  19.7421  REG_R  0800:2008 -> 00 02
+  19.7421  REG_R  0900:0074 -> 01 1A
+  19.7421  REG_R  0900:01b0 -> 03 D2
+  19.7921  REG_R  0800:2008 -> 00 02
+  19.7921  REG_R  0900:0074 -> 01 1A
+  19.7921  REG_R  0900:01b0 -> 03 D2
+  19.8421  REG_R  0800:2008 -> 00 02
+  19.8421  REG_R  0900:0074 -> 01 1A
+  19.8421  REG_R  0900:01b0 -> 03 D2
+  19.8921  REG_R  0800:2008 -> 00 02
+  19.8921  REG_R  0900:0074 -> 01 1A
+  19.8921  REG_R  0900:01b0 -> 03 D2
+  19.9421  REG_R  0800:2008 -> 00 04
+  19.9421  REG_R  0900:0074 -> 01 1E
+  19.9421  REG_R  0900:01b0 -> 03 D2
+  19.9421  REG_R  0800:2008 -> 00 04
+  19.9431  REG_R  0800:2008 -> 00 04
+  19.9431  REG_W  0900:0074 = 00 04
+  19.9431  REG_W  0900:01b0 = 00 00
+  19.9431  SCMD   STATE_CHANGE mode=00 data=0001
+  20.1782  REG_R  0800:0014 -> 05 00
+  20.2782  REG_R  0800:2008 -> 00 01
+  20.2782  REG_R  0900:0074 -> 01 1E
+  20.2782  REG_R  0900:01b0 -> 03 D2
+  20.2782  REG_R  0800:2008 -> 00 01
+  20.2792  REG_R  0800:2008 -> 00 01
+  20.2792  REG_W  0900:0074 = 00 04
+  20.2792  REG_W  0900:01b0 = 00 00
+  20.7802  READ   9C:2B -> F8
+  20.7842  READ   9C:2A -> FA
+  20.7882  READ   9C:68 -> BF
+  20.7922  READ   9C:67 -> 59
+  20.7962  READ   9C:66 -> BA
+  20.8002  READ   9C:65 -> 95
+  20.8042  READ   9C:2B -> F8
+  20.8082  READ   9C:60 -> B2
+  20.8122  READ   98:F5 -> 72
+  20.8162  READ   98:F5 -> 72
+  20.8202  READ   98:F5 -> 72
+  20.8242  READ   98:F5 -> 72
+  20.8292  READ   98:F5 -> 72
+  20.8332  READ   98:F5 -> 72
+  20.8372  READ   98:F5 -> 72
+  20.8412  READ   98:F5 -> 72
+  20.8452  READ   98:F5 -> 72
+  20.8492  READ   98:F5 -> 72
+  20.8532  READ   98:F5 -> 72
+  20.8572  READ   98:F5 -> 72
+  20.8612  READ   98:F5 -> 72
+  20.8652  READ   98:F5 -> 72
+  20.8692  READ   98:F5 -> 72
+  20.8732  READ   98:F5 -> 72
+  20.8782  READ   98:F5 -> 72
+  20.8822  READ   98:F5 -> 72
+  20.8862  READ   98:F5 -> 72
+  20.8902  READ   98:F5 -> 72
+  20.8942  READ   98:F5 -> 72
+  20.8982  READ   98:F5 -> 72
+  20.9022  READ   98:F5 -> 72
+  20.9062  READ   98:F5 -> 72
+  20.9102  READ   98:F5 -> 72
+  20.9142  READ   98:F5 -> 72
+  20.9182  READ   98:F5 -> 72
+  20.9222  READ   98:F5 -> 72
+  20.9262  READ   98:F5 -> 72
+  20.9302  READ   98:F5 -> 72
+  20.9342  READ   98:F5 -> 72
+  21.0772  SOC    1124 v_pid_out=4113
+  21.0772  SOC    1264 v_pid_out_ts_out2=4113
+  21.0772  SOC    1128 a_pid_out=271
+  21.0772  SOC    1268 a_pid_out_ts_out2=271
+  21.0772  SOC    1004 dma_sel_out=1
+  21.0782  SOC    1504 v_in_source_type=0
+  21.0782  SOC    1500 v_format=2
+  21.0782  SOC    1510 v_ip_format=2
+  21.0782  SOC    1504 tfrff=2
+  21.0782  SOC    1000 tbc_mode=1
+  21.0782  SOC    1000 tbc_mode=1
+  21.0782  SOC    1a00 a_sample=0
+  21.0792  SOC    1a08 ain_master=0
+  21.0792  SOC    1a08 ain_lsb_first=0
+  21.0792  SOC    1a08 ain_bit_posb=0
+  21.0792  SOC    1a08 amck_mode=1
+  21.0792  SOC    1a08 ain_dlength=2
+  21.0802  SOC    1a08 ain_lr_hlset=1
+  21.0802  SOC    1a08 ain_i2s=1
+  21.0802  SOC    1a08 ain_lrclk_sel=0
+  21.0802  SOC    1a08 ain_sclk_sel=0
+  21.0812  SOC    1a08 ain_bclk_sel=0
+  21.0812  SOC    1a08 ain_bclk_hl=0
+  21.0812  SOC    1a08 ain_offset_mode=0
+  21.0812  SOC    1a0c ain_offset=0
+  21.0822  SOC    1588 v_disable_aspect_ratio_info_present_flag=0
+  21.0822  SOC    1688 v_disable_aspect_ratio_info_present_flag_bl=0
+  21.0822  SOC    1570 v_pic_order_present_flag=1
+  21.0822  SOC    1670 v_pic_order_present_flag_bl=1
+  21.0832  SOC    1574 1574/15/1=0
+  21.0832  SOC    1574 v_max_cpb_delay=10
+  21.0832  SOC    1104 system_rate=9053
+  21.0842  SOC    1104 system_min_rate=0
+  21.0842  SOC    1510 v_cl_gop=1
+  21.0842  SOC    1518 v_gop_struct=3
+  21.0842  SOC    1518 v_gop_size=8
+  21.0852  SOC    1510 v_vlc_mode=0
+  21.0852  SOC    1514 v_vbr_converge_mode=0
+  21.0852  SOC    1510 v_rate_mode=1
+  21.0852  SOC    1530 v_bitrate=8000
+  21.0862  SOC    1534 v_max_bitrate=7200
+  21.0862  SOC    1534 v_ave_bitrate=4000
+  21.0862  SOC    1538 v_min_bitrate=800
+  21.0872  SOC    152c v_hsize_out=1280
+  21.0872  SOC    152c v_vsize_out=720
+  21.0872  SOC    1000 v_vinpelclk=0
+  21.0872  SOC    1584 time_scale_h=0
+  21.0882  SOC    1584 time_scale_l=0
+  21.0882  SOC    1588 num_units_in_tick=0
+  21.0882  SOC    1518 v_idr_interval_h=0
+  21.0892  SOC    151c v_idr_interval_l=0
+  21.0892  SOC    151c 151c/0/5=0
+  21.0892  SOC    1524 v_h264_profile=1
+  21.0892  SOC    1524 v_h264_level=31
+  21.0902  SOC    1a00 a_sample=0
+  21.0902  SOC    1a14 e_mpeg_protect=0
+  21.0902  SOC    1a14 e_mpeg_mode=0
+  21.0902  SOC    1a14 e_mpeg_copyr=0
+  21.0912  SOC    1a14 e_mpeg_orig=1
+  21.0912  SOC    1a14 e_mpeg_emp=0
+  21.0912  SOC    1a04 a_bitrate=320
+  21.0912  SOC    1580 colour_description_present_flag=1
+  21.0922  SOC    1580 colour_primaries=1
+  21.0922  SOC    1580 transfer_characteristics=1
+  21.0922  SOC    1580 matrix_coefficients=1
+  21.0922  SOC    157c video_full_range_flag=0
+  21.0932  SOC    157c video_signal_type_present_flag=1
+  21.0932  SOC    157c video_format=5
+  21.0932  SOC    157c video_full_range_flag=0
+  21.0932  SOC    1674 1674/15/1=0
+  21.0942  SOC    1674 v_max_cpb_delay_bl=10
+  21.0942  SOC    1244 system_rate_ts_out2=9053
+  21.0942  SOC    1244 system_min_rate_ts_out2=0
+  21.0942  SOC    1610 v_cl_gop_bl=1
+  21.0952  SOC    1610 v_ip_format_bl=2
+  21.0952  SOC    1618 v_gop_struct_bl=3
+  21.0952  SOC    1618 v_gop_size_bl=8
+  21.0952  SOC    1610 v_vlc_mode_bl=0
+  21.0962  SOC    1610 v_rate_mode_bl=1
+  21.0962  SOC    1614 v_vbr_converge_mode_bl=0
+  21.0962  SOC    1630 v_bitrate_bl=8000
+  21.0972  SOC    1634 v_max_bitrate_bl=7200
+  21.0972  SOC    1634 v_ave_bitrate_bl=4000
+  21.0972  SOC    1638 v_min_bitrate_bl=800
+  21.0972  SOC    1638 v_filler_bitrate_bl=0
+  21.0982  SOC    162c v_hsize_out_bl=1280
+  21.0982  SOC    162c v_vsize_out_bl=720
+  21.0982  SOC    1610 v_ip_format_bl=2
+  21.0982  SOC    1504 tfrff=2
+  21.0992  SOC    1618 v_idr_interval_h_bl=0
+  21.0992  SOC    161c v_idr_interval_l_bl=0
+  21.0992  SOC    161c 161c/0/5=0
+  21.0992  SOC    1624 v_h264_profile_bl=1
+  21.1002  SOC    1624 v_h264_level_bl=31
+  21.1002  SOC    1684 time_scale_h_bl=0
+  21.1002  SOC    1684 time_scale_l_bl=60000
+  21.1002  SOC    1688 num_units_in_tick_bl=1001
+  21.1012  SOC    1a24 ach_sel_bl=0
+  21.1012  SOC    1a34 e_mpeg_protect_bl=0
+  21.1012  SOC    1a34 e_mpeg_mode_bl=0
+  21.1012  SOC    1a34 e_mpeg_copyr_bl=0
+  21.1022  SOC    1a34 e_mpeg_orig_bl=1
+  21.1022  SOC    1a34 e_mpeg_emp_bl=0
+  21.1022  SOC    1a24 a_bitrate_bl=320
+  21.1022  SOC    1680 colour_description_present_flag_bl=1
+  21.1032  SOC    1680 colour_primaries_bl=1
+  21.1032  SOC    1680 transfer_characteristics_bl=1
+  21.1032  SOC    1680 matrix_coefficients_bl=1
+  21.1032  SOC    167c video_full_range_flag_bl=0
+  21.1042  SOC    167c video_signal_type_present_flag_bl=1
+  21.1042  SOC    167c video_format_bl=5
+  21.1042  SOC    167c video_full_range_flag_bl=0
+  21.1042  SOC    1008 sout_mode=0
+  21.1052  SOC    1008 sout2_mode=0
+  21.1052  SOC    1008 v_ts_out_mode=1
+  21.1052  SOC    100c a_ts_out_mode=2
+  21.1052  SOC    100c a_mode=3
+  21.1062  SOC    1008 v_ts_out2_mode=0
+  21.1062  SOC    100c a_ts_out2_mode=0
+  21.1062  SOC    100c a2_mode=0
+  21.1062  SCMD   INIT mode=A0 data=0000
+  21.1072  REG_R  0800:2008 -> 00 01
+  21.1072  SCMD   STATE_CHANGE mode=00 data=0002
+  21.3272  REG_R  0800:0014 -> 05 00
+  21.4272  REG_R  0800:2008 -> 00 01
+  21.4272  REG_R  0900:0074 -> 01 1E
+  21.4272  REG_R  0900:01b0 -> 03 D2
+  21.4272  REG_R  0800:2008 -> 00 01
+  21.4282  REG_R  0800:2008 -> 00 01
+  21.4282  REG_W  0900:0074 = 00 04
+  21.4282  REG_W  0900:01b0 = 00 00
+  21.4782  REG_R  0800:2008 -> 00 02
+  21.4782  REG_R  0900:0074 -> 01 1E
+  21.4782  REG_R  0900:01b0 -> 03 D2
+  21.4782  REG_R  0800:2008 -> 00 02
+  21.4792  REG_R  0800:2008 -> 00 02
+  21.4792  REG_W  0900:0074 = 00 04
+  21.4792  REG_W  0900:01b0 = 00 00
+  21.8803  READ   9C:2B -> F8
+  21.8843  READ   9C:2A -> FA
+  21.8893  READ   9C:68 -> BF
+  21.8933  READ   9C:67 -> 58
+  21.8983  READ   9C:66 -> BA
+  21.9023  READ   9C:65 -> 95
+  21.9073  READ   9C:2B -> F8
+  21.9113  READ   9C:60 -> B2
+  21.9153  READ   98:F5 -> 72
+  21.9203  READ   98:F5 -> 72
+  21.9253  READ   98:F5 -> 72
+  21.9293  READ   98:F5 -> 72
+  21.9333  READ   98:F5 -> 72
+  21.9383  READ   98:F5 -> 72
+  21.9423  READ   98:F5 -> 72
+  21.9463  READ   98:F5 -> 72
+  21.9513  READ   98:F5 -> 72
+  21.9553  READ   98:F5 -> 72
+  21.9593  READ   98:F5 -> 72
+  21.9633  READ   98:F5 -> 72
+  21.9683  READ   98:F5 -> 72
+  21.9723  READ   98:F5 -> 72
+  21.9763  READ   98:F5 -> 72
+  21.9813  READ   98:F5 -> 72
+  21.9853  READ   98:F5 -> 72
+  21.9903  READ   98:F5 -> 72
+  21.9953  READ   98:F5 -> 72
+  21.9993  READ   98:F5 -> 72
+  22.0033  READ   98:F5 -> 72
+  22.0083  READ   98:F5 -> 72
+  22.0123  READ   98:F5 -> 72
+  22.0163  READ   98:F5 -> 72
+  22.0203  READ   98:F5 -> 72
+  22.0243  READ   98:F5 -> 72
+  22.0293  READ   98:F5 -> 72
+  22.0333  READ   98:F5 -> 72
+  22.0383  READ   98:F5 -> 72
+  22.0423  READ   98:F5 -> 72
+  22.0463  READ   98:F5 -> 72
+  22.5313  READ   9C:2B -> F8
+  22.5363  READ   9C:2A -> FA
+  22.5413  READ   9C:68 -> BF
+  22.5453  READ   9C:67 -> 59
+  22.5543  READ   9C:66 -> BA
+  22.5583  READ   9C:65 -> 95
+  22.5623  READ   9C:2B -> F8
+  22.5663  READ   9C:60 -> B2
+  22.5703  READ   98:F5 -> 72
+  22.5743  READ   98:F5 -> 72
+  22.5793  READ   98:F5 -> 72
+  22.6903  READ   98:F5 -> 72
+  22.7183  READ   98:F5 -> 72
+  22.7223  READ   98:F5 -> 72
+  22.7263  READ   98:F5 -> 72
+  22.7303  READ   98:F5 -> 72
+  22.7343  READ   98:F5 -> 72
+  22.7383  READ   98:F5 -> 72
+  22.7423  READ   98:F5 -> 72
+  22.7463  READ   98:F5 -> 72
+  22.7503  READ   98:F5 -> 72
+  22.7543  READ   98:F5 -> 72
+  22.7593  READ   98:F5 -> 72
+  22.7633  READ   98:F5 -> 72
+  22.7673  READ   98:F5 -> 72
+  22.7713  READ   98:F5 -> 72
+  22.7763  READ   98:F5 -> 72
+  22.7803  READ   98:F5 -> 72
+  22.7853  READ   98:F5 -> 72
+  22.7903  READ   98:F5 -> 72
+  22.7943  READ   98:F5 -> 72
+  22.7983  READ   98:F5 -> 72
+  22.8023  READ   98:F5 -> 72
+  22.8143  READ   98:F5 -> 72
+  22.8183  READ   98:F5 -> 72
+  22.8223  READ   98:F5 -> 72
+  22.8273  READ   98:F5 -> 72
+  22.8313  READ   98:F5 -> 72
+  22.8373  READ   98:F5 -> 72
+  23.3623  READ   9C:2B -> F8
+  23.3663  READ   9C:2A -> FA
+  23.3703  READ   9C:68 -> BF
+  23.3763  READ   9C:67 -> 59
+  23.3813  READ   9C:66 -> BA
+  23.4273  READ   9C:65 -> 95
+  23.4323  READ   9C:2B -> F8
+  23.4363  READ   9C:60 -> B2
+  23.4403  READ   98:F5 -> 72
+  23.4453  READ   98:F5 -> 72
+  23.4543  READ   98:F5 -> 72
+  23.4593  READ   98:F5 -> 72
+  23.4633  READ   98:F5 -> 72
+  23.4683  READ   98:F5 -> 72
+  23.4733  READ   98:F5 -> 72
+  23.4883  READ   98:F5 -> 72
+  23.4933  READ   98:F5 -> 72
+  23.4973  READ   98:F5 -> 72
+  23.5123  READ   98:F5 -> 72
+  23.5483  READ   98:F5 -> 72
+  23.5733  READ   98:F5 -> 72
+  23.5773  READ   98:F5 -> 72
+  23.5923  READ   98:F5 -> 72
+  23.5983  READ   98:F5 -> 72
+  23.6193  READ   98:F5 -> 72
+  23.6234  READ   98:F5 -> 72
+  23.6384  READ   98:F5 -> 72
+  23.6434  READ   98:F5 -> 72
+  23.6664  READ   98:F5 -> 72
+  23.7054  READ   98:F5 -> 72
+  23.7194  READ   98:F5 -> 72
+  23.7234  READ   98:F5 -> 72
+  23.7444  READ   98:F5 -> 72
+  23.7494  READ   98:F5 -> 72
+  23.7634  READ   98:F5 -> 72
+  23.7674  READ   98:F5 -> 72
+  23.7714  READ   98:F5 -> 72
+  23.8184  READ   98:F5 -> 72
+  23.8364  READ   98:F5 -> 72
+  24.4424  READ   9C:2B -> F8
+  24.4464  READ   9C:2A -> FA
+  24.4514  READ   9C:68 -> BF
+  24.4564  READ   9C:67 -> 59
+  24.4664  READ   9C:66 -> BA
+  24.4714  READ   9C:65 -> 95
+  24.5134  READ   9C:2B -> F8
+  24.5194  READ   9C:60 -> B2
+  24.5244  READ   98:F5 -> 72
+  24.5364  READ   98:F5 -> 72
+  24.5444  READ   98:F5 -> 72
+  24.5484  READ   98:F5 -> 72
+  24.5534  READ   98:F5 -> 72
+  24.5584  READ   98:F5 -> 72
+  24.5684  READ   98:F5 -> 72
+  24.5724  READ   98:F5 -> 72
+  24.5764  READ   98:F5 -> 72
+  24.5814  READ   98:F5 -> 72
+  24.5854  READ   98:F5 -> 72
+  24.6004  READ   98:F5 -> 72
+  24.6054  READ   98:F5 -> 72
+  24.6094  READ   98:F5 -> 72
+  24.6144  READ   98:F5 -> 72
+  24.6204  READ   98:F5 -> 72
+  24.6294  READ   98:F5 -> 72
+  24.6334  READ   98:F5 -> 72
+  24.6384  READ   98:F5 -> 72
+  24.6764  READ   98:F5 -> 72
+  24.6964  READ   98:F5 -> 72
+  24.7014  READ   98:F5 -> 72
+  24.7054  READ   98:F5 -> 72
+  24.7114  READ   98:F5 -> 72
+  24.7154  READ   98:F5 -> 72
+  24.7244  READ   98:F5 -> 72
+  24.7284  READ   98:F5 -> 72
+  24.7324  READ   98:F5 -> 72
+  24.7364  READ   98:F5 -> 72
+  24.7494  READ   98:F5 -> 72
+  24.7584  READ   98:F5 -> 72
+  25.4125  READ   9C:2B -> F8
+  25.4185  READ   9C:2A -> FA
+  25.4335  READ   9C:68 -> BF
+  25.4395  READ   9C:67 -> 58
+  25.4435  READ   9C:66 -> BA
+  25.4485  READ   9C:65 -> 95
+  25.4585  READ   9C:2B -> F8
+  25.4645  READ   9C:60 -> B2
+  25.4685  READ   98:F5 -> 72
+  25.4725  READ   98:F5 -> 72
+  25.4765  READ   98:F5 -> 72
+  25.4805  READ   98:F5 -> 72
+  25.4965  READ   98:F5 -> 72
+  25.5015  READ   98:F5 -> 72
+  25.5365  READ   98:F5 -> 72
+  25.5415  READ   98:F5 -> 72
+  25.5455  READ   98:F5 -> 72
+  25.5555  READ   98:F5 -> 72
+  25.5595  READ   98:F5 -> 72
+  25.5635  READ   98:F5 -> 72
+  25.5685  READ   98:F5 -> 72
+  25.5885  READ   98:F5 -> 72
+  25.5925  READ   98:F5 -> 72
+  25.5965  READ   98:F5 -> 72
+  25.6015  READ   98:F5 -> 72
+  25.6065  READ   98:F5 -> 72
+  25.6145  READ   98:F5 -> 72
+  25.6195  READ   98:F5 -> 72
+  25.6235  READ   98:F5 -> 72
+  25.6705  READ   98:F5 -> 72
+  25.6835  READ   98:F5 -> 72
+  25.7005  READ   98:F5 -> 72
+  25.7045  READ   98:F5 -> 72
+  25.7245  READ   98:F5 -> 72
+  25.7295  READ   98:F5 -> 72
+  25.7485  READ   98:F5 -> 72
+  25.7525  READ   98:F5 -> 72
+  25.7565  READ   98:F5 -> 72
+  25.7635  READ   98:F5 -> 72
+  26.3855  READ   9C:2B -> F8
+  26.4015  READ   9C:2A -> FA
+  26.4055  READ   9C:68 -> BF
+  26.4095  READ   9C:67 -> 58
+  26.4355  READ   9C:66 -> BA
+  26.4395  READ   9C:65 -> 95
+  26.4735  READ   9C:2B -> F8
+  26.4895  READ   9C:60 -> B2
+  26.4965  READ   98:F5 -> 72
+  26.5005  READ   98:F5 -> 72
+  26.5045  READ   98:F5 -> 72
+  26.5145  READ   98:F5 -> 72
+  26.5185  READ   98:F5 -> 72
+  26.5245  READ   98:F5 -> 72
+  26.5295  READ   98:F5 -> 72
+  26.5575  READ   98:F5 -> 72
+  26.5635  READ   98:F5 -> 72
+  26.5835  READ   98:F5 -> 72
+  26.5945  READ   98:F5 -> 72
+  26.6005  READ   98:F5 -> 72
+  26.6555  READ   98:F5 -> 72
+  26.6605  READ   98:F5 -> 72
+  26.6645  READ   98:F5 -> 72
+  26.6975  READ   98:F5 -> 72
+  26.7035  READ   98:F5 -> 72
+  26.7095  READ   98:F5 -> 72
+  26.7135  READ   98:F5 -> 72
+  26.7235  READ   98:F5 -> 72
+  26.7565  READ   98:F5 -> 72
+  26.7625  READ   98:F5 -> 72
+  26.7665  READ   98:F5 -> 72
+  26.7815  READ   98:F5 -> 72
+  26.7865  READ   98:F5 -> 72
+  26.7955  READ   98:F5 -> 72
+  26.8005  READ   98:F5 -> 72
+  26.8055  READ   98:F5 -> 72
+  26.8125  READ   98:F5 -> 72
+  26.8455  READ   98:F5 -> 72
+  26.8495  READ   98:F5 -> 72
+  27.5336  READ   9C:2B -> F8
+  27.5396  READ   9C:2A -> FA
+  27.5456  READ   9C:68 -> BF
+  27.5586  READ   9C:67 -> 58
+  27.5626  READ   9C:66 -> BA
+  27.5666  READ   9C:65 -> 95
+  27.5706  READ   9C:2B -> F8
+  27.6256  READ   9C:60 -> B2
+  27.7186  READ   98:F5 -> 72
+  27.7226  READ   98:F5 -> 72
+  27.7266  READ   98:F5 -> 72
+  27.7396  READ   98:F5 -> 72
+  27.7436  READ   98:F5 -> 72
+  27.7486  READ   98:F5 -> 72
+  27.7526  READ   98:F5 -> 72
+  27.7566  READ   98:F5 -> 72
+  27.7616  READ   98:F5 -> 72
+  27.7656  READ   98:F5 -> 72
+  27.7706  READ   98:F5 -> 72
+  27.7746  READ   98:F5 -> 72
+  27.7786  READ   98:F5 -> 72
+  27.7826  READ   98:F5 -> 72
+  27.7866  READ   98:F5 -> 72
+  27.7906  READ   98:F5 -> 72
+  27.7946  READ   98:F5 -> 72
+  27.7996  READ   98:F5 -> 72
+  27.8036  READ   98:F5 -> 72
+  27.8086  READ   98:F5 -> 72
+  27.8126  READ   98:F5 -> 72
+  27.8166  READ   98:F5 -> 72
+  27.8446  READ   98:F5 -> 72
+  27.8496  READ   98:F5 -> 72
+  27.8536  READ   98:F5 -> 72
+  27.8586  READ   98:F5 -> 72
+  27.8626  READ   98:F5 -> 72
+  27.8666  READ   98:F5 -> 72
+  27.8706  READ   98:F5 -> 72
+  27.8746  READ   98:F5 -> 72
+  27.8786  READ   98:F5 -> 72
+  27.9346  SCMD   STATE_CHANGE mode=00 data=0004
+  28.1346  REG_R  0800:0014 -> 05 00
+  28.2356  REG_R  0800:2008 -> 00 02
+  28.2356  REG_R  0900:0074 -> 01 1A
+  28.2356  REG_R  0900:01b0 -> 03 D2
+  28.2856  REG_R  0800:2008 -> 00 02
+  28.2856  REG_R  0900:0074 -> 01 1A
+  28.2856  REG_R  0900:01b0 -> 03 D2
+  28.3356  REG_R  0800:2008 -> 00 02
+  28.3356  REG_R  0900:0074 -> 01 1A
+  28.3356  REG_R  0900:01b0 -> 03 D2
+  28.3856  REG_R  0800:2008 -> 00 02
+  28.3856  REG_R  0900:0074 -> 01 1A
+  28.3856  REG_R  0900:01b0 -> 03 D2
+  28.4586  REG_R  0800:2008 -> 00 02
+  28.4586  REG_R  0900:0074 -> 01 1A
+  28.4596  REG_R  0900:01b0 -> 03 D2
+  28.5266  REG_R  0800:2008 -> 00 02
+  28.5266  REG_R  0900:0074 -> 01 1A
+  28.5266  REG_R  0900:01b0 -> 03 D2
+  28.5776  REG_R  0800:2008 -> 00 02
+  28.5776  REG_R  0900:0074 -> 01 1A
+  28.5776  REG_R  0900:01b0 -> 03 D2
+  28.6286  REG_R  0800:2008 -> 00 02
+  28.6286  REG_R  0900:0074 -> 01 1A
+  28.6286  REG_R  0900:01b0 -> 03 D2
+  28.6786  REG_R  0800:2008 -> 00 02
+  28.6786  REG_R  0900:0074 -> 01 1A
+  28.6786  REG_R  0900:01b0 -> 03 D2
+  28.7286  REG_R  0800:2008 -> 00 02
+  28.7286  REG_R  0900:0074 -> 01 1A
+  28.7286  REG_R  0900:01b0 -> 03 D2
+  28.7786  REG_R  0800:2008 -> 00 02
+  28.7786  REG_R  0900:0074 -> 01 1A
+  28.7786  REG_R  0900:01b0 -> 03 D2
+  28.8286  REG_R  0800:2008 -> 00 02
+  28.8286  REG_R  0900:0074 -> 01 1A
+  28.8286  REG_R  0900:01b0 -> 03 D2
+  28.8797  REG_R  0800:2008 -> 00 02
+  28.8797  REG_R  0900:0074 -> 01 1A
+  28.8797  REG_R  0900:01b0 -> 03 D2
+  28.9297  REG_R  0800:2008 -> 00 02
+  28.9297  REG_R  0900:0074 -> 01 1A
+  28.9297  REG_R  0900:01b0 -> 03 D2
+  28.9797  REG_R  0800:2008 -> 00 02
+  28.9797  REG_R  0900:0074 -> 01 1A
+  28.9797  REG_R  0900:01b0 -> 03 D2
+  29.0297  REG_R  0800:2008 -> 00 02
+  29.0297  REG_R  0900:0074 -> 01 1A
+  29.0297  REG_R  0900:01b0 -> 03 D2
+  29.0797  REG_R  0800:2008 -> 00 02
+  29.0797  REG_R  0900:0074 -> 01 1A
+  29.0797  REG_R  0900:01b0 -> 03 D2
+  29.1307  REG_R  0800:2008 -> 00 02
+  29.1307  REG_R  0900:0074 -> 01 1A
+  29.1307  REG_R  0900:01b0 -> 03 D2
+  29.1807  REG_R  0800:2008 -> 00 02
+  29.1807  REG_R  0900:0074 -> 01 1A
+  29.1807  REG_R  0900:01b0 -> 03 D2
+  29.2307  REG_R  0800:2008 -> 00 04
+  29.2307  REG_R  0900:0074 -> 01 1E
+  29.2307  REG_R  0900:01b0 -> 03 D2
+  29.2307  REG_R  0800:2008 -> 00 04
+  29.2317  REG_R  0800:2008 -> 00 04
+  29.2317  REG_W  0900:0074 = 00 04
+  29.2317  REG_W  0900:01b0 = 00 00
+  29.2317  SCMD   STATE_CHANGE mode=00 data=0001
+  29.4327  REG_R  0800:0014 -> 05 00
+  29.5337  REG_R  0800:2008 -> 00 01
+  29.5337  REG_R  0900:0074 -> 01 1E
+  29.5337  REG_R  0900:01b0 -> 03 D2
+  29.5337  REG_R  0800:2008 -> 00 01
+  29.5347  REG_R  0800:2008 -> 00 01
+  29.5347  REG_W  0900:0074 = 00 04
+  29.5347  REG_W  0900:01b0 = 00 00
+  30.1807  READ   9C:2B -> F8
+  30.1847  READ   9C:2A -> FA
+  30.1887  READ   9C:68 -> BF
+  30.1927  READ   9C:67 -> 59
+  30.1967  READ   9C:66 -> BA
+  30.2007  READ   9C:65 -> 95
+  30.2047  READ   9C:2B -> F8
+  30.2087  READ   9C:60 -> B2
+  30.2127  READ   98:F5 -> 72
+  30.2167  READ   98:F5 -> 72
+  30.2207  READ   98:F5 -> 72
+  30.2247  READ   98:F5 -> 72
+  30.2287  READ   98:F5 -> 72
+  30.2327  READ   98:F5 -> 72
+  30.2367  READ   98:F5 -> 72
+  30.2407  READ   98:F5 -> 72
+  30.2447  READ   98:F5 -> 72
+  30.2497  READ   98:F5 -> 72
+  30.2537  READ   98:F5 -> 72
+  30.2567  READ   98:F5 -> 72
+  30.2617  READ   98:F5 -> 72
+  30.2657  READ   98:F5 -> 72
+  30.2687  READ   98:F5 -> 72
+  30.2727  READ   98:F5 -> 72
+  30.2757  READ   98:F5 -> 72
+  30.2807  READ   98:F5 -> 72
+  30.2837  READ   98:F5 -> 72
+  30.2887  READ   98:F5 -> 72
+  30.2927  READ   98:F5 -> 72
+  30.2967  READ   98:F5 -> 72
+  30.3007  READ   98:F5 -> 72
+  30.3037  READ   98:F5 -> 72
+  30.3087  READ   98:F5 -> 72
+  30.3127  READ   98:F5 -> 72
+  30.3167  READ   98:F5 -> 72
+  30.3207  READ   98:F5 -> 72
+  30.3247  READ   98:F5 -> 72
+  30.3287  READ   98:F5 -> 72
+  30.3327  READ   98:F5 -> 72
+  30.4277  SOC    1124 v_pid_out=4113
+  30.4277  SOC    1264 v_pid_out_ts_out2=4113
+  30.4277  SOC    1128 a_pid_out=271
+  30.4277  SOC    1268 a_pid_out_ts_out2=271
+  30.4287  SOC    1004 dma_sel_out=1
+  30.4287  SOC    1504 v_in_source_type=0
+  30.4287  SOC    1500 v_format=2
+  30.4287  SOC    1510 v_ip_format=2
+  30.4287  SOC    1504 tfrff=2
+  30.4287  SOC    1000 tbc_mode=1
+  30.4287  SOC    1000 tbc_mode=1
+  30.4287  SOC    1a00 a_sample=0
+  30.4297  SOC    1a08 ain_master=0
+  30.4297  SOC    1a08 ain_lsb_first=0
+  30.4297  SOC    1a08 ain_bit_posb=0
+  30.4297  SOC    1a08 amck_mode=1
+  30.4297  SOC    1a08 ain_dlength=2
+  30.4297  SOC    1a08 ain_lr_hlset=1
+  30.4297  SOC    1a08 ain_i2s=1
+  30.4297  SOC    1a08 ain_lrclk_sel=0
+  30.4307  SOC    1a08 ain_sclk_sel=0
+  30.4307  SOC    1a08 ain_bclk_sel=0
+  30.4307  SOC    1a08 ain_bclk_hl=0
+  30.4307  SOC    1a08 ain_offset_mode=0
+  30.4307  SOC    1a0c ain_offset=0
+  30.4307  SOC    1588 v_disable_aspect_ratio_info_present_flag=0
+  30.4307  SOC    1688 v_disable_aspect_ratio_info_present_flag_bl=0
+  30.4307  SOC    1570 v_pic_order_present_flag=1
+  30.4317  SOC    1670 v_pic_order_present_flag_bl=1
+  30.4317  SOC    1574 1574/15/1=0
+  30.4317  SOC    1574 v_max_cpb_delay=3
+  30.4317  SOC    1104 system_rate=16562
+  30.4317  SOC    1104 system_min_rate=0
+  30.4317  SOC    1510 v_cl_gop=1
+  30.4327  SOC    1518 v_gop_struct=3
+  30.4327  SOC    1518 v_gop_size=8
+  30.4327  SOC    1510 v_vlc_mode=0
+  30.4327  SOC    1514 v_vbr_converge_mode=0
+  30.4337  SOC    1510 v_rate_mode=0
+  30.4337  SOC    1530 v_bitrate=15000
+  30.4337  SOC    1534 v_max_bitrate=13500
+  30.4337  SOC    1534 v_ave_bitrate=7500
+  30.4347  SOC    1538 v_min_bitrate=3750
+  30.4347  SOC    152c v_hsize_out=1280
+  30.4347  SOC    152c v_vsize_out=720
+  30.4347  SOC    1000 v_vinpelclk=0
+  30.4357  SOC    1584 time_scale_h=0
+  30.4357  SOC    1584 time_scale_l=0
+  30.4357  SOC    1588 num_units_in_tick=0
+  30.4357  SOC    1518 v_idr_interval_h=0
+  30.4367  SOC    151c v_idr_interval_l=0
+  30.4367  SOC    151c 151c/0/5=0
+  30.4367  SOC    1524 v_h264_profile=1
+  30.4367  SOC    1524 v_h264_level=31
+  30.4377  SOC    1a00 a_sample=0
+  30.4377  SOC    1a14 e_mpeg_protect=0
+  30.4377  SOC    1a14 e_mpeg_mode=0
+  30.4377  SOC    1a14 e_mpeg_copyr=0
+  30.4387  SOC    1a14 e_mpeg_orig=1
+  30.4387  SOC    1a14 e_mpeg_emp=0
+  30.4387  SOC    1a04 a_bitrate=320
+  30.4387  SOC    1580 colour_description_present_flag=1
+  30.4397  SOC    1580 colour_primaries=1
+  30.4397  SOC    1580 transfer_characteristics=1
+  30.4397  SOC    1580 matrix_coefficients=1
+  30.4407  SOC    157c video_full_range_flag=0
+  30.4407  SOC    157c video_signal_type_present_flag=1
+  30.4407  SOC    157c video_format=5
+  30.4407  SOC    157c video_full_range_flag=0
+  30.4417  SOC    1674 1674/15/1=0
+  30.4417  SOC    1674 v_max_cpb_delay_bl=3
+  30.4417  SOC    1244 system_rate_ts_out2=16562
+  30.4417  SOC    1244 system_min_rate_ts_out2=0
+  30.4427  SOC    1610 v_cl_gop_bl=1
+  30.4427  SOC    1610 v_ip_format_bl=2
+  30.4427  SOC    1618 v_gop_struct_bl=3
+  30.4427  SOC    1618 v_gop_size_bl=8
+  30.4437  SOC    1610 v_vlc_mode_bl=0
+  30.4437  SOC    1610 v_rate_mode_bl=0
+  30.4437  SOC    1614 v_vbr_converge_mode_bl=0
+  30.4437  SOC    1630 v_bitrate_bl=15000
+  30.4447  SOC    1634 v_max_bitrate_bl=13500
+  30.4447  SOC    1634 v_ave_bitrate_bl=7500
+  30.4447  SOC    1638 v_min_bitrate_bl=3750
+  30.4447  SOC    1638 v_filler_bitrate_bl=0
+  30.4457  SOC    162c v_hsize_out_bl=1280
+  30.4457  SOC    162c v_vsize_out_bl=720
+  30.4457  SOC    1610 v_ip_format_bl=2
+  30.4457  SOC    1504 tfrff=2
+  30.4467  SOC    1618 v_idr_interval_h_bl=0
+  30.4467  SOC    161c v_idr_interval_l_bl=0
+  30.4467  SOC    161c 161c/0/5=0
+  30.4467  SOC    1624 v_h264_profile_bl=1
+  30.4477  SOC    1624 v_h264_level_bl=31
+  30.4477  SOC    1684 time_scale_h_bl=0
+  30.4477  SOC    1684 time_scale_l_bl=60000
+  30.4477  SOC    1688 num_units_in_tick_bl=1001
+  30.4487  SOC    1a24 ach_sel_bl=0
+  30.4487  SOC    1a34 e_mpeg_protect_bl=0
+  30.4487  SOC    1a34 e_mpeg_mode_bl=0
+  30.4487  SOC    1a34 e_mpeg_copyr_bl=0
+  30.4497  SOC    1a34 e_mpeg_orig_bl=1
+  30.4497  SOC    1a34 e_mpeg_emp_bl=0
+  30.4497  SOC    1a24 a_bitrate_bl=320
+  30.4497  SOC    1680 colour_description_present_flag_bl=1
+  30.4507  SOC    1680 colour_primaries_bl=1
+  30.4507  SOC    1680 transfer_characteristics_bl=1
+  30.4507  SOC    1680 matrix_coefficients_bl=1
+  30.4507  SOC    167c video_full_range_flag_bl=0
+  30.4517  SOC    167c video_signal_type_present_flag_bl=1
+  30.4517  SOC    167c video_format_bl=5
+  30.4517  SOC    167c video_full_range_flag_bl=0
+  30.4517  SOC    1008 sout_mode=0
+  30.4527  SOC    1008 sout2_mode=0
+  30.4527  SOC    1008 v_ts_out_mode=1
+  30.4527  SOC    100c a_ts_out_mode=2
+  30.4527  SOC    100c a_mode=3
+  30.4537  SOC    1008 v_ts_out2_mode=0
+  30.4537  SOC    100c a_ts_out2_mode=0
+  30.4537  SOC    100c a2_mode=0
+  30.4537  SCMD   INIT mode=A0 data=0000
+  30.4547  REG_R  0800:2008 -> 00 01
+  30.4547  SCMD   STATE_CHANGE mode=00 data=0002
+  30.6958  REG_R  0800:0014 -> 05 00
+  30.8268  REG_R  0800:2008 -> 00 01
+  30.8268  REG_R  0900:0074 -> 01 1E
+  30.8268  REG_R  0900:01b0 -> 03 D2
+  30.8278  REG_R  0800:2008 -> 00 01
+  30.8278  REG_R  0800:2008 -> 00 01
+  30.8278  REG_W  0900:0074 = 00 04
+  30.8278  REG_W  0900:01b0 = 00 00
+  30.8788  REG_R  0800:2008 -> 00 01
+  30.8788  REG_R  0900:0074 -> 01 1A
+  30.8788  REG_R  0900:01b0 -> 03 D2
+  30.9288  REG_R  0800:2008 -> 00 02
+  30.9288  REG_R  0900:0074 -> 01 1E
+  30.9288  REG_R  0900:01b0 -> 03 D2
+  30.9298  REG_R  0800:2008 -> 00 02
+  30.9298  REG_R  0800:2008 -> 00 02
+  30.9298  REG_W  0900:0074 = 00 04
+  30.9298  REG_W  0900:01b0 = 00 00
+  31.6158  READ   9C:2B -> F8
+  31.6528  READ   9C:2A -> FA
+  31.7028  READ   9C:68 -> BF
+  31.7258  READ   9C:67 -> 58
+  31.8768  READ   9C:66 -> BA
+  31.8808  READ   9C:65 -> 95
+  31.9138  READ   9C:2B -> F8
+  31.9188  READ   9C:60 -> B2
+  31.9228  READ   98:F5 -> 72
+  31.9298  READ   98:F5 -> 72
+  31.9348  READ   98:F5 -> 72
+  31.9398  READ   98:F5 -> 72
+  31.9868  READ   98:F5 -> 72
+  31.9908  READ   98:F5 -> 72
+  31.9968  READ   98:F5 -> 72
+  32.0028  READ   98:F5 -> 72
+  32.0178  READ   98:F5 -> 72
+  32.0258  READ   98:F5 -> 72
+  32.0298  READ   98:F5 -> 72
+  32.0358  READ   98:F5 -> 72
+  32.0438  READ   98:F5 -> 72
+  32.0808  READ   98:F5 -> 72
+  32.0948  READ   98:F5 -> 72
+  32.0988  READ   98:F5 -> 72
+  32.1028  READ   98:F5 -> 72
+  32.1078  READ   98:F5 -> 72
+  32.1118  READ   98:F5 -> 72
+  32.1158  READ   98:F5 -> 72
+  32.1368  READ   98:F5 -> 72
+  32.1408  READ   98:F5 -> 72
+  32.1448  READ   98:F5 -> 72
+  32.1498  READ   98:F5 -> 72
+  32.1808  READ   98:F5 -> 72
+  32.1858  READ   98:F5 -> 72
+  32.1898  READ   98:F5 -> 72
+  32.2108  READ   98:F5 -> 72
+  32.2148  READ   98:F5 -> 72
+  32.2188  READ   98:F5 -> 72
+  32.2228  READ   98:F5 -> 72
+  32.7439  READ   9C:2B -> F8
+  32.7519  READ   9C:2A -> FA
+  32.7559  READ   9C:68 -> BF
+  32.7609  READ   9C:67 -> 58
+  32.7649  READ   9C:66 -> BA
+  32.7949  READ   9C:65 -> 95
+  32.7989  READ   9C:2B -> F8
+  32.8029  READ   9C:60 -> B2
+  32.8069  READ   98:F5 -> 72
+  32.8109  READ   98:F5 -> 72
+  32.8169  READ   98:F5 -> 72
+  32.8249  READ   98:F5 -> 72
+  32.8289  READ   98:F5 -> 72
+  32.8339  READ   98:F5 -> 72
+  32.8379  READ   98:F5 -> 72
+  32.8419  READ   98:F5 -> 72
+  32.8589  READ   98:F5 -> 72
+  32.8669  READ   98:F5 -> 72
+  32.8709  READ   98:F5 -> 72
+  32.9079  READ   98:F5 -> 72
+  32.9359  READ   98:F5 -> 72
+  32.9399  READ   98:F5 -> 72
+  32.9439  READ   98:F5 -> 72
+  32.9579  READ   98:F5 -> 72
+  32.9739  READ   98:F5 -> 72
+  32.9889  READ   98:F5 -> 72
+  33.0319  READ   98:F5 -> 72
+  33.0439  READ   98:F5 -> 72
+  33.0559  READ   98:F5 -> 72
+  33.0599  READ   98:F5 -> 72
+  33.0639  READ   98:F5 -> 72
+  33.0679  READ   98:F5 -> 72
+  33.0729  READ   98:F5 -> 72
+  33.0869  READ   98:F5 -> 72
+  33.0909  READ   98:F5 -> 72
+  33.1139  READ   98:F5 -> 72
+  33.1179  READ   98:F5 -> 72
+  33.1219  READ   98:F5 -> 72
+  33.1259  READ   98:F5 -> 72
+  33.5519  SCMD   STATE_CHANGE mode=00 data=0004
+  33.7949  REG_R  0800:0014 -> 05 00
+  33.9269  REG_R  0800:2008 -> 00 02
+  33.9269  REG_R  0900:0074 -> 01 1A
+  33.9269  REG_R  0900:01b0 -> 03 D2
+  33.9779  REG_R  0800:2008 -> 00 02
+  33.9779  REG_R  0900:0074 -> 01 1A
+  33.9779  REG_R  0900:01b0 -> 03 D2
+  34.0279  REG_R  0800:2008 -> 00 02
+  34.0279  REG_R  0900:0074 -> 01 1A
+  34.0279  REG_R  0900:01b0 -> 03 D2
+  34.0779  REG_R  0800:2008 -> 00 02
+  34.0779  REG_R  0900:0074 -> 01 1A
+  34.0779  REG_R  0900:01b0 -> 03 D2
+  34.1290  REG_R  0800:2008 -> 00 04
+  34.1290  REG_R  0900:0074 -> 01 1E
+  34.1290  REG_R  0900:01b0 -> 03 D2
+  34.1290  REG_R  0800:2008 -> 00 04
+  34.1300  REG_R  0800:2008 -> 00 04
+  34.1300  REG_W  0900:0074 = 00 04
+  34.1300  REG_W  0900:01b0 = 00 00
+  34.1300  SCMD   STATE_CHANGE mode=00 data=0001
+  34.3310  REG_R  0800:0014 -> 05 00
+  34.4320  REG_R  0800:2008 -> 00 01
+  34.4320  REG_R  0900:0074 -> 01 1E
+  34.4320  REG_R  0900:01b0 -> 03 D2
+  34.4320  REG_R  0800:2008 -> 00 01
+  34.4330  REG_R  0800:2008 -> 00 01
+  34.4330  REG_W  0900:0074 = 00 04
+  34.4330  REG_W  0900:01b0 = 00 00
+  34.9300  READ   9C:2B -> F8
+  34.9350  READ   9C:2A -> FA
+  34.9390  READ   9C:68 -> BF
+  34.9430  READ   9C:67 -> 59
+  34.9470  READ   9C:66 -> BA
+  34.9510  READ   9C:65 -> 95
+  34.9550  READ   9C:2B -> F8
+  34.9590  READ   9C:60 -> B2
+  34.9630  READ   98:F5 -> 72
+  34.9670  READ   98:F5 -> 72
+  34.9710  READ   98:F5 -> 72
+  34.9750  READ   98:F5 -> 72
+  34.9790  READ   98:F5 -> 72
+  34.9830  READ   98:F5 -> 72
+  34.9870  READ   98:F5 -> 72
+  34.9910  READ   98:F5 -> 72
+  34.9950  READ   98:F5 -> 72
+  34.9990  READ   98:F5 -> 72
+  35.0040  READ   98:F5 -> 72
+  35.0080  READ   98:F5 -> 72
+  35.0120  READ   98:F5 -> 72
+  35.0160  READ   98:F5 -> 72
+  35.0200  READ   98:F5 -> 72
+  35.0250  READ   98:F5 -> 72
+  35.0290  READ   98:F5 -> 72
+  35.0330  READ   98:F5 -> 72
+  35.0370  READ   98:F5 -> 72
+  35.0410  READ   98:F5 -> 72
+  35.0450  READ   98:F5 -> 72
+  35.0490  READ   98:F5 -> 72
+  35.0530  READ   98:F5 -> 72
+  35.0570  READ   98:F5 -> 72
+  35.0610  READ   98:F5 -> 72
+  35.0650  READ   98:F5 -> 72
+  35.0690  READ   98:F5 -> 72
+  35.0740  READ   98:F5 -> 72
+  35.0780  READ   98:F5 -> 72
+  35.0830  READ   98:F5 -> 72
+  35.0870  READ   98:F5 -> 72
+  35.3270  SOC    1124 v_pid_out=4113
+  35.3270  SOC    1264 v_pid_out_ts_out2=4113
+  35.3270  SOC    1128 a_pid_out=271
+  35.3270  SOC    1268 a_pid_out_ts_out2=271
+  35.3270  SOC    1004 dma_sel_out=1
+  35.3280  SOC    1504 v_in_source_type=0
+  35.3280  SOC    1500 v_format=2
+  35.3280  SOC    1510 v_ip_format=2
+  35.3280  SOC    1504 tfrff=2
+  35.3280  SOC    1000 tbc_mode=1
+  35.3290  SOC    1000 tbc_mode=1
+  35.3290  SOC    1a00 a_sample=0
+  35.3290  SOC    1a08 ain_master=0
+  35.3300  SOC    1a08 ain_lsb_first=0
+  35.3300  SOC    1a08 ain_bit_posb=0
+  35.3300  SOC    1a08 amck_mode=1
+  35.3300  SOC    1a08 ain_dlength=2
+  35.3310  SOC    1a08 ain_lr_hlset=1
+  35.3310  SOC    1a08 ain_i2s=1
+  35.3310  SOC    1a08 ain_lrclk_sel=0
+  35.3310  SOC    1a08 ain_sclk_sel=0
+  35.3320  SOC    1a08 ain_bclk_sel=0
+  35.3320  SOC    1a08 ain_bclk_hl=0
+  35.3320  SOC    1a08 ain_offset_mode=0
+  35.3320  SOC    1a0c ain_offset=0
+  35.3330  SOC    1588 v_disable_aspect_ratio_info_present_flag=0
+  35.3330  SOC    1688 v_disable_aspect_ratio_info_present_flag_bl=0
+  35.3330  SOC    1570 v_pic_order_present_flag=1
+  35.3330  SOC    1670 v_pic_order_present_flag_bl=1
+  35.3340  SOC    1574 1574/15/1=0
+  35.3340  SOC    1574 v_max_cpb_delay=3
+  35.3340  SOC    1104 system_rate=28683
+  35.3340  SOC    1104 system_min_rate=0
+  35.3350  SOC    1510 v_cl_gop=1
+  35.3350  SOC    1518 v_gop_struct=3
+  35.3350  SOC    1518 v_gop_size=14
+  35.3350  SOC    1510 v_vlc_mode=0
+  35.3360  SOC    1514 v_vbr_converge_mode=0
+  35.3360  SOC    1510 v_rate_mode=0
+  35.3360  SOC    1530 v_bitrate=26250
+  35.3370  SOC    1534 v_max_bitrate=23625
+  35.3370  SOC    1534 v_ave_bitrate=13125
+  35.3370  SOC    1538 v_min_bitrate=9187
+  35.3370  SOC    152c v_hsize_out=1280
+  35.3380  SOC    152c v_vsize_out=720
+  35.3380  SOC    1000 v_vinpelclk=0
+  35.3380  SOC    1584 time_scale_h=0
+  35.3380  SOC    1584 time_scale_l=0
+  35.3390  SOC    1588 num_units_in_tick=0
+  35.3390  SOC    1518 v_idr_interval_h=0
+  35.3390  SOC    151c v_idr_interval_l=0
+  35.3390  SOC    151c 151c/0/5=0
+  35.3400  SOC    1524 v_h264_profile=1
+  35.3400  SOC    1524 v_h264_level=40
+  35.3400  SOC    1a00 a_sample=0
+  35.3400  SOC    1a14 e_mpeg_protect=0
+  35.3410  SOC    1a14 e_mpeg_mode=0
+  35.3410  SOC    1a14 e_mpeg_copyr=0
+  35.3410  SOC    1a14 e_mpeg_orig=1
+  35.3410  SOC    1a14 e_mpeg_emp=0
+  35.3420  SOC    1a04 a_bitrate=320
+  35.3420  SOC    1580 colour_description_present_flag=1
+  35.3420  SOC    1580 colour_primaries=1
+  35.3420  SOC    1580 transfer_characteristics=1
+  35.3430  SOC    1580 matrix_coefficients=1
+  35.3430  SOC    157c video_full_range_flag=0
+  35.3430  SOC    157c video_signal_type_present_flag=1
+  35.3430  SOC    157c video_format=5
+  35.3440  SOC    157c video_full_range_flag=0
+  35.3440  SOC    1674 1674/15/1=0
+  35.3440  SOC    1674 v_max_cpb_delay_bl=3
+  35.3440  SOC    1244 system_rate_ts_out2=28683
+  35.3450  SOC    1244 system_min_rate_ts_out2=0
+  35.3450  SOC    1610 v_cl_gop_bl=1
+  35.3450  SOC    1610 v_ip_format_bl=2
+  35.3450  SOC    1618 v_gop_struct_bl=3
+  35.3460  SOC    1618 v_gop_size_bl=14
+  35.3460  SOC    1610 v_vlc_mode_bl=0
+  35.3460  SOC    1610 v_rate_mode_bl=0
+  35.3460  SOC    1614 v_vbr_converge_mode_bl=0
+  35.3470  SOC    1630 v_bitrate_bl=26250
+  35.3470  SOC    1634 v_max_bitrate_bl=23625
+  35.3470  SOC    1634 v_ave_bitrate_bl=13125
+  35.3470  SOC    1638 v_min_bitrate_bl=9187
+  35.3480  SOC    1638 v_filler_bitrate_bl=0
+  35.3480  SOC    162c v_hsize_out_bl=1280
+  35.3480  SOC    162c v_vsize_out_bl=720
+  35.3480  SOC    1610 v_ip_format_bl=2
+  35.3490  SOC    1504 tfrff=2
+  35.3490  SOC    1618 v_idr_interval_h_bl=0
+  35.3490  SOC    161c v_idr_interval_l_bl=0
+  35.3490  SOC    161c 161c/0/5=0
+  35.3500  SOC    1624 v_h264_profile_bl=1
+  35.3500  SOC    1624 v_h264_level_bl=31
+  35.3500  SOC    1684 time_scale_h_bl=0
+  35.3500  SOC    1684 time_scale_l_bl=0
+  35.3510  SOC    1688 num_units_in_tick_bl=0
+  35.3510  SOC    1a24 ach_sel_bl=0
+  35.3510  SOC    1a34 e_mpeg_protect_bl=0
+  35.3510  SOC    1a34 e_mpeg_mode_bl=0
+  35.3520  SOC    1a34 e_mpeg_copyr_bl=0
+  35.3520  SOC    1a34 e_mpeg_orig_bl=1
+  35.3520  SOC    1a34 e_mpeg_emp_bl=0
+  35.3530  SOC    1a24 a_bitrate_bl=320
+  35.3530  SOC    1680 colour_description_present_flag_bl=1
+  35.3530  SOC    1680 colour_primaries_bl=1
+  35.3530  SOC    1680 transfer_characteristics_bl=1
+  35.3540  SOC    1680 matrix_coefficients_bl=1
+  35.3540  SOC    167c video_full_range_flag_bl=0
+  35.3540  SOC    167c video_signal_type_present_flag_bl=1
+  35.3540  SOC    167c video_format_bl=5
+  35.3550  SOC    167c video_full_range_flag_bl=0
+  35.3550  SOC    1008 sout_mode=0
+  35.3550  SOC    1008 sout2_mode=0
+  35.3550  SOC    1008 v_ts_out_mode=1
+  35.3560  SOC    100c a_ts_out_mode=2
+  35.3560  SOC    100c a_mode=3
+  35.3560  SOC    1008 v_ts_out2_mode=0
+  35.3560  SOC    100c a_ts_out2_mode=0
+  35.3570  SOC    100c a2_mode=0
+  35.3570  SCMD   INIT mode=A0 data=0000
+  35.3570  REG_R  0800:2008 -> 00 01
+  35.3570  SCMD   STATE_CHANGE mode=00 data=0002
+  35.5770  REG_R  0800:0014 -> 05 00
+  35.6770  REG_R  0800:2008 -> 00 01
+  35.6770  REG_R  0900:0074 -> 01 1E
+  35.6770  REG_R  0900:01b0 -> 03 D2
+  35.6770  REG_R  0800:2008 -> 00 01
+  35.6780  REG_R  0800:2008 -> 00 01
+  35.6780  REG_W  0900:0074 = 00 04
+  35.6780  REG_W  0900:01b0 = 00 00
+  35.7280  REG_R  0800:2008 -> 00 01
+  35.7280  REG_R  0900:0074 -> 01 1A
+  35.7280  REG_R  0900:01b0 -> 03 D2
+  35.7780  REG_R  0800:2008 -> 00 02
+  35.7780  REG_R  0900:0074 -> 01 1E
+  35.7780  REG_R  0900:01b0 -> 03 D2
+  35.7780  REG_R  0800:2008 -> 00 02
+  35.7790  REG_R  0800:2008 -> 00 02
+  35.7790  REG_W  0900:0074 = 00 04
+  35.7790  REG_W  0900:01b0 = 00 00
+  36.1371  READ   9C:2B -> F8
+  36.1411  READ   9C:2A -> FA
+  36.1471  READ   9C:68 -> BF
+  36.1531  READ   9C:67 -> 59
+  36.1591  READ   9C:66 -> BA
+  36.1631  READ   9C:65 -> 95
+  36.1671  READ   9C:2B -> F8
+  36.1711  READ   9C:60 -> B2
+  36.1771  READ   98:F5 -> 72
+  36.1841  READ   98:F5 -> 72
+  36.1891  READ   98:F5 -> 72
+  36.1931  READ   98:F5 -> 72
+  36.1981  READ   98:F5 -> 72
+  36.2031  READ   98:F5 -> 72
+  36.2201  READ   98:F5 -> 72
+  36.2251  READ   98:F5 -> 72
+  36.2311  READ   98:F5 -> 72
+  36.2391  READ   98:F5 -> 72
+  36.2431  READ   98:F5 -> 72
+  36.2481  READ   98:F5 -> 72
+  36.2521  READ   98:F5 -> 72
+  36.2561  READ   98:F5 -> 72
+  36.2601  READ   98:F5 -> 72
+  36.2681  READ   98:F5 -> 72
+  36.2721  READ   98:F5 -> 72
+  36.2761  READ   98:F5 -> 72
+  36.2801  READ   98:F5 -> 72
+  36.2841  READ   98:F5 -> 72
+  36.2891  READ   98:F5 -> 72
+  36.3021  READ   98:F5 -> 72
+  36.3131  READ   98:F5 -> 72
+  36.3171  READ   98:F5 -> 72
+  36.3211  READ   98:F5 -> 72
+  36.3271  READ   98:F5 -> 72
+  36.3311  READ   98:F5 -> 72
+  36.3351  READ   98:F5 -> 72
+  36.3391  READ   98:F5 -> 72
+  36.3431  READ   98:F5 -> 72
+  36.3491  READ   98:F5 -> 72
+  36.8291  READ   9C:2B -> F8
+  36.8341  READ   9C:2A -> FA
+  36.8381  READ   9C:68 -> BF
+  36.8421  READ   9C:67 -> 58
+  36.8561  READ   9C:66 -> BA
+  36.8601  READ   9C:65 -> 95
+  36.8651  READ   9C:2B -> F8
+  36.8691  READ   9C:60 -> B2
+  36.8821  READ   98:F5 -> 72
+  36.8871  READ   98:F5 -> 72
+  36.8911  READ   98:F5 -> 72
+  36.8951  READ   98:F5 -> 72
+  36.8991  READ   98:F5 -> 72
+  36.9051  READ   98:F5 -> 72
+  36.9091  READ   98:F5 -> 72
+  36.9131  READ   98:F5 -> 72
+  36.9181  READ   98:F5 -> 72
+  36.9221  READ   98:F5 -> 72
+  36.9261  READ   98:F5 -> 72
+  36.9311  READ   98:F5 -> 72
+  36.9441  READ   98:F5 -> 72
+  36.9491  READ   98:F5 -> 72
+  36.9541  READ   98:F5 -> 72
+  36.9581  READ   98:F5 -> 72
+  36.9751  READ   98:F5 -> 72
+  36.9801  READ   98:F5 -> 72
+  36.9851  READ   98:F5 -> 72
+  36.9901  READ   98:F5 -> 72
+  36.9941  READ   98:F5 -> 72
+  36.9991  READ   98:F5 -> 72
+  37.0031  READ   98:F5 -> 72
+  37.0071  READ   98:F5 -> 72
+  37.0111  READ   98:F5 -> 72
+  37.0151  READ   98:F5 -> 72
+  37.0191  READ   98:F5 -> 72
+  37.0261  READ   98:F5 -> 72
+  37.0381  READ   98:F5 -> 72
+  37.0431  READ   98:F5 -> 72
+  37.0481  READ   98:F5 -> 72
+  37.5351  READ   9C:2B -> F8
+  37.5401  READ   9C:2A -> FA
+  37.5441  READ   9C:68 -> BF
+  37.5491  READ   9C:67 -> 59
+  37.5581  READ   9C:66 -> BA
+  37.5621  READ   9C:65 -> 95
+  37.5671  READ   9C:2B -> F8
+  37.5711  READ   9C:60 -> B2
+  37.5751  READ   98:F5 -> 72
+  37.5811  READ   98:F5 -> 72
+  37.5881  READ   98:F5 -> 72
+  37.5921  READ   98:F5 -> 72
+  37.5961  READ   98:F5 -> 72
+  37.6002  READ   98:F5 -> 72
+  37.6042  READ   98:F5 -> 72
+  37.6092  READ   98:F5 -> 72
+  37.6142  READ   98:F5 -> 72
+  37.6212  READ   98:F5 -> 72
+  37.6252  READ   98:F5 -> 72
+  37.6292  READ   98:F5 -> 72
+  37.6332  READ   98:F5 -> 72
+  37.6382  READ   98:F5 -> 72
+  37.6512  READ   98:F5 -> 72
+  37.6562  READ   98:F5 -> 72
+  37.6602  READ   98:F5 -> 72
+  37.6642  READ   98:F5 -> 72
+  37.6692  READ   98:F5 -> 72
+  37.6732  READ   98:F5 -> 72
+  37.6782  READ   98:F5 -> 72
+  37.6872  READ   98:F5 -> 72
+  37.6932  READ   98:F5 -> 72
+  37.6982  READ   98:F5 -> 72
+  37.7112  READ   98:F5 -> 72
+  37.7162  READ   98:F5 -> 72
+  37.7202  READ   98:F5 -> 72
+  37.7252  READ   98:F5 -> 72
+  37.7312  READ   98:F5 -> 72
+  37.7472  READ   98:F5 -> 72
+  37.7512  READ   98:F5 -> 72
+  38.0392  READ   9C:2B -> F8
+  38.0432  READ   9C:2A -> FA
+  38.0482  READ   9C:68 -> BF
+  38.0532  READ   9C:67 -> 58
+  38.0582  READ   9C:66 -> BA
+  38.0622  READ   9C:65 -> 9A
+  38.0662  READ   9C:2B -> F8
+  38.0702  READ   9C:60 -> B2
+  38.0702  WRITE  9C:04 = DC
+  38.1762  WRITE  9C:E0 = CC
+  38.1832  READ   98:F5 -> 72
+  38.1882  READ   98:F5 -> 72
+  38.1982  READ   98:F5 -> 72
+  38.2082  READ   98:F5 -> 72
+  38.2122  READ   98:F5 -> 72
+  38.2202  READ   98:F5 -> 72
+  38.2252  READ   98:F5 -> 72
+  38.2292  READ   98:F5 -> 72
+  38.2332  READ   98:F5 -> 72
+  38.2382  READ   98:F5 -> 72
+  38.2422  READ   98:F5 -> 72
+  38.2462  READ   98:F5 -> 72
+  38.2502  READ   98:F5 -> 72
+  38.2542  READ   98:F5 -> 72
+  38.2582  READ   98:F5 -> 72
+  38.2622  READ   98:F5 -> 72
+  38.2662  READ   98:F5 -> 72
+  38.2702  READ   98:F5 -> 72
+  38.2742  READ   98:F5 -> 72
+  38.2782  READ   98:F5 -> 72
+  38.2832  READ   98:F5 -> 72
+  38.2882  READ   98:F5 -> 72
+  38.2922  READ   98:F5 -> 72
+  38.2962  READ   98:F5 -> 72
+  38.3002  READ   98:F5 -> 72
+  38.3042  READ   98:F5 -> 72
+  38.3092  READ   98:F5 -> 72
+  38.3142  READ   98:F5 -> 72
+  38.3192  READ   98:F5 -> 72
+  38.3322  READ   98:F5 -> 72
+  38.3382  READ   98:F5 -> 72
+  38.3872  READ   9C:2B -> F8
+  38.3922  READ   9C:2A -> FA
+  38.3962  READ   9C:68 -> BF
+  38.4002  READ   9C:67 -> 58
+  38.4042  READ   9C:66 -> BA
+  38.4092  READ   9C:65 -> 95
+  38.4132  READ   9C:2B -> F8
+  38.4182  READ   9C:60 -> B2
+  38.4182  WRITE  9C:04 = D0
+  38.4212  WRITE  9C:E0 = 6C
+  38.4882  WRITE  9C:E0 = 8C
+  38.4962  READ   9C:D6 -> B2
+  38.5002  READ   9C:D7 -> B2
+  38.5042  READ   9C:D8 -> 38
+  38.5092  READ   9C:D9 -> FA
+  38.5132  READ   98:F5 -> 72
+  38.5182  READ   98:F5 -> 72
+  38.5222  READ   98:F5 -> 72
+  38.5262  READ   98:F5 -> 72
+  38.5302  READ   98:F5 -> 72
+  38.5342  READ   98:F5 -> 72
+  38.5382  READ   98:F5 -> 72
+  38.5422  READ   98:F5 -> 72
+  38.5472  READ   98:F5 -> 72
+  38.5512  READ   98:F5 -> 72
+  38.5552  READ   98:F5 -> 72
+  38.5592  READ   98:F5 -> 72
+  38.5632  READ   98:F5 -> 72
+  38.5692  READ   98:F5 -> 72
+  38.5732  READ   98:F5 -> 72
+  38.5782  READ   98:F5 -> 72
+  38.5822  READ   98:F5 -> 72
+  38.5862  READ   98:F5 -> 72
+  38.5902  READ   98:F5 -> 72
+  38.5942  READ   98:F5 -> 72
+  38.5992  READ   98:F5 -> 72
+  38.6032  READ   98:F5 -> 72
+  38.6072  READ   98:F5 -> 72
+  38.6122  READ   98:F5 -> 72
+  38.6212  READ   98:F5 -> 72
+  38.6262  READ   98:F5 -> 72
+  38.6352  READ   98:F5 -> 72
+  38.6402  READ   98:F5 -> 72
+  38.6442  READ   98:F5 -> 72
+  38.6492  READ   98:F5 -> 72
+  38.6532  READ   98:F5 -> 72
+  38.6912  READ   9C:2B -> F8
+  38.6962  READ   9C:2A -> FA
+  38.7002  READ   9C:68 -> BF
+  38.7042  READ   9C:67 -> 59
+  38.7082  READ   9C:66 -> BA
+  38.7122  READ   9C:65 -> 95
+  38.7162  READ   9C:2B -> F8
+  38.7202  READ   9C:60 -> B2
+  38.7202  WRITE  9C:04 = E4
+  38.7232  WRITE  9C:E0 = 6C
+  38.7762  WRITE  9C:E0 = 8C
+  38.7842  READ   9C:D6 -> B2
+  38.7892  READ   9C:D7 -> B2
+  38.7942  READ   9C:D8 -> 3B
+  38.7992  READ   9C:D9 -> D4
+  38.8032  READ   98:F5 -> 72
+  38.8082  READ   98:F5 -> 72
+  38.8122  READ   98:F5 -> 72
+  38.8162  READ   98:F5 -> 72
+  38.8202  READ   98:F5 -> 72
+  38.8242  READ   98:F5 -> 72
+  38.8282  READ   98:F5 -> 72
+  38.8332  READ   98:F5 -> 72
+  38.8432  READ   98:F5 -> 72
+  38.8492  READ   98:F5 -> 72
+  38.8602  READ   98:F5 -> 72
+  38.8642  READ   98:F5 -> 72
+  38.8682  READ   98:F5 -> 72
+  38.8732  READ   98:F5 -> 72
+  38.8782  READ   98:F5 -> 72
+  38.8822  READ   98:F5 -> 72
+  38.8862  READ   98:F5 -> 72
+  38.8902  READ   98:F5 -> 72
+  38.8942  READ   98:F5 -> 72
+  38.8982  READ   98:F5 -> 72
+  38.9022  READ   98:F5 -> 72
+  38.9062  READ   98:F5 -> 72
+  38.9102  READ   98:F5 -> 72
+  38.9142  READ   98:F5 -> 72
+  38.9192  READ   98:F5 -> 72
+  38.9242  READ   98:F5 -> 72
+  38.9292  READ   98:F5 -> 72
+  38.9332  READ   98:F5 -> 72
+  38.9382  READ   98:F5 -> 72
+  38.9422  READ   98:F5 -> 72
+  38.9462  READ   98:F5 -> 72
+  38.9972  READ   9C:2B -> F8
+  39.0012  READ   9C:2A -> FA
+  39.0062  READ   9C:68 -> BF
+  39.0172  READ   9C:67 -> 59
+  39.0222  READ   9C:66 -> BA
+  39.0262  READ   9C:65 -> 95
+  39.0312  READ   9C:2B -> F8
+  39.0352  READ   9C:60 -> B2
+  39.0352  WRITE  9C:04 = F8
+  39.0382  WRITE  9C:E0 = 6C
+  39.0902  WRITE  9C:E0 = 8C
+  39.1012  READ   9C:D6 -> B2
+  39.1062  READ   9C:D7 -> B2
+  39.1162  READ   9C:D8 -> 35
+  39.1222  READ   9C:D9 -> 78
+  39.1262  READ   98:F5 -> 72
+  39.1302  READ   98:F5 -> 72
+  39.1342  READ   98:F5 -> 72
+  39.1392  READ   98:F5 -> 72
+  39.1442  READ   98:F5 -> 72
+  39.1522  READ   98:F5 -> 72
+  39.1562  READ   98:F5 -> 72
+  39.1602  READ   98:F5 -> 72
+  39.1652  READ   98:F5 -> 72
+  39.1712  READ   98:F5 -> 72
+  39.1812  READ   98:F5 -> 72
+  39.1852  READ   98:F5 -> 72
+  39.1972  READ   98:F5 -> 72
+  39.2022  READ   98:F5 -> 72
+  39.2062  READ   98:F5 -> 72
+  39.2102  READ   98:F5 -> 72
+  39.2142  READ   98:F5 -> 72
+  39.2192  READ   98:F5 -> 72
+  39.2232  READ   98:F5 -> 72
+  39.2282  READ   98:F5 -> 72
+  39.2322  READ   98:F5 -> 72
+  39.2362  READ   98:F5 -> 72
+  39.2402  READ   98:F5 -> 72
+  39.2442  READ   98:F5 -> 72
+  39.2492  READ   98:F5 -> 72
+  39.2532  READ   98:F5 -> 72
+  39.2592  READ   98:F5 -> 72
+  39.2642  READ   98:F5 -> 72
+  39.2732  READ   98:F5 -> 72
+  39.2822  READ   98:F5 -> 72
+  39.2862  READ   98:F5 -> 72
+  39.3423  READ   9C:2B -> F8
+  39.3463  READ   9C:2A -> FA
+  39.3503  READ   9C:68 -> BF
+  39.3553  READ   9C:67 -> 58
+  39.3593  READ   9C:66 -> BA
+  39.3643  READ   9C:65 -> 95
+  39.3683  READ   9C:2B -> F8
+  39.3723  READ   9C:60 -> B2
+  39.3723  WRITE  9C:04 = 8C
+  39.3753  WRITE  9C:E0 = 6C
+  39.4263  WRITE  9C:E0 = 8C
+  39.4333  READ   9C:D6 -> B2
+  39.4383  READ   9C:D7 -> B2
+  39.4423  READ   9C:D8 -> 3A
+  39.4473  READ   9C:D9 -> 0C
+  39.4513  READ   98:F5 -> 72
+  39.4553  READ   98:F5 -> 72
+  39.4593  READ   98:F5 -> 72
+  39.4633  READ   98:F5 -> 72
+  39.4683  READ   98:F5 -> 72
+  39.4723  READ   98:F5 -> 72
+  39.4783  READ   98:F5 -> 72
+  39.4823  READ   98:F5 -> 72
+  39.4863  READ   98:F5 -> 72
+  39.4903  READ   98:F5 -> 72
+  39.4953  READ   98:F5 -> 72
+  39.4993  READ   98:F5 -> 72
+  39.5033  READ   98:F5 -> 72
+  39.5083  READ   98:F5 -> 72
+  39.5123  READ   98:F5 -> 72
+  39.5163  READ   98:F5 -> 72
+  39.5203  READ   98:F5 -> 72
+  39.5253  READ   98:F5 -> 72
+  39.5293  READ   98:F5 -> 72
+  39.5333  READ   98:F5 -> 72
+  39.5373  READ   98:F5 -> 72
+  39.5413  READ   98:F5 -> 72
+  39.5453  READ   98:F5 -> 72
+  39.5493  READ   98:F5 -> 72
+  39.5533  READ   98:F5 -> 72
+  39.5583  READ   98:F5 -> 72
+  39.5623  READ   98:F5 -> 72
+  39.5673  READ   98:F5 -> 72
+  39.5713  READ   98:F5 -> 72
+  39.5753  READ   98:F5 -> 72
+  39.5793  READ   98:F5 -> 72
+  39.6053  READ   9C:2B -> F8
+  39.6133  READ   9C:2A -> FA
+  39.6183  READ   9C:68 -> BF
+  39.6223  READ   9C:67 -> 59
+  39.6263  READ   9C:66 -> BA
+  39.6303  READ   9C:65 -> 95
+  39.6353  READ   9C:2B -> F8
+  39.6393  READ   9C:60 -> B2
+  39.6393  WRITE  9C:04 = 80
+  39.6423  WRITE  9C:E0 = 6C
+  39.6763  WRITE  9C:E0 = 8C
+  39.6913  READ   9C:D6 -> B2
+  39.6953  READ   9C:D7 -> B2
+  39.6993  READ   9C:D8 -> 38
+  39.7033  READ   9C:D9 -> 10
+  39.7083  READ   98:F5 -> 72
+  39.7123  READ   98:F5 -> 72
+  39.7163  READ   98:F5 -> 72
+  39.7203  READ   98:F5 -> 72
+  39.7243  READ   98:F5 -> 72
+  39.7293  READ   98:F5 -> 72
+  39.7333  READ   98:F5 -> 72
+  39.7383  READ   98:F5 -> 72
+  39.7423  READ   98:F5 -> 72
+  39.7463  READ   98:F5 -> 72
+  39.7503  READ   98:F5 -> 72
+  39.7563  READ   98:F5 -> 72
+  39.7613  READ   98:F5 -> 72
+  39.7693  READ   98:F5 -> 72
+  39.7743  READ   98:F5 -> 72
+  39.7833  READ   98:F5 -> 72
+  39.7883  READ   98:F5 -> 72
+  39.7923  READ   98:F5 -> 72
+  39.7963  READ   98:F5 -> 72
+  39.8003  READ   98:F5 -> 72
+  39.8053  READ   98:F5 -> 72
+  39.8093  READ   98:F5 -> 72
+  39.8133  READ   98:F5 -> 72
+  39.8183  READ   98:F5 -> 72
+  39.8223  READ   98:F5 -> 72
+  39.8263  READ   98:F5 -> 72
+  39.8303  READ   98:F5 -> 72
+  39.8363  READ   98:F5 -> 72
+  39.8403  READ   98:F5 -> 72
+  39.8443  READ   98:F5 -> 72
+  39.8493  READ   98:F5 -> 72
+  39.8803  READ   9C:2B -> F8
+  39.8843  READ   9C:2A -> FA
+  39.8883  READ   9C:68 -> BF
+  39.8923  READ   9C:67 -> 59
+  39.8963  READ   9C:66 -> BA
+  39.9003  READ   9C:65 -> 95
+  39.9043  READ   9C:2B -> F8
+  39.9093  READ   9C:60 -> B2
+  39.9093  WRITE  9C:04 = 94
+  39.9123  WRITE  9C:E0 = 6C
+  39.9863  WRITE  9C:E0 = 8C
+  40.0033  READ   9C:D6 -> B2
+  40.0113  READ   9C:D7 -> B2
+  40.0173  READ   9C:D8 -> 3B
+  40.0223  READ   9C:D9 -> 2A
+  40.0273  READ   98:F5 -> 72
+  40.0313  READ   98:F5 -> 72
+  40.0353  READ   98:F5 -> 72
+  40.0393  READ   98:F5 -> 72
+  40.0433  READ   98:F5 -> 72
+  40.0483  READ   98:F5 -> 72
+  40.0523  READ   98:F5 -> 72
+  40.0563  READ   98:F5 -> 72
+  40.0603  READ   98:F5 -> 72
+  40.0643  READ   98:F5 -> 72
+  40.0693  READ   98:F5 -> 72
+  40.0733  READ   98:F5 -> 72
+  40.0783  READ   98:F5 -> 72
+  40.0823  READ   98:F5 -> 72
+  40.0873  READ   98:F5 -> 72
+  40.0953  READ   98:F5 -> 72
+  40.1083  READ   98:F5 -> 72
+  40.1133  READ   98:F5 -> 72
+  40.1183  READ   98:F5 -> 72
+  40.1223  READ   98:F5 -> 72
+  40.1263  READ   98:F5 -> 72
+  40.1303  READ   98:F5 -> 72
+  40.1353  READ   98:F5 -> 72
+  40.1393  READ   98:F5 -> 72
+  40.1433  READ   98:F5 -> 72
+  40.1483  READ   98:F5 -> 72
+  40.1523  READ   98:F5 -> 72
+  40.1563  READ   98:F5 -> 72
+  40.1603  READ   98:F5 -> 72
+  40.1643  READ   98:F5 -> 72
+  40.1693  READ   98:F5 -> 72
+  40.1843  READ   9C:2B -> F8
+  40.1893  READ   9C:2A -> FA
+  40.1933  READ   9C:68 -> BF
+  40.1973  READ   9C:67 -> 59
+  40.2033  READ   9C:66 -> BA
+  40.2083  READ   9C:65 -> 95
+  40.2123  READ   9C:2B -> F8
+  40.2163  READ   9C:60 -> B2
+  40.2173  WRITE  9C:04 = DC
+  40.3293  WRITE  9C:E0 = CC
+  40.3383  READ   98:F5 -> 72
+  40.3423  READ   98:F5 -> 72
+  40.3463  READ   98:F5 -> 72
+  40.3503  READ   98:F5 -> 72
+  40.3553  READ   98:F5 -> 72
+  40.3593  READ   98:F5 -> 72
+  40.3633  READ   98:F5 -> 72
+  40.3683  READ   98:F5 -> 72
+  40.3723  READ   98:F5 -> 72
+  40.3763  READ   98:F5 -> 72
+  40.3803  READ   98:F5 -> 72
+  40.3833  READ   98:F5 -> 72
+  40.3893  READ   98:F5 -> 72
+  40.3983  READ   98:F5 -> 72
+  40.4113  READ   98:F5 -> 72
+  40.4153  READ   98:F5 -> 72
+  40.4193  READ   98:F5 -> 72
+  40.4243  READ   98:F5 -> 72
+  40.4293  READ   98:F5 -> 72
+  40.4333  READ   98:F5 -> 72
+  40.4393  READ   98:F5 -> 72
+  40.4433  READ   98:F5 -> 72
+  40.4483  READ   98:F5 -> 72
+  40.4523  READ   98:F5 -> 72
+  40.4563  READ   98:F5 -> 72
+  40.4603  READ   98:F5 -> 72
+  40.4653  READ   98:F5 -> 72
+  40.4703  READ   98:F5 -> 72
+  40.4743  READ   98:F5 -> 72
+  40.4793  READ   98:F5 -> 72
+  40.4833  READ   98:F5 -> 72
+  40.5113  READ   9C:2B -> F8
+  40.5163  READ   9C:2A -> FA
+  40.5213  READ   9C:68 -> BF
+  40.5263  READ   9C:67 -> 59
+  40.5313  READ   9C:66 -> BA
+  40.5353  READ   9C:65 -> 95
+  40.5393  READ   9C:2B -> F8
+  40.5443  READ   9C:60 -> B2
+  40.5443  WRITE  9C:04 = D0
+  40.5473  WRITE  9C:E0 = 6C
+  40.5793  WRITE  9C:E0 = 8C
+  40.5873  READ   9C:D6 -> B2
+  40.5913  READ   9C:D7 -> B2
+  40.5953  READ   9C:D8 -> 3B
+  40.5993  READ   9C:D9 -> 71
+  40.6043  READ   98:F5 -> 72
+  40.6073  READ   98:F5 -> 72
+  40.6133  READ   98:F5 -> 72
+  40.6183  READ   98:F5 -> 72
+  40.6323  READ   98:F5 -> 72
+  40.6383  READ   98:F5 -> 72
+  40.6433  READ   98:F5 -> 72
+  40.6483  READ   98:F5 -> 72
+  40.6523  READ   98:F5 -> 72
+  40.6563  READ   98:F5 -> 72
+  40.6613  READ   98:F5 -> 72
+  40.6653  READ   98:F5 -> 72
+  40.6693  READ   98:F5 -> 72
+  40.6733  READ   98:F5 -> 72
+  40.6793  READ   98:F5 -> 72
+  40.6833  READ   98:F5 -> 72
+  40.6883  READ   98:F5 -> 72
+  40.6923  READ   98:F5 -> 72
+  40.6963  READ   98:F5 -> 72
+  40.7003  READ   98:F5 -> 72
+  40.7053  READ   98:F5 -> 72
+  40.7103  READ   98:F5 -> 72
+  40.7193  READ   98:F5 -> 72
+  40.7333  READ   98:F5 -> 72
+  40.7393  READ   98:F5 -> 72
+  40.7433  READ   98:F5 -> 72
+  40.7483  READ   98:F5 -> 72
+  40.7533  READ   98:F5 -> 72
+  40.7583  READ   98:F5 -> 72
+  40.7623  READ   98:F5 -> 72
+  40.7663  READ   98:F5 -> 72
+  40.7803  READ   9C:2B -> F8
+  40.7853  READ   9C:2A -> FA
+  40.7893  READ   9C:68 -> BF
+  40.7933  READ   9C:67 -> 58
+  40.7983  READ   9C:66 -> BA
+  40.8023  READ   9C:65 -> 95
+  40.8063  READ   9C:2B -> F8
+  40.8103  READ   9C:60 -> B2
+  40.8103  WRITE  9C:04 = E4
+  40.8123  WRITE  9C:E0 = 6C
+  40.8783  WRITE  9C:E0 = 8C
+  40.8903  READ   9C:D6 -> B2
+  40.8963  READ   9C:D7 -> B2
+  40.9013  READ   9C:D8 -> 3B
+  40.9053  READ   9C:D9 -> E2
+  40.9093  READ   98:F5 -> 72
+  40.9133  READ   98:F5 -> 72
+  40.9183  READ   98:F5 -> 72
+  40.9223  READ   98:F5 -> 72
+  40.9263  READ   98:F5 -> 72
+  40.9303  READ   98:F5 -> 72
+  40.9343  READ   98:F5 -> 72
+  40.9393  READ   98:F5 -> 72
+  40.9433  READ   98:F5 -> 72
+  40.9483  READ   98:F5 -> 72
+  40.9523  READ   98:F5 -> 72
+  40.9563  READ   98:F5 -> 72
+  40.9603  READ   98:F5 -> 72
+  40.9643  READ   98:F5 -> 72
+  40.9693  READ   98:F5 -> 72
+  40.9753  READ   98:F5 -> 72
+  40.9813  READ   98:F5 -> 72
+  40.9943  READ   98:F5 -> 72
+  40.9983  READ   98:F5 -> 72
+  41.0023  READ   98:F5 -> 72
+  41.0063  READ   98:F5 -> 72
+  41.0103  READ   98:F5 -> 72
+  41.0143  READ   98:F5 -> 72
+  41.0193  READ   98:F5 -> 72
+  41.0233  READ   98:F5 -> 72
+  41.0283  READ   98:F5 -> 72
+  41.0323  READ   98:F5 -> 72
+  41.0373  READ   98:F5 -> 72
+  41.0413  READ   98:F5 -> 72
+  41.0453  READ   98:F5 -> 72
+  41.0493  READ   98:F5 -> 72
+  41.0803  READ   9C:2B -> F8
+  41.0853  READ   9C:2A -> FA
+  41.0893  READ   9C:68 -> BF
+  41.0933  READ   9C:67 -> 59
+  41.0984  READ   9C:66 -> BA
+  41.1023  READ   9C:65 -> 95
+  41.1074  READ   9C:2B -> F8
+  41.1114  READ   9C:60 -> B2
+  41.1114  WRITE  9C:04 = F8
+  41.1144  WRITE  9C:E0 = 6C
+  41.1874  WRITE  9C:E0 = 8C
+  41.1944  READ   9C:D6 -> B2
+  41.2024  READ   9C:D7 -> B2
+  41.2084  READ   9C:D8 -> 3A
+  41.2124  READ   9C:D9 -> 7F
+  41.2174  READ   98:F5 -> 72
+  41.2224  READ   98:F5 -> 72
+  41.2254  READ   98:F5 -> 72
+  41.2304  READ   98:F5 -> 72
+  41.2344  READ   98:F5 -> 72
+  41.2394  READ   98:F5 -> 72
+  41.2434  READ   98:F5 -> 72
+  41.2484  READ   98:F5 -> 72
+  41.2524  READ   98:F5 -> 72
+  41.2574  READ   98:F5 -> 72
+  41.2624  READ   98:F5 -> 72
+  41.2704  READ   98:F5 -> 72
+  41.2794  READ   98:F5 -> 72
+  41.2854  READ   98:F5 -> 72
+  41.2894  READ   98:F5 -> 72
+  41.2924  READ   98:F5 -> 72
+  41.2974  READ   98:F5 -> 72
+  41.3024  READ   98:F5 -> 72
+  41.3064  READ   98:F5 -> 72
+  41.3104  READ   98:F5 -> 72
+  41.3144  READ   98:F5 -> 72
+  41.3184  READ   98:F5 -> 72
+  41.3224  READ   98:F5 -> 72
+  41.3264  READ   98:F5 -> 72
+  41.3304  READ   98:F5 -> 72
+  41.3344  READ   98:F5 -> 72
+  41.3394  READ   98:F5 -> 72
+  41.3434  READ   98:F5 -> 72
+  41.3484  READ   98:F5 -> 72
+  41.3524  READ   98:F5 -> 72
+  41.3554  READ   98:F5 -> 72
+  41.3834  READ   9C:2B -> F8
+  41.3924  READ   9C:2A -> FA
+  41.3964  READ   9C:68 -> BF
+  41.4004  READ   9C:67 -> 59
+  41.4044  READ   9C:66 -> BA
+  41.4094  READ   9C:65 -> 95
+  41.4134  READ   9C:2B -> F8
+  41.4184  READ   9C:60 -> B2
+  41.4184  WRITE  9C:04 = 8C
+  41.4214  WRITE  9C:E0 = 6C
+  41.4764  WRITE  9C:E0 = 8C
+  41.4834  READ   9C:D6 -> B2
+  41.4884  READ   9C:D7 -> B2
+  41.4924  READ   9C:D8 -> 35
+  41.4984  READ   9C:D9 -> B2
+  41.5074  READ   98:F5 -> 72
+  41.5184  READ   98:F5 -> 72
+  41.5224  READ   98:F5 -> 72
+  41.5264  READ   98:F5 -> 72
+  41.5294  READ   98:F5 -> 72
+  41.5344  READ   98:F5 -> 72
+  41.5384  READ   98:F5 -> 72
+  41.5414  READ   98:F5 -> 72
+  41.5474  READ   98:F5 -> 72
+  41.5514  READ   98:F5 -> 72
+  41.5554  READ   98:F5 -> 72
+  41.5594  READ   98:F5 -> 72
+  41.5634  READ   98:F5 -> 72
+  41.5684  READ   98:F5 -> 72
+  41.5724  READ   98:F5 -> 72
+  41.5754  READ   98:F5 -> 72
+  41.5804  READ   98:F5 -> 72
+  41.5844  READ   98:F5 -> 72
+  41.5874  READ   98:F5 -> 72
+  41.5924  READ   98:F5 -> 72
+  41.5964  READ   98:F5 -> 72
+  41.6004  READ   98:F5 -> 72
+  41.6044  READ   98:F5 -> 72
+  41.6084  READ   98:F5 -> 72
+  41.6134  READ   98:F5 -> 72
+  41.6194  READ   98:F5 -> 72
+  41.6274  READ   98:F5 -> 72
+  41.6394  READ   98:F5 -> 72
+  41.6464  READ   98:F5 -> 72
+  41.6514  READ   98:F5 -> 72
+  41.6554  READ   98:F5 -> 72
+  41.6844  READ   9C:2B -> F8
+  41.6934  READ   9C:2A -> FA
+  41.7014  READ   9C:68 -> BF
+  41.7064  READ   9C:67 -> 58
+  41.7094  READ   9C:66 -> BA
+  41.7144  READ   9C:65 -> 95
+  41.7194  READ   9C:2B -> F8
+  41.7234  READ   9C:60 -> B2
+  41.7234  WRITE  9C:04 = 80
+  41.7264  WRITE  9C:E0 = 6C
+  41.7764  WRITE  9C:E0 = 8C
+  41.7824  READ   9C:D6 -> B2
+  41.7884  READ   9C:D7 -> B2
+  41.7924  READ   9C:D8 -> 3A
+  41.7964  READ   9C:D9 -> AB
+  41.8004  READ   98:F5 -> 72
+  41.8044  READ   98:F5 -> 72
+  41.8094  READ   98:F5 -> 72
+  41.8144  READ   98:F5 -> 72
+  41.8234  READ   98:F5 -> 72
+  41.8274  READ   98:F5 -> 72
+  41.8314  READ   98:F5 -> 72
+  41.8354  READ   98:F5 -> 72
+  41.8404  READ   98:F5 -> 72
+  41.8494  READ   98:F5 -> 72
+  41.8534  READ   98:F5 -> 72
+  41.8584  READ   98:F5 -> 72
+  41.8624  READ   98:F5 -> 72
+  41.8664  READ   98:F5 -> 72
+  41.8694  READ   98:F5 -> 72
+  41.8754  READ   98:F5 -> 72
+  41.8814  READ   98:F5 -> 72
+  41.8904  READ   98:F5 -> 72
+  41.8944  READ   98:F5 -> 72
+  41.8984  READ   98:F5 -> 72
+  41.9024  READ   98:F5 -> 72
+  41.9064  READ   98:F5 -> 72
+  41.9104  READ   98:F5 -> 72
+  41.9154  READ   98:F5 -> 72
+  41.9264  READ   98:F5 -> 72
+  41.9304  READ   98:F5 -> 72
+  41.9344  READ   98:F5 -> 72
+  41.9384  READ   98:F5 -> 72
+  41.9434  READ   98:F5 -> 72
+  41.9464  READ   98:F5 -> 72
+  41.9504  READ   98:F5 -> 72
+  41.9934  READ   9C:2B -> F8
+  41.9984  READ   9C:2A -> FA
+  42.0014  READ   9C:68 -> BF
+  42.0074  READ   9C:67 -> 59
+  42.0124  READ   9C:66 -> BA
+  42.0194  READ   9C:65 -> 95
+  42.0234  READ   9C:2B -> F8
+  42.0274  READ   9C:60 -> B2
+  42.0284  WRITE  9C:04 = 94
+  42.0304  WRITE  9C:E0 = 6C
+  42.0924  WRITE  9C:E0 = 8C
+  42.0994  READ   9C:D6 -> B2
+  42.1084  READ   9C:D7 -> B2
+  42.1134  READ   9C:D8 -> 3A
+  42.1194  READ   9C:D9 -> 7E
+  42.1224  READ   98:F5 -> 72
+  42.1284  READ   98:F5 -> 72
+  42.1314  READ   98:F5 -> 72
+  42.1374  READ   98:F5 -> 72
+  42.1414  READ   98:F5 -> 72
+  42.1464  READ   98:F5 -> 72
+  42.1504  READ   98:F5 -> 72
+  42.1544  READ   98:F5 -> 72
+  42.1594  READ   98:F5 -> 72
+  42.1634  READ   98:F5 -> 72
+  42.1674  READ   98:F5 -> 72
+  42.1714  READ   98:F5 -> 72
+  42.1744  READ   98:F5 -> 72
+  42.1794  READ   98:F5 -> 72
+  42.1824  READ   98:F5 -> 72
+  42.1884  READ   98:F5 -> 72
+  42.1924  READ   98:F5 -> 72
+  42.1964  READ   98:F5 -> 72
+  42.2004  READ   98:F5 -> 72
+  42.2054  READ   98:F5 -> 72
+  42.2094  READ   98:F5 -> 72
+  42.2134  READ   98:F5 -> 72
+  42.2174  READ   98:F5 -> 72
+  42.2214  READ   98:F5 -> 72
+  42.2254  READ   98:F5 -> 72
+  42.2294  READ   98:F5 -> 72
+  42.2334  READ   98:F5 -> 72
+  42.2374  READ   98:F5 -> 72
+  42.2414  READ   98:F5 -> 72
+  42.2474  READ   98:F5 -> 72
+  42.2554  READ   98:F5 -> 72
+  42.2804  READ   9C:2B -> F8
+  42.2844  READ   9C:2A -> FA
+  42.2884  READ   9C:68 -> BF
+  42.2924  READ   9C:67 -> 59
+  42.2964  READ   9C:66 -> BA
+  42.3004  READ   9C:65 -> 95
+  42.3044  READ   9C:2B -> F8
+  42.3094  READ   9C:60 -> B2
+  42.3104  WRITE  9C:04 = A8
+  42.3124  WRITE  9C:E0 = 6C
+  42.3764  WRITE  9C:E0 = 8C
+  42.3874  READ   9C:D6 -> B2
+  42.3914  READ   9C:D7 -> B2
+  42.3954  READ   9C:D8 -> 35
+  42.3994  READ   9C:D9 -> 8A
+  42.4034  READ   98:F5 -> 72
+  42.4094  READ   98:F5 -> 72
+  42.4124  READ   98:F5 -> 72
+  42.4164  READ   98:F5 -> 72
+  42.4204  READ   98:F5 -> 72
+  42.4244  READ   98:F5 -> 72
+  42.4284  READ   98:F5 -> 72
+  42.4324  READ   98:F5 -> 72
+  42.4364  READ   98:F5 -> 72
+  42.4404  READ   98:F5 -> 72
+  42.4464  READ   98:F5 -> 72
+  42.4494  READ   98:F5 -> 72
+  42.4544  READ   98:F5 -> 72
+  42.4584  READ   98:F5 -> 72
+  42.4624  READ   98:F5 -> 72
+  42.4674  READ   98:F5 -> 72
+  42.4724  READ   98:F5 -> 72
+  42.4814  READ   98:F5 -> 72
+  42.4854  READ   98:F5 -> 72
+  42.4944  READ   98:F5 -> 72
+  42.5004  READ   98:F5 -> 72
+  42.5064  READ   98:F5 -> 72
+  42.5094  READ   98:F5 -> 72
+  42.5134  READ   98:F5 -> 72
+  42.5184  READ   98:F5 -> 72
+  42.5224  READ   98:F5 -> 72
+  42.5274  READ   98:F5 -> 72
+  42.5314  READ   98:F5 -> 72
+  42.5374  READ   98:F5 -> 72
+  42.5404  READ   98:F5 -> 72
+  42.5464  READ   98:F5 -> 72
+  42.5874  READ   9C:2B -> F8
+  42.5914  READ   9C:2A -> FA
+  42.5964  READ   9C:68 -> BF
+  42.5994  READ   9C:67 -> 59
+  42.6044  READ   9C:66 -> BA
+  42.6084  READ   9C:65 -> 95
+  42.6114  READ   9C:2B -> F8
+  42.6154  READ   9C:60 -> B2
+  42.6164  WRITE  9C:04 = BC
+  42.6184  WRITE  9C:E0 = 6C
+  42.6794  WRITE  9C:E0 = 8C
+  42.6934  READ   9C:D6 -> B2
+  42.6984  READ   9C:D7 -> B2
+  42.7024  READ   9C:D8 -> 34
+  42.7074  READ   9C:D9 -> 7A
+  42.7114  READ   98:F5 -> 72
+  42.7154  READ   98:F5 -> 72
+  42.7194  READ   98:F5 -> 72
+  42.7234  READ   98:F5 -> 72
+  42.7294  READ   98:F5 -> 72
+  42.7324  READ   98:F5 -> 72
+  42.7364  READ   98:F5 -> 72
+  42.7404  READ   98:F5 -> 72
+  42.7444  READ   98:F5 -> 72
+  42.7484  READ   98:F5 -> 72
+  42.7524  READ   98:F5 -> 72
+  42.7564  READ   98:F5 -> 72
+  42.7604  READ   98:F5 -> 72
+  42.7644  READ   98:F5 -> 72
+  42.7694  READ   98:F5 -> 72
+  42.7734  READ   98:F5 -> 72
+  42.7784  READ   98:F5 -> 72
+  42.7824  READ   98:F5 -> 72
+  42.7864  READ   98:F5 -> 72
+  42.7904  READ   98:F5 -> 72
+  42.7944  READ   98:F5 -> 72
+  42.7984  READ   98:F5 -> 72
+  42.8024  READ   98:F5 -> 72
+  42.8094  READ   98:F5 -> 72
+  42.8124  READ   98:F5 -> 72
+  42.8264  READ   98:F5 -> 72
+  42.8314  READ   98:F5 -> 72
+  42.8354  READ   98:F5 -> 72
+  42.8395  READ   98:F5 -> 72
+  42.8444  READ   98:F5 -> 72
+  42.8484  READ   98:F5 -> 72
+  42.8865  READ   9C:2B -> F8
+  42.8925  READ   9C:2A -> FA
+  42.8975  READ   9C:68 -> BF
+  42.9015  READ   9C:67 -> 58
+  42.9055  READ   9C:66 -> BA
+  42.9095  READ   9C:65 -> 95
+  42.9135  READ   9C:2B -> F8
+  42.9185  READ   9C:60 -> B2
+  42.9195  WRITE  9C:04 = B0
+  42.9215  WRITE  9C:E0 = 6C
+  42.9765  WRITE  9C:E0 = 8C
+  42.9845  READ   9C:D6 -> B2
+  42.9885  READ   9C:D7 -> B2
+  42.9925  READ   9C:D8 -> 36
+  42.9975  READ   9C:D9 -> 3F
+  43.0025  READ   98:F5 -> 72
+  43.0075  READ   98:F5 -> 72
+  43.0155  READ   98:F5 -> 72
+  43.0235  READ   98:F5 -> 72
+  43.0285  READ   98:F5 -> 72
+  43.0325  READ   98:F5 -> 72
+  43.0375  READ   98:F5 -> 72
+  43.0405  READ   98:F5 -> 72
+  43.0455  READ   98:F5 -> 72
+  43.0495  READ   98:F5 -> 72
+  43.0535  READ   98:F5 -> 72
+  43.0575  READ   98:F5 -> 72
+  43.0615  READ   98:F5 -> 72
+  43.0655  READ   98:F5 -> 72
+  43.0695  READ   98:F5 -> 72
+  43.0745  READ   98:F5 -> 72
+  43.0785  READ   98:F5 -> 72
+  43.0825  READ   98:F5 -> 72
+  43.0865  READ   98:F5 -> 72
+  43.0905  READ   98:F5 -> 72
+  43.0955  READ   98:F5 -> 72
+  43.0985  READ   98:F5 -> 72
+  43.1045  READ   98:F5 -> 72
+  43.1075  READ   98:F5 -> 72
+  43.1115  READ   98:F5 -> 72
+  43.1155  READ   98:F5 -> 72
+  43.1195  READ   98:F5 -> 72
+  43.1235  READ   98:F5 -> 72
+  43.1275  READ   98:F5 -> 72
+  43.1315  READ   98:F5 -> 72
+  43.1355  READ   98:F5 -> 72
+  43.1875  READ   9C:2B -> F8
+  43.1985  READ   9C:2A -> FA
+  43.2045  READ   9C:68 -> BF
+  43.2085  READ   9C:67 -> 59
+  43.2135  READ   9C:66 -> BA
+  43.2175  READ   9C:65 -> 95
+  43.2215  READ   9C:2B -> F8
+  43.2265  READ   9C:60 -> B2
+  43.2275  WRITE  9C:04 = 44
+  43.2305  WRITE  9C:E0 = 6C
+  43.2765  WRITE  9C:E0 = 8C
+  43.2825  READ   9C:D6 -> B2
+  43.2885  READ   9C:D7 -> B2
+  43.2915  READ   9C:D8 -> 37
+  43.2955  READ   9C:D9 -> BC
+  43.2995  READ   98:F5 -> 72
+  43.3045  READ   98:F5 -> 72
+  43.3095  READ   98:F5 -> 72
+  43.3175  READ   98:F5 -> 72
+  43.3245  READ   98:F5 -> 72
+  43.3315  READ   98:F5 -> 72
+  43.3365  READ   98:F5 -> 72
+  43.3405  READ   98:F5 -> 72
+  43.3455  READ   98:F5 -> 72
+  43.3495  READ   98:F5 -> 72
+  43.3535  READ   98:F5 -> 72
+  43.3575  READ   98:F5 -> 72
+  43.3615  READ   98:F5 -> 72
+  43.3655  READ   98:F5 -> 72
+  43.3695  READ   98:F5 -> 72
+  43.3735  READ   98:F5 -> 72
+  43.3775  READ   98:F5 -> 72
+  43.3815  READ   98:F5 -> 72
+  43.3855  READ   98:F5 -> 72
+  43.3895  READ   98:F5 -> 72
+  43.3935  READ   98:F5 -> 72
+  43.3975  READ   98:F5 -> 72
+  43.4025  READ   98:F5 -> 72
+  43.4055  READ   98:F5 -> 72
+  43.4105  READ   98:F5 -> 72
+  43.4145  READ   98:F5 -> 72
+  43.4185  READ   98:F5 -> 72
+  43.4225  READ   98:F5 -> 72
+  43.4265  READ   98:F5 -> 72
+  43.4305  READ   98:F5 -> 72
+  43.4355  READ   98:F5 -> 72
+  43.4815  READ   9C:2B -> F8
+  43.4845  READ   9C:2A -> FA
+  43.4885  READ   9C:68 -> BF
+  43.4925  READ   9C:67 -> 58
+  43.4985  READ   9C:66 -> BA
+  43.5015  READ   9C:65 -> 95
+  43.5055  READ   9C:2B -> F8
+  43.5095  READ   9C:60 -> B2
+  43.5105  WRITE  9C:04 = 58
+  43.5125  WRITE  9C:E0 = 6C
+  43.5765  WRITE  9C:E0 = 8C
+  43.5825  READ   9C:D6 -> B2
+  43.5865  READ   9C:D7 -> B2
+  43.5905  READ   9C:D8 -> 37
+  43.5945  READ   9C:D9 -> FC
+  43.5985  READ   98:F5 -> 72
+  43.6025  READ   98:F5 -> 72
+  43.6075  READ   98:F5 -> 72
+  43.6115  READ   98:F5 -> 72
+  43.6175  READ   98:F5 -> 72
+  43.6205  READ   98:F5 -> 72
+  43.6245  READ   98:F5 -> 72
+  43.6285  READ   98:F5 -> 72
+  43.6335  READ   98:F5 -> 72
+  43.6385  READ   98:F5 -> 72
+  43.6425  READ   98:F5 -> 72
+  43.6475  READ   98:F5 -> 72
+  43.6565  READ   98:F5 -> 72
+  43.6595  READ   98:F5 -> 72
+  43.6755  READ   98:F5 -> 72
+  43.6785  READ   98:F5 -> 72
+  43.6825  READ   98:F5 -> 72
+  43.6865  READ   98:F5 -> 72
+  43.6925  READ   98:F5 -> 72
+  43.6955  READ   98:F5 -> 72
+  43.6995  READ   98:F5 -> 72
+  43.7035  READ   98:F5 -> 72
+  43.7075  READ   98:F5 -> 72
+  43.7115  READ   98:F5 -> 72
+  43.7155  READ   98:F5 -> 72
+  43.7195  READ   98:F5 -> 72
+  43.7235  READ   98:F5 -> 72
+  43.7285  READ   98:F5 -> 72
+  43.7315  READ   98:F5 -> 72
+  43.7405  READ   98:F5 -> 72
+  43.7445  READ   98:F5 -> 72
+  43.7875  READ   9C:2B -> F8
+  43.7915  READ   9C:2A -> FA
+  43.7965  READ   9C:68 -> BF
+  43.8005  READ   9C:67 -> 58
+  43.8045  READ   9C:66 -> BA
+  43.8085  READ   9C:65 -> 9A
+  43.8125  READ   9C:2B -> F8
+  43.8165  READ   9C:60 -> B2
+  43.8175  WRITE  9C:04 = 6C
+  43.8195  WRITE  9C:E0 = 6C
+  43.8845  WRITE  9C:E0 = 8C
+  43.8945  READ   9C:D6 -> B2
+  43.8995  READ   9C:D7 -> B2
+  43.9035  READ   9C:D8 -> 34
+  43.9065  READ   9C:D9 -> 68
+  43.9105  READ   98:F5 -> 72
+  43.9145  READ   98:F5 -> 72
+  43.9185  READ   98:F5 -> 72
+  43.9225  READ   98:F5 -> 72
+  43.9265  READ   98:F5 -> 72
+  43.9305  READ   98:F5 -> 72
+  43.9355  READ   98:F5 -> 72
+  43.9395  READ   98:F5 -> 72
+  43.9425  READ   98:F5 -> 72
+  43.9465  READ   98:F5 -> 72
+  43.9505  READ   98:F5 -> 72
+  43.9545  READ   98:F5 -> 72
+  43.9595  READ   98:F5 -> 72
+  43.9635  READ   98:F5 -> 72
+  43.9675  READ   98:F5 -> 72
+  43.9725  READ   98:F5 -> 72
+  43.9795  READ   98:F5 -> 72
+  43.9825  READ   98:F5 -> 72
+  43.9865  READ   98:F5 -> 72
+  43.9905  READ   98:F5 -> 72
+  43.9945  READ   98:F5 -> 72
+  43.9985  READ   98:F5 -> 72
+  44.0025  READ   98:F5 -> 72
+  44.0065  READ   98:F5 -> 72
+  44.0105  READ   98:F5 -> 72
+  44.0145  READ   98:F5 -> 72
+  44.0185  READ   98:F5 -> 72
+  44.0225  READ   98:F5 -> 72
+  44.0265  READ   98:F5 -> 72
+  44.0305  READ   98:F5 -> 72
+  44.0365  READ   98:F5 -> 72
+  44.0855  READ   9C:2B -> F8
+  44.0935  READ   9C:2A -> FA
+  44.0985  READ   9C:68 -> BF
+  44.1025  READ   9C:67 -> 59
+  44.1065  READ   9C:66 -> BA
+  44.1105  READ   9C:65 -> 95
+  44.1145  READ   9C:2B -> F8
+  44.1185  READ   9C:60 -> B2
+  44.1195  WRITE  9C:04 = 60
+  44.1215  WRITE  9C:E0 = 6C
+  44.1895  WRITE  9C:E0 = 8C
+  44.2015  READ   9C:D6 -> B2
+  44.2175  READ   9C:D7 -> B2
+  44.2225  READ   9C:D8 -> 34
+  44.2275  READ   9C:D9 -> C4
+  44.2305  READ   98:F5 -> 72
+  44.2355  READ   98:F5 -> 72
+  44.2395  READ   98:F5 -> 72
+  44.2445  READ   98:F5 -> 72
+  44.2485  READ   98:F5 -> 72
+  44.2525  READ   98:F5 -> 72
+  44.2565  READ   98:F5 -> 72
+  44.2605  READ   98:F5 -> 72
+  44.2655  READ   98:F5 -> 72
+  44.2685  READ   98:F5 -> 72
+  44.2725  READ   98:F5 -> 72
+  44.2765  READ   98:F5 -> 72
+  44.2815  READ   98:F5 -> 72
+  44.2845  READ   98:F5 -> 72
+  44.2885  READ   98:F5 -> 72
+  44.2925  READ   98:F5 -> 72
+  44.2965  READ   98:F5 -> 72
+  44.3015  READ   98:F5 -> 72
+  44.3065  READ   98:F5 -> 72
+  44.3145  READ   98:F5 -> 72
+  44.3185  READ   98:F5 -> 72
+  44.3265  READ   98:F5 -> 72
+  44.3305  READ   98:F5 -> 72
+  44.3345  READ   98:F5 -> 72
+  44.3385  READ   98:F5 -> 72
+  44.3435  READ   98:F5 -> 72
+  44.3485  READ   98:F5 -> 72
+  44.3525  READ   98:F5 -> 72
+  44.3565  READ   98:F5 -> 72
+  44.3615  READ   98:F5 -> 72
+  44.3655  READ   98:F5 -> 72
+  44.3995  READ   9C:2B -> F8
+  44.4065  READ   9C:2A -> FA
+  44.4165  READ   9C:68 -> BF
+  44.4195  READ   9C:67 -> 59
+  44.4235  READ   9C:66 -> BA
+  44.4285  READ   9C:65 -> 95
+  44.4325  READ   9C:2B -> F8
+  44.4365  READ   9C:60 -> B2
+  44.4375  WRITE  9C:04 = 74
+  44.4395  WRITE  9C:E0 = 6C
+  44.4765  WRITE  9C:E0 = 8C
+  44.4845  READ   9C:D6 -> B2
+  44.4885  READ   9C:D7 -> B2
+  44.4925  READ   9C:D8 -> 36
+  44.4975  READ   9C:D9 -> B3
+  44.5015  READ   98:F5 -> 72
+  44.5055  READ   98:F5 -> 72
+  44.5095  READ   98:F5 -> 72
+  44.5135  READ   98:F5 -> 72
+  44.5175  READ   98:F5 -> 72
+  44.5235  READ   98:F5 -> 72
+  44.5285  READ   98:F5 -> 72
+  44.5365  READ   98:F5 -> 72
+  44.5455  READ   98:F5 -> 72
+  44.5495  READ   98:F5 -> 72
+  44.5555  READ   98:F5 -> 72
+  44.5585  READ   98:F5 -> 72
+  44.5645  READ   98:F5 -> 72
+  44.5695  READ   98:F5 -> 72
+  44.5745  READ   98:F5 -> 72
+  44.5795  READ   98:F5 -> 72
+  44.5856  READ   98:F5 -> 72
+  44.5896  READ   98:F5 -> 72
+  44.5935  READ   98:F5 -> 72
+  44.5986  READ   98:F5 -> 72
+  44.6026  READ   98:F5 -> 72
+  44.6076  READ   98:F5 -> 72
+  44.6156  READ   98:F5 -> 72
+  44.6196  READ   98:F5 -> 72
+  44.6286  READ   98:F5 -> 72
+  44.6326  READ   98:F5 -> 72
+  44.6396  READ   98:F5 -> 72
+  44.6426  READ   98:F5 -> 72
+  44.6466  READ   98:F5 -> 72
+  44.6506  READ   98:F5 -> 72
+  44.6546  READ   98:F5 -> 72
+  44.6796  READ   9C:2B -> F8
+  44.6836  READ   9C:2A -> FA
+  44.6896  READ   9C:68 -> BF
+  44.6926  READ   9C:67 -> 59
+  44.6966  READ   9C:66 -> BA
+  44.7006  READ   9C:65 -> 95
+  44.7046  READ   9C:2B -> F8
+  44.7086  READ   9C:60 -> B2
+  44.7096  WRITE  9C:04 = 08
+  44.7126  WRITE  9C:E0 = 6C
+  44.7776  WRITE  9C:E0 = 8C
+  44.7926  READ   9C:D6 -> B2
+  44.7996  READ   9C:D7 -> B2
+  44.8046  READ   9C:D8 -> 31
+  44.8126  READ   9C:D9 -> 9C
+  44.8166  READ   98:F5 -> 72
+  44.8206  READ   98:F5 -> 72
+  44.8246  READ   98:F5 -> 72
+  44.8286  READ   98:F5 -> 72
+  44.8326  READ   98:F5 -> 72
+  44.8446  READ   98:F5 -> 72
+  44.8486  READ   98:F5 -> 72
+  44.8526  READ   98:F5 -> 72
+  44.8566  READ   98:F5 -> 72
+  44.8606  READ   98:F5 -> 72
+  44.8646  READ   98:F5 -> 72
+  44.8686  READ   98:F5 -> 72
+  44.8736  READ   98:F5 -> 72
+  44.8786  READ   98:F5 -> 72
+  44.8866  READ   98:F5 -> 72
+  44.8916  READ   98:F5 -> 72
+  44.8956  READ   98:F5 -> 72
+  44.8996  READ   98:F5 -> 72
+  44.9046  READ   98:F5 -> 72
+  44.9086  READ   98:F5 -> 72
+  44.9166  READ   98:F5 -> 72
+  44.9206  READ   98:F5 -> 72
+  44.9246  READ   98:F5 -> 72
+  44.9286  READ   98:F5 -> 72
+  44.9346  READ   98:F5 -> 72
+  44.9396  READ   98:F5 -> 72
+  44.9486  READ   98:F5 -> 72
+  44.9536  READ   98:F5 -> 72
+  44.9566  READ   98:F5 -> 72
+  44.9606  READ   98:F5 -> 72
+  44.9646  READ   98:F5 -> 72
+  44.9896  READ   9C:2B -> F8
+  44.9946  READ   9C:2A -> FA
+  44.9996  READ   9C:68 -> BF
+  45.0036  READ   9C:67 -> 58
+  45.0086  READ   9C:66 -> BA
+  45.0126  READ   9C:65 -> 95
+  45.0166  READ   9C:2B -> F8
+  45.0206  READ   9C:60 -> B2
+  45.0216  WRITE  9C:04 = 1C
+  45.0236  WRITE  9C:E0 = 6C
+  45.0766  WRITE  9C:E0 = 8C
+  45.0826  READ   9C:D6 -> B2
+  45.0896  READ   9C:D7 -> B2
+  45.0926  READ   9C:D8 -> 31
+  45.0966  READ   9C:D9 -> B6
+  45.1006  READ   98:F5 -> 72
+  45.1046  READ   98:F5 -> 72
+  45.1096  READ   98:F5 -> 72
+  45.1126  READ   98:F5 -> 72
+  45.1186  READ   98:F5 -> 72
+  45.1226  READ   98:F5 -> 72
+  45.1276  READ   98:F5 -> 72
+  45.1326  READ   98:F5 -> 72
+  45.1366  READ   98:F5 -> 72
+  45.1406  READ   98:F5 -> 72
+  45.1456  READ   98:F5 -> 72
+  45.1516  READ   98:F5 -> 72
+  45.1556  READ   98:F5 -> 72
+  45.1646  READ   98:F5 -> 72
+  45.1696  READ   98:F5 -> 72
+  45.1736  READ   98:F5 -> 72
+  45.1786  READ   98:F5 -> 72
+  45.1826  READ   98:F5 -> 72
+  45.1866  READ   98:F5 -> 72
+  45.1906  READ   98:F5 -> 72
+  45.1946  READ   98:F5 -> 72
+  45.1986  READ   98:F5 -> 72
+  45.2026  READ   98:F5 -> 72
+  45.2086  READ   98:F5 -> 72
+  45.2126  READ   98:F5 -> 72
+  45.2166  READ   98:F5 -> 72
+  45.2206  READ   98:F5 -> 72
+  45.2266  READ   98:F5 -> 72
+  45.2306  READ   98:F5 -> 72
+  45.2346  READ   98:F5 -> 72
+  45.2386  READ   98:F5 -> 72
+  45.2826  READ   9C:2B -> F8
+  45.2856  READ   9C:2A -> FA
+  45.2896  READ   9C:68 -> BF
+  45.2946  READ   9C:67 -> 58
+  45.2986  READ   9C:66 -> BA
+  45.3026  READ   9C:65 -> 95
+  45.3066  READ   9C:2B -> F8
+  45.3126  READ   9C:60 -> B2
+  45.3126  WRITE  9C:04 = 10
+  45.3146  WRITE  9C:E0 = 6C
+  45.3766  WRITE  9C:E0 = 8C
+  45.3826  READ   9C:D6 -> B2
+  45.3866  READ   9C:D7 -> B2
+  45.3906  READ   9C:D8 -> 36
+  45.3946  READ   9C:D9 -> 6A
+  45.3996  READ   98:F5 -> 72
+  45.4036  READ   98:F5 -> 72
+  45.4086  READ   98:F5 -> 72
+  45.4126  READ   98:F5 -> 72
+  45.4186  READ   98:F5 -> 72
+  45.4226  READ   98:F5 -> 72
+  45.4266  READ   98:F5 -> 72
+  45.4306  READ   98:F5 -> 72
+  45.4356  READ   98:F5 -> 72
+  45.4386  READ   98:F5 -> 72
+  45.4426  READ   98:F5 -> 72
+  45.4476  READ   98:F5 -> 72
+  45.4506  READ   98:F5 -> 72
+  45.4546  READ   98:F5 -> 72
+  45.4586  READ   98:F5 -> 72
+  45.4626  READ   98:F5 -> 72
+  45.4686  READ   98:F5 -> 72
+  45.4726  READ   98:F5 -> 72
+  45.4766  READ   98:F5 -> 72
+  45.4806  READ   98:F5 -> 72
+  45.4846  READ   98:F5 -> 72
+  45.4886  READ   98:F5 -> 72
+  45.4946  READ   98:F5 -> 72
+  45.4996  READ   98:F5 -> 72
+  45.5026  READ   98:F5 -> 72
+  45.5086  READ   98:F5 -> 72
+  45.5126  READ   98:F5 -> 72
+  45.5166  READ   98:F5 -> 72
+  45.5206  READ   98:F5 -> 72
+  45.5246  READ   98:F5 -> 72
+  45.5286  READ   98:F5 -> 72
+  45.5426  READ   9C:2B -> F8
+  45.5466  READ   9C:2A -> FA
+  45.5506  READ   9C:68 -> BF
+  45.5546  READ   9C:67 -> 58
+  45.5586  READ   9C:66 -> BA
+  45.5626  READ   9C:65 -> 9A
+  45.5696  READ   9C:2B -> F8
+  45.5726  READ   9C:60 -> B2
+  45.5736  WRITE  9C:04 = 24
+  45.5756  WRITE  9C:E0 = 6C
+  45.6266  WRITE  9C:E0 = 8C
+  45.6326  READ   9C:D6 -> B2
+  45.6366  READ   9C:D7 -> B2
+  45.6406  READ   9C:D8 -> 36
+  45.6446  READ   9C:D9 -> 85
+  45.6486  READ   98:F5 -> 72
+  45.6526  READ   98:F5 -> 72
+  45.6576  READ   98:F5 -> 72
+  45.6616  READ   98:F5 -> 72
+  45.6656  READ   98:F5 -> 72
+  45.6696  READ   98:F5 -> 72
+  45.6746  READ   98:F5 -> 72
+  45.6836  READ   98:F5 -> 72
+  45.6886  READ   98:F5 -> 72
+  45.6926  READ   98:F5 -> 72
+  45.6966  READ   98:F5 -> 72
+  45.7006  READ   98:F5 -> 72
+  45.7046  READ   98:F5 -> 72
+  45.7086  READ   98:F5 -> 72
+  45.7126  READ   98:F5 -> 72
+  45.7186  READ   98:F5 -> 72
+  45.7236  READ   98:F5 -> 72
+  45.7266  READ   98:F5 -> 72
+  45.7306  READ   98:F5 -> 72
+  45.7356  READ   98:F5 -> 72
+  45.7386  READ   98:F5 -> 72
+  45.7446  READ   98:F5 -> 72
+  45.7496  READ   98:F5 -> 72
+  45.7536  READ   98:F5 -> 72
+  45.7586  READ   98:F5 -> 72
+  45.7636  READ   98:F5 -> 72
+  45.7686  READ   98:F5 -> 72
+  45.7726  READ   98:F5 -> 72
+  45.7766  READ   98:F5 -> 72
+  45.7806  READ   98:F5 -> 72
+  45.7846  READ   98:F5 -> 72
+  45.8316  READ   9C:2B -> F8
+  45.8356  READ   9C:2A -> FA
+  45.8396  READ   9C:68 -> BF
+  45.8436  READ   9C:67 -> 58
+  45.8486  READ   9C:66 -> BA
+  45.8526  READ   9C:65 -> 95
+  45.8566  READ   9C:2B -> F8
+  45.8606  READ   9C:60 -> B2
+  45.8616  WRITE  9C:04 = 38
+  45.8646  WRITE  9C:E0 = 6C
+  46.0276  WRITE  9C:E0 = 8C
+  46.0346  READ   9C:D6 -> B2
+  46.0386  READ   9C:D7 -> B2
+  46.0426  READ   9C:D8 -> 36
+  46.0486  READ   9C:D9 -> 43
+  46.0536  READ   98:F5 -> 72
+  46.0566  READ   98:F5 -> 72
+  46.0606  READ   98:F5 -> 72
+  46.0646  READ   98:F5 -> 72
+  46.0706  READ   98:F5 -> 72
+  46.0736  READ   98:F5 -> 72
+  46.0786  READ   98:F5 -> 72
+  46.0826  READ   98:F5 -> 72
+  46.0876  READ   98:F5 -> 72
+  46.0916  READ   98:F5 -> 72
+  46.0966  READ   98:F5 -> 72
+  46.1006  READ   98:F5 -> 72
+  46.1046  READ   98:F5 -> 72
+  46.1096  READ   98:F5 -> 72
+  46.1146  READ   98:F5 -> 72
+  46.1276  READ   98:F5 -> 72
+  46.1316  READ   98:F5 -> 72
+  46.1406  READ   98:F5 -> 72
+  46.1456  READ   98:F5 -> 72
+  46.1486  READ   98:F5 -> 72
+  46.1536  READ   98:F5 -> 72
+  46.1576  READ   98:F5 -> 72
+  46.1616  READ   98:F5 -> 72
+  46.1666  READ   98:F5 -> 72
+  46.1696  READ   98:F5 -> 72
+  46.1746  READ   98:F5 -> 72
+  46.1786  READ   98:F5 -> 72
+  46.1826  READ   98:F5 -> 72
+  46.1876  READ   98:F5 -> 72
+  46.1916  READ   98:F5 -> 72
+  46.1966  READ   98:F5 -> 72
+  46.2476  READ   9C:2B -> F8
+  46.2516  READ   9C:2A -> FA
+  46.2566  READ   9C:68 -> BF
+  46.2616  READ   9C:67 -> 59
+  46.2666  READ   9C:66 -> BA
+  46.2706  READ   9C:65 -> 95
+  46.2746  READ   9C:2B -> F8
+  46.2796  READ   9C:60 -> B2
+  46.2806  WRITE  9C:04 = CC
+  46.2826  WRITE  9C:E0 = 6C
+  46.3266  WRITE  9C:E0 = 8C
+  46.3326  READ   9C:D6 -> B2
+  46.3377  READ   9C:D7 -> B2
+  46.3417  READ   9C:D8 -> 34
+  46.3467  READ   9C:D9 -> 88
+  46.3507  READ   98:F5 -> 72
+  46.3547  READ   98:F5 -> 72
+  46.3587  READ   98:F5 -> 72
+  46.3627  READ   98:F5 -> 72
+  46.3667  READ   98:F5 -> 72
+  46.3707  READ   98:F5 -> 72
+  46.3747  READ   98:F5 -> 72
+  46.3787  READ   98:F5 -> 72
+  46.3847  READ   98:F5 -> 72
+  46.3937  READ   98:F5 -> 72
+  46.4027  READ   98:F5 -> 72
+  46.4077  READ   98:F5 -> 72
+  46.4117  READ   98:F5 -> 72
+  46.4157  READ   98:F5 -> 72
+  46.4197  READ   98:F5 -> 72
+  46.4237  READ   98:F5 -> 72
+  46.4287  READ   98:F5 -> 72
+  46.4327  READ   98:F5 -> 72
+  46.4367  READ   98:F5 -> 72
+  46.4407  READ   98:F5 -> 72
+  46.4447  READ   98:F5 -> 72
+  46.4487  READ   98:F5 -> 72
+  46.4527  READ   98:F5 -> 72
+  46.4577  READ   98:F5 -> 72
+  46.4617  READ   98:F5 -> 72
+  46.4657  READ   98:F5 -> 72
+  46.4697  READ   98:F5 -> 72
+  46.4737  READ   98:F5 -> 72
+  46.4787  READ   98:F5 -> 72
+  46.4837  READ   98:F5 -> 72
+  46.4867  READ   98:F5 -> 72
+  46.5587  READ   9C:2B -> F8
+  46.5657  READ   9C:2A -> FA
+  46.5697  READ   9C:68 -> BF
+  46.5737  READ   9C:67 -> 59
+  46.5797  READ   9C:66 -> BA
+  46.5827  READ   9C:65 -> 95
+  46.5877  READ   9C:2B -> F8
+  46.5917  READ   9C:60 -> B2
+  46.5927  WRITE  9C:04 = C0
+  46.5947  WRITE  9C:E0 = 6C
+  46.6277  WRITE  9C:E0 = 8C
+  46.6377  READ   9C:D6 -> B2
+  46.6427  READ   9C:D7 -> B2
+  46.6487  READ   9C:D8 -> 34
+  46.6527  READ   9C:D9 -> 2D
+  46.6567  READ   98:F5 -> 72
+  46.6607  READ   98:F5 -> 72
+  46.6647  READ   98:F5 -> 72
+  46.6697  READ   98:F5 -> 72
+  46.6757  READ   98:F5 -> 72
+  46.6797  READ   98:F5 -> 72
+  46.6827  READ   98:F5 -> 72
+  46.6917  READ   98:F5 -> 72
+  46.6957  READ   98:F5 -> 72
+  46.6997  READ   98:F5 -> 72
+  46.7047  READ   98:F5 -> 72
+  46.7087  READ   98:F5 -> 72
+  46.7127  READ   98:F5 -> 72
+  46.7177  READ   98:F5 -> 72
+  46.7227  READ   98:F5 -> 72
+  46.7267  READ   98:F5 -> 72
+  46.7307  READ   98:F5 -> 72
+  46.7357  READ   98:F5 -> 72
+  46.7407  READ   98:F5 -> 72
+  46.7447  READ   98:F5 -> 72
+  46.7487  READ   98:F5 -> 72
+  46.7527  READ   98:F5 -> 72
+  46.7567  READ   98:F5 -> 72
+  46.7627  READ   98:F5 -> 72
+  46.7677  READ   98:F5 -> 72
+  46.7717  READ   98:F5 -> 72
+  46.7797  READ   98:F5 -> 72
+  46.7877  READ   98:F5 -> 72
+  46.7927  READ   98:F5 -> 72
+  46.7987  READ   98:F5 -> 72
+  46.8027  READ   98:F5 -> 72
+  46.8447  READ   9C:2B -> F8
+  46.8527  READ   9C:2A -> FA
+  46.8587  READ   9C:68 -> BF
+  46.8627  READ   9C:67 -> 58
+  46.8667  READ   9C:66 -> BA
+  46.8827  READ   9C:65 -> 95
+  46.8877  READ   9C:2B -> F8
+  46.8917  READ   9C:60 -> B2
+  46.8927  WRITE  9C:04 = D0
+  46.8987  READ   98:F5 -> 72
+  46.9037  READ   98:F5 -> 72
+  46.9077  READ   98:F5 -> 72
+  46.9137  READ   98:F5 -> 72
+  46.9217  READ   98:F5 -> 72
+  46.9327  READ   98:F5 -> 72
+  46.9387  READ   98:F5 -> 72
+  46.9427  READ   98:F5 -> 72
+  46.9467  READ   98:F5 -> 72
+  46.9517  READ   98:F5 -> 72
+  46.9557  READ   98:F5 -> 72
+  46.9597  READ   98:F5 -> 72
+  46.9637  READ   98:F5 -> 72
+  46.9687  READ   98:F5 -> 72
+  46.9737  READ   98:F5 -> 72
+  46.9787  READ   98:F5 -> 72
+  46.9827  READ   98:F5 -> 72
+  46.9877  READ   98:F5 -> 72
+  46.9917  READ   98:F5 -> 72
+  46.9957  READ   98:F5 -> 72
+  46.9997  READ   98:F5 -> 72
+  47.0037  READ   98:F5 -> 72
+  47.0077  READ   98:F5 -> 72
+  47.0137  READ   98:F5 -> 72
+  47.0167  READ   98:F5 -> 72
+  47.0257  READ   98:F5 -> 72
+  47.0397  READ   98:F5 -> 72
+  47.0447  READ   98:F5 -> 72
+  47.0497  READ   98:F5 -> 72
+  47.0537  READ   98:F5 -> 72
+  47.0587  READ   98:F5 -> 72
+  47.2807  READ   9C:2B -> F8
+  47.2847  READ   9C:2A -> FA
+  47.2887  READ   9C:68 -> BF
+  47.2927  READ   9C:67 -> 59
+  47.2977  READ   9C:66 -> BA
+  47.3007  READ   9C:65 -> 95
+  47.3057  READ   9C:2B -> F8
+  47.3097  READ   9C:60 -> B2
+  47.3147  READ   98:F5 -> 72
+  47.3187  READ   98:F5 -> 72
+  47.3227  READ   98:F5 -> 72
+  47.3267  READ   98:F5 -> 72
+  47.3317  READ   98:F5 -> 72
+  47.3367  READ   98:F5 -> 72
+  47.3407  READ   98:F5 -> 72
+  47.3467  READ   98:F5 -> 72
+  47.3547  READ   98:F5 -> 72
+  47.3597  READ   98:F5 -> 72
+  47.3637  READ   98:F5 -> 72
+  47.3727  READ   98:F5 -> 72
+  47.3767  READ   98:F5 -> 72
+  47.3817  READ   98:F5 -> 72
+  47.3857  READ   98:F5 -> 72
+  47.3897  READ   98:F5 -> 72
+  47.3947  READ   98:F5 -> 72
+  47.3987  READ   98:F5 -> 72
+  47.4037  READ   98:F5 -> 72
+  47.4087  READ   98:F5 -> 72
+  47.4137  READ   98:F5 -> 72
+  47.4187  READ   98:F5 -> 72
+  47.4227  READ   98:F5 -> 72
+  47.4267  READ   98:F5 -> 72
+  47.4307  READ   98:F5 -> 72
+  47.4367  READ   98:F5 -> 72
+  47.4537  READ   98:F5 -> 72
+  47.4577  READ   98:F5 -> 72
+  47.4617  READ   98:F5 -> 72
+  47.4657  READ   98:F5 -> 72
+  47.4697  READ   98:F5 -> 72
+  47.9327  READ   9C:2B -> F8
+  47.9377  READ   9C:2A -> FA
+  47.9417  READ   9C:68 -> BF
+  47.9457  READ   9C:67 -> 59
+  47.9507  READ   9C:66 -> BA
+  47.9547  READ   9C:65 -> 95
+  47.9587  READ   9C:2B -> F8
+  47.9627  READ   9C:60 -> B2
+  47.9667  READ   98:F5 -> 72
+  47.9717  READ   98:F5 -> 72
+  47.9757  READ   98:F5 -> 72
+  47.9807  READ   98:F5 -> 72
+  47.9867  READ   98:F5 -> 72
+  47.9967  READ   98:F5 -> 72
+  48.0087  READ   98:F5 -> 72
+  48.0127  READ   98:F5 -> 72
+  48.0167  READ   98:F5 -> 72
+  48.0207  READ   98:F5 -> 72
+  48.0257  READ   98:F5 -> 72
+  48.0297  READ   98:F5 -> 72
+  48.0337  READ   98:F5 -> 72
+  48.0387  READ   98:F5 -> 72
+  48.0437  READ   98:F5 -> 72
+  48.0487  READ   98:F5 -> 72
+  48.0527  READ   98:F5 -> 72
+  48.0577  READ   98:F5 -> 72
+  48.0627  READ   98:F5 -> 72
+  48.0667  READ   98:F5 -> 72
+  48.0707  READ   98:F5 -> 72
+  48.0747  READ   98:F5 -> 72
+  48.0787  READ   98:F5 -> 72
+  48.0828  READ   98:F5 -> 72
+  48.0868  READ   98:F5 -> 72
+  48.0907  READ   98:F5 -> 72
+  48.0947  READ   98:F5 -> 72
+  48.0988  READ   98:F5 -> 72
+  48.1028  READ   98:F5 -> 72
+  48.1078  READ   98:F5 -> 72
+  48.1128  READ   98:F5 -> 72
+  48.5878  READ   9C:2B -> F8
+  48.5918  READ   9C:2A -> FA
+  48.5998  READ   9C:68 -> BF
+  48.6038  READ   9C:67 -> 59
+  48.6098  READ   9C:66 -> BA
+  48.6138  READ   9C:65 -> 95
+  48.6188  READ   9C:2B -> F8
+  48.6228  READ   9C:60 -> B2
+  48.6268  READ   98:F5 -> 72
+  48.6318  READ   98:F5 -> 72
+  48.6358  READ   98:F5 -> 72
+  48.6398  READ   98:F5 -> 72
+  48.6438  READ   98:F5 -> 72
+  48.6488  READ   98:F5 -> 72
+  48.6528  READ   98:F5 -> 72
+  48.6568  READ   98:F5 -> 72
+  48.6608  READ   98:F5 -> 72
+  48.6648  READ   98:F5 -> 72
+  48.6698  READ   98:F5 -> 72
+  48.6738  READ   98:F5 -> 72
+  48.6778  READ   98:F5 -> 72
+  48.6818  READ   98:F5 -> 72
+  48.6868  READ   98:F5 -> 72
+  48.7008  READ   98:F5 -> 72
+  48.7038  READ   98:F5 -> 72
+  48.7088  READ   98:F5 -> 72
+  48.7128  READ   98:F5 -> 72
+  48.7178  READ   98:F5 -> 72
+  48.7218  READ   98:F5 -> 72
+  48.7258  READ   98:F5 -> 72
+  48.7298  READ   98:F5 -> 72
+  48.7338  READ   98:F5 -> 72
+  48.7388  READ   98:F5 -> 72
+  48.7428  READ   98:F5 -> 72
+  48.7468  READ   98:F5 -> 72
+  48.7518  READ   98:F5 -> 72
+  48.7558  READ   98:F5 -> 72
+  48.7608  READ   98:F5 -> 72
+  48.7648  READ   98:F5 -> 72
+  49.2358  READ   9C:2B -> F8
+  49.2398  READ   9C:2A -> FA
+  49.2438  READ   9C:68 -> BF
+  49.2488  READ   9C:67 -> 58
+  49.2528  READ   9C:66 -> BA
+  49.2588  READ   9C:65 -> 95
+  49.2628  READ   9C:2B -> F8
+  49.2668  READ   9C:60 -> B2
+  49.2718  READ   98:F5 -> 72
+  49.2768  READ   98:F5 -> 72
+  49.2808  READ   98:F5 -> 72
+  49.2848  READ   98:F5 -> 72
+  49.2888  READ   98:F5 -> 72
+  49.2948  READ   98:F5 -> 72
+  49.3038  READ   98:F5 -> 72
+  49.3158  READ   98:F5 -> 72
+  49.3208  READ   98:F5 -> 72
+  49.3248  READ   98:F5 -> 72
+  49.3288  READ   98:F5 -> 72
+  49.3328  READ   98:F5 -> 72
+  49.3368  READ   98:F5 -> 72
+  49.3428  READ   98:F5 -> 72
+  49.3478  READ   98:F5 -> 72
+  49.3518  READ   98:F5 -> 72
+  49.3558  READ   98:F5 -> 72
+  49.3598  READ   98:F5 -> 72
+  49.3638  READ   98:F5 -> 72
+  49.3688  READ   98:F5 -> 72
+  49.3728  READ   98:F5 -> 72
+  49.3788  READ   98:F5 -> 72
+  49.3828  READ   98:F5 -> 72
+  49.3888  READ   98:F5 -> 72
+  49.3928  READ   98:F5 -> 72
+  49.3978  READ   98:F5 -> 72
+  49.4018  READ   98:F5 -> 72
+  49.4068  READ   98:F5 -> 72
+  49.4118  READ   98:F5 -> 72
+  49.4178  READ   98:F5 -> 72
+  49.4208  READ   98:F5 -> 72
+  49.8809  READ   9C:2B -> F8
+  49.8859  READ   9C:2A -> FA
+  49.8899  READ   9C:68 -> BF
+  49.8949  READ   9C:67 -> 58
+  49.8989  READ   9C:66 -> BA
+  49.9029  READ   9C:65 -> 95
+  49.9079  READ   9C:2B -> F8
+  49.9129  READ   9C:60 -> B2
+  49.9259  READ   98:F5 -> 72
+  49.9309  READ   98:F5 -> 72
+  49.9349  READ   98:F5 -> 72
+  49.9389  READ   98:F5 -> 72
+  49.9449  READ   98:F5 -> 72
+  49.9499  READ   98:F5 -> 72
+  49.9539  READ   98:F5 -> 72
+  49.9589  READ   98:F5 -> 72
+  49.9629  READ   98:F5 -> 72
+  49.9669  READ   98:F5 -> 72
+  49.9709  READ   98:F5 -> 72
+  49.9759  READ   98:F5 -> 72
+  49.9799  READ   98:F5 -> 72
+  49.9849  READ   98:F5 -> 72
+  49.9899  READ   98:F5 -> 72
+  49.9939  READ   98:F5 -> 72
+  49.9999  READ   98:F5 -> 72
+  50.0079  READ   98:F5 -> 72
+  50.0159  READ   98:F5 -> 72
+  50.0299  READ   98:F5 -> 72
+  50.0349  READ   98:F5 -> 72
+  50.0389  READ   98:F5 -> 72
+  50.0429  READ   98:F5 -> 72
+  50.0479  READ   98:F5 -> 72
+  50.0519  READ   98:F5 -> 72
+  50.0559  READ   98:F5 -> 72
+  50.0609  READ   98:F5 -> 72
+  50.0659  READ   98:F5 -> 72
+  50.0699  READ   98:F5 -> 72
+  50.0739  READ   98:F5 -> 72
+  50.0789  READ   98:F5 -> 72
+  50.5939  READ   9C:2B -> F8
+  50.6029  READ   9C:2A -> FA
+  50.6089  READ   9C:68 -> BF
+  50.6129  READ   9C:67 -> 59
+  50.6169  READ   9C:66 -> BA
+  50.6219  READ   9C:65 -> 95
+  50.6259  READ   9C:2B -> F8
+  50.6299  READ   9C:60 -> B2
+  50.6339  READ   98:F5 -> 72
+  50.6389  READ   98:F5 -> 72
+  50.6429  READ   98:F5 -> 72
+  50.6469  READ   98:F5 -> 72
+  50.6509  READ   98:F5 -> 72
+  50.6549  READ   98:F5 -> 72
+  50.6589  READ   98:F5 -> 72
+  50.6629  READ   98:F5 -> 72
+  50.6699  READ   98:F5 -> 72
+  50.6729  READ   98:F5 -> 72
+  50.6779  READ   98:F5 -> 72
+  50.6869  READ   98:F5 -> 72
+  50.6969  READ   98:F5 -> 72
+  50.7049  READ   98:F5 -> 72
+  50.7099  READ   98:F5 -> 72
+  50.7139  READ   98:F5 -> 72
+  50.7179  READ   98:F5 -> 72
+  50.7219  READ   98:F5 -> 72
+  50.7259  READ   98:F5 -> 72
+  50.7299  READ   98:F5 -> 72
+  50.7339  READ   98:F5 -> 72
+  50.7389  READ   98:F5 -> 72
+  50.7439  READ   98:F5 -> 72
+  50.7489  READ   98:F5 -> 72
+  50.7529  READ   98:F5 -> 72
+  50.7589  READ   98:F5 -> 72
+  50.7639  READ   98:F5 -> 72
+  50.7679  READ   98:F5 -> 72
+  50.7719  READ   98:F5 -> 72
+  50.7759  READ   98:F5 -> 72
+  50.7799  READ   98:F5 -> 72
+  51.2899  READ   9C:2B -> F8
+  51.2939  READ   9C:2A -> FA
+  51.3009  READ   9C:68 -> BF
+  51.3059  READ   9C:67 -> 58
+  51.3109  READ   9C:66 -> BA
+  51.3149  READ   9C:65 -> 95
+  51.3209  READ   9C:2B -> F8
+  51.3259  READ   9C:60 -> B2
+  51.3299  READ   98:F5 -> 72
+  51.3339  READ   98:F5 -> 72
+  51.3389  READ   98:F5 -> 72
+  51.3429  READ   98:F5 -> 72
+  51.3469  READ   98:F5 -> 72
+  51.3509  READ   98:F5 -> 72
+  51.3559  READ   98:F5 -> 72
+  51.3599  READ   98:F5 -> 72
+  51.3639  READ   98:F5 -> 72
+  51.3689  READ   98:F5 -> 72
+  51.3729  READ   98:F5 -> 72
+  51.3769  READ   98:F5 -> 72
+  51.3809  READ   98:F5 -> 72
+  51.3869  READ   98:F5 -> 72
+  51.3929  READ   98:F5 -> 72
+  51.3959  READ   98:F5 -> 72
+  51.3999  READ   98:F5 -> 72
+  51.4049  READ   98:F5 -> 72
+  51.4099  READ   98:F5 -> 72
+  51.4139  READ   98:F5 -> 72
+  51.4189  READ   98:F5 -> 72
+  51.4229  READ   98:F5 -> 72
+  51.4269  READ   98:F5 -> 72
+  51.4309  READ   98:F5 -> 72
+  51.4349  READ   98:F5 -> 72
+  51.4389  READ   98:F5 -> 72
+  51.4429  READ   98:F5 -> 72
+  51.4469  READ   98:F5 -> 72
+  51.4509  READ   98:F5 -> 72
+  51.4549  READ   98:F5 -> 72
+  51.4609  READ   98:F5 -> 72
+  51.9420  READ   9C:2B -> F8
+  51.9460  READ   9C:2A -> FA
+  51.9500  READ   9C:68 -> BF
+  51.9540  READ   9C:67 -> 58
+  51.9590  READ   9C:66 -> BA
+  51.9630  READ   9C:65 -> 9A
+  51.9670  READ   9C:2B -> F8
+  51.9710  READ   9C:60 -> B2
+  51.9760  READ   98:F5 -> 72
+  51.9800  READ   98:F5 -> 72
+  51.9850  READ   98:F5 -> 72
+  51.9900  READ   98:F5 -> 72
+  51.9990  READ   98:F5 -> 72
+  52.0030  READ   98:F5 -> 72
+  52.0110  READ   98:F5 -> 72
+  52.0160  READ   98:F5 -> 72
+  52.0200  READ   98:F5 -> 72
+  52.0240  READ   98:F5 -> 72
+  52.0290  READ   98:F5 -> 72
+  52.0330  READ   98:F5 -> 72
+  52.0370  READ   98:F5 -> 72
+  52.0410  READ   98:F5 -> 72
+  52.0460  READ   98:F5 -> 72
+  52.0500  READ   98:F5 -> 72
+  52.0540  READ   98:F5 -> 72
+  52.0580  READ   98:F5 -> 72
+  52.0620  READ   98:F5 -> 72
+  52.0660  READ   98:F5 -> 72
+  52.0700  READ   98:F5 -> 72
+  52.0750  READ   98:F5 -> 72
+  52.0800  READ   98:F5 -> 72
+  52.0840  READ   98:F5 -> 72
+  52.0900  READ   98:F5 -> 72
+  52.1040  READ   98:F5 -> 72
+  52.1100  READ   98:F5 -> 72
+  52.1140  READ   98:F5 -> 72
+  52.1200  READ   98:F5 -> 72
+  52.1240  READ   98:F5 -> 72
+  52.1290  READ   98:F5 -> 72
+  52.6480  READ   9C:2B -> F8
+  52.6520  READ   9C:2A -> FA
+  52.6600  READ   9C:68 -> BF
+  52.6650  READ   9C:67 -> 59
+  52.6690  READ   9C:66 -> BA
+  52.6740  READ   9C:65 -> 95
+  52.6780  READ   9C:2B -> F8
+  52.6830  READ   9C:60 -> B2
+  52.6860  READ   98:F5 -> 72
+  52.6900  READ   98:F5 -> 72
+  52.6940  READ   98:F5 -> 72
+  52.6980  READ   98:F5 -> 72
+  52.7020  READ   98:F5 -> 72
+  52.7070  READ   98:F5 -> 72
+  52.7110  READ   98:F5 -> 72
+  52.7150  READ   98:F5 -> 72
+  52.7190  READ   98:F5 -> 72
+  52.7230  READ   98:F5 -> 72
+  52.7280  READ   98:F5 -> 72
+  52.7330  READ   98:F5 -> 72
+  52.7370  READ   98:F5 -> 72
+  52.7410  READ   98:F5 -> 72
+  52.7450  READ   98:F5 -> 72
+  52.7500  READ   98:F5 -> 72
+  52.7550  READ   98:F5 -> 72
+  52.7600  READ   98:F5 -> 72
+  52.7650  READ   98:F5 -> 72
+  52.7700  READ   98:F5 -> 72
+  52.7740  READ   98:F5 -> 72
+  52.7780  READ   98:F5 -> 72
+  52.7820  READ   98:F5 -> 72
+  52.7860  READ   98:F5 -> 72
+  52.7900  READ   98:F5 -> 72
+  52.7940  READ   98:F5 -> 72
+  52.7980  READ   98:F5 -> 72
+  52.8030  READ   98:F5 -> 72
+  52.8070  READ   98:F5 -> 72
+  52.8110  READ   98:F5 -> 72
+  52.8150  READ   98:F5 -> 72
+  53.2970  READ   9C:2B -> F8
+  53.3100  READ   9C:2A -> FA
+  53.3140  READ   9C:68 -> BF
+  53.3180  READ   9C:67 -> 59
+  53.3220  READ   9C:66 -> BA
+  53.3261  READ   9C:65 -> 9A
+  53.3300  READ   9C:2B -> F8
+  53.3351  READ   9C:60 -> B2
+  53.3400  READ   98:F5 -> 72
+  53.3441  READ   98:F5 -> 72
+  53.3491  READ   98:F5 -> 72
+  53.3531  READ   98:F5 -> 72
+  53.3571  READ   98:F5 -> 72
+  53.3611  READ   98:F5 -> 72
+  53.3661  READ   98:F5 -> 72
+  53.3701  READ   98:F5 -> 72
+  53.3741  READ   98:F5 -> 72
+  53.3791  READ   98:F5 -> 72
+  53.3831  READ   98:F5 -> 72
+  53.3871  READ   98:F5 -> 72
+  53.3911  READ   98:F5 -> 72
+  53.3951  READ   98:F5 -> 72
+  53.4001  READ   98:F5 -> 72
+  53.4051  READ   98:F5 -> 72
+  53.4101  READ   98:F5 -> 72
+  53.4141  READ   98:F5 -> 72
+  53.4181  READ   98:F5 -> 72
+  53.4231  READ   98:F5 -> 72
+  53.4281  READ   98:F5 -> 72
+  53.4321  READ   98:F5 -> 72
+  53.4371  READ   98:F5 -> 72
+  53.4411  READ   98:F5 -> 72
+  53.4461  READ   98:F5 -> 72
+  53.4501  READ   98:F5 -> 72
+  53.4541  READ   98:F5 -> 72
+  53.4581  READ   98:F5 -> 72
+  53.4621  READ   98:F5 -> 72
+  53.4661  READ   98:F5 -> 72
+  53.4701  READ   98:F5 -> 72
+  53.9321  READ   9C:2B -> F8
+  53.9391  READ   9C:2A -> FA
+  53.9441  READ   9C:68 -> BF
+  53.9491  READ   9C:67 -> 59
+  53.9531  READ   9C:66 -> BA
+  53.9571  READ   9C:65 -> 95
+  53.9611  READ   9C:2B -> F8
+  53.9651  READ   9C:60 -> B2
+  53.9701  READ   98:F5 -> 72
+  53.9741  READ   98:F5 -> 72
+  53.9791  READ   98:F5 -> 72
+  53.9831  READ   98:F5 -> 72
+  53.9871  READ   98:F5 -> 72
+  53.9921  READ   98:F5 -> 72
+  54.0011  READ   98:F5 -> 72
+  54.0051  READ   98:F5 -> 72
+  54.0141  READ   98:F5 -> 72
+  54.0181  READ   98:F5 -> 72
+  54.0221  READ   98:F5 -> 72
+  54.0261  READ   98:F5 -> 72
+  54.0301  READ   98:F5 -> 72
+  54.0341  READ   98:F5 -> 72
+  54.0391  READ   98:F5 -> 72
+  54.0431  READ   98:F5 -> 72
+  54.0481  READ   98:F5 -> 72
+  54.0521  READ   98:F5 -> 72
+  54.0561  READ   98:F5 -> 72
+  54.0601  READ   98:F5 -> 72
+  54.0641  READ   98:F5 -> 72
+  54.0681  READ   98:F5 -> 72
+  54.0721  READ   98:F5 -> 72
+  54.0761  READ   98:F5 -> 72
+  54.0801  READ   98:F5 -> 72
+  54.0861  READ   98:F5 -> 72
+  54.0941  READ   98:F5 -> 72
+  54.1001  READ   98:F5 -> 72
+  54.1171  READ   98:F5 -> 72
+  54.1211  READ   98:F5 -> 72
+  54.1251  READ   98:F5 -> 72
+  54.6461  READ   9C:2B -> F8
+  54.6551  READ   9C:2A -> FA
+  54.6591  READ   9C:68 -> BF
+  54.6631  READ   9C:67 -> 59
+  54.6671  READ   9C:66 -> BA
+  54.6711  READ   9C:65 -> 95
+  54.6751  READ   9C:2B -> F8
+  54.6801  READ   9C:60 -> B2
+  54.6851  READ   98:F5 -> 72
+  54.6891  READ   98:F5 -> 72
+  54.6931  READ   98:F5 -> 72
+  54.6971  READ   98:F5 -> 72
+  54.7011  READ   98:F5 -> 72
+  54.7051  READ   98:F5 -> 72
+  54.7101  READ   98:F5 -> 72
+  54.7141  READ   98:F5 -> 72
+  54.7181  READ   98:F5 -> 72
+  54.7221  READ   98:F5 -> 72
+  54.7261  READ   98:F5 -> 72
+  54.7311  READ   98:F5 -> 72
+  54.7391  READ   98:F5 -> 72
+  54.7471  READ   98:F5 -> 72
+  54.7581  READ   98:F5 -> 72
+  54.7621  READ   98:F5 -> 72
+  54.7661  READ   98:F5 -> 72
+  54.7701  READ   98:F5 -> 72
+  54.7741  READ   98:F5 -> 72
+  54.7791  READ   98:F5 -> 72
+  54.7831  READ   98:F5 -> 72
+  54.7881  READ   98:F5 -> 72
+  54.7921  READ   98:F5 -> 72
+  54.7961  READ   98:F5 -> 72
+  54.8001  READ   98:F5 -> 72
+  54.8041  READ   98:F5 -> 72
+  54.8091  READ   98:F5 -> 72
+  54.8131  READ   98:F5 -> 72
+  54.8171  READ   98:F5 -> 72
+  54.8211  READ   98:F5 -> 72
+  54.8261  READ   98:F5 -> 72
+  55.3472  READ   9C:2B -> F8
+  55.3512  READ   9C:2A -> FA
+  55.3552  READ   9C:68 -> BF
+  55.3592  READ   9C:67 -> 5E
+  55.3632  READ   9C:66 -> BA
+  55.3672  READ   9C:65 -> 95
+  55.3712  READ   9C:2B -> F8
+  55.3762  READ   9C:60 -> B2
+  55.3802  READ   98:F5 -> 72
+  55.3842  READ   98:F5 -> 72
+  55.3882  READ   98:F5 -> 72
+  55.3922  READ   98:F5 -> 72
+  55.3962  READ   98:F5 -> 72
+  55.4002  READ   98:F5 -> 72
+  55.4052  READ   98:F5 -> 72
+  55.4092  READ   98:F5 -> 72
+  55.4132  READ   98:F5 -> 72
+  55.4192  READ   98:F5 -> 72
+  55.4282  READ   98:F5 -> 72
+  55.4412  READ   98:F5 -> 72
+  55.4452  READ   98:F5 -> 72
+  55.4502  READ   98:F5 -> 72
+  55.4542  READ   98:F5 -> 72
+  55.4582  READ   98:F5 -> 72
+  55.4622  READ   98:F5 -> 72
+  55.4672  READ   98:F5 -> 72
+  55.4712  READ   98:F5 -> 72
+  55.4752  READ   98:F5 -> 72
+  55.4792  READ   98:F5 -> 72
+  55.4832  READ   98:F5 -> 72
+  55.4882  READ   98:F5 -> 72
+  55.4922  READ   98:F5 -> 72
+  55.4962  READ   98:F5 -> 72
+  55.5002  READ   98:F5 -> 72
+  55.5042  READ   98:F5 -> 72
+  55.5082  READ   98:F5 -> 72
+  55.5122  READ   98:F5 -> 72
+  55.5162  READ   98:F5 -> 72
+  55.5212  READ   98:F5 -> 72
+  56.0012  READ   9C:2B -> F8
+  56.0052  READ   9C:2A -> FA
+  56.0132  READ   9C:68 -> BF
+  56.0172  READ   9C:67 -> 58
+  56.0222  READ   9C:66 -> BA
+  56.0262  READ   9C:65 -> 95
+  56.0302  READ   9C:2B -> F8
+  56.0342  READ   9C:60 -> B2
+  56.0382  READ   98:F5 -> 72
+  56.0422  READ   98:F5 -> 72
+  56.0462  READ   98:F5 -> 72
+  56.0502  READ   98:F5 -> 72
+  56.0542  READ   98:F5 -> 72
+  56.0592  READ   98:F5 -> 72
+  56.0632  READ   98:F5 -> 72
+  56.0682  READ   98:F5 -> 72
+  56.0722  READ   98:F5 -> 72
+  56.0772  READ   98:F5 -> 72
+  56.0812  READ   98:F5 -> 72
+  56.0852  READ   98:F5 -> 72
+  56.0892  READ   98:F5 -> 72
+  56.0932  READ   98:F5 -> 72
+  56.0992  READ   98:F5 -> 72
+  56.1032  READ   98:F5 -> 72
+  56.1072  READ   98:F5 -> 72
+  56.1112  READ   98:F5 -> 72
+  56.1152  READ   98:F5 -> 72
+  56.1192  READ   98:F5 -> 72
+  56.1232  READ   98:F5 -> 72
+  56.1272  READ   98:F5 -> 72
+  56.1312  READ   98:F5 -> 72
+  56.1352  READ   98:F5 -> 72
+  56.1392  READ   98:F5 -> 72
+  56.1432  READ   98:F5 -> 72
+  56.1472  READ   98:F5 -> 72
+  56.1512  READ   98:F5 -> 72
+  56.1552  READ   98:F5 -> 72
+  56.1602  READ   98:F5 -> 72
+  56.1642  READ   98:F5 -> 72
