@@ -1,11 +1,12 @@
 # T-051 (first step): component, encoder values of the Windows software
 # per source mode at the standard output size (bitrate, GOP, level,
-# system_rate, colour, v_vinpelclk, 1080p30 timing). A live viewer runs
+# system_rate, colour, v_vinpelclk, 1080p30 timing); checked in the stream:
+# size, field order, level, colour primaries. 480i/480p later. A live viewer runs
 # while the source's output is changed in its own menu; then a 10 s
 # capture is checked. The input is selected again before each start (the
 # driver detects the source mode then).
 # Needs: a component source that can switch between 576i, 576p, 720p,
-# 1080i and 1080p (and 480i/480p if it can).
+# 1080i and 1080p.
 
 D=$DEV
 # comp_cap W H FIELD: 10 s capture; size, field order, frame rate, aspect
@@ -39,34 +40,29 @@ viewer_stop() {
 	wait $VIEWER 2>/dev/null
 	sleep 2
 }
-mode() {	# mode NAME W H FIELD
+mode() {	# mode NAME W H FIELD LEVEL COLOUR [HINT]
 	step "component $1"
 	viewer_start
-	prompt "A window 'Elgato component' shows the PS3. In the PS3's menu set its video output to $1. If the picture freezes or disappears after the change, close the window: it reopens with a fresh detection. Press Enter when the window shows the PS3 in $1."
-	confirm "$1: is the picture right (no colour cast, sharp, motion smooth)?"
+	prompt "A window 'Elgato component' shows the PS3. In the PS3's menu set its video output to $1.${7:+ $7} If the picture freezes or disappears after the change, close the window: it reopens with a fresh detection. Press Enter when the window shows the PS3 in $1."
+	confirm "$1: is the picture right (colours as on a TV, sharp, motion smooth)?"
 	viewer_stop
 	set_input 1
-	expect "$1: stream ${2}x${3}, field order $4" "width=$2 height=$3 .*field_order=$4" comp_cap
-	run sh -c "sudo dmesg | grep 'signal detected: input=1' | tail -1"
+	expect "$1: stream ${2}x${3} $4, level $5, colour $6 (encoder values as recorded)" \
+		"width=$2 height=$3 .*level=$5 color_primaries=$6 field_order=$4" comp_cap
+	run sh -c "sudo dmesg | grep 'detect component' | tail -1"
 }
 
-step "load module (fresh plug-in)"
+step "load the test build (fresh plug-in)"
 load_module replug
 set_input 2
 set_fmt 720 480 MPEG
 set_input 1
 
-mode 576i 720 576 tt
-mode 576p 720 576 progressive
-mode 720p 1280 720 progressive
-mode 1080i 1920 1080 tt
-mode 1080p 1920 1080 progressive
-
-step "480i / 480p (if the source offers them)"
-read -r -p "Can the component source output 480i and 480p? [y/N] " a
-log "480 modes available: $a"
-if [[ "$a" == [yYjJ]* ]]; then
-	mode 480i 720 480 tt
-	mode 480p 720 480 progressive
-fi
+# Captured with the driver of dev 0.5.10 (old encoder values) on
+# 2026-11-26: 576p, 720p, 1080i, 1080p right. Now the recorded values.
+mode 576i 720 576 tt 31 smpte170m "In the PS3's video output settings untick 576p (the PS3 sends the highest resolution ticked)."
+mode 576p 720 576 progressive 30 smpte170m
+mode 720p 1280 720 progressive 40 bt709
+mode 1080i 1920 1080 tt 40 bt709
+mode 1080p 1920 1080 progressive 40 bt709
 set_input 2

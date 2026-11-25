@@ -138,15 +138,36 @@ find_h264_dev() {
 }
 
 # load_module [replug] [module parameters...]
+# unload_module: remove elgato_gchd if loaded; when it is in use, name the
+# programs that hold the device and stop the test.
+unload_module() {
+	lsmod | grep -q '^elgato_gchd ' || return 0
+	sudo rmmod elgato_gchd 2>>"$LOG" && return 0
+	result FAIL "elgato_gchd cannot be unloaded (in use)"
+	say "${R}The driver is in use; close these programs and start the test again:${N}"
+	sudo fuser -v /dev/video* 2>&1 | tee -a "$LOG"
+	exit 1
+}
+
 load_module() {
 	local replug=0
 	if [ "${1:-}" = replug ]; then replug=1; shift; fi
-	sudo rmmod elgato_gchd 2>/dev/null
+	unload_module || return 1
 	if [ $replug = 1 ]; then
 		prompt "Unplug the Elgato from the PC (or detach it in VirtualBox), wait 3 s, plug it in again."
+		# An installed (DKMS) driver is loaded by udev on plug-in: remove it.
+		sleep 2
+		unload_module || return 1
 	fi
 	sudo modprobe -a videodev videobuf2-v4l2 videobuf2-vmalloc
 	run sudo insmod "$KSRC/elgato_gchd.ko" "$@" || { result FAIL "insmod $*"; return 1; }
+	# The module running must be the one built for this test.
+	if [ "$(cat /sys/module/elgato_gchd/srcversion 2>/dev/null)" != \
+	     "$(modinfo -F srcversion "$KSRC/elgato_gchd.ko")" ]; then
+		result FAIL "the loaded elgato_gchd is not the test build"
+		say "${R}Stopping: another elgato_gchd module is loaded.${N}"
+		exit 1
+	fi
 	local i
 	for i in $(seq 1 20); do
 		find_h264_dev && [ -e "$DEV" ] && break
