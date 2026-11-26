@@ -357,9 +357,13 @@ bash gchd-test.sh T-051 --branch feat/component
   next run takes that sample again with up to 20 s and cuts it at a frame
   start.
 
+- T-051 (33eea68), seventeenth run: 1/1 PASS: the 1080i → 1280 × 720
+  sample (12.5 s, uploaded to `traces/component/samples/`) decodes without
+  errors, 1280 × 720 progressive, level 31. Its frame rate is 30000/1001
+  (376 frames in 12.5 s); the driver reported 60 for this output
+  (`G_PARM`, frame intervals), from an inference in the analysis (field
+  pairs), not a measurement. Now 30, docs and analysis corrected. All
+  samples of RULES F3 are on traces.
+
 ## Maintainer comments
 
-=== summary (T-051, 33eea68 TASK: T-051 sixteenth run (samples, restarts while capturing))
-PASS | step 3 sample 1080i at 1280x720 | 1080i_1280x720: 1280x720 progressive, level 31, decodes without errors
-
-FAIL: 0  WARN: 0

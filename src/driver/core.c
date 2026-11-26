@@ -150,8 +150,6 @@ static void gchd_comp_fps(const struct gchd *d, u8 out, u32 *num, u32 *den)
   if (gchd_comp_src_height(d) == 720 && !d->allow_5060) {
    *num = 30; *den = 1;
   }
- } else if (out == GCHD_OUT_1280X720 && gchd_comp_src_interlaced(d)) {
-  *num = 60;
  } else {
   *num = gchd_comp_src_height(d) == 576 ? 25 : 30;
  }
