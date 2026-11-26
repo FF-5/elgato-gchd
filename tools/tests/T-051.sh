@@ -1,8 +1,8 @@
-# T-051: the OBS plugin's bitrate range right after an output size change
-# (from the output mode, not the range read before). Accepted on
-# 2026-11-26: bitrate settings per output mode in the driver, the window and
-# the plugin (fourteenth run; its FAILs were a test pattern).
-# Needs: the PS3 on component in 1080i, OBS with the plugin.
+# T-051: TS samples per component mode for the merge (RULES F3: decoded
+# without errors, size and field order; saved for the traces branch), and
+# repeated bitrate changes while capturing at 1280x720 (an encoder restart
+# timed out once, 2026-11-26). Everything else of T-051 is accepted.
+# Needs: the PAL PS3 on component (1080i, 720p, 576p, 576i).
 
 INST="$REPO/install-driver.sh"
 LOGS="$HOME/.config/obs-studio/logs"
@@ -76,36 +76,67 @@ kept() {
 	expect "$1: mode $2, $3 bit/s" "video_bitrate_mode: $2 video_bitrate: $3" rates
 }
 
-step "install the settings programs and the plugin of this branch"
+SAMPLES=$HOME/gchd-test-logs/T-051-samples
+# sample NAME W H FIELD LEVEL: 4 s of the stream at W x H saved as
+# component_NAME.ts with its ffprobe and ffmpeg output; checked.
+sample() {
+	local f=$SAMPLES/component_$1.ts
+	mkdir -p $SAMPLES
+	run v4l2-ctl -d $D -v width=$2,height=$3,pixelformat=MPEG
+	set_input 1
+	timeout -k 5 30 bash -c "head -c 40000000 < $D > $f & p=\$!; sleep 4; kill \$p 2>/dev/null; wait \$p" 2>/dev/null
+	ffprobe -v error -show_entries stream=codec_name,width,height,field_order,r_frame_rate,sample_aspect_ratio,level,profile,color_primaries,sample_rate,channels -of default=nw=1 $f > $f.ffprobe.txt 2>&1
+	ffmpeg -v error -i $f -f null - > $f.ffmpeg.txt 2>&1
+	expect "$1: ${2}x${3} $4, level $5, decodes without errors" \
+		"width=$2 height=$3 .*level=$5 .*field_order=$4 .*errors=0" \
+		sh -c "tr '\n' ' ' < $f.ffprobe.txt; echo errors=\$(wc -l < $f.ffmpeg.txt)"
+}
+
+step "install"
 run sudo rmmod elgato_gchd
 run bash "$INST" --all --yes --in-terminal < /dev/null
 prompt "Unplug the Elgato and plug it in again; wait 5 s."
 set_input 1
-source_mode 1080i "Tick 1080i (and untick 1080p) so the PS3 sends 1080i."
-
-step "settings"
 run v4l2-ctl -d $D -c allow_50_60_fps=1
-size 1280 720
-run v4l2-ctl -d $D -c video_bitrate_mode=1
-run v4l2-ctl -d $D -c video_bitrate=12000000
-size 640 480
-run v4l2-ctl -d $D -c video_bitrate_mode=1
-run v4l2-ctl -d $D -c video_bitrate=10000000
-size 1920 1080
-run v4l2-ctl -d $D -c video_bitrate_mode=1
-run v4l2-ctl -d $D -c video_bitrate=20000000
-kept "1920x1080 CBR 20" 1 20000000
 
-step "OBS plugin"
-prompt "Start OBS (source 'Elgato Game Capture HD', input Component); open the source's properties."
-prompt "Choose Output size 1280x720 and look at the slider at once."
-confirm "OBS at once: Constant (CBR), slider from 9.33 to 15.00 at 12.00 (not 30.00)?"
-prompt "Choose Output size 640x480 and look at once."
-confirm "OBS at once: Constant (CBR), slider from 7.00 to 11.25 at 10.00?"
-prompt "Choose Output size Source resolution and look at once."
-confirm "OBS at once: Constant (CBR), slider from 18.67 to 30.00 at 20.00?"
-prompt "Choose Output size 1280x720 again -> OK; wait 3 s."
-kept "OBS 1280x720: CBR 12 Mbit/s" 1 12000000
-prompt "Close OBS."
-expect "OBS applied 12.00 for 1280x720" "output 3, mode 1, 12.00 Mbit/s" obs_log 8
+source_mode 1080i "Tick 1080i (and untick 1080p) so the PS3 sends 1080i."
+step "samples 1080i"
+sample 1080i 1920 1080 tt 40
+sample 1080i_1280x720 1280 720 progressive 31
+
+step "bitrate changes while capturing at 1280x720"
+run v4l2-ctl -d $D -v width=1280,height=720,pixelformat=MPEG
+set_input 1
+N0=$(sudo dmesg | wc -l)
+since() { sudo dmesg | tail -n +$((N0 + 1)); }
+count_new() { since | grep -cE "$1"; }
+restarts() { since | grep -E "encoder restart|output now|failed"; }
+( timeout -k 5 60 cat $D > /dev/null ) &
+READER=$!
+sleep 5
+for b in 9500000 14000000 10000000 15000000 12000000 9330000 13000000 12000000; do
+	run v4l2-ctl -d $D -c video_bitrate=$b
+	sleep 4
+done
+sleep 5
+kill $READER 2>/dev/null; wait $READER 2>/dev/null
+expect "8 encoder restarts while capturing" "^([8-9]|[1-9][0-9])$" count_new "component output now 3"
+expect "no failed restart" "^0$" count_new "restart failed|change failed"
+run restarts
+
+source_mode 720p "Tick only 720p."
+step "sample 720p"
+sample 720p 1280 720 progressive 40
+
+source_mode 576p "Tick only 576p."
+step "sample 576p"
+sample 576p 720 576 progressive 30
+
+source_mode 576i "Untick all HD resolutions and 576p."
+step "sample 576i"
+sample 576i 720 576 tt 31
+
+step "samples"
+run ls -l $SAMPLES
+prompt "Upload the folder $SAMPLES to the traces branch as traces/component/samples/ (or tell me where it is)."
 set_input 2
