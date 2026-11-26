@@ -2,8 +2,8 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** encoder values per mode accepted on hardware; front end and
-  back end as recorded (hardware test open); next: HD output sizes and
+- **Status:** encoder values and the mode configuration (front end, back
+  end) accepted on hardware; next: HD output sizes and
   the 50/60 fps option, mode changes while capturing, 480i/480p
 - **Type:** driver feature (stage 2)
 - **Branch:** `feat/component` (from `dev` 0.5.10)
@@ -82,8 +82,7 @@ input, the lowest mode first).
 ## Next
 
 1. ~~Hardware test of the encoder values~~ accepted (third run).
-2. Front end and back end per mode: done offline (below); hardware test
-   open.
+2. ~~Front end and back end per mode~~ accepted (fourth run).
 3. Output sizes and the 50/60 fps option. Recorded per source (encoder
    size; "app" = the Windows software scales, the encoder keeps the
    source size):
@@ -105,8 +104,8 @@ input, the lowest mode first).
 4. Mode changes while capturing (the Windows software restarts with the
    new mode's values, sequence #17/#18).
 
-Wanted recordings: 480i and 480p (maintainer: after the tests with the
-PAL PS3).
+Wanted recordings (maintainer, with the NTSC PS3): 480i, 480p and 720p
+input, 480 × 360 output.
 
 ## Hardware test (maintainer)
 
@@ -164,22 +163,11 @@ bash gchd-test.sh T-051 --branch feat/component
   pulses (depends on the status reads). Not done: the back-end reset and
   the `0x9C:04` sweep the Windows software runs at a source mode change
   while capturing (item 4).
+- T-051 (ecbbec5), fourth run: 10/10 PASS with the mode configuration as
+  recorded (back end without the other input path's blocks, pulses until
+  settled): all five modes detected, right picture, encoder values in the
+  stream. The maintainer will record 480i, 480p and 720p input and the
+  480 × 360 output with an NTSC PS3.
 
 ## Maintainer comments
 
-When I record traces with my NTSC PS3 I'll add traces with input in 480i/480p and 720p and output in 480x360. Should be the same as for the PAL PS3.
-
-Summary of the test:
-=== summary (T-051, ecbbec5 TASK: T-051 output sizes and the 50/60 fps option per source, planned interface)
-PASS | step 2 component 576i | 576i: is the picture right (colours as on a TV, sharp, motion smooth)?
-PASS | step 2 component 576i | 576i: stream 720x576 tt, level 31, colour smpte170m (encoder values as recorded)
-PASS | step 3 component 576p | 576p: is the picture right (colours as on a TV, sharp, motion smooth)?
-PASS | step 3 component 576p | 576p: stream 720x576 progressive, level 30, colour smpte170m (encoder values as recorded)
-PASS | step 4 component 720p | 720p: is the picture right (colours as on a TV, sharp, motion smooth)?
-PASS | step 4 component 720p | 720p: stream 1280x720 progressive, level 40, colour bt709 (encoder values as recorded)
-PASS | step 5 component 1080i | 1080i: is the picture right (colours as on a TV, sharp, motion smooth)?
-PASS | step 5 component 1080i | 1080i: stream 1920x1080 tt, level 40, colour bt709 (encoder values as recorded)
-PASS | step 6 component 1080p | 1080p: is the picture right (colours as on a TV, sharp, motion smooth)?
-PASS | step 6 component 1080p | 1080p: stream 1920x1080 progressive, level 40, colour bt709 (encoder values as recorded)
-
-FAIL: 0  WARN: 0
