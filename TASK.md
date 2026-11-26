@@ -359,3 +359,7 @@ bash gchd-test.sh T-051 --branch feat/component
 
 ## Maintainer comments
 
+=== summary (T-051, 33eea68 TASK: T-051 sixteenth run (samples, restarts while capturing))
+PASS | step 3 sample 1080i at 1280x720 | 1080i_1280x720: 1280x720 progressive, level 31, decodes without errors
+
+FAIL: 0  WARN: 0
