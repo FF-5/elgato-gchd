@@ -1,9 +1,15 @@
-# T-051: component 576p with scaled outputs (PAL PS3): 640x480 and
-# 480x360, "Allow 50/60 fps" at 640x480 (not recorded; the driver follows
-# the 480p recordings); source mode changes while capturing (the driver
-# polls the timing measurement and configures the new mode itself).
-# Everything else on component was accepted on 2026-11-26.
-# Needs: the PAL PS3 on component.
+# T-051: the settings window and the OBS plugin for component (output
+# sizes the source allows, "Allow 50/60 fps"). The driver parts of T-051
+# were accepted on 2026-11-26.
+# Needs: the PS3 on component in 1080i (or 1080p), OBS with the plugin.
+
+INST="$REPO/install-driver.sh"
+LOGS="$HOME/.config/obs-studio/logs"
+obs_log() {
+	local f
+	f=$(ls -t "$LOGS" | head -1)
+	grep -h '\[gchd\]' "$LOGS/$f" | tail -"$1"
+}
 
 D=$DEV
 # comp_cap W H FIELD: 10 s capture; size, field order, frame rate, aspect
@@ -55,36 +61,30 @@ source_mode() {	# source_mode NAME [HINT]
 	run v4l2-ctl -d $D --list-framesizes MPEG
 }
 
-step "load the test build (fresh plug-in)"
-load_module replug
-set_input 2
-set_fmt 720 576 MPEG
+step "install the settings programs and the plugin of this branch"
+run sudo rmmod elgato_gchd
+run bash "$INST" --all --yes --in-terminal < /dev/null
+prompt "Unplug the Elgato and plug it in again; wait 5 s."
 set_input 1
-run v4l2-ctl -d $D -c allow_50_60_fps=1
 
-source_mode 576p "Untick 1080p, 1080i and 720p (the PS3 sends the highest resolution ticked)."
-expect "576p: three output sizes offered" "720x576.*640x480.*480x360" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | tr '\n' ' '"
-out "576p -> 640x480, option on" 640 480 progressive 30
-out "576p -> 480x360" 480 360 progressive 22
-run v4l2-ctl -d $D -c allow_50_60_fps=0
-out "576p -> 640x480, option off" 640 480 progressive 31
-run v4l2-ctl -d $D -c allow_50_60_fps=1
-step "576p scaled: picture"
-run v4l2-ctl -d $D -v width=640,height=480,pixelformat=MPEG
-play 12 "576p at 640x480: is the picture right (whole picture, not cut, motion smooth)?"
-run v4l2-ctl -d $D -v width=480,height=360,pixelformat=MPEG
-play 12 "576p at 480x360: is the picture right?"
-run v4l2-ctl -d $D -v width=720,height=576,pixelformat=MPEG
+source_mode 1080i "Tick 1080i (and untick 1080p) so the PS3 sends 1080i."
 
-step "source mode changes while capturing"
-set_input 1
-since=$(sudo dmesg | wc -l)
-log "dmesg lines before: $since"
-( timeout 300 ffplay -loglevel error -window_title "Elgato follow" -f mpegts $D >/dev/null 2>&1 ) &
-FOLLOW=$!
-prompt "A window 'Elgato follow' shows the PS3 (do NOT close it in this step). In the PS3's menu change its video output while watching: 576p -> 720p -> 1080i -> 576p (tick/untick; confirm the PS3's 'Is this OK?' each time). Wait until the picture is back after each change. Press Enter when done."
-confirm "after each change the picture came back by itself in the new mode (within a few seconds, without closing the window)?"
-pkill -f "window_title Elgato follow" 2>/dev/null; wait $FOLLOW 2>/dev/null
-run sh -c "sudo dmesg | grep -E 'component source mode changed|signal detected: input=1|signal lost' | tail -12"
-expect "the driver followed at least three source mode changes" "^([3-9]|[1-9][0-9])$" sh -c "sudo dmesg | tail -n +$((since + 1)) | grep -cE 'component source mode changed|input 1 signal lost'"
+step "settings window"
+prompt "Open 'Elgato Game Capture HD Settings'. Input Component."
+confirm "Output size lists 1920x1080, 1280x720, 640x480, 480x360; an 'Allow 50/60 fps' switch is shown; no Stretch, Bitrate mode or Bitrate?"
+prompt "Choose Output size 1280x720; wait 3 s."
+expect "window: output 1280x720" "1280/720" v4l2-ctl -d $D -V
+prompt "Switch 'Allow 50/60 fps' off; wait 3 s."
+expect "window: Allow 50/60 fps off" "allow_50_60_fps: 0" v4l2-ctl -d $D -C allow_50_60_fps
+prompt "Switch it on again and choose Output size 1920x1080; wait 3 s; leave the window open."
+expect "window: back to the source size" "1920/1080" v4l2-ctl -d $D -V
+
+step "OBS plugin"
+prompt "Start OBS (the source 'Elgato Game Capture HD' shown, input Component); open the source's properties."
+confirm "OBS: Output size lists 1920x1080, 1280x720, 640x480, 480x360 and 'Allow 50/60 fps' is shown; no Stretch, Bitrate mode or Bitrate?"
+prompt "In OBS's properties choose 640x480; wait 5 s (the preview follows)."
+expect "OBS: output 640x480" "640/480" v4l2-ctl -d $D -V
+confirm "the preview shows the PS3 at 640x480, and the settings window shows 640x480 by itself?"
+prompt "Choose 1920x1080 again -> OK. Close OBS and the settings window."
+run obs_log 8
 set_input 2
