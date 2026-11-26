@@ -1,7 +1,8 @@
-# T-051: component output size changed while capturing (encoder restart).
-# Output sizes per source and "Allow 50/60 fps" were accepted on
-# 2026-11-26 (sixth run).
-# Needs: the PS3 on component, 1080i ticked in its video output settings.
+# T-051: component 480i and 480p (NTSC PS3): source size, 640x480 and
+# 480x360, "Allow 50/60 fps" on 480p (also at 640x480). The other modes,
+# output sizes and the size change while capturing were accepted on
+# 2026-11-26 with the PAL PS3.
+# Needs: the NTSC PS3 on component.
 
 D=$DEV
 # comp_cap W H FIELD: 10 s capture; size, field order, frame rate, aspect
@@ -58,19 +59,21 @@ load_module replug
 set_input 2
 set_fmt 720 480 MPEG
 set_input 1
+run v4l2-ctl -d $D -c allow_50_60_fps=1
 
-source_mode 1080i "Tick 1080i again (untick 1080p if it is ticked)."
-step "1080i: output size change while capturing"
-run v4l2-ctl -d $D -v width=1920,height=1080,pixelformat=MPEG
-set_input 1
-# The size change runs in the background, 6 s after the capture starts.
-( sleep 6; v4l2-ctl -d $D -v width=1280,height=720,pixelformat=MPEG ) >/dev/null 2>&1 &
-run comp_cap
-wait
-expect "encoder restarted for 1280x720 while capturing" "component output now 3" sh -c "sudo dmesg | grep -E 'encoder restart|component output now' | tail -3"
-step "back to the source size while capturing"
-( sleep 6; v4l2-ctl -d $D -v width=1920,height=1080,pixelformat=MPEG ) >/dev/null 2>&1 &
-run comp_cap
-wait
-expect "encoder restarted for the source size while capturing" "component output now 0" sh -c "sudo dmesg | grep -E 'encoder restart|component output now' | tail -3"
+source_mode 480p "Untick 1080p, 1080i and 720p (the PS3 sends the highest resolution ticked)."
+expect "480p: three output sizes offered" "720x480.*640x480.*480x360" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | tr '\n' ' '"
+out "480p, Allow 50/60 fps on" 720 480 progressive 30
+out "480p -> 640x480, option on" 640 480 progressive 30
+out "480p -> 480x360" 480 360 progressive 22
+run v4l2-ctl -d $D -c allow_50_60_fps=0
+out "480p -> 640x480, option off" 640 480 progressive 31
+out "480p, Allow 50/60 fps off" 720 480 progressive 31
+run v4l2-ctl -d $D -c allow_50_60_fps=1
+
+source_mode 480i "Untick 480p."
+out "480i source size" 720 480 tt 31
+out "480i -> 640x480" 640 480 progressive 30
+out "480i -> 480x360" 480 360 progressive 22
+run v4l2-ctl -d $D -v width=720,height=480,pixelformat=MPEG
 set_input 2
