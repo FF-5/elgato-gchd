@@ -4,8 +4,8 @@
 
 - **Status:** encoder values and the mode configuration (front end, back
   end), output sizes per source and "Allow 50/60 fps" accepted on
-  hardware, also the size change while capturing; 480i/480p from the
-  NTSC recordings implemented (hardware test open); next: mode changes while capturing,
+  hardware, also the size change while capturing and 480i/480p (NTSC
+  PS3); next: mode changes while capturing,
   480i/480p, the settings window and OBS plugin for component
 - **Type:** driver feature (stage 2)
 - **Branch:** `feat/component` (from `dev` 0.5.10)
@@ -226,18 +226,11 @@ bash gchd-test.sh T-051 --branch feat/component
   changes: the Windows software starts each new mode once with the
   previous mode's values and restarts 3–4 s later; from the new
   detection value to NULL 4.3 s (720p → 1080i).
+- T-051 (ec3f0d5), eighth run, NTSC PS3: 9/9 PASS: 480p offers three
+  sizes; 720 × 480 progressive level 30 (option on) / 31 (off), 640 × 480
+  level 30 / 31 by the option, 480 × 360 level 22; 480i 720 × 480 tt
+  level 31, 640 × 480 level 30, 480 × 360 level 22. Not tested on
+  hardware: 576p with a scaled size (no recording; follows 480p).
 
 ## Maintainer comments
 
-=== summary (T-051, ec3f0d5 Component 480i/480p as recorded: 640x480 and 480x360 for all SD sources, scaled outputs of 60 Hz progressive sources at 30 fps, Allow 50/60 fps for 480p/576p scaled outputs, system_rate constants for progressive 50/60 fps output; docs/component.md (T-051))
-PASS | step 2 component source 480p | 480p: three output sizes offered
-PASS | step 2 component source 480p | 480p, Allow 50/60 fps on: stream 720x480 progressive, level 30
-PASS | step 2 component source 480p | 480p -> 640x480, option on: stream 640x480 progressive, level 30
-PASS | step 2 component source 480p | 480p -> 480x360: stream 480x360 progressive, level 22
-PASS | step 2 component source 480p | 480p -> 640x480, option off: stream 640x480 progressive, level 31
-PASS | step 2 component source 480p | 480p, Allow 50/60 fps off: stream 720x480 progressive, level 31
-PASS | step 3 component source 480i | 480i source size: stream 720x480 tt, level 31
-PASS | step 3 component source 480i | 480i -> 640x480: stream 640x480 progressive, level 30
-PASS | step 3 component source 480i | 480i -> 480x360: stream 480x360 progressive, level 22
-
-FAIL: 0  WARN: 0
