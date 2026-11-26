@@ -1208,9 +1208,9 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 	if (input == 1) {
 		/*
 		 * Component, as composite: CBR from 7/11.25 of the output's
-		 * highest bitrate (placeholder until recorded) to the highest;
-		 * VBR the average, from 8/15 of the highest (recorded) to half
-		 * of it. The highest of the output mode, as the driver's.
+		 * highest bitrate to the highest; VBR the average, from 8/15
+		 * of the highest to half of it. The highest of the output
+		 * mode, as the driver's.
 		 */
 		static const double top[] = { 15.0, 11.25, 15.0, 26.25, 15.0, 30.0 };
 		double cmax = top[oslot];
@@ -1408,8 +1408,7 @@ read_done:
 	obs_property_set_long_description(
 		p, "VBR: the average bitrate (half of the setting); CBR: the bitrate");
 
-	/* H.264 profile: not offered (the driver's default, as in the
-	 * Windows software). */
+	/* H.264 profile: not offered (the driver's default). */
 
 	obs_properties_add_bool(props, "stretch", "Stretch SD input");
 	obs_property_set_long_description(

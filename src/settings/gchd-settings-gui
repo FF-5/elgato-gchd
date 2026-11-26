@@ -198,9 +198,8 @@ class Window(Gtk.Window):
     def rate_range(self):
         if self.comp_range:
             # Component, as composite: CBR the bitrate from 7/11.25 of the
-            # output's highest (placeholder until recorded) to the highest;
-            # VBR the average, lowest 8/15 of the highest (recorded) to
-            # half the highest.
+            # output's highest to the highest; VBR the average, lowest 8/15
+            # of the highest to half the highest.
             lo, hi = self.comp_range
             if self.comp_mobile() or self.mode.get_active() == 1:
                 return lo / 2, hi / 2, hi / 2

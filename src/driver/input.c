@@ -763,8 +763,8 @@ route:
 }
 
 /*
- * Component while capturing: read the timing measurement once, as the
- * Windows software does about every 0.75 s. Returns 1 when it shows no
+ * Component while capturing: read the timing measurement once (the mode
+ * worker calls this every 0.75 s). Returns 1 when it shows no
  * signal or another source mode than the configured one, 0 when it matches,
  * a negative error code when the read fails.
  */
@@ -1978,7 +1978,7 @@ static int gchd_input_configure_mode(struct gchd *d)
 
  /*
   * A capture starts with the standard output; a scaled output is switched
-  * to from the running capture (as recorded), by the mode worker.
+  * to from the running capture by the mode worker.
   */
  d->out_active = GCHD_OUT_STANDARD;
  dev_info(&d->intf->dev,
