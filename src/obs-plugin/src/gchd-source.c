@@ -255,11 +255,15 @@ static void gchd_apply_changes(int fd, const struct gchd_vals *v,
 		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
 			  vbr ? V4L2_MPEG_VIDEO_BITRATE_MODE_VBR :
 				V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
+	/* Component: mode and bitrate as composite; the driver keeps the
+	 * bitrate inside the output's range. */
+	if (v->input == 1 && mode_changed)
+		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
+			  vbr ? V4L2_MPEG_VIDEO_BITRATE_MODE_VBR :
+				V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
 	if (v->input == 1 && rate_changed && v->rate > 0)
-		/* Component: the bitrate itself; the driver encodes the highest
-		 * of the output CBR and a lower one VBR. */
 		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE,
-			  gchd_kbps(v->rate, false) * 1000);
+			  gchd_kbps(v->rate, vbr) * 1000);
 	if (analog && rate_changed) {
 		double lo = vbr ? gchd_vbr_min[o] : GCHD_CBR_MIN;
 		double hi = vbr ? gchd_vbr_max[o] : GCHD_CBR_MAX;
@@ -334,8 +338,8 @@ static bool gchd_read_device(const char *path, struct gchd_vals *v)
 		kb = c.value / 1000;
 	if (v->output == 2)
 		v->mode = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
-	v->rate = v->mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR && v->input != 1 ?
-			  kb / 2000.0 : kb / 1000.0;
+	v->rate = v->mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR ? kb / 2000.0 :
+								kb / 1000.0;
 	c.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE;
 	if (ioctl(fd, VIDIOC_G_CTRL, &c) == 0)
 		v->profile = c.value;
@@ -1097,13 +1101,18 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 	hi = vbr ? gchd_vbr_max[o] : GCHD_CBR_MAX;
 	def = vbr ? gchd_vbr_def[o] : GCHD_CBR_DEF;
 	if (input == 1) {
-		/* Component: the driver's range for the output (Mbit/s). */
+		/*
+		 * Component, as composite: CBR from 7/11.25 of the output's
+		 * highest bitrate (placeholder until recorded) to the highest;
+		 * VBR the average, from 8/15 of the highest (recorded) to half
+		 * of it. The highest is the driver's.
+		 */
 		double cmax = obs_data_get_double(settings, "comp_rate_max");
 
-		vbr = false;
-		slot = 1;
-		lo = cmax > 0 ? obs_data_get_double(settings, "comp_rate_min") : 2.0;
-		hi = def = cmax > 0 ? cmax : 30.0;
+		if (cmax <= 0)
+			cmax = 30.0;
+		lo = vbr ? cmax * 8 / 15 / 2 : (int)(cmax * 700 / 11.25 + 0.5) / 100.0;
+		hi = def = vbr ? cmax / 2 : cmax;
 	}
 	r = obs_data_get_double(settings, "rate");
 
@@ -1138,7 +1147,7 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 	}
 	obs_property_set_visible(obs_properties_get(props, "stretch"), analog);
 	obs_property_set_visible(obs_properties_get(props, "bitrate_mode"),
-				 analog && !mobile);
+				 (analog || input == 1) && !mobile);
 	obs_property_set_visible(obs_properties_get(props, "rate"),
 				 analog || input == 1);
 	obs_property_float_set_limits(obs_properties_get(props, "rate"), lo, hi,

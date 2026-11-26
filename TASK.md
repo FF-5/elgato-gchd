@@ -268,19 +268,19 @@ bash gchd-test.sh T-051 --branch feat/component
   lower-bitrate sequences reproduced. Settings window, OBS plugin, text
   menu: component bitrate slider in the driver's range; the H.264 profile
   removed from all three (the driver keeps High).
+- T-051 (1988a40), eleventh run: 9/9 PASS (component bitrate range per
+  output in the driver, window and plugin; no H.264 profile). Maintainer:
+  (1) the bitrate should work as for composite (bitrate mode menu, CBR
+  and VBR ranges); the CBR/VBR switch point will come from a bitrate
+  recording with the HDMI recordings (TODO R13). Now: component has the
+  bitrate mode like composite (driver: the mode set, 480 × 360 VBR only,
+  a bitrate kept per mode); window and plugin: mode menu, CBR from 7/11.25
+  of the output's highest to the highest, VBR as the average from 8/15 of
+  the highest to half of it (placeholders as composite's until R13).
+  (2) After 20.00 at 1080i, 640 × 480 and back, the window showed 30.00
+  (maintainer). With a stand-in modelling the driver the window shows
+  20.00 again; the next test checks the value in the driver itself after
+  the same steps.
 
 ## Maintainer comments
 
-=== summary (T-051, 1988a40 Component bitrate as in the Windows software: CBR at the highest of the output, VBR below, 480x360 VBR; bitrate control range per output; bitrate slider for component in the settings window, OBS plugin and text menu; H.264 profile no longer offered there (T-051))
-PASS | step 3 driver: bitrate range per output | 1080i source size: 16-30 Mbit/s
-PASS | step 3 driver: bitrate range per output | 640x480: 6-11.25 Mbit/s
-PASS | step 3 driver: bitrate range per output | 1280x720: 8-15 Mbit/s
-PASS | step 3 driver: bitrate range per output | 1080i at 20 Mbit/s kept
-PASS | step 4 settings window | a Bitrate slider from 16.00 to 30.00 Mbit/s is shown; no H.264 profile row?
-PASS | step 4 settings window | window: about 20 Mbit/s
-PASS | step 4 settings window | the slider now goes from 6.00 to 11.25 (and stands at 11.25)?
-PASS | step 4 settings window | Composite: no H.264 profile row either; Bitrate mode and Bitrate as before?
-PASS | step 5 OBS plugin | OBS: a Bitrate slider from 16.00 to 30.00 Mbit/s; no H.264 profile; no Bitrate mode?
-PASS | step 5 OBS plugin | OBS: about 25 Mbit/s
-
-FAIL: 0  WARN: 0

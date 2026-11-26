@@ -180,9 +180,13 @@ Bitrate: the range of `V4L2_CID_MPEG_VIDEO_BITRATE` follows the output in
 effect (highest = default: 30000 kbit/s for 1080i/1080p, 26250 for 720p at
 60, 15000 for 720p at 30, 480p, 576p, 1280 × 720 and 480 × 360, 11250 for
 480i, 576i and 640 × 480; lowest 8/15 of it, as the Windows software's
-slider). The highest is encoded CBR, a lower one VBR (`v_rate_mode 1`,
-`v_max_cpb_delay 10`), as recorded; 480 × 360 always VBR. A bitrate outside
-the output's range (set for another output) gives the highest.
+slider). In the recordings the highest is encoded CBR and the lowest VBR
+(`v_rate_mode 1`, `v_max_cpb_delay 10`); 480 × 360 always VBR. Where the
+Windows software switches between them is not recorded yet. The driver
+works as for composite: `V4L2_CID_MPEG_VIDEO_BITRATE_MODE` selects CBR or
+VBR (480 × 360 VBR only), each mode keeps its last bitrate, and a kept
+bitrate outside the output's range (set for another output) gives the
+highest; it stays kept for an output it fits again.
 
 Control "Allow 50/60 fps" (default on): off encodes 720p at 30 frames per
 second (signalled 60000/1001, GOP 8, 15000 kbit/s) and 576p/480p with GOP

@@ -142,6 +142,7 @@ while :; do
 	if [ "${i:-0}" = 1 ]; then
 		items+=(compout "Output size: $(size_get)"
 			bitrate "Bitrate: $(( $(ctrl_get video_bitrate || echo 0) / 1000 )) kbit/s"
+			mode "Bitrate mode: $( [ "$(ctrl_get video_bitrate_mode)" = 0 ] && echo VBR || echo CBR )"
 			allow "Allow 50/60 fps: $( [ "$(ctrl_get allow_50_60_fps)" = 0 ] && echo off || echo on )")
 	fi
 	if [ "${i:-0}" -ge 2 ]; then

@@ -462,15 +462,10 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
  u8 comp_level = 0;
 
  if (comp) {
-  u32 def;
-
   if (out == GCHD_OUT_STANDARD) {
    comp_half = (src_height == 1080 && !d->input_interlaced) ||
                (src_height == 720 && !d->allow_5060);
    comp_fast = comp_sd_p || (src_height == 720 && !comp_half);
-   def = src_height == 1080 ? 30000 :
-         src_height == 720 ? (comp_half ? 15000 : 26250) :
-         comp_sd_p ? 15000 : 11250;
    if (comp_sd_p)
     /* "Allow 50/60 fps" off: GOP 12 (level 31); the stream stays at
      * 50/60 frames per second. */
@@ -488,19 +483,18 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
    bool slow = comp_sd_p && !d->allow_5060;
 
    comp_half = !d->input_interlaced && fps != 50;
-   def = out == GCHD_OUT_640X480 ? 11250 : 15000;
    gop = comp_sd ? (fps == 50 ? (slow ? 12 : 6) : (slow ? 14 : 8)) : 8;
    comp_level = out == GCHD_OUT_640X480 ? (slow ? 31 : 30) :
                 out == GCHD_OUT_MOBILE ? 22 : 31;
   }
   /*
-   * The highest bitrate of the output is encoded CBR, a lower one VBR (as
-   * composite); 480 x 360 always VBR.
+   * Bitrate mode and bitrate as for composite: the mode set (480 x 360
+   * VBR only), the bitrate kept for it when inside the output's range
+   * (lowest 8/15 of the highest), else the highest.
    */
-  bitrate = def;
-  if (d->bitrate_forced && d->bitrate >= def * 8 / 15 && d->bitrate < def)
-   bitrate = d->bitrate;
-  vbr = bitrate < def || out == GCHD_OUT_MOBILE;
+  bitrate = gchd_comp_bitrate(d);
+  vbr = d->bitrate_mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR ||
+        out == GCHD_OUT_MOBILE;
   auto_max_bitrate = bitrate * 9U / 10U;
   auto_average_bitrate = bitrate / 2U;
   auto_min_bitrate = bitrate <= 4000 ? 0 : bitrate < 10000 ? bitrate / 10U :

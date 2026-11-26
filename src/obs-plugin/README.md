@@ -19,10 +19,11 @@ properties.
   of composite and S-video (720x480 NTSC / 720x576 PAL, 640 × 480,
   480 × 360), bitrate mode and bitrate, stretch of SD input; for
   component the output sizes the source allows (the resolutions the
-  driver lists, source size first), the bitrate in the driver's range for
-  the output and "Allow 50/60 fps". Output size, bitrate mode, bitrate
-  and stretch are hidden for HDMI; bitrate mode and stretch for
-  component. The H.264 profile is not offered (the driver's default, as
+  driver lists, source size first), bitrate mode and bitrate as for
+  composite in the range the driver gives for the output (CBR from 7/11.25
+  of the highest to the highest; VBR the average, 8/15 of the highest to
+  half of it) and "Allow 50/60 fps". Output size, bitrate mode, bitrate
+  and stretch are hidden for HDMI; stretch for component. The H.264 profile is not offered (the driver's default, as
   the Windows software does). They are the driver's settings, shared with the
   settings window and other programs: the properties show the device's
   values when they open and follow changes made elsewhere (checked every
