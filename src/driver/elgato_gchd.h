@@ -239,19 +239,14 @@ void gchd_mark_start(struct gchd *);
 
 /*
  * Component output size in effect for the detected source: 1080i/1080p
- * all sizes; 720p no 1280 x 720 (that is the source size); 480i/576i the
- * source size or 640 x 480; 480p/576p the source size. Before detection the
- * requested size.
+ * all sizes; 720p and SD sources (480i, 480p, 576i, 576p) all but
+ * 1280 x 720. Before detection the requested size.
  */
 static inline u8 gchd_comp_out_of(const struct gchd *d, u8 o)
 {
 	if (!d->input_height || d->input_height == 1080)
 		return o;
-	if (d->input_height == 720)
-		return o == GCHD_OUT_1280X720 ? GCHD_OUT_STANDARD : o;
-	if (d->input_interlaced)
-		return o == GCHD_OUT_640X480 ? o : GCHD_OUT_STANDARD;
-	return GCHD_OUT_STANDARD;
+	return o == GCHD_OUT_1280X720 ? GCHD_OUT_STANDARD : o;
 }
 
 static inline u8 gchd_comp_out(const struct gchd *d)

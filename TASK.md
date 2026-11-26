@@ -4,7 +4,8 @@
 
 - **Status:** encoder values and the mode configuration (front end, back
   end), output sizes per source and "Allow 50/60 fps" accepted on
-  hardware, also the size change while capturing; next: mode changes while capturing,
+  hardware, also the size change while capturing; 480i/480p from the
+  NTSC recordings implemented (hardware test open); next: mode changes while capturing,
   480i/480p, the settings window and OBS plugin for component
 - **Type:** driver feature (stage 2)
 - **Branch:** `feat/component` (from `dev` 0.5.10)
@@ -211,6 +212,20 @@ bash gchd-test.sh T-051 --branch feat/component
   each time. Next: the maintainer records 480i/480p (sizes, 50/60 fps
   option), 720p with 480 × 360 and a source mode change while capturing
   with the NTSC PS3.
+- NTSC PS3 recordings (2026-11-26, analysis appended to
+  `traces/ANALYSIS-2026-11-25-component.md`): 480i and 480p offer
+  640 × 480 and 480 × 360 (the driver offered the source size only for
+  480p, and no 480 × 360 for 480i); scaled outputs of 480p are encoded at
+  30 frames per second (timing 60000/1001), like 720p and 1080p30; the
+  50/60 fps option on 480p switches GOP 8/14 and level 30/31, also at
+  640 × 480; `system_rate` of 480p 16614 (one more than the former +51
+  rule): now one constant per case (461.7 / 470.2, progressive 50/60
+  frames per second 504.7 / 521.5). Driver changed accordingly (576p
+  follows 480p: scaled sizes offered); all 23 recorded combinations of
+  source, output and option reproduced in the emulator. Source mode
+  changes: the Windows software starts each new mode once with the
+  previous mode's values and restarts 3–4 s later; from the new
+  detection value to NULL 4.3 s (720p → 1080i).
 
 ## Maintainer comments
 

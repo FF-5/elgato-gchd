@@ -480,10 +480,17 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
    comp_level = src_height > 576 ? (comp_half && src_height == 720 ? 31 : 40) :
                 comp_sd_p && d->allow_5060 ? 30 : 31;
   } else {
-   comp_half = !d->input_interlaced && src_height > 576;
+   /*
+    * Scaled outputs: 60 Hz progressive sources (480p, 720p, 1080p30)
+    * at 30 frames per second; for 480p/576p "Allow 50/60 fps" off
+    * gives the long GOP (and level 31 at 640 x 480).
+    */
+   bool slow = comp_sd_p && !d->allow_5060;
+
+   comp_half = !d->input_interlaced && fps != 50;
    def = out == GCHD_OUT_640X480 ? 11250 : 15000;
-   gop = comp_sd ? (fps == 50 ? 6 : 8) : 8;
-   comp_level = out == GCHD_OUT_640X480 ? 30 :
+   gop = comp_sd ? (fps == 50 ? (slow ? 12 : 6) : (slow ? 14 : 8)) : 8;
+   comp_level = out == GCHD_OUT_640X480 ? (slow ? 31 : 30) :
                 out == GCHD_OUT_MOBILE ? 22 : 31;
   }
   bitrate = d->bitrate_forced ? clamp_t(u32, d->bitrate, 2000, 40000) : def;
@@ -491,12 +498,11 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
   auto_average_bitrate = bitrate / 2U;
   auto_min_bitrate = bitrate <= 4000 ? 0 : bitrate < 10000 ? bitrate / 10U :
                      bitrate < 26250 ? bitrate / 4U : bitrate * 35U / 100U;
-  /* floor(1.07285 * B + 461.7) at 50 Hz, + 470.2 at 60 Hz; progressive
-   * output at 50/60 frames per second: +43 / +51. */
+  /* floor(1.07285 * B + c): c 461.7 at 50 Hz, 470.2 at 60 Hz; progressive
+   * output at 50/60 frames per second 504.7 / 521.5. */
   comp_system_rate = ((u32)bitrate * 21457U +
-                      (fps == 50 ? 9234000U : 9404000U)) / 20000U;
-  if (comp_fast)
-   comp_system_rate += fps == 50 ? 43 : 51;
+                      (fps == 50 ? (comp_fast ? 10094000U : 9234000U) :
+                                   (comp_fast ? 10430000U : 9404000U))) / 20000U;
  }
  u16 anchor = 3;
  u8 profile;
