@@ -859,6 +859,10 @@ int gchd_probe_video_source(struct gchd *d)
    d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60;
   }
   d->input_fps_den=1;
+  d->comp_seen.width = d->input_width;
+  d->comp_seen.height = d->input_height;
+  d->comp_seen.fps = d->input_fps_num;
+  d->comp_seen.interlaced = d->input_interlaced;
  } else {
   u8 v, std, be_status = 0;
 

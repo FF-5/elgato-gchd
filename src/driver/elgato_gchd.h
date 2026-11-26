@@ -165,6 +165,12 @@ struct gchd {
  u32 input_width, input_height;
  u32 input_fps_num, input_fps_den;
  bool input_interlaced;
+ /* Component: the source mode detected last (sizes and bitrate range
+  * while no capture has detected the source since the input was chosen). */
+ struct {
+  u32 width, height, fps;
+  bool interlaced;
+ } comp_seen;
  u32 bitrate;
  u8 h264_profile;
  u8 h264_level;
@@ -245,9 +251,22 @@ void gchd_mark_start(struct gchd *);
  * all sizes; 720p and SD sources (480i, 480p, 576i, 576p) all but
  * 1280 x 720. Before detection the requested size.
  */
+/* Component source mode: the detected one, else the one detected last. */
+static inline u32 gchd_comp_src_height(const struct gchd *d)
+{
+	return d->input_height ? d->input_height : d->comp_seen.height;
+}
+
+static inline bool gchd_comp_src_interlaced(const struct gchd *d)
+{
+	return d->input_height ? d->input_interlaced : d->comp_seen.interlaced;
+}
+
 static inline u8 gchd_comp_out_of(const struct gchd *d, u8 o)
 {
-	if (!d->input_height || d->input_height == 1080)
+	u32 h = gchd_comp_src_height(d);
+
+	if (!h || h == 1080)
 		return o;
 	return o == GCHD_OUT_1280X720 ? GCHD_OUT_STANDARD : o;
 }
@@ -275,18 +294,19 @@ static inline u8 gchd_out_target(const struct gchd *d)
 static inline u32 gchd_comp_bitrate_max(const struct gchd *d)
 {
 	u8 out = gchd_comp_out(d);
+	u32 h = gchd_comp_src_height(d);
 
-	if (!d->input_height)
+	if (!h)
 		return 0;
 	if (out == GCHD_OUT_640X480)
 		return 11250;
 	if (out != GCHD_OUT_STANDARD)
 		return 15000;
-	if (d->input_height == 1080)
+	if (h == 1080)
 		return 30000;
-	if (d->input_height == 720)
+	if (h == 720)
 		return d->allow_5060 ? 26250 : 15000;
-	return d->input_interlaced ? 11250 : 15000;
+	return gchd_comp_src_interlaced(d) ? 11250 : 15000;
 }
 
 static inline u32 gchd_comp_bitrate_min(const struct gchd *d)

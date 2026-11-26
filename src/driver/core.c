@@ -120,6 +120,8 @@ static void gchd_comp_out_size(const struct gchd *d, u8 out, u32 *width,
   *width = 1280; *height = 720;
  } else if (d->input_height) {
   *width = d->input_width; *height = d->input_height;
+ } else if (d->comp_seen.height) {
+  *width = d->comp_seen.width; *height = d->comp_seen.height;
  } else {
   *width = d->width; *height = d->height;
  }
@@ -142,15 +144,16 @@ static void gchd_comp_fps(const struct gchd *d, u8 out, u32 *num, u32 *den)
 {
  *den = 1;
  if (out == GCHD_OUT_STANDARD) {
-  *num = d->input_fps_num ? d->input_fps_num : 60;
-  *den = d->input_fps_den ? d->input_fps_den : 1;
-  if (d->input_height == 720 && !d->allow_5060) {
+  *num = d->input_fps_num ? d->input_fps_num :
+         d->comp_seen.fps ? d->comp_seen.fps : 60;
+  *den = d->input_fps_num && d->input_fps_den ? d->input_fps_den : 1;
+  if (gchd_comp_src_height(d) == 720 && !d->allow_5060) {
    *num = 30; *den = 1;
   }
- } else if (out == GCHD_OUT_1280X720 && d->input_interlaced) {
+ } else if (out == GCHD_OUT_1280X720 && gchd_comp_src_interlaced(d)) {
   *num = 60;
  } else {
-  *num = d->input_height == 576 ? 25 : 30;
+  *num = gchd_comp_src_height(d) == 576 ? 25 : 30;
  }
 }
 
@@ -160,8 +163,9 @@ static enum v4l2_field gchd_field(const struct gchd *d)
  if (d->input >= 2)
   return d->analog_out == GCHD_OUT_STANDARD ?
          V4L2_FIELD_INTERLACED_TB : V4L2_FIELD_NONE;
- if (d->input == 1 && gchd_comp_out(d) != GCHD_OUT_STANDARD)
-  return V4L2_FIELD_NONE;
+ if (d->input == 1)
+  return gchd_comp_out(d) != GCHD_OUT_STANDARD || !gchd_comp_src_interlaced(d) ?
+         V4L2_FIELD_NONE : V4L2_FIELD_INTERLACED;
  return d->input_interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
 }
 
@@ -2493,7 +2497,7 @@ static const struct gchd_mode *gchd_adjust_fmt(struct gchd *d,
   gchd_comp_out_size(d, out, &w, &h);
   pix->width = w;
   pix->height = h;
-  pix->field = out != GCHD_OUT_STANDARD || !d->input_interlaced ?
+  pix->field = out != GCHD_OUT_STANDARD || !gchd_comp_src_interlaced(d) ?
                V4L2_FIELD_NONE : V4L2_FIELD_INTERLACED;
  } else {
   m = gchd_find_mode(pix->width, pix->height, interlaced);

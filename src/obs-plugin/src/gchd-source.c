@@ -1150,8 +1150,11 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 				 (analog || input == 1) && !mobile);
 	obs_property_set_visible(obs_properties_get(props, "rate"),
 				 analog || input == 1);
-	obs_property_float_set_limits(obs_properties_get(props, "rate"), lo, hi,
-				      0.01);
+	/* A little above the highest: OBS's slider counts whole steps, and
+	 * the last one is lost to rounding for some ranges (29.99 instead
+	 * of 30.00); values are rounded to hundredths. */
+	obs_property_float_set_limits(obs_properties_get(props, "rate"), lo,
+				      hi + 0.004, 0.01);
 	return true;
 }
 

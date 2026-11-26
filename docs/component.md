@@ -170,7 +170,9 @@ adjustment).
 | 1080i, 1080p30 | source, 1280 × 720, 640 × 480, 480 × 360 |
 | 720p, 480i, 480p, 576i, 576p | source, 640 × 480, 480 × 360 |
 
-A size the source does not allow gives the source size; the request is
+While no capture has detected the source since the input was selected,
+the sizes, the bitrate range and the frame rate follow the component source
+mode detected last. A size the source does not allow gives the source size; the request is
 kept and applies again to a source that allows it. While capturing, a new
 output size (or a new encoder setting) restarts the encoder (NULL, STOP,
 encoder fields, START), as the Windows software does. Scaled outputs are
