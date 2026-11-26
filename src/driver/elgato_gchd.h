@@ -134,6 +134,7 @@ struct gchd {
  bool stretch; /* composite/S-video: v_in_source_type 2 */
  u8 hd_out; /* component: requested output size (GCHD_OUT_*) */
  bool allow_5060; /* component: 50/60 frames per second for 576p and 720p */
+ u8 comp_mode_mismatch; /* component: polls showing another source mode */
  int bitrate_mode; /* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
  bool enc_dirty; /* encoder settings changed while capturing */
  unsigned long start_jiffies; /* last completed START */
@@ -201,6 +202,7 @@ int gchd_load_encoder_firmware(struct gchd *);
 int gchd_input_configure(struct gchd *);
 int gchd_input_start(struct gchd *);
 int gchd_input_check_mode(struct gchd *);
+int gchd_component_mode_changed(struct gchd *);
 int gchd_input_read_family(struct gchd *, u8 *);
 void gchd_input_log_status(struct gchd *, const char *);
 int gchd_input_read_lock(struct gchd *, u8 *, u8 *);

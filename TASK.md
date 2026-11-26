@@ -231,6 +231,16 @@ bash gchd-test.sh T-051 --branch feat/component
   level 30 / 31 by the option, 480 × 360 level 22; 480i 720 × 480 tt
   level 31, 640 × 480 level 30, 480 × 360 level 22. Not tested on
   hardware: 576p with a scaled size (no recording; follows 480p).
+- Source mode change while capturing (item 4), offline: the driver
+  followed a component mode change only through the 0.5 s stream-loss
+  check (and the mode worker never ran for component after a capture
+  start). Now the mode worker runs for component too and reads the
+  timing measurement every 0.75 s, as the Windows software does; another
+  mode or no signal on two reads in a row hands over to the detection
+  (stop, detect, configure, START). Not done: the Windows software's
+  neutral back-end values and `0x9C:04` sweep at the change. Hardware
+  test together with 576p's scaled outputs (PAL PS3, no new recordings,
+  maintainer).
 
 ## Maintainer comments
 

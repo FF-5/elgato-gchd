@@ -1515,9 +1515,12 @@ static void gchd_detection_worker(struct work_struct *work)
    }
    WRITE_ONCE(d->capture_active, true);
    gchd_set_lifecycle(d, GCHD_STREAMING);
-   if (d->input >= 2 &&
-       (d->input_height == 480 || d->input_height == 576))
+   if ((d->input >= 2 &&
+        (d->input_height == 480 || d->input_height == 576)) ||
+       d->input == 1) {
+    d->comp_mode_mismatch = 0;
     schedule_delayed_work(&d->mode_work, msecs_to_jiffies(250));
+   }
   }
  }
 
@@ -1554,9 +1557,30 @@ static void gchd_mode_workfn(struct work_struct *work)
   */
  if (d->input == 1) {
   if (d->disconnected || !READ_ONCE(d->capture_active) ||
-      !d->input_configured || !READ_ONCE(d->signal_present) ||
-      (d->out_active == gchd_out_target(d) && !READ_ONCE(d->enc_dirty)))
+      !d->input_configured || !READ_ONCE(d->signal_present))
    goto out;
+  if (d->out_active == gchd_out_target(d) && !READ_ONCE(d->enc_dirty)) {
+   /*
+    * Source mode: another timing on two polls in a row (or no signal)
+    * stops the capture; the detection configures the new mode and starts
+    * again.
+    */
+   r = gchd_component_mode_changed(d);
+   if (r > 0 && ++d->comp_mode_mismatch >= 2) {
+    d->comp_mode_mismatch = 0;
+    gchd_mark(d, "source mode-change");
+    dev_info(&d->intf->dev,
+             "component source mode changed while capturing; detecting again\n");
+    WRITE_ONCE(d->signal_present, false);
+    WRITE_ONCE(d->detect_requested, true);
+    schedule_delayed_work(&d->detect_work, 0);
+    goto out;
+   }
+   if (r <= 0)
+    d->comp_mode_mismatch = 0;
+   schedule_delayed_work(&d->mode_work, msecs_to_jiffies(750));
+   goto out;
+  }
   dev_info(&d->intf->dev, "encoder restart: output %u -> %u%s\n",
            d->out_active, gchd_out_target(d),
            READ_ONCE(d->enc_dirty) ? ", settings changed" : "");
@@ -1747,7 +1771,7 @@ stop_and_restart:
  v4l2_event_queue(&d->vdev, &ev);
  if (d->input == 1) {
   dev_info(&d->intf->dev, "component output now %u\n", d->out_active);
-  goto out;
+  goto reschedule;
  }
  dev_info(&d->intf->dev, "analog mode now %s, output %u\n",
           d->input_height == 576 ? (d->input_interlaced ? "576i" : "288p") :

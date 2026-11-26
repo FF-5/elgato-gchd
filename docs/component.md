@@ -144,6 +144,15 @@ while capturing); the driver follows it at every capture start
    the back end has not settled; `0x9C:0F = E4`.
 7. Encoder programming (§4), INIT, START.
 
+Source mode change while capturing: the Windows software reads the
+timing measurement (`0x9C:68/67`, `66/65`) about every 0.75 s; after a new
+value it stops (NULL, STOP, 4.3 s after the first new value in one
+recording) and configures the new mode. The driver reads the same
+registers every 0.75 s while capturing; another mode (or no signal) on two
+reads in a row stops the capture, and the detection configures the new
+mode (steps 2–7) and starts again. A loss of the stream for 0.5 s does the
+same.
+
 Not done by the driver: at a source mode change while capturing, the
 Windows software first sets the back end to neutral values (`0x98:70 =
 C8`, `0x90 = 88`, `0x91`–`0xA3 = 77`, `0xC0 = 80`, …) and steps

@@ -762,6 +762,38 @@ route:
  return 0;
 }
 
+/*
+ * Component while capturing: read the timing measurement once, as the
+ * Windows software does about every 0.75 s. Returns 1 when it shows no
+ * signal or another source mode than the configured one, 0 when it matches,
+ * a negative error code when the read fails.
+ */
+int gchd_component_mode_changed(struct gchd *d)
+{
+ static const struct { u16 value; u16 height; bool interlaced; } modes[] = {
+  { 0xbbf4, 1080, false }, { 0xa03d, 1080, true }, { 0xbf59, 720, false },
+  { 0xa6b7, 576, false }, { 0x9ab9, 576, true }, { 0xa150, 480, false },
+  { 0x9576, 480, true },
+ };
+ u8 hi, lo;
+ u32 v6665, v6867;
+ unsigned int i;
+
+ GCHD_FE_R(d, 0x66, hi);
+ GCHD_FE_R(d, 0x65, lo);
+ v6665 = (u32)hi << 8 | lo;
+ GCHD_FE_R(d, 0x68, hi);
+ GCHD_FE_R(d, 0x67, lo);
+ v6867 = (u32)hi << 8 | lo;
+ if (!gchd_component_timing_valid(v6867) || abs((int)v6665 - 0xad4d) < 10)
+  return 1;
+ for (i = 0; i < ARRAY_SIZE(modes); ++i)
+  if (abs((int)v6867 - modes[i].value) < 10)
+   return modes[i].height != d->input_height ||
+          modes[i].interlaced != d->input_interlaced;
+ return 1;
+}
+
 int gchd_probe_video_source(struct gchd *d)
 {
  u32 sum6665 = 0, sum6463 = 0, count6665 = 0, count6463 = 0;
