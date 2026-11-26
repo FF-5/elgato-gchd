@@ -1,0 +1,3 @@
+[in#0 @ 0x593572d88d40] Error opening input: Invalid data found when processing input
+Error opening input file /home/ff5/gchd-test-logs/T-051-samples/component_1080i_1280x720.ts.
+Error opening input files: Invalid data found when processing input
