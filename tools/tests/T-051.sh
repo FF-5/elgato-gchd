@@ -1,7 +1,8 @@
 # T-051: component 576p with scaled outputs (PAL PS3): 640x480 and
-# 480x360, "Allow 50/60 fps" at 640x480. Not recorded; the driver follows
-# the 480p recordings. Everything else on component was accepted on
-# 2026-11-26.
+# 480x360, "Allow 50/60 fps" at 640x480 (not recorded; the driver follows
+# the 480p recordings); source mode changes while capturing (the driver
+# polls the timing measurement and configures the new mode itself).
+# Everything else on component was accepted on 2026-11-26.
 # Needs: the PAL PS3 on component.
 
 D=$DEV
@@ -74,4 +75,16 @@ play 12 "576p at 640x480: is the picture right (whole picture, not cut, motion s
 run v4l2-ctl -d $D -v width=480,height=360,pixelformat=MPEG
 play 12 "576p at 480x360: is the picture right?"
 run v4l2-ctl -d $D -v width=720,height=576,pixelformat=MPEG
+
+step "source mode changes while capturing"
+set_input 1
+since=$(sudo dmesg | wc -l)
+log "dmesg lines before: $since"
+( timeout 300 ffplay -loglevel error -window_title "Elgato follow" -f mpegts $D >/dev/null 2>&1 ) &
+FOLLOW=$!
+prompt "A window 'Elgato follow' shows the PS3 (do NOT close it in this step). In the PS3's menu change its video output while watching: 576p -> 720p -> 1080i -> 576p (tick/untick; confirm the PS3's 'Is this OK?' each time). Wait until the picture is back after each change. Press Enter when done."
+confirm "after each change the picture came back by itself in the new mode (within a few seconds, without closing the window)?"
+pkill -f "window_title Elgato follow" 2>/dev/null; wait $FOLLOW 2>/dev/null
+run sh -c "sudo dmesg | grep -E 'component source mode changed|signal detected: input=1|signal lost' | tail -12"
+expect "the driver followed at least three source mode changes" "^([3-9]|[1-9][0-9])$" sh -c "sudo dmesg | tail -n +$((since + 1)) | grep -cE 'component source mode changed|input 1 signal lost'"
 set_input 2
