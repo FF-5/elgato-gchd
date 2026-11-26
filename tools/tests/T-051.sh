@@ -1,7 +1,5 @@
-# T-051: the TS sample of 1080i at 1280x720 for the merge (RULES F3; the
-# last run's sample was empty: the 4 s ended during the capture setup).
-# Accepted on 2026-11-26: samples of 1080i, 720p, 576p, 576i (frame-aligned
-# copies on traces), eight bitrate changes while capturing at 1280x720.
+# T-051: frame rate reported for 1080i at 1280x720 (30, as the captured
+# stream; was 60). Everything else of T-051 is accepted (2026-11-26).
 # Needs: the PS3 on component in 1080i.
 
 INST="$REPO/install-driver.sh"
@@ -100,11 +98,11 @@ run sudo rmmod elgato_gchd
 run bash "$INST" --all --yes --in-terminal < /dev/null
 prompt "Unplug the Elgato and plug it in again; wait 5 s."
 set_input 1
-run v4l2-ctl -d $D -c allow_50_60_fps=1
-
 source_mode 1080i "Tick 1080i (and untick 1080p) so the PS3 sends 1080i."
-step "sample 1080i at 1280x720"
-sample 1080i_1280x720 1280 720 progressive 31
-run ls -l $SAMPLES
-prompt "Upload component_1080i_1280x720.ts and its .raw, .ffprobe.txt and .ffmpeg.txt from $SAMPLES to traces/component/samples/ (replacing the empty one)."
+
+step "frame rate of 1080i at 1280x720"
+size 1280 720
+expect "G_PARM: 30 frames per second" "Frames per second: 30\.000" v4l2-ctl -d $D --get-parm
+expect "frame intervals: 30 frames per second" "\(30\.000 fps\)" v4l2-ctl -d $D --list-frameintervals width=1280,height=720,pixelformat=MPEG
+size 1920 1080
 set_input 2
