@@ -255,6 +255,11 @@ static void gchd_apply_changes(int fd, const struct gchd_vals *v,
 		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
 			  vbr ? V4L2_MPEG_VIDEO_BITRATE_MODE_VBR :
 				V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
+	if (v->input == 1 && rate_changed && v->rate > 0)
+		/* Component: the bitrate itself; the driver encodes the highest
+		 * of the output CBR and a lower one VBR. */
+		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE,
+			  gchd_kbps(v->rate, false) * 1000);
 	if (analog && rate_changed) {
 		double lo = vbr ? gchd_vbr_min[o] : GCHD_CBR_MIN;
 		double hi = vbr ? gchd_vbr_max[o] : GCHD_CBR_MAX;
@@ -329,8 +334,8 @@ static bool gchd_read_device(const char *path, struct gchd_vals *v)
 		kb = c.value / 1000;
 	if (v->output == 2)
 		v->mode = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
-	v->rate = v->mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR ? kb / 2000.0 :
-								kb / 1000.0;
+	v->rate = v->mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR && v->input != 1 ?
+			  kb / 2000.0 : kb / 1000.0;
 	c.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE;
 	if (ioctl(fd, VIDIOC_G_CTRL, &c) == 0)
 		v->profile = c.value;
@@ -1091,6 +1096,15 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 	lo = vbr ? gchd_vbr_min[o] : GCHD_CBR_MIN;
 	hi = vbr ? gchd_vbr_max[o] : GCHD_CBR_MAX;
 	def = vbr ? gchd_vbr_def[o] : GCHD_CBR_DEF;
+	if (input == 1) {
+		/* Component: the driver's range for the output (Mbit/s). */
+		double cmax = obs_data_get_double(settings, "comp_rate_max");
+
+		vbr = false;
+		slot = 1;
+		lo = cmax > 0 ? obs_data_get_double(settings, "comp_rate_min") : 2.0;
+		hi = def = cmax > 0 ? cmax : 30.0;
+	}
 	r = obs_data_get_double(settings, "rate");
 
 	/* Other bitrate mode or 480x360: show the bitrate last used there. */
@@ -1125,7 +1139,8 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 	obs_property_set_visible(obs_properties_get(props, "stretch"), analog);
 	obs_property_set_visible(obs_properties_get(props, "bitrate_mode"),
 				 analog && !mobile);
-	obs_property_set_visible(obs_properties_get(props, "rate"), analog);
+	obs_property_set_visible(obs_properties_get(props, "rate"),
+				 analog || input == 1);
 	obs_property_float_set_limits(obs_properties_get(props, "rate"), lo, hi,
 				      0.01);
 	return true;
@@ -1156,6 +1171,21 @@ static void gchd_comp_sizes(const char *path, char *buf, size_t size)
 				      n ? "," : "", w, h, code);
 		if (n >= size)
 			break;
+	}
+	close(fd);
+}
+
+/* Component: range of the bitrate control (the output's), in Mbit/s. */
+static void gchd_comp_rate_range(const char *path, obs_data_t *settings)
+{
+	struct v4l2_queryctrl q = { .id = V4L2_CID_MPEG_VIDEO_BITRATE };
+	int fd = open(path, O_RDWR | O_NONBLOCK);
+
+	if (fd < 0)
+		return;
+	if (ioctl(fd, VIDIOC_QUERYCTRL, &q) == 0 && q.maximum < 40000000) {
+		obs_data_set_double(settings, "comp_rate_min", q.minimum / 1e6);
+		obs_data_set_double(settings, "comp_rate_max", q.maximum / 1e6);
 	}
 	close(fd);
 }
@@ -1225,6 +1255,7 @@ static obs_properties_t *gchd_properties(void *data)
 
 				gchd_comp_sizes(path, sizes, sizeof(sizes));
 				obs_data_set_string(settings, "comp_sizes", sizes);
+				gchd_comp_rate_range(path, settings);
 			}
 			pthread_mutex_lock(&s->lock);
 			s->cur = v;
@@ -1277,12 +1308,8 @@ read_done:
 	obs_property_set_long_description(
 		p, "VBR: the average bitrate (half of the setting); CBR: the bitrate");
 
-	p = obs_properties_add_list(props, "profile", "H.264 profile",
-				    OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
-	obs_property_list_add_int(p, "High", V4L2_MPEG_VIDEO_H264_PROFILE_HIGH);
-	obs_property_list_add_int(p, "Main", V4L2_MPEG_VIDEO_H264_PROFILE_MAIN);
-	obs_property_list_add_int(p, "Baseline",
-				  V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE);
+	/* H.264 profile: not offered (the driver's default, as in the
+	 * Windows software). */
 
 	obs_properties_add_bool(props, "stretch", "Stretch SD input");
 	obs_property_set_long_description(

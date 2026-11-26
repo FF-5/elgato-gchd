@@ -3,7 +3,8 @@
 #
 # gchd-settings: settings of the Elgato Game Capture HD (elgato_gchd
 # driver) in a text menu: input, output size, bitrate, bitrate mode,
-# H.264 profile, stretch of SD input. The driver remembers the settings.
+# stretch of SD input, for component "Allow 50/60 fps". The driver
+# remembers the settings.
 #
 #   gchd-settings [DEVICE]      DEVICE: default /dev/elgato-gchd, else the
 #                               first device of the driver
@@ -105,7 +106,7 @@ menu_bitrate() {
 	local cur kb
 	cur=$(ctrl_get video_bitrate)
 	kb=$(whiptail --title "$TITLE" --inputbox \
-		"Bitrate in kbit/s (2000-15000 for composite/S-video)" 10 60 \
+		"Bitrate in kbit/s ($(v4l2-ctl -d "$DEV" -l 2>/dev/null | sed -n 's/^ *video_bitrate .*min=\([0-9]*\) max=\([0-9]*\).*/\1-\2/p' | awk -F- '{ printf "%d-%d", $1 / 1000, $2 / 1000 }'))" 10 60 \
 		"$((${cur:-11250000} / 1000))" 3>&1 1>&2 2>&3) || return
 	[[ "$kb" =~ ^[0-9]+$ ]] || { whiptail --msgbox "Not a number: $kb" 8 40; return; }
 	apply "The bitrate" -c "video_bitrate=$((kb * 1000))"
@@ -117,14 +118,6 @@ menu_mode() {
 	n=$(whiptail --title "$TITLE" --default-item "${cur:-1}" --menu "Bitrate mode" 12 50 2 \
 		1 "Constant (CBR)" 0 "Variable (VBR)" 3>&1 1>&2 2>&3) || return
 	apply "The bitrate mode" -c "video_bitrate_mode=$n"
-}
-
-menu_profile() {
-	local cur n
-	cur=$(ctrl_get h264_profile)
-	n=$(whiptail --title "$TITLE" --default-item "${cur:-4}" --menu "H.264 profile" 13 50 3 \
-		4 High 2 Main 0 Baseline 3>&1 1>&2 2>&3) || return
-	apply "The H.264 profile" -c "h264_profile=$n"
 }
 
 menu_stretch() {
@@ -148,9 +141,9 @@ while :; do
 	fi
 	if [ "${i:-0}" = 1 ]; then
 		items+=(compout "Output size: $(size_get)"
+			bitrate "Bitrate: $(( $(ctrl_get video_bitrate || echo 0) / 1000 )) kbit/s"
 			allow "Allow 50/60 fps: $( [ "$(ctrl_get allow_50_60_fps)" = 0 ] && echo off || echo on )")
 	fi
-	items+=(profile "H.264 profile: $(ctrl_get h264_profile)")
 	if [ "${i:-0}" -ge 2 ]; then
 		items+=(stretch "Stretch SD input: $( [ "$(ctrl_get stretch_sd_input)" = 1 ] && echo on || echo off )")
 	fi
@@ -161,7 +154,6 @@ while :; do
 	output) menu_output ;;
 	bitrate) menu_bitrate ;;
 	mode) menu_mode ;;
-	profile) menu_profile ;;
 	stretch) menu_stretch ;;
 	compout) menu_comp_output ;;
 	allow) menu_allow ;;

@@ -17,11 +17,13 @@ properties.
   when the source is created (Deinterlacing in the source's context menu).
 - **Properties:** input (HDMI, component, composite, S-video), output size
   of composite and S-video (720x480 NTSC / 720x576 PAL, 640 × 480,
-  480 × 360), bitrate mode and bitrate, H.264 profile, stretch of SD
-  input; for component the output sizes the source allows (the
-  resolutions the driver lists, source size first) and "Allow 50/60 fps".
-  Output size, bitrate mode, bitrate and stretch are hidden for HDMI;
-  bitrate mode, bitrate and stretch for component. They are the driver's settings, shared with the
+  480 × 360), bitrate mode and bitrate, stretch of SD input; for
+  component the output sizes the source allows (the resolutions the
+  driver lists, source size first), the bitrate in the driver's range for
+  the output and "Allow 50/60 fps". Output size, bitrate mode, bitrate
+  and stretch are hidden for HDMI; bitrate mode and stretch for
+  component. The H.264 profile is not offered (the driver's default, as
+  the Windows software does). They are the driver's settings, shared with the
   settings window and other programs: the properties show the device's
   values when they open and follow changes made elsewhere (checked every
   1.5 s). A change in the dialog is applied to the device 0.5 s after the
@@ -31,7 +33,7 @@ properties.
   dialog again. Changes are remembered by the driver. Only values that
   differ from the device are sent, so values the dialog still shows from
   before never overwrite a change made elsewhere. A change of bitrate
-  mode or input group shows the bitrate (and mode, profile) the driver
+  mode or input group shows the bitrate (and mode) the driver
   keeps for it (read from its module parameters); a new bitrate mode is sent alone and the driver uses its
   kept bitrate unless the slider was moved.
 - **Bitrate:** shown in Mbit/s as in the observed settings

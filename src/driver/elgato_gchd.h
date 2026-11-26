@@ -203,6 +203,7 @@ int gchd_input_configure(struct gchd *);
 int gchd_input_start(struct gchd *);
 int gchd_input_check_mode(struct gchd *);
 int gchd_component_mode_changed(struct gchd *);
+void gchd_bitrate_range(struct gchd *);
 int gchd_input_read_family(struct gchd *, u8 *);
 void gchd_input_log_status(struct gchd *, const char *);
 int gchd_input_read_lock(struct gchd *, u8 *, u8 *);
@@ -262,6 +263,49 @@ static inline u8 gchd_out_target(const struct gchd *d)
 	if (d->input >= 2)
 		return d->analog_out;
 	return d->input == 1 ? gchd_comp_out(d) : GCHD_OUT_STANDARD;
+}
+
+/*
+ * Component: highest (default) bitrate in kbit/s of the output in effect:
+ * source size 30000 (1080i/1080p), 26250 (720p at 60 frames per second),
+ * 15000 (720p at 30, 480p, 576p), 11250 (480i, 576i); 1280 x 720 15000,
+ * 640 x 480 11250, 480 x 360 15000. The lowest is 8/15 of it. 0: no source
+ * detected yet.
+ */
+static inline u32 gchd_comp_bitrate_max(const struct gchd *d)
+{
+	u8 out = gchd_comp_out(d);
+
+	if (!d->input_height)
+		return 0;
+	if (out == GCHD_OUT_640X480)
+		return 11250;
+	if (out != GCHD_OUT_STANDARD)
+		return 15000;
+	if (d->input_height == 1080)
+		return 30000;
+	if (d->input_height == 720)
+		return d->allow_5060 ? 26250 : 15000;
+	return d->input_interlaced ? 11250 : 15000;
+}
+
+static inline u32 gchd_comp_bitrate_min(const struct gchd *d)
+{
+	return gchd_comp_bitrate_max(d) * 8 / 15;
+}
+
+/*
+ * Component bitrate in use: the one set, when inside the output's range,
+ * else the highest.
+ */
+static inline u32 gchd_comp_bitrate(const struct gchd *d)
+{
+	u32 hi = gchd_comp_bitrate_max(d);
+
+	if (d->bitrate_forced && d->bitrate >= gchd_comp_bitrate_min(d) &&
+	    d->bitrate <= hi)
+		return d->bitrate;
+	return hi;
 }
 
 /* 640 x 480 and 480 x 360 are encoded on transport output 2. */

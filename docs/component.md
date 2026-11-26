@@ -176,6 +176,14 @@ output size (or a new encoder setting) restarts the encoder (NULL, STOP,
 encoder fields, START), as the Windows software does. Scaled outputs are
 progressive; 640 × 480 and 480 × 360 use transport output 2.
 
+Bitrate: the range of `V4L2_CID_MPEG_VIDEO_BITRATE` follows the output in
+effect (highest = default: 30000 kbit/s for 1080i/1080p, 26250 for 720p at
+60, 15000 for 720p at 30, 480p, 576p, 1280 × 720 and 480 × 360, 11250 for
+480i, 576i and 640 × 480; lowest 8/15 of it, as the Windows software's
+slider). The highest is encoded CBR, a lower one VBR (`v_rate_mode 1`,
+`v_max_cpb_delay 10`), as recorded; 480 × 360 always VBR. A bitrate outside
+the output's range (set for another output) gives the highest.
+
 Control "Allow 50/60 fps" (default on): off encodes 720p at 30 frames per
 second (signalled 60000/1001, GOP 8, 15000 kbit/s) and 576p/480p with GOP
 12/14 and level 31 (also their 640 × 480); no effect on 1080i and

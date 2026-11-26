@@ -2125,6 +2125,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   mutex_unlock(&d->lifecycle_lock);
   if (group_changed)
    gchd_ctrls_show(d);
+  gchd_bitrate_range(d);
   return 0;
  }
 
@@ -2137,6 +2138,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  mutex_unlock(&d->lifecycle_lock);
  if (group_changed)
   gchd_ctrls_show(d);
+ gchd_bitrate_range(d);
  return 0;
 }
 
@@ -2554,6 +2556,7 @@ static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
    if (out != d->hd_out) {
     gchd_mark(d, "request output %ux%u", x->fmt.pix.width, x->fmt.pix.height);
     d->hd_out = out;
+    gchd_bitrate_range(d);
     gchd_settings_save(d);
     if (d->streaming)
      mod_delayed_work(system_wq, &d->mode_work, 0);
@@ -2571,8 +2574,10 @@ static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
   return gchd_gfmt(f, p, x);
  }
 
- if (d->input == 1)
+ if (d->input == 1) {
   d->hd_out = gchd_comp_out_for(x->fmt.pix.width, x->fmt.pix.height);
+  gchd_bitrate_range(d);
+ }
  m = gchd_adjust_fmt(d, &x->fmt.pix);
  if (d->input >= 2)
   gchd_set_analog_out(d, gchd_analog_out_for(x->fmt.pix.width,
@@ -2676,10 +2681,42 @@ static const struct v4l2_ioctl_ops gchd_ioctl={
  */
 static s32 gchd_ctrl_bitrate_value(const struct gchd *d)
 {
+ if (d->input == 1 && gchd_comp_bitrate_max(d))
+  return gchd_comp_bitrate(d) * 1000;
  if (d->bitrate_forced)
   return d->bitrate * 1000;
  return d->input >= 2 && d->analog_out == GCHD_OUT_MOBILE ? 15000000 :
                                                            11250000;
+}
+
+/*
+ * Range of the bitrate control: component the range of the output in
+ * effect (the highest is the default, encoded CBR; lower VBR); other inputs
+ * 32 kbit/s to 40 Mbit/s. The kept bitrate itself is not changed.
+ */
+static void gchd_bitrate_range_locked(struct gchd *d)
+{
+ s64 lo = 32000, hi = 40000000, def = 11250000;
+
+ if (!d->ctrl_bitrate)
+  return;
+ if (d->input == 1 && gchd_comp_bitrate_max(d)) {
+  hi = (s64)gchd_comp_bitrate_max(d) * 1000;
+  lo = (s64)gchd_comp_bitrate_min(d) * 1000;
+  def = hi;
+ }
+ WRITE_ONCE(d->ctrl_sync, true);
+ __v4l2_ctrl_modify_range(d->ctrl_bitrate, lo, hi, 1000, def);
+ WRITE_ONCE(d->ctrl_sync, false);
+}
+
+void gchd_bitrate_range(struct gchd *d)
+{
+ if (!d->ctrl_bitrate)
+  return;
+ mutex_lock(d->ctrls.lock);
+ gchd_bitrate_range_locked(d);
+ mutex_unlock(d->ctrls.lock);
 }
 
 /* Level menu value of the settings in use (automatic: 4.1). */
@@ -2742,6 +2779,7 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
   break;
  case V4L2_CID_GCHD_ALLOW_5060:
   d->allow_5060 = c->val;
+  gchd_bitrate_range_locked(d);
   break;
  case V4L2_CID_MPEG_VIDEO_BITRATE:
   d->bitrate = c->val / 1000;

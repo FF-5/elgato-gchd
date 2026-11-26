@@ -2035,6 +2035,7 @@ static int gchd_input_configure_mode(struct gchd *d)
  if (d->input == 1) {
   d->out_active = gchd_out_target(d);
   d->enc_dirty = false;
+  gchd_bitrate_range(d);
  }
  r = gchd_encoder_program(d);
  if (r)

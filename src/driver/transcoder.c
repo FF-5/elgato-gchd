@@ -493,7 +493,14 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
    comp_level = out == GCHD_OUT_640X480 ? (slow ? 31 : 30) :
                 out == GCHD_OUT_MOBILE ? 22 : 31;
   }
-  bitrate = d->bitrate_forced ? clamp_t(u32, d->bitrate, 2000, 40000) : def;
+  /*
+   * The highest bitrate of the output is encoded CBR, a lower one VBR (as
+   * composite); 480 x 360 always VBR.
+   */
+  bitrate = def;
+  if (d->bitrate_forced && d->bitrate >= def * 8 / 15 && d->bitrate < def)
+   bitrate = d->bitrate;
+  vbr = bitrate < def || out == GCHD_OUT_MOBILE;
   auto_max_bitrate = bitrate * 9U / 10U;
   auto_average_bitrate = bitrate / 2U;
   auto_min_bitrate = bitrate <= 4000 ? 0 : bitrate < 10000 ? bitrate / 10U :
