@@ -271,3 +271,16 @@ bash gchd-test.sh T-051 --branch feat/component
 
 ## Maintainer comments
 
+=== summary (T-051, 1988a40 Component bitrate as in the Windows software: CBR at the highest of the output, VBR below, 480x360 VBR; bitrate control range per output; bitrate slider for component in the settings window, OBS plugin and text menu; H.264 profile no longer offered there (T-051))
+PASS | step 3 driver: bitrate range per output | 1080i source size: 16-30 Mbit/s
+PASS | step 3 driver: bitrate range per output | 640x480: 6-11.25 Mbit/s
+PASS | step 3 driver: bitrate range per output | 1280x720: 8-15 Mbit/s
+PASS | step 3 driver: bitrate range per output | 1080i at 20 Mbit/s kept
+PASS | step 4 settings window | a Bitrate slider from 16.00 to 30.00 Mbit/s is shown; no H.264 profile row?
+PASS | step 4 settings window | window: about 20 Mbit/s
+PASS | step 4 settings window | the slider now goes from 6.00 to 11.25 (and stands at 11.25)?
+PASS | step 4 settings window | Composite: no H.264 profile row either; Bitrate mode and Bitrate as before?
+PASS | step 5 OBS plugin | OBS: a Bitrate slider from 16.00 to 30.00 Mbit/s; no H.264 profile; no Bitrate mode?
+PASS | step 5 OBS plugin | OBS: about 25 Mbit/s
+
+FAIL: 0  WARN: 0
