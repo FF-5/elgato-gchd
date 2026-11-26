@@ -3,7 +3,7 @@
 # placeholders until TODO R13) in the window and the plugin; the window
 # after Composite -> Component (sizes and bitrate from the mode detected
 # last). The driver's kept bitrate per mode and across output sizes was
-# accepted on 2026-11-27.
+# accepted on 2026-11-26.
 # Needs: the PS3 on component in 1080i, OBS with the plugin.
 
 INST="$REPO/install-driver.sh"
