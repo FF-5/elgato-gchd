@@ -49,9 +49,9 @@ sudo dkms install elgato-gchd/0.5.10
 | `input` | 0 | Input at load: 0 HDMI, 1 component, 2 composite, 3 S-video. |
 | `output` | 0 | Composite/S-video output size: 0 source size (720 × 480 or 720 × 576), 1 640 × 480, 2 480 × 360. |
 | `format` | 0 | Pixel format: 0 H.264, 1 MPEG transport stream. |
-| `out_bitrate_mode` | `1,1,0,1,1` | Bitrate mode per output size (0 VBR, 1 CBR), in this order: composite/S-video source size, 640 × 480, 480 × 360 (VBR only), 1280 × 720, HDMI/component source size. |
-| `out_bitrate_cbr` | `0,0,0,0,0` | Last CBR bitrate per output size (same order) in kbit/s, 0 automatic. |
-| `out_bitrate_vbr` | `0,0,0,0,0` | Last VBR bitrate per output size (same order) in kbit/s (the control value, twice the average), 0 automatic. |
+| `out_bitrate_mode` | `0,1,1,1,1,1` | Bitrate mode per output mode (0 VBR, 1 CBR), in this order: 480 × 360 (VBR only), 640 × 480 and 720 × 480i/576i, 720 × 480p/576p, 1280 × 720 at 60 frames per second, 1280 × 720 at 30 and scaled from 1080, 1920 × 1080i/1080p. |
+| `out_bitrate_cbr` | `0,0,0,0,0,0` | Last CBR bitrate per output mode (same order) in kbit/s, 0 automatic. |
+| `out_bitrate_vbr` | `0,0,0,0,0,0` | Last VBR bitrate per output mode (same order) in kbit/s (the control value, twice the average), 0 automatic. |
 | `hd_output` | 0 | Component output size: 0 source size, 1 640 × 480, 2 480 × 360, 3 1280 × 720 (sizes the source does not allow give the source size). |
 | `allow_5060` | 1 | Component: 1 encodes 720p at 60 and 576p/480p at 50/60 frames per second with the short GOP; 0 encodes 720p at 30 frames per second and 576p/480p with the long GOP. |
 | `stretch` | 0 | Stretch standard-definition input (composite/S-video). |
@@ -61,19 +61,22 @@ sudo dkms install elgato-gchd/0.5.10
 | `std_svideo` | 0 | The same for S-video. |
 | `hd_h264_profile` | 4 | HDMI/component H.264 profile (V4L2 value). |
 | `hd_h264_level` | 0 | HDMI/component H.264 level × 10 (30–51), 0 automatic. |
-| `bitrate`, `bitrate_mode`, `bitrate_cbr`, `bitrate_vbr`, `bitrate_small`, `hd_bitrate_mode`, `hd_bitrate_cbr`, `hd_bitrate_vbr` | | Older settings files (bitrate settings per group): read only when no `out_bitrate_*` parameter is given; composite/S-video values for its output sizes, HDMI/component values for 1280 × 720 and its source size. |
+| `bitrate`, `bitrate_mode`, `bitrate_cbr`, `bitrate_vbr`, `bitrate_small`, `hd_bitrate_mode`, `hd_bitrate_cbr`, `hd_bitrate_vbr` | | Older settings files (bitrate settings per group): read only when no `out_bitrate_*` parameter is given; composite/S-video values for 480 × 360 and 640 × 480 / 480i / 576i, HDMI/component values for the other output modes. |
 
-### Settings per output size
+### Settings per output mode
 
-Each output size keeps its own bitrate settings, the same for every input:
-the bitrate mode last used there and the bitrate last set in each mode. The
-sizes are the composite/S-video source size, 640 × 480, 480 × 360 (VBR
-only), 1280 × 720 and the HDMI/component source size (its bitrates differ
-from those of standard definition). A change of the output size or the
-input loads the new size's mode and bitrate into the controls; a change of
-`video_bitrate_mode` loads the bitrate last set in that mode, and
-`video_bitrate` changes the bitrate in use. A kept component bitrate outside
-the range of the output in effect gives the highest bitrate of that output.
+Each output mode (the picture encoded) keeps its own bitrate settings, the
+same for every input: the bitrate mode last used there and the bitrate last
+set in each mode. The output modes, with the highest bitrate: 480 × 360
+(15000 kbit/s, VBR only); 640 × 480 and 720 × 480i/576i (11250);
+720 × 480p/576p (15000); 1280 × 720 at 60 frames per second (26250);
+1280 × 720 at 30 and scaled from 1080 (15000); 1920 × 1080i/1080p (30000).
+The output mode follows the input, the output size, the source mode and
+"Allow 50/60 fps" (720p); on a change the controls show that mode's bitrate
+mode and bitrate. A change of `video_bitrate_mode` loads the bitrate last
+set in that mode, and `video_bitrate` changes the bitrate in use. A kept
+component bitrate outside the output's range gives the highest bitrate of
+that output.
 The bitrate control is volatile: reading it always gives the bitrate in use.
 
 H.264 profile and level are kept per group: composite and S-video share

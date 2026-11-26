@@ -307,15 +307,19 @@ bash gchd-test.sh T-051 --branch feat/component
   showed and sent 15.00. Maintainer: the bitrate mode carried over to
   every output size; each output size should remember the mode it used
   last, and the settings of an output size are the same for every input.
-  Now the driver keeps per output size (composite/S-video source size,
-  640 × 480, 480 × 360, 1280 × 720, HDMI/component source size) the mode
-  last used and the last bitrate of each mode (parameters
-  `out_bitrate_mode`, `out_bitrate_cbr`, `out_bitrate_vbr`; the older
-  per-group parameters are read once); a change of output size or input
-  loads that size's mode and bitrate into the controls. The source sizes
-  of standard definition and HDMI/component are kept apart because their
-  bitrates differ. Window and plugin show the mode and bitrate kept for
-  the size; the window no longer sends VBR itself at 480 × 360.
+  Agreed with the maintainer: settings are kept per output mode (the
+  picture encoded), shared by every input: 480 × 360 (15000, VBR only);
+  640 × 480 and 720 × 480i/576i (11250); 720 × 480p/576p (15000); 1280 × 720
+  at 60 fps (26250); 1280 × 720 at 30 fps and scaled from 1080 (15000; own
+  mode because the highest bitrate differs, following "Allow 50/60 fps" as
+  the Windows software does); 1920 × 1080i/1080p (30000). Each keeps the
+  bitrate mode last used and the last bitrate of each mode (parameters
+  `out_bitrate_mode`, `out_bitrate_cbr`, `out_bitrate_vbr`, six values;
+  the older per-group parameters are read once). The driver follows the
+  input, output size, source mode and option, and shows that mode's values
+  in the controls; `VIDIOC_G_DV_TIMINGS` gives the component mode detected
+  last, from which the plugin predicts the output mode. The window reads
+  the values back and no longer sends VBR itself at 480 × 360.
 
 ## Maintainer comments
 

@@ -32,9 +32,17 @@
 #define GCHD_OUT_640X480  1
 #define GCHD_OUT_MOBILE   2 /* 480 x 360 */
 #define GCHD_OUT_1280X720 3 /* component, 1080i/1080p sources */
-/* Bitrate settings: the four output sizes and the HDMI/component source size. */
-#define GCHD_RATE_HD      4
-#define GCHD_RATE_SLOTS   5
+/*
+ * Bitrate settings per output mode (the picture encoded), the same for
+ * every input; highest bitrate in brackets.
+ */
+#define GCHD_RATE_360     0 /* 480 x 360 (15000, VBR only) */
+#define GCHD_RATE_SD      1 /* 640 x 480, 720 x 480i/576i (11250) */
+#define GCHD_RATE_SDP     2 /* 720 x 480p/576p (15000) */
+#define GCHD_RATE_720_60  3 /* 1280 x 720 at 60 frames per second (26250) */
+#define GCHD_RATE_720     4 /* 1280 x 720 at 30, scaled from 1080 (15000) */
+#define GCHD_RATE_1080    5 /* 1920 x 1080i/1080p (30000) */
+#define GCHD_RATE_SLOTS   6
 #define GCHD_RING_FRAMES 512
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
@@ -183,9 +191,11 @@ struct gchd {
   u8 level;        /* level x10, 0 automatic */
  } grp[2];
  /*
-  * Bitrate settings per output size, the same for every input (see
-  * gchd_rate_slot): the mode last used there and a bitrate per mode.
+  * Bitrate settings per output mode (GCHD_RATE_*), the same for every
+  * input: the mode last used there and a bitrate per mode; rate_slot is the
+  * one in use (d->bitrate_mode, d->bitrate).
   */
+ u8 rate_slot;
  struct gchd_rates {
   u16 bitrate[2];  /* kbit/s, 0 automatic: [0] VBR, [1] CBR */
   u8 bitrate_mode; /* V4L2_MPEG_VIDEO_BITRATE_MODE_* */

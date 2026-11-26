@@ -186,12 +186,14 @@ slider). In the recordings the highest is encoded CBR and the lowest VBR
 (`v_rate_mode 1`, `v_max_cpb_delay 10`); 480 × 360 always VBR. Where the
 Windows software switches between them is not recorded yet. The driver
 works as for composite: `V4L2_CID_MPEG_VIDEO_BITRATE_MODE` selects CBR or
-VBR (480 × 360 VBR only). Each output size (source size, 1280 × 720,
-640 × 480, 480 × 360) keeps the bitrate mode last used there and the last
-bitrate of each mode; 640 × 480 and 480 × 360 share them with composite and
-S-video. A kept bitrate outside the range of the output in effect (the
-source size of another source mode) gives the highest; it stays kept for a
-source it fits again.
+VBR (480 × 360 VBR only). Each output mode (the picture encoded:
+480 × 360; 640 × 480 and 480i/576i; 480p/576p; 720p at 60; 720p at 30 and
+1280 × 720 scaled from 1080; 1080i/1080p) keeps the bitrate mode last used
+there and the last bitrate of each mode, the same for every input
+(composite and S-video share 480 × 360 and 640 × 480 / 480i / 576i). A
+change of source mode, output size or "Allow 50/60 fps" (720p) uses that
+output mode's settings. `VIDIOC_G_DV_TIMINGS` gives the mode detected last
+while none is detected.
 
 Control "Allow 50/60 fps" (default on): off encodes 720p at 30 frames per
 second (signalled 60000/1001, GOP 8, 15000 kbit/s) and 576p/480p with GOP

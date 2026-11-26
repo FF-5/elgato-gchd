@@ -269,25 +269,26 @@ module_param_named(std_svideo, gchd_set_std[1], uint, 0644);
 MODULE_PARM_DESC(std_svideo, "Last standard on S-video: 0 unknown, 1 NTSC (60 Hz), 2 PAL (50 Hz)");
 
 /*
- * Bitrate settings per output size (source size, 640x480, 480x360,
- * 1280x720, HDMI/component source size), the same for every input: the
- * mode last used there and a bitrate per mode (kbit/s, 0 automatic).
+ * Bitrate settings per output mode, the same for every input: the mode last
+ * used there and a bitrate per mode (kbit/s, 0 automatic). Order: 480x360,
+ * 640x480 and 720x480i/576i, 720x480p/576p, 1280x720 at 60 frames per
+ * second, 1280x720 at 30 and scaled from 1080, 1920x1080.
  */
-static unsigned int gchd_set_out_mode[GCHD_RATE_SLOTS] = { 1, 1, 0, 1, 1 };
+static unsigned int gchd_set_out_mode[GCHD_RATE_SLOTS] = { 0, 1, 1, 1, 1, 1 };
 static int gchd_set_out_mode_n;
 module_param_array_named(out_bitrate_mode, gchd_set_out_mode, uint,
                          &gchd_set_out_mode_n, 0644);
-MODULE_PARM_DESC(out_bitrate_mode, "Bitrate mode per output size (0 VBR, 1 CBR): composite/S-video source size, 640x480, 480x360 (VBR only), 1280x720, HDMI/component source size");
+MODULE_PARM_DESC(out_bitrate_mode, "Bitrate mode per output mode (0 VBR, 1 CBR): 480x360 (VBR only), 640x480 and 720x480i/576i, 720x480p/576p, 1280x720 at 60 fps, 1280x720 at 30 fps and scaled from 1080, 1920x1080");
 static unsigned int gchd_set_out_cbr[GCHD_RATE_SLOTS];
 static int gchd_set_out_cbr_n;
 module_param_array_named(out_bitrate_cbr, gchd_set_out_cbr, uint,
                          &gchd_set_out_cbr_n, 0644);
-MODULE_PARM_DESC(out_bitrate_cbr, "Last CBR bitrate per output size (as out_bitrate_mode) in kbit/s, 0 automatic");
+MODULE_PARM_DESC(out_bitrate_cbr, "Last CBR bitrate per output mode (as out_bitrate_mode) in kbit/s, 0 automatic");
 static unsigned int gchd_set_out_vbr[GCHD_RATE_SLOTS];
 static int gchd_set_out_vbr_n;
 module_param_array_named(out_bitrate_vbr, gchd_set_out_vbr, uint,
                          &gchd_set_out_vbr_n, 0644);
-MODULE_PARM_DESC(out_bitrate_vbr, "Last VBR bitrate per output size (as out_bitrate_mode) in kbit/s, 0 automatic");
+MODULE_PARM_DESC(out_bitrate_vbr, "Last VBR bitrate per output mode (as out_bitrate_mode) in kbit/s, 0 automatic");
 
 /*
  * Older settings files (read when the out_bitrate_* parameters are not
@@ -346,51 +347,59 @@ static unsigned int gchd_group(const struct gchd *d)
 }
 
 /*
- * Bitrate settings in use: those of the selected input's output size; the
- * HDMI/component source size has its own (other bitrates than the
- * composite/S-video source size).
+ * Output mode of the picture encoded (GCHD_RATE_*): the output size, and
+ * at the source size the source mode (component: the one detected last
+ * while none is detected; unknown: 1920 x 1080).
  */
 static unsigned int gchd_rate_slot(const struct gchd *d)
 {
- u8 out = d->input >= 2 ? d->analog_out :
-          d->input == 1 ? d->hd_out : GCHD_OUT_STANDARD;
+ u8 out = gchd_out_target(d);
+ u32 h = d->input == 1 ? gchd_comp_src_height(d) : d->input_height;
+ bool il = d->input == 1 ? gchd_comp_src_interlaced(d) : d->input_interlaced;
 
- if (out == GCHD_OUT_STANDARD)
-  return d->input >= 2 ? GCHD_OUT_STANDARD : GCHD_RATE_HD;
- return out;
+ if (out == GCHD_OUT_MOBILE)
+  return GCHD_RATE_360;
+ if (out == GCHD_OUT_640X480 || d->input >= 2)
+  return GCHD_RATE_SD;
+ if (out == GCHD_OUT_1280X720)
+  return GCHD_RATE_720;
+ if (!h || h == 1080)
+  return GCHD_RATE_1080;
+ if (h == 720)
+  return d->input == 1 && !d->allow_5060 ? GCHD_RATE_720 : GCHD_RATE_720_60;
+ return il ? GCHD_RATE_SD : GCHD_RATE_SDP;
 }
 
 /* Kept bitrate of the mode in use: [0] VBR, [1] CBR; 480 x 360 is VBR only. */
-static unsigned int gchd_rate_index(const struct gchd *d, unsigned int slot)
+static unsigned int gchd_rate_index(const struct gchd *d)
 {
- return slot != GCHD_OUT_MOBILE && d->bitrate_mode ? 1 : 0;
+ return d->rate_slot != GCHD_RATE_360 && d->bitrate_mode ? 1 : 0;
 }
 
-/* Keep the bitrate settings in use for their output size. */
+/* Keep the bitrate settings in use for their output mode. */
 static void gchd_rate_store(struct gchd *d)
 {
- unsigned int s = gchd_rate_slot(d);
- struct gchd_rates *r = &d->rates[s];
+ struct gchd_rates *r = &d->rates[d->rate_slot];
 
- if (s != GCHD_OUT_MOBILE)
+ if (d->rate_slot != GCHD_RATE_360)
   r->bitrate_mode = d->bitrate_mode;
- r->bitrate[gchd_rate_index(d, s)] = d->bitrate_forced ? d->bitrate : 0;
+ r->bitrate[gchd_rate_index(d)] = d->bitrate_forced ? d->bitrate : 0;
 }
 
 /* Use the bitrate kept for the mode in use. */
 static void gchd_rate_load_bitrate(struct gchd *d)
 {
- unsigned int s = gchd_rate_slot(d);
- u16 b = d->rates[s].bitrate[gchd_rate_index(d, s)];
+ u16 b = d->rates[d->rate_slot].bitrate[gchd_rate_index(d)];
 
  d->bitrate_forced = b != 0;
  d->bitrate = b ? b : 40000;
 }
 
-/* Use the bitrate settings (mode, bitrate) of the output size in use. */
+/* Use the bitrate settings (mode, bitrate) of the output mode in effect. */
 static void gchd_rate_load(struct gchd *d)
 {
- d->bitrate_mode = d->rates[gchd_rate_slot(d)].bitrate_mode;
+ d->rate_slot = gchd_rate_slot(d);
+ d->bitrate_mode = d->rates[d->rate_slot].bitrate_mode;
  gchd_rate_load_bitrate(d);
 }
 
@@ -448,15 +457,15 @@ static void gchd_settings_save(struct gchd *d)
  snprintf(e[0], sizeof(e[0]), "GCHD_INPUT=%u", d->input);
  snprintf(e[1], sizeof(e[1]), "GCHD_OUTPUT=%u", gchd_set_output);
  snprintf(e[2], sizeof(e[2]), "GCHD_FORMAT=%u", gchd_set_format);
- snprintf(e[3], sizeof(e[3]), "GCHD_OUT_BITRATE_MODE=%u,%u,%u,%u,%u",
+ snprintf(e[3], sizeof(e[3]), "GCHD_OUT_BITRATE_MODE=%u,%u,%u,%u,%u,%u",
           gchd_set_out_mode[0], gchd_set_out_mode[1], gchd_set_out_mode[2],
-          gchd_set_out_mode[3], gchd_set_out_mode[4]);
- snprintf(e[4], sizeof(e[4]), "GCHD_OUT_BITRATE_CBR=%u,%u,%u,%u,%u",
+          gchd_set_out_mode[3], gchd_set_out_mode[4], gchd_set_out_mode[5]);
+ snprintf(e[4], sizeof(e[4]), "GCHD_OUT_BITRATE_CBR=%u,%u,%u,%u,%u,%u",
           gchd_set_out_cbr[0], gchd_set_out_cbr[1], gchd_set_out_cbr[2],
-          gchd_set_out_cbr[3], gchd_set_out_cbr[4]);
- snprintf(e[5], sizeof(e[5]), "GCHD_OUT_BITRATE_VBR=%u,%u,%u,%u,%u",
+          gchd_set_out_cbr[3], gchd_set_out_cbr[4], gchd_set_out_cbr[5]);
+ snprintf(e[5], sizeof(e[5]), "GCHD_OUT_BITRATE_VBR=%u,%u,%u,%u,%u,%u",
           gchd_set_out_vbr[0], gchd_set_out_vbr[1], gchd_set_out_vbr[2],
-          gchd_set_out_vbr[3], gchd_set_out_vbr[4]);
+          gchd_set_out_vbr[3], gchd_set_out_vbr[4], gchd_set_out_vbr[5]);
  snprintf(e[6], sizeof(e[6]), "GCHD_STRETCH=%u", gchd_set_stretch);
  snprintf(e[7], sizeof(e[7]), "GCHD_H264_PROFILE=%u", gchd_set_profile);
  snprintf(e[8], sizeof(e[8]), "GCHD_H264_LEVEL=%u", gchd_set_level);
@@ -504,9 +513,9 @@ static u16 gchd_rate_param(unsigned int kb)
 }
 
 /*
- * Older settings files: composite/S-video settings for its sizes (and the
- * single "bitrate" for its mode in use), HDMI/component for 1280x720 and
- * its source size.
+ * Older settings files: the composite/S-video group for 480 x 360 and
+ * 640 x 480 / 480i / 576i (and the single "bitrate" for its mode in use),
+ * the HDMI/component group for the other output modes.
  */
 static void gchd_rate_params_old(void)
 {
@@ -519,13 +528,13 @@ static void gchd_rate_params_old(void)
    gchd_set_bitrate_vbr = gchd_set_bitrate;
  }
  for (i = 0; i < GCHD_RATE_SLOTS; ++i) {
-  bool hd = i >= GCHD_OUT_1280X720;
+  bool hd = i > GCHD_RATE_SD;
 
   gchd_set_out_mode[i] = hd ? gchd_set_hd_bitrate_mode : gchd_set_bitrate_mode;
   gchd_set_out_cbr[i] = hd ? gchd_set_hd_bitrate_cbr : gchd_set_bitrate_cbr;
   gchd_set_out_vbr[i] = hd ? gchd_set_hd_bitrate_vbr :
-                        i == GCHD_OUT_MOBILE ? gchd_set_bitrate_small :
-                                               gchd_set_bitrate_vbr;
+                        i == GCHD_RATE_360 ? gchd_set_bitrate_small :
+                                             gchd_set_bitrate_vbr;
  }
 }
 
@@ -549,7 +558,7 @@ static void gchd_settings_load(struct gchd *d)
  for (i = 0; i < GCHD_RATE_SLOTS; ++i) {
   struct gchd_rates *r = &d->rates[i];
 
-  r->bitrate_mode = gchd_set_out_mode[i] && i != GCHD_OUT_MOBILE ?
+  r->bitrate_mode = gchd_set_out_mode[i] && i != GCHD_RATE_360 ?
                     V4L2_MPEG_VIDEO_BITRATE_MODE_CBR :
                     V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
   r->bitrate[0] = gchd_rate_param(gchd_set_out_vbr[i]);
@@ -2168,19 +2177,16 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_out_len = 0; WRITE_ONCE(d->wait_pat, true); d->ts_base_valid = false;
  d->ts_partial_len = 0;
  /*
-  * The bitrate settings of the new input's output size, the H.264
-  * settings of its group (composite/S-video, HDMI/component).
+  * The H.264 settings of the new input's group (composite/S-video,
+  * HDMI/component); the bitrate settings of its output mode follow below
+  * (gchd_bitrate_range()).
   */
- mutex_lock(d->ctrls.lock);
- gchd_rate_store(d);
  gchd_group_store(d);
  group_changed = gchd_group(d) != (i >= 2);
  d->previous_input = d->input;
  d->input = i;
  if (group_changed)
   gchd_group_load(d);
- gchd_rate_load(d);
- mutex_unlock(d->ctrls.lock);
  gchd_update_tvnorms(d);
  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
  mutex_lock(&gchd_last_input_lock);
@@ -2262,11 +2268,17 @@ static int gchd_dv_index(u32 width, u32 height, bool interlaced)
  return m ? (int)(m - gchd_modes) : -1;
 }
 
-/* Current timings of HDMI/component: the configured mode, else the last set. */
+/*
+ * Current timings of HDMI/component: the configured mode; component the
+ * mode detected last while none is detected; else the last set.
+ */
 static int gchd_dv_current(const struct gchd *d)
 {
  int i = gchd_dv_index(d->input_width, d->input_height, d->input_interlaced);
 
+ if (i < 0 && d->input == 1 && !d->input_height)
+  i = gchd_dv_index(d->comp_seen.width, d->comp_seen.height,
+                    d->comp_seen.interlaced);
  return i >= 0 ? i : d->dv_index;
 }
 
@@ -2607,10 +2619,9 @@ static const struct gchd_mode *gchd_adjust_fmt(struct gchd *d,
 static void gchd_bitrate_range_locked(struct gchd *d);
 
 /*
- * Output size of the selected input (composite/S-video or component): the
- * bitrate settings in use are kept for the old size and those of the new
- * one used (control handler lock: they are control values); the controls
- * show them.
+ * Output size of the selected input (composite/S-video or component); the
+ * bitrate settings of the new output mode are used (control handler lock:
+ * they are control values).
  */
 static void gchd_set_out(struct gchd *d, u8 out)
 {
@@ -2619,12 +2630,9 @@ static void gchd_set_out(struct gchd *d, u8 out)
  if (d->input == 0 || out == *cur)
   return;
  mutex_lock(d->ctrls.lock);
- gchd_rate_store(d);
  *cur = out;
- gchd_rate_load(d);
  gchd_bitrate_range_locked(d);
  mutex_unlock(d->ctrls.lock);
- gchd_ctrls_show(d);
 }
 
 static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
@@ -2778,9 +2786,10 @@ static s32 gchd_ctrl_bitrate_value(const struct gchd *d)
 }
 
 /*
- * Range of the bitrate control: component the range of the output in
- * effect (the highest is the default, encoded CBR; lower VBR); other inputs
- * 32 kbit/s to 40 Mbit/s. The kept bitrate itself is not changed.
+ * Bitrate settings of the output mode in effect, and the range of the
+ * bitrate control: component the range of the output (the highest is the
+ * default); other inputs 32 kbit/s to 40 Mbit/s. The kept bitrate itself
+ * is not changed.
  */
 static void gchd_bitrate_range_locked(struct gchd *d)
 {
@@ -2788,6 +2797,16 @@ static void gchd_bitrate_range_locked(struct gchd *d)
 
  if (!d->ctrl_bitrate)
   return;
+ /* Another output mode (input, output size, source mode, option): its
+  * bitrate mode and bitrate; the mode control shows it. */
+ if (gchd_rate_slot(d) != d->rate_slot) {
+  gchd_rate_load(d);
+  if (d->ctrl_mode) {
+   WRITE_ONCE(d->ctrl_sync, true);
+   __v4l2_ctrl_s_ctrl(d->ctrl_mode, d->bitrate_mode);
+   WRITE_ONCE(d->ctrl_sync, false);
+  }
+ }
  if (d->input == 1 && gchd_comp_bitrate_max(d)) {
   hi = (s64)gchd_comp_bitrate_max(d) * 1000;
   lo = (s64)gchd_comp_bitrate_min(d) * 1000;

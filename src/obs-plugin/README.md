@@ -34,10 +34,11 @@ properties.
   dialog again. Changes are remembered by the driver. Only values that
   differ from the device are sent, so values the dialog still shows from
   before never overwrite a change made elsewhere. A change of input
-  shows the output size the driver keeps for it; a change of output size
-  or input shows the bitrate mode and bitrate the driver keeps for that
-  output size, and a change of bitrate mode the bitrate kept for that mode
-  (read from its module parameters). These are not sent: the driver loads
+  shows the output size the driver keeps for it; a change of output size,
+  input, source mode or "Allow 50/60 fps" shows the bitrate mode and
+  bitrate the driver keeps for that output mode (the picture encoded), and
+  a change of bitrate mode the bitrate kept for that mode (read from its
+  module parameters; the source mode from `VIDIOC_G_DV_TIMINGS`). These are not sent: the driver loads
   them itself; a new bitrate mode is sent alone unless the slider was
   moved.
 - **Bitrate:** shown in Mbit/s as in the observed settings
