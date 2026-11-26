@@ -2322,13 +2322,22 @@ static int gchd_enum_framesizes(struct file *f, void *p,
   static const u8 order[] = { GCHD_OUT_STANDARD, GCHD_OUT_1280X720,
                               GCHD_OUT_640X480, GCHD_OUT_MOBILE };
 
+  u32 sw, sh;
+
+  /* Before detection the source size is the nominal one: not twice. */
+  gchd_comp_out_size(d, GCHD_OUT_STANDARD, &sw, &sh);
   for (i = 0; i < ARRAY_SIZE(order); ++i) {
+   u32 w, h;
+
    if (i && gchd_comp_out_of(d, order[i]) != order[i])
+    continue;
+   gchd_comp_out_size(d, order[i], &w, &h);
+   if (i && w == sw && h == sh)
     continue;
    if (n++ == s->index) {
     s->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-    gchd_comp_out_size(d, order[i], &s->discrete.width,
-                       &s->discrete.height);
+    s->discrete.width = w;
+    s->discrete.height = h;
     return 0;
    }
   }
