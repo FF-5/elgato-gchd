@@ -298,3 +298,264 @@ bash gchd-test.sh T-051 --branch feat/component
 
 ## Maintainer comments
 
+There's a behavior I would like to change. Everytime I select a bitrate mode and change output size, the bitrate mode carries over. I think the ideal behavior is for the output size to remember what bitrate mode it was using last time. Maybe you need to better group how everything is going to be stored. Because clearly every output setting seems to have the same settings regardless of input source, so there's a clear easy pattern to store settings for every output size.
+
+This is the log:
+gchd-test T-051 20261126-212251 host 6.8.0-146-generic
+log: /home/ff5/gchd-test-logs/T-051-20261126-212251.log
+== build
+$ git fetch -q origin
+$ git checkout -q feat/component
+$ git pull -q --ff-only
+commit: 4747cd5 Component: sizes, bitrate range and frame rate from the mode detected last while no capture has detected since the input was selected (window lost 1080 and the bitrate after Composite -> Component); OBS bitrate slider reaches its highest value (T-051)
+commit: 4747cd5 Component: sizes, bitrate range and frame rate from the mode detected last while no capture has detected since the input was selected (window lost 1080 and the bitrate after Composite -> Component); OBS bitrate slider reaches its highest value (T-051)
+build rc=0 warnings=0
+
+=== step 1: install the settings programs and the plugin of this branch
+$ sudo rmmod elgato_gchd
+$ bash /home/ff5/elgato-gchd/install-driver.sh --all --yes --in-terminal
+[1mElgato Game Capture HD driver 0.5.10[0m
+
+[1m==> 1/3 Firmware[0m
+[32mFirmware found in /lib/firmware/gchd.[0m
+
+[1m==> 2/3 Building the driver[0m
+[32mBuilt /home/ff5/elgato-gchd/build/elgato_gchd.ko.[0m
+
+[1m==> 3/3 Installing[0m
+Sign command: /usr/bin/kmodsign
+Signing key: /var/lib/shim-signed/mok/MOK.priv
+Public certificate (MOK): /var/lib/shim-signed/mok/MOK.der
+
+Building module:
+Cleaning build area...
+make -j4 KERNELRELEASE=6.8.0-146-generic KDIR=/lib/modules/6.8.0-146-generic/build...
+Signing module /var/lib/dkms/elgato-gchd/0.5.10/build/elgato_gchd.ko
+Cleaning build area...
+
+elgato_gchd.ko.zst:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/6.8.0-146-generic/updates/dkms/
+depmod...
+[32mInstalled with DKMS (rebuilt automatically after kernel updates).[0m
+[32mudev rules installed (settings are remembered; device name /dev/elgato-gchd).[0m
+[32mDriver loaded. Plug in the Game Capture HD; it appears as a /dev/video device.[0m
+Watch: v4l2-ctl -d /dev/elgato-gchd -v pixelformat=MPEG && ffplay -f mpegts /dev/elgato-gchd
+
+[1m==> Settings programs[0m
+[32mSettings installed: 'Elgato Game Capture HD Settings' in the application menu (gchd-settings-gui); text menu: gchd-settings[0m
+
+[1m==> OBS plugin[0m
+[32mOBS plugin installed in /home/ff5/.config/obs-studio/plugins/obs-elgato-gchd. Restart OBS and add the source 'Elgato Game Capture HD'.[0m
+
+PROMPT: Unplug the Elgato and plug it in again; wait 5 s.
+$ v4l2-ctl -d /dev/video0 -i 1
+Video input set to 1 (Component: Camera, no signal)
+--- dmesg step 1
+[16780.526969] usbcore: deregistering interface driver elgato_gchd
+[16783.967388] usb 1-2: new high-speed USB device number 20 using xhci_hcd
+[16784.347314] usb 1-2: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
+[16784.347321] usb 1-2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[16784.347323] usb 1-2: Product: GameCapture HD
+[16784.347325] usb 1-2: Manufacturer: Elgato
+[16784.347326] usb 1-2: SerialNumber: 04107F1267
+[16784.366354] elgato_gchd 1-2:1.0: GCHD lifecycle: USB probe; registering V4L2 only\n
+[16784.368007] elgato_gchd 1-2:1.0: GCHD lifecycle: USB present; V4L2 registered; hardware stays powered off until STREAMON
+[16784.368030] usbcore: registered new interface driver elgato_gchd
+[16785.854304] usbcore: deregistering interface driver elgato_gchd
+[16787.973965] usb 1-2: USB disconnect, device number 20
+[16791.480160] usbcore: registered new interface driver elgato_gchd
+[16799.143755] usb 1-2: new high-speed USB device number 21 using xhci_hcd
+[16799.522152] usb 1-2: New USB device found, idVendor=0fd9, idProduct=005d, bcdDevice= 2.00
+[16799.522172] usb 1-2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[16799.522178] usb 1-2: Product: GameCapture HD
+[16799.522183] usb 1-2: Manufacturer: Elgato
+[16799.522187] usb 1-2: SerialNumber: 04107F1267
+[16799.527062] elgato_gchd 1-2:1.0: GCHD lifecycle: USB probe; registering V4L2 only\n
+[16799.529402] elgato_gchd 1-2:1.0: GCHD lifecycle: USB present; V4L2 registered; hardware stays powered off until STREAMON
+[16800.590202] elgato_gchd 1-2:1.0: input switch requested: old=2 new=1 hw_initialized=0 streaming=0
+[16800.590253] elgato_gchd 1-2:1.0: input selected: input=1; detection deferred until device open
+
+=== step 2: component source 1080i
+$ v4l2-ctl -d /dev/video0 -v width=1920,height=1080,pixelformat=MPEG
+PROMPT: A window 'Elgato component' shows the PS3. Set the PS3's video output to 1080i. Tick 1080i (and untick 1080p) so the PS3 sends 1080i. If the picture freezes or disappears, close the window (it reopens). Press Enter when it shows the PS3 in 1080i.
+$ v4l2-ctl -d /dev/video0 --list-framesizes MPEG
+ioctl: VIDIOC_ENUM_FRAMESIZES
+	Size: Discrete 1920x1080
+	Size: Discrete 1280x720
+	Size: Discrete 640x480
+	Size: Discrete 480x360
+--- dmesg step 2
+[16800.628061] elgato_gchd 1-2:1.0: input switch requested: old=1 new=1 hw_initialized=0 streaming=0
+[16800.746993] elgato_gchd 1-2:1.0: GCHD lifecycle: starting hardware boot/init from V4L2 STREAMON
+[16800.879281] elgato_gchd 1-2:1.0: transcoder defaults loaded
+[16800.944512] elgato_gchd 1-2:1.0: device idle, processor state 0x27f97b
+[16800.955343] elgato_gchd 1-2:1.0: gchd-diag detect component: raw6665=0xba95 raw6867=0xa03d
+[16800.955346] elgato_gchd 1-2:1.0: gchd-diag detected input=1 mode=1920x1080 fps=60/1 interlaced=1 signal_present=1
+[16800.955348] elgato_gchd 1-2:1.0: signal detected: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[16800.955351] elgato_gchd 1-2:1.0: capture setup: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[16801.736050] elgato_gchd 1-2:1.0: capture setup: encoder start completed
+[16802.888126] elgato_gchd 1-2:1.0: capture setup: input configuration completed
+[16802.904818] elgato_gchd 1-2:1.0: capture setup: encoder programming completed
+[16802.905073] elgato_gchd 1-2:1.0: capture setup: state after final SCMD_INIT=0x0001
+[16802.906472] elgato_gchd 1-2:1.0: async bulk-IN starting: ep=0x81 URBs=32 maxpacket=512; ep=0x84 URBs=8 maxpacket=512 speed=3 alt=0
+[16802.907232] elgato_gchd 1-2:1.0: gchd-diag issuing START: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[16802.907911] elgato_gchd 1-2:1.0: START before SCMD: state=0x0001 enable_state=0xd39e (r=0) enable=0x020e (r=0) completion=0x011e (r=0) saved=0xd39e hw_state=0xd39e hw_enable=0x020e
+[16803.010899] elgato_gchd 1-2:1.0: gchd-diag START transition completed
+[16807.907807] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=268 bytes=17563648 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[16810.338149] elgato_gchd 1-2:1.0: hardware shutdown done (state 0x0001 before, 0x0012 now)
+
+=== step 3: settings
+$ v4l2-ctl -d /dev/video0 -v width=1920,height=1080,pixelformat=MPEG
+$ v4l2-ctl -d /dev/video0 -c video_bitrate_mode=0
+$ v4l2-ctl -d /dev/video0 -c video_bitrate=16000000
+$ v4l2-ctl -d /dev/video0 -c video_bitrate_mode=1
+$ v4l2-ctl -d /dev/video0 -c video_bitrate=20000000
+--- dmesg step 3
+
+
+=== step 4: settings window
+PROMPT: Open 'Elgato Game Capture HD Settings' (Input Component).
+[PASS] Bitrate mode is shown; Constant (CBR) with the slider from 18.67 to 30.00 at 20.00?
+PROMPT: Choose Input Composite, wait 3 s, then Input Component again; wait 3 s.
+[PASS] Component again: Output size still offers 1920x1080, 1280x720, 640x480, 480x360; Bitrate mode and the slider (18.67 to 30.00 at 20.00) are shown?
+PROMPT: Choose Variable (VBR); wait 3 s.
+[PASS] slider from 8.00 to 15.00 at 8.00 (VBR 16 Mbit/s is shown as its average, 8.00)?
+PROMPT: Move the slider to about 10.00 and release it; wait 3 s.
+$ rate
+video_bitrate: 20040000
+[PASS] window: VBR about 20 Mbit/s (10.00 average)
+PROMPT: Choose Output size 640x480; wait 3 s; then 1920x1080 again; wait 3 s.
+[PASS] back at 1920x1080 the slider stands at about 10.00 again (not at the highest)?
+PROMPT: Choose Output size 480x360; wait 3 s.
+[PASS] Bitrate mode locked to Variable (VBR), slider 4.00 to 7.50?
+PROMPT: Output size 1920x1080, Bitrate mode Constant (CBR); wait 3 s; leave the window open.
+--- dmesg step 4
+[16847.893378] elgato_gchd 1-2:1.0: input switch requested: old=1 new=2 hw_initialized=0 streaming=0
+[16847.893458] elgato_gchd 1-2:1.0: input selected: input=2; detection deferred until device open
+[16853.379450] elgato_gchd 1-2:1.0: input switch requested: old=2 new=1 hw_initialized=0 streaming=0
+[16853.379506] elgato_gchd 1-2:1.0: input selected: input=1; detection deferred until device open
+
+=== step 5: OBS plugin
+PROMPT: Start OBS (source 'Elgato Game Capture HD', input Component); open the source's properties.
+[PASS] OBS: Bitrate mode Constant (CBR), Bitrate from 18.67 to 30.00 at about 20.00; dragging the slider fully to the right reaches 30.00 (not 29.99)?
+PROMPT: In OBS's properties choose Variable (VBR) -> OK; wait 3 s.
+$ rate
+video_bitrate: 30000000
+[FAIL] OBS: VBR with the kept VBR bitrate (about 20 Mbit/s) (expected /video_bitrate: (19[5-9]|20[0-5])[0-9]{5}/, got: video_bitrate: 30000000)
+[FAIL] the settings window shows Variable (VBR) at about 10.00 by itself? -- It opened at 15.00.
+PROMPT: Back to Constant (CBR), slider 30.00 -> OK. Close OBS and the settings window.
+$ obs_log 8
+21:27:29.234: [gchd] settings applied: input 1, output 0, mode 1, 30.00 Mbit/s, profile 4, stretch 0
+21:27:46.777: [gchd] settings applied: input 1, output 0, mode 1, 19.97 Mbit/s, profile 4, stretch 0
+21:27:47.484: [gchd] settings applied: input 1, output 0, mode 1, 20.00 Mbit/s, profile 4, stretch 0
+21:28:00.597: [gchd] settings applied: input 1, output 0, mode 0, 15.00 Mbit/s, profile 4, stretch 0
+21:28:51.895: [gchd] properties: device settings read: input 1, output 0, mode 0, 15.00 Mbit/s
+21:28:55.490: [gchd] settings applied: input 1, output 0, mode 1, 20.00 Mbit/s, profile 4, stretch 0
+21:29:02.739: [gchd] settings applied: input 1, output 0, mode 1, 30.00 Mbit/s, profile 4, stretch 0
+21:29:10.858: [gchd] capture stopped (source hidden or settings changed)
+$ v4l2-ctl -d /dev/video0 -i 2
+Video input set to 2 (Composite: Camera, no signal)
+--- dmesg step 5
+[17022.828716] elgato_gchd 1-2:1.0: GCHD lifecycle: starting hardware boot/init from V4L2 STREAMON
+[17023.051816] elgato_gchd 1-2:1.0: transcoder defaults loaded
+[17023.128712] elgato_gchd 1-2:1.0: device idle, processor state 0x27f97b
+[17023.139131] elgato_gchd 1-2:1.0: gchd-diag detect component: raw6665=0xba95 raw6867=0xa03d
+[17023.139139] elgato_gchd 1-2:1.0: gchd-diag detected input=1 mode=1920x1080 fps=60/1 interlaced=1 signal_present=1
+[17023.139143] elgato_gchd 1-2:1.0: signal detected: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[17023.139146] elgato_gchd 1-2:1.0: capture setup: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[17024.157138] elgato_gchd 1-2:1.0: capture setup: encoder start completed
+[17025.579295] elgato_gchd 1-2:1.0: capture setup: input configuration completed
+[17025.610370] elgato_gchd 1-2:1.0: capture setup: encoder programming completed
+[17025.610956] elgato_gchd 1-2:1.0: capture setup: state after final SCMD_INIT=0x0001
+[17025.612502] elgato_gchd 1-2:1.0: async bulk-IN starting: ep=0x81 URBs=32 maxpacket=512; ep=0x84 URBs=8 maxpacket=512 speed=3 alt=0
+[17025.613305] elgato_gchd 1-2:1.0: gchd-diag issuing START: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[17025.614267] elgato_gchd 1-2:1.0: START before SCMD: state=0x0001 enable_state=0x031e (r=0) enable=0x020e (r=0) completion=0x011e (r=0) saved=0x031e hw_state=0x031e hw_enable=0x020e
+[17025.733565] elgato_gchd 1-2:1.0: gchd-diag START transition completed
+[17030.625283] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=180 bytes=11796480 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17035.629073] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=380 bytes=24903680 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17040.633060] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=580 bytes=38010880 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17045.636652] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=780 bytes=51118080 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17046.146735] elgato_gchd 1-2:1.0: encoder restart: output 0 -> 0, settings changed
+[17046.984395] elgato_gchd 1-2:1.0: capture setup: encoder programming completed
+[17046.984851] elgato_gchd 1-2:1.0: capture setup: state after final SCMD_INIT=0x0001
+[17046.989007] elgato_gchd 1-2:1.0: async bulk-IN starting: ep=0x81 URBs=32 maxpacket=512; ep=0x84 URBs=8 maxpacket=512 speed=3 alt=0
+[17046.989626] elgato_gchd 1-2:1.0: gchd-diag issuing START: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[17046.990192] elgato_gchd 1-2:1.0: START before SCMD: state=0x0001 enable_state=0x031e (r=0) enable=0x020e (r=0) completion=0x011e (r=0) saved=0x031e hw_state=0x031e hw_enable=0x020e
+[17047.090579] elgato_gchd 1-2:1.0: gchd-diag START transition completed
+[17047.090582] elgato_gchd 1-2:1.0: component output now 0
+[17047.753770] elgato_gchd 1-2:1.0: encoder restart: output 0 -> 0, settings changed
+[17049.188574] elgato_gchd 1-2:1.0: capture setup: encoder programming completed
+[17049.188921] elgato_gchd 1-2:1.0: capture setup: state after final SCMD_INIT=0x0001
+[17049.189802] elgato_gchd 1-2:1.0: async bulk-IN starting: ep=0x81 URBs=32 maxpacket=512; ep=0x84 URBs=8 maxpacket=512 speed=3 alt=0
+[17049.191464] elgato_gchd 1-2:1.0: gchd-diag issuing START: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[17049.191990] elgato_gchd 1-2:1.0: START before SCMD: state=0x0001 enable_state=0x031e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0x031e hw_state=0x031e hw_enable=0x020e
+[17049.294812] elgato_gchd 1-2:1.0: gchd-diag START transition completed
+[17049.294815] elgato_gchd 1-2:1.0: component output now 0
+[17054.196354] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=268 bytes=17563648 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17059.210120] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=566 bytes=37093376 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=1
+[17064.223912] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=864 bytes=56623104 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17065.298983] elgato_gchd 1-2:1.0: encoder restart: output 0 -> 0, settings changed
+[17066.348655] elgato_gchd 1-2:1.0: capture setup: encoder programming completed
+[17066.348995] elgato_gchd 1-2:1.0: capture setup: state after final SCMD_INIT=0x0001
+[17066.350004] elgato_gchd 1-2:1.0: async bulk-IN starting: ep=0x81 URBs=32 maxpacket=512; ep=0x84 URBs=8 maxpacket=512 speed=3 alt=0
+[17066.350576] elgato_gchd 1-2:1.0: gchd-diag issuing START: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[17066.351083] elgato_gchd 1-2:1.0: START before SCMD: state=0x0001 enable_state=0x031e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0x031e hw_state=0x031e hw_enable=0x020e
+[17066.471587] elgato_gchd 1-2:1.0: gchd-diag START transition completed
+[17066.471592] elgato_gchd 1-2:1.0: component output now 0
+[17071.371212] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=180 bytes=11796480 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17076.377269] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=380 bytes=24903680 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17079.116680] elgato_gchd 1-2:1.0: encoder restart: output 0 -> 0, settings changed
+[17080.127681] elgato_gchd 1-2:1.0: capture setup: encoder programming completed
+[17080.128036] elgato_gchd 1-2:1.0: capture setup: state after final SCMD_INIT=0x0001
+[17080.131609] elgato_gchd 1-2:1.0: async bulk-IN starting: ep=0x81 URBs=32 maxpacket=512; ep=0x84 URBs=8 maxpacket=512 speed=3 alt=0
+[17080.132396] elgato_gchd 1-2:1.0: gchd-diag issuing START: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[17080.133311] elgato_gchd 1-2:1.0: START before SCMD: state=0x0001 enable_state=0x031e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0x031e hw_state=0x031e hw_enable=0x020e
+[17080.233867] elgato_gchd 1-2:1.0: gchd-diag START transition completed
+[17080.233871] elgato_gchd 1-2:1.0: component output now 0
+[17085.171504] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=126 bytes=8257536 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17090.190617] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=264 bytes=17301504 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17095.192952] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=403 bytes=26411008 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17100.206655] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=545 bytes=35717120 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17105.254808] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=686 bytes=44957696 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17110.259167] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=824 bytes=54001664 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17115.263448] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=965 bytes=63242240 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17120.270337] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=1105 bytes=72417280 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17125.289122] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=1247 bytes=81723392 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17130.292818] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=1387 bytes=90898432 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17134.011281] elgato_gchd 1-2:1.0: encoder restart: output 0 -> 0, settings changed
+[17135.362280] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=1503 bytes=98500608 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17135.699091] elgato_gchd 1-2:1.0: capture setup: encoder programming completed
+[17135.699540] elgato_gchd 1-2:1.0: capture setup: state after final SCMD_INIT=0x0001
+[17135.700721] elgato_gchd 1-2:1.0: async bulk-IN starting: ep=0x81 URBs=32 maxpacket=512; ep=0x84 URBs=8 maxpacket=512 speed=3 alt=0
+[17135.701331] elgato_gchd 1-2:1.0: gchd-diag issuing START: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[17135.701944] elgato_gchd 1-2:1.0: START before SCMD: state=0x0001 enable_state=0x031e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0x031e hw_state=0x031e hw_enable=0x020e
+[17135.821887] elgato_gchd 1-2:1.0: gchd-diag START transition completed
+[17135.821890] elgato_gchd 1-2:1.0: component output now 0
+[17140.721149] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=180 bytes=11796480 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17141.260570] elgato_gchd 1-2:1.0: encoder restart: output 0 -> 0, settings changed
+[17142.155320] elgato_gchd 1-2:1.0: capture setup: encoder programming completed
+[17142.155955] elgato_gchd 1-2:1.0: capture setup: state after final SCMD_INIT=0x0001
+[17142.157378] elgato_gchd 1-2:1.0: async bulk-IN starting: ep=0x81 URBs=32 maxpacket=512; ep=0x84 URBs=8 maxpacket=512 speed=3 alt=0
+[17142.158029] elgato_gchd 1-2:1.0: gchd-diag issuing START: input=1 mode=1920x1080 fps=60/1 interlaced=1
+[17142.158605] elgato_gchd 1-2:1.0: START before SCMD: state=0x0001 enable_state=0x031e (r=0) enable=0x020e (r=0) completion=0x011a (r=0) saved=0x031e hw_state=0x031e hw_enable=0x020e
+[17142.261648] elgato_gchd 1-2:1.0: gchd-diag START transition completed
+[17142.261652] elgato_gchd 1-2:1.0: component output now 0
+[17147.163013] elgato_gchd 1-2:1.0: async bulk-IN stats: reads=268 bytes=17563648 ep84_bytes=0 empty=0 errors=0 urb_errors=0 last_status=0 queued=0 start_pending=0 ring_dropped=0 frames_waiting=0
+[17149.379185] elgato_gchd 1-2:1.0: hardware shutdown done (state 0x0001 before, 0x0012 now)
+[17161.416966] elgato_gchd 1-2:1.0: input switch requested: old=1 new=2 hw_initialized=0 streaming=0
+[17161.416996] elgato_gchd 1-2:1.0: input selected: input=2; detection deferred until device open
+
+=== summary (T-051, 4747cd5 Component: sizes, bitrate range and frame rate from the mode detected last while no capture has detected since the input was selected (window lost 1080 and the bitrate after Composite -> Component); OBS bitrate slider reaches its highest value (T-051))
+PASS | step 4 settings window | Bitrate mode is shown; Constant (CBR) with the slider from 18.67 to 30.00 at 20.00?
+PASS | step 4 settings window | Component again: Output size still offers 1920x1080, 1280x720, 640x480, 480x360; Bitrate mode and the slider (18.67 to 30.00 at 20.00) are shown?
+PASS | step 4 settings window | slider from 8.00 to 15.00 at 8.00 (VBR 16 Mbit/s is shown as its average, 8.00)?
+PASS | step 4 settings window | window: VBR about 20 Mbit/s (10.00 average)
+PASS | step 4 settings window | back at 1920x1080 the slider stands at about 10.00 again (not at the highest)?
+PASS | step 4 settings window | Bitrate mode locked to Variable (VBR), slider 4.00 to 7.50?
+PASS | step 5 OBS plugin | OBS: Bitrate mode Constant (CBR), Bitrate from 18.67 to 30.00 at about 20.00; dragging the slider fully to the right reaches 30.00 (not 29.99)?
+FAIL | step 5 OBS plugin | OBS: VBR with the kept VBR bitrate (about 20 Mbit/s) (expected /video_bitrate: (19[5-9]|20[0-5])[0-9]{5}/, got: video_bitrate: 30000000)
+FAIL | step 5 OBS plugin | the settings window shows Variable (VBR) at about 10.00 by itself? -- It opened at 15.00.
