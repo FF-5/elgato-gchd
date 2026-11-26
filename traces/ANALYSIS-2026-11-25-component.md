@@ -200,3 +200,10 @@ Readings:
   58.5 s (`0x9C:68 = A0`), NULL at 62.7 s, START at 67.1 s; the recording
   ends before the restart. Front end and back end reprogrammed at each
   change (120–130 writes), as in the first component recording.
+
+## Correction (2026-11-26, captured sample)
+
+1080i at 1280×720: 30 progressive frames per second, not 60 (sample
+`traces/component/samples/component_1080i_1280x720.ts`: 376 frames in
+12.5 s, `r_frame_rate` 30000/1001). The "60 pictures per second" above was
+inferred from the missing timing fields, not measured.

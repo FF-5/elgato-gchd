@@ -9,8 +9,9 @@ stream (H.264 + MP2).
   (`*.ffmpeg.txt`).
 - `component_<mode>_frames.ts`: the same bytes up to the start of the last
   video frame; decode without errors.
-- `component_1080i_1280x720.ts`: empty (the 4 s ended during the capture
-  setup); taken again in the next run.
+- `component_1080i_1280x720.ts`: taken again (driver 33eea68, up to 20 s /
+  20 MB, cut at the start of the last video frame; `.raw` as read): 12.5 s,
+  decodes without errors.
 
 | Mode | Size | Field order | Level | Colour |
 |---|---|---|---|---|
@@ -18,3 +19,4 @@ stream (H.264 + MP2).
 | 720p | 1280 × 720 | progressive | 40 | BT.709 |
 | 576p | 720 × 576 | progressive | 30 | SMPTE 170M |
 | 576i | 720 × 576 | tt | 31 | SMPTE 170M |
+| 1080i → 1280 × 720 | 1280 × 720 | progressive, 30000/1001 | 31 | BT.709 |
