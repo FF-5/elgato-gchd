@@ -762,6 +762,38 @@ route:
  return 0;
 }
 
+/*
+ * Component while capturing: read the timing measurement once (the mode
+ * worker calls this every 0.75 s). Returns 1 when it shows no
+ * signal or another source mode than the configured one, 0 when it matches,
+ * a negative error code when the read fails.
+ */
+int gchd_component_mode_changed(struct gchd *d)
+{
+ static const struct { u16 value; u16 height; bool interlaced; } modes[] = {
+  { 0xbbf4, 1080, false }, { 0xa03d, 1080, true }, { 0xbf59, 720, false },
+  { 0xa6b7, 576, false }, { 0x9ab9, 576, true }, { 0xa150, 480, false },
+  { 0x9576, 480, true },
+ };
+ u8 hi, lo;
+ u32 v6665, v6867;
+ unsigned int i;
+
+ GCHD_FE_R(d, 0x66, hi);
+ GCHD_FE_R(d, 0x65, lo);
+ v6665 = (u32)hi << 8 | lo;
+ GCHD_FE_R(d, 0x68, hi);
+ GCHD_FE_R(d, 0x67, lo);
+ v6867 = (u32)hi << 8 | lo;
+ if (!gchd_component_timing_valid(v6867) || abs((int)v6665 - 0xad4d) < 10)
+  return 1;
+ for (i = 0; i < ARRAY_SIZE(modes); ++i)
+  if (abs((int)v6867 - modes[i].value) < 10)
+   return modes[i].height != d->input_height ||
+          modes[i].interlaced != d->input_interlaced;
+ return 1;
+}
+
 int gchd_probe_video_source(struct gchd *d)
 {
  u32 sum6665 = 0, sum6463 = 0, count6665 = 0, count6463 = 0;
@@ -827,6 +859,10 @@ int gchd_probe_video_source(struct gchd *d)
    d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60;
   }
   d->input_fps_den=1;
+  d->comp_seen.width = d->input_width;
+  d->comp_seen.height = d->input_height;
+  d->comp_seen.fps = d->input_fps_num;
+  d->comp_seen.interlaced = d->input_interlaced;
  } else {
   u8 v, std, be_status = 0;
 
@@ -1700,10 +1736,12 @@ static int gchd_configure_component_exact(struct gchd *d)
   r = gchd_mail_seq(d, select_component, ARRAY_SIZE(select_component));
   if (r) return r;
  }
- GCHD_FE_R(d, 0x88, v); GCHD_FE_W(d, 0xb7, 0xce);
  r=gchd_do_enable(d,0,0); if(r)return r;
- GCHD_FE_W(d, 0x24, 0x0c); GCHD_FE_W(d, 0x21, 0xcd); GCHD_FE_W(d, 0x91, 0xc8); GCHD_FE_W(d, 0x0e, 0x8c);
- GCHD_FE_W(d, 0x11, 0xec); GCHD_FE_W(d, 0x71, 0x4c); GCHD_FE_W(d, 0x04, 0xcc);
+ GCHD_FE_W(d, GCHD_FE_REG_BANK, 0x4c); GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
+ GCHD_FE_W(d, 0x24, 0x0c); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_R(d, 0x1e, v);
+ GCHD_FE_W(d, 0x21, 0xc5); GCHD_FE_R(d, 0xae, v); GCHD_FE_W(d, 0x91, 0xc8); GCHD_FE_W(d, 0x0e, 0x8c);
+ GCHD_FE_W(d, 0x11, 0xec); GCHD_FE_R(d, 0x6b, v); GCHD_FE_W(d, 0x54, 0xfc); GCHD_FE_R(d, 0x4e, v);
+ GCHD_FE_W(d, 0x71, 0x4c); GCHD_FE_W(d, 0x04, 0xcc);
 
  for (i=0; i<max_t(unsigned int, 1, signal_active_retries); i++) {
   unsigned int retry_limit;
@@ -1795,7 +1833,7 @@ static int gchd_configure_component_exact(struct gchd *d)
  } else return -EINVAL;
 
  GCHD_FE_R(d, 0x2f, v); GCHD_FE_W(d, 0x10, 0x71); GCHD_FE_R(d, 0x30, v); GCHD_FE_W(d, 0x0f, 0xe4); GCHD_FE_W(d, 0x12, 0xc8); GCHD_FE_R(d, 0x28, v);
- GCHD_FE_W(d, 0x17, 0xce);
+ GCHD_FE_W(d, 0x17, 0xc6);
  if(d->input_height==480||d->input_height==576) GCHD_FE_W(d, 0x12, 0xc8); else GCHD_FE_W(d, 0x12, 0xcc);
  GCHD_FE_W(d, 0x13, 0xd8); GCHD_FE_W(d, 0x0b, 0x4c); GCHD_FE_W(d, 0x0c, 0xac); GCHD_FE_W(d, 0x0d, 0x4c);
  GCHD_FE_W(d, 0x1b, 0xcc); GCHD_FE_W(d, 0x1c, 0xcc); GCHD_FE_W(d, 0x1d, 0xcc); GCHD_FE_W(d, 0x18, 0xdc); GCHD_FE_W(d, 0x19, 0xdc);
@@ -1839,28 +1877,47 @@ static int gchd_configure_component_exact(struct gchd *d)
  }
 
  GCHD_FE_W(d, 0xb0, 0xe8); GCHD_FE_W(d, 0xb1, 0x0c);
- if(d->input_height==576 && d->input_interlaced) { GCHD_FE_W(d, 0xad, 0xcc); GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb1, 0xcc); }
- else if(d->input_height==480 && d->input_interlaced) { GCHD_FE_W(d, 0xad, 0xcc); GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb1, 0x4c); }
- else { GCHD_FE_W(d, 0xad, 0xc9); GCHD_FE_W(d, 0xb0, 0xe9); }
+ if(d->input_height==576 && d->input_interlaced) {
+  GCHD_FE_W(d, 0xad, 0xcc); GCHD_FE_R(d, 0x8f, v); GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb1, 0xcc);
+ } else if(d->input_height==480 && d->input_interlaced) {
+  GCHD_FE_W(d, 0xad, 0xcc); GCHD_FE_R(d, 0x8f, v); GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb1, 0x4c);
+ } else {
+  GCHD_FE_W(d, 0xad, 0xc9); GCHD_FE_R(d, 0x8f, v); GCHD_FE_W(d, 0xb0, 0xe9);
+ }
+
+ /*
+  * Back end for the mode (docs/component.md §5): mode table, the common
+  * back-end values, then pulses until the status settles.
+  */
+ GCHD_FE_W(d, 0xab, 0xcc); GCHD_BE_W(d, 0x04, 0x95);
+ r=gchd_setup_subblock_exact(d); if(r)return r;
+ GCHD_BE_RX(d, 0x89); GCHD_BE_W(d, 0x72, 0x88); GCHD_BE_W(d, 0xc0, 0x88);
+ GCHD_BE_W(d, 0x61, 0x98); GCHD_BE_W(d, 0x63, 0x89); GCHD_BE_W(d, 0x64, 0x96);
+ GCHD_BE_W(d, 0x65, 0x88); GCHD_BE_RX(d, 0xff); GCHD_BE_W(d, 0x04, 0x8d);
+ GCHD_BE_W(d, 0x62, 0x91);
+ r=gchd_be_retrigger_settle(d); if(r)return r;
+ GCHD_FE_W(d, 0x0f, 0xe4);
 
  r=gchd_color_space_exact(d); if(r)return r;
  if(d->input_height==480 && d->input_interlaced) { GCHD_FE_W(d, 0xb0, 0xf9); GCHD_FE_W(d, 0xb1, 0xcc); }
- GCHD_FE_W(d, 0xab, 0xcc); GCHD_BE_W(d, 0x04, 0x95);
- r=gchd_setup_subblock_exact(d); if(r)return r;
- r=gchd_common_block_b1(d,false); if(r)return r;
 
- GCHD_BE_R(d, 0xf5, v); GCHD_BE_R(d, 0xfd, v);
- GCHD_BE_R(d, 0xf5, v); GCHD_BE_R(d, 0xfc, v); GCHD_BE_R(d, 0xf3, v);
- GCHD_BE_W(d, 0x0c, 0x89); GCHD_BE_W(d, GCHD_BE_REG_RETRIGGER, GCHD_BE_RETRIGGER_VALUE); GCHD_BE_R(d, 0xf5, v);
- GCHD_BE_W(d, GCHD_BE_REG_PULSE, (u8)((v&0x10)|0x65)); GCHD_BE_W(d, GCHD_BE_REG_PULSE, (u8)((v&0x10)|0x64));
+ /* Final front-end values per mode, then wait for the back end again. */
+ GCHD_FE_R(d, 0x8d, v); GCHD_FE_R(d, 0x8a, v);
+ {
+  bool sd = d->input_height <= 576;
+  u8 b5 = (d->input_height == 720 || (d->input_height == 1080 && d->input_interlaced)) ? 0xcc : 0xc4;
+  u8 r03 = d->input_height == 1080 ? (d->input_interlaced ? 0x0c : 0x04) :
+           d->input_height == 720 ? 0x8c : d->input_interlaced ? 0x8c : 0x84;
+  u8 st;
 
- r=gchd_common_block_a(d); if(r)return r;
- r=gchd_setup_subblock_exact(d); if(r)return r;
- r=gchd_common_block_b1(d,d->input_height==1080 && !d->input_interlaced); if(r)return r;
- r=gchd_common_block_b2(d); if(r)return r;
- r=gchd_common_block_b3(d); if(r)return r;
+  GCHD_FE_W(d, 0xb2, sd ? 0xcf : 0xcc); GCHD_FE_W(d, 0xb5, b5);
+  GCHD_FE_W(d, 0x03, r03); GCHD_FE_W(d, 0x04, 0xcc); GCHD_FE_W(d, 0xe0, 0xcc);
+  r = gchd_be_wait_status(d, 500, &st); if (r) return r;
+  if (st != GCHD_BE_STATUS_SETTLED) {
+   r = gchd_be_retrigger_settle(d); if (r) return r;
+  }
+ }
  GCHD_FE_W(d, 0x0f, 0xe4);
- r=gchd_common_block_c(d); if(r)return r;
 
  return 0;
 
@@ -1921,7 +1978,7 @@ static int gchd_input_configure_mode(struct gchd *d)
 
  /*
   * A capture starts with the standard output; a scaled output is switched
-  * to from the running capture (as recorded), by the mode worker.
+  * to from the running capture by the mode worker.
   */
  d->out_active = GCHD_OUT_STANDARD;
  dev_info(&d->intf->dev,
@@ -1978,6 +2035,13 @@ static int gchd_input_configure_mode(struct gchd *d)
  }
  dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
 
+ /* Component: the output size the detected source allows, from the start. */
+ if (d->input == 1) {
+  d->out_active = gchd_out_target(d);
+  d->enc_dirty = false;
+ }
+ /* The bitrate settings of the output mode of the detected source. */
+ gchd_bitrate_range(d);
  r = gchd_encoder_program(d);
  if (r)
   return r;
@@ -2010,14 +2074,16 @@ int gchd_analog_mode_reconfigure(struct gchd *d)
 }
 
 /*
- * Output size change while capturing (encoder in STOP): program the encoder
- * for d->analog_out; no decoder or back-end writes. START follows.
+ * Output size change or new encoder settings while capturing (encoder in
+ * STOP), composite/S-video and component: program the encoder for the
+ * output size in effect; no decoder, front-end or back-end writes. START
+ * follows.
  */
 int gchd_analog_output_reconfigure(struct gchd *d)
 {
  int r;
 
- d->out_active = d->analog_out;
+ d->out_active = gchd_out_target(d);
  d->enc_dirty = false;
  r = gchd_encoder_program(d);
  if (r)

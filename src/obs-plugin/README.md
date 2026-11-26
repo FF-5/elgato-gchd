@@ -17,9 +17,16 @@ properties.
   when the source is created (Deinterlacing in the source's context menu).
 - **Properties:** input (HDMI, component, composite, S-video), output size
   of composite and S-video (720x480 NTSC / 720x576 PAL, 640 × 480,
-  480 × 360), bitrate mode and bitrate, H.264 profile, stretch of SD
-  input. Output size, bitrate mode, bitrate and stretch are hidden for
-  HDMI and component. They are the driver's settings, shared with the
+  480 × 360), bitrate mode and bitrate, stretch of SD input; for
+  component the output sizes the source allows (the resolutions the
+  driver lists, source size first), bitrate mode and bitrate as for
+  composite in the range of the output mode (highest as the driver's:
+  480 × 360 15, 640 × 480 and 480i/576i 11.25, 480p/576p 15, 720p at 60
+  26.25, 720p at 30 and 1280 × 720 15, 1080 30 Mbit/s; CBR from 7/11.25 of
+  the highest to the highest; VBR the average, 8/15 of the highest to half
+  of it) and "Allow 50/60 fps". Output size, bitrate mode, bitrate
+  and stretch are hidden for HDMI; stretch for component. The H.264 profile is not offered (the driver's default, as
+  the Windows software does). They are the driver's settings, shared with the
   settings window and other programs: the properties show the device's
   values when they open and follow changes made elsewhere (checked every
   1.5 s). A change in the dialog is applied to the device 0.5 s after the
@@ -28,10 +35,14 @@ properties.
   when a slider is released); Cancel sets the values from before the
   dialog again. Changes are remembered by the driver. Only values that
   differ from the device are sent, so values the dialog still shows from
-  before never overwrite a change made elsewhere. A change of bitrate
-  mode or input group shows the bitrate (and mode, profile) the driver
-  keeps for it (read from its module parameters); a new bitrate mode is sent alone and the driver uses its
-  kept bitrate unless the slider was moved.
+  before never overwrite a change made elsewhere. A change of input
+  shows the output size the driver keeps for it; a change of output size,
+  input, source mode or "Allow 50/60 fps" shows the bitrate mode and
+  bitrate the driver keeps for that output mode (the picture encoded), and
+  a change of bitrate mode the bitrate kept for that mode (read from its
+  module parameters; the source mode from `VIDIOC_G_DV_TIMINGS`). These are not sent: the driver loads
+  them itself; a new bitrate mode is sent alone unless the slider was
+  moved.
 - **Bitrate:** shown in Mbit/s as in the observed settings
   (`docs/composite.md` §10): VBR as the average (half the bitrate),
   3.00–7.23 for the source size and 640 × 480, 2.00–7.50 for 480 × 360

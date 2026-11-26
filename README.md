@@ -80,7 +80,7 @@ Driver with DKMS, and the udev rule:
 
 ```sh
 sudo dkms add ./src/driver
-sudo dkms install elgato-gchd/0.5.10
+sudo dkms install elgato-gchd/0.5.11
 sudo modprobe elgato_gchd
 sudo cp udev-rules/55-elgato-gchd-device.rules udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
@@ -112,9 +112,11 @@ the scene instead); the plugin's source shows it stretched.
 changes the input, output size and encoder settings in a window (menus,
 bitrate slider, switch); the driver remembers them. Changes apply at once,
 also to a running capture, and the window shows changes made by other
-programs. Composite and S-video share one group of settings, HDMI and
-component another; each bitrate mode keeps its last bitrate. Settings that
-do not apply to the selected input are hidden. Without a desktop:
+programs. Each output mode (480 × 360, 640 × 480 and 480i/576i,
+480p/576p, 720p at 60, 720p at 30, 1080) keeps the bitrate mode last used
+there and the last bitrate of each mode, the same for every input. Settings that
+do not apply to the selected input are hidden. For component the window
+offers the output sizes the source allows and "Allow 50/60 fps". Without a desktop:
 [`src/settings/gchd-settings`](src/settings/gchd-settings) (text menu) or
 `v4l2-ctl`.
 

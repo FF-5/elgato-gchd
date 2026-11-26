@@ -3,7 +3,8 @@
 #
 # gchd-settings: settings of the Elgato Game Capture HD (elgato_gchd
 # driver) in a text menu: input, output size, bitrate, bitrate mode,
-# H.264 profile, stretch of SD input. The driver remembers the settings.
+# stretch of SD input, for component "Allow 50/60 fps". The driver
+# remembers the settings.
 #
 #   gchd-settings [DEVICE]      DEVICE: default /dev/elgato-gchd, else the
 #                               first device of the driver
@@ -74,11 +75,38 @@ menu_output() {
 	apply "The output size" -v "width=$w,height=$h"
 }
 
+# Component: the resolutions the source allows (the source size first).
+menu_comp_output() {
+	local sizes n i=0 args=() cur w h s
+	mapfile -t sizes < <(v4l2-ctl -d "$DEV" --list-framesizes MPEG 2>/dev/null | sed -n 's/.*Discrete \([0-9]*x[0-9]*\).*/\1/p')
+	[ ${#sizes[@]} -gt 0 ] || { whiptail --msgbox "No output sizes (no signal?)" 8 40; return; }
+	local def=0
+	cur=$(size_get)
+	for s in "${sizes[@]}"; do
+		[ "$s" = "$cur" ] && def=$i
+		args+=("$i" "$s"); i=$((i + 1))
+	done
+	n=$(whiptail --title "$TITLE" --default-item "$def" \
+		--menu "Output size (component)" 14 50 4 "${args[@]}" 3>&1 1>&2 2>&3) || return
+	# The source size is requested as 1920x1080 (never a scaled size).
+	if [ "$n" = 0 ]; then w=1920 h=1080; else w=${sizes[$n]%x*} h=${sizes[$n]#*x}; fi
+	apply "The output size" -v "width=$w,height=$h"
+}
+
+menu_allow() {
+	local cur n
+	cur=$(ctrl_get allow_50_60_fps)
+	n=$(whiptail --title "$TITLE" --default-item "${cur:-1}" --menu \
+		"Allow 50/60 fps (component: 720p at 60, 480p/576p short GOP)" 12 60 2 \
+		1 On 0 Off 3>&1 1>&2 2>&3) || return
+	apply "Allow 50/60 fps" -c "allow_50_60_fps=$n"
+}
+
 menu_bitrate() {
 	local cur kb
 	cur=$(ctrl_get video_bitrate)
 	kb=$(whiptail --title "$TITLE" --inputbox \
-		"Bitrate in kbit/s (2000-15000 for composite/S-video)" 10 60 \
+		"Bitrate in kbit/s ($(v4l2-ctl -d "$DEV" -l 2>/dev/null | sed -n 's/^ *video_bitrate .*min=\([0-9]*\) max=\([0-9]*\).*/\1-\2/p' | awk -F- '{ printf "%d-%d", $1 / 1000, $2 / 1000 }'))" 10 60 \
 		"$((${cur:-11250000} / 1000))" 3>&1 1>&2 2>&3) || return
 	[[ "$kb" =~ ^[0-9]+$ ]] || { whiptail --msgbox "Not a number: $kb" 8 40; return; }
 	apply "The bitrate" -c "video_bitrate=$((kb * 1000))"
@@ -90,14 +118,6 @@ menu_mode() {
 	n=$(whiptail --title "$TITLE" --default-item "${cur:-1}" --menu "Bitrate mode" 12 50 2 \
 		1 "Constant (CBR)" 0 "Variable (VBR)" 3>&1 1>&2 2>&3) || return
 	apply "The bitrate mode" -c "video_bitrate_mode=$n"
-}
-
-menu_profile() {
-	local cur n
-	cur=$(ctrl_get h264_profile)
-	n=$(whiptail --title "$TITLE" --default-item "${cur:-4}" --menu "H.264 profile" 13 50 3 \
-		4 High 2 Main 0 Baseline 3>&1 1>&2 2>&3) || return
-	apply "The H.264 profile" -c "h264_profile=$n"
 }
 
 menu_stretch() {
@@ -119,7 +139,12 @@ while :; do
 			bitrate "Bitrate: $(( $(ctrl_get video_bitrate || echo 0) / 1000 )) kbit/s"
 			mode "Bitrate mode: $( [ "$(ctrl_get video_bitrate_mode)" = 0 ] && echo VBR || echo CBR )")
 	fi
-	items+=(profile "H.264 profile: $(ctrl_get h264_profile)")
+	if [ "${i:-0}" = 1 ]; then
+		items+=(compout "Output size: $(size_get)"
+			bitrate "Bitrate: $(( $(ctrl_get video_bitrate || echo 0) / 1000 )) kbit/s"
+			mode "Bitrate mode: $( [ "$(ctrl_get video_bitrate_mode)" = 0 ] && echo VBR || echo CBR )"
+			allow "Allow 50/60 fps: $( [ "$(ctrl_get allow_50_60_fps)" = 0 ] && echo off || echo on )")
+	fi
 	if [ "${i:-0}" -ge 2 ]; then
 		items+=(stretch "Stretch SD input: $( [ "$(ctrl_get stretch_sd_input)" = 1 ] && echo on || echo off )")
 	fi
@@ -130,8 +155,9 @@ while :; do
 	output) menu_output ;;
 	bitrate) menu_bitrate ;;
 	mode) menu_mode ;;
-	profile) menu_profile ;;
 	stretch) menu_stretch ;;
+	compout) menu_comp_output ;;
+	allow) menu_allow ;;
 	*) break ;;
 	esac
 done

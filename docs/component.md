@@ -61,3 +61,145 @@ The driver configuration is implemented in `gchd_configure_component_exact()`
 
 Component capture with a source present has not yet been confirmed by a
 trace.
+
+## 4. Encoder settings per source mode (Observed)
+
+Recorded with the Windows software (576i, 576p, 720p, 1080i, 1080p30;
+output sizes; "Allow 50/60fps"). Detection values as in §3. All
+sequences CBR (`v_rate_mode 0`, `v_max_cpb_delay 3`), High profile
+(encoder value 1), `v_gop_struct 3`. `ts`: `time_scale_l_bl` /
+`num_units_in_tick_bl`; output 2: `v_ts_out2_mode = 1` (audio on output 2
+as well).
+
+| Source | Output | Frames/s | `v_format` | `v_ip_format` | `v_in_source_type` | `v_vinpelclk` | GOP | Bitrate B / max / ave / min (kbit/s) | Level (`_bl`) | `system_rate` | `ts` | TS output | Colour |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 576i | 720 × 576 | 25 (50 fields) | 5 | 0 | 3 | 1 | 12 | 11250 / 10125 / 5625 / 2812 | 31 (31) | 12531 | 0 / 0 | 1 | 6 |
+| 576i | 640 × 480 | 25 | 5 | 2 | 3 | 1 | 6 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12531 | 0 / 0 | 2 | 6 |
+| 480i | 720 × 480 | 30 (60 fields) | 4 | 0 | 3 | 0 | 14 | 11250 / 10125 / 5625 / 2812 | 31 (31) | 12539 | 0 / 0 | 1 | 6 |
+| 480i | 640 × 480 | 30 | 4 | 2 | 3 | 0 | 8 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12539 | 0 / 0 | 2 | 6 |
+| 480i | 480 × 360 | 30 | 4 | 2 | 3 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 22 (22) | 16562 | 0 / 0 | 2 | 6 |
+| 480p | 720 × 480 | 60 | 8 | 2 | 3 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 30 (30) | 16614 | 0 / 0 | 1 | 6 |
+| 480p, 50/60fps off | 720 × 480 | 60 | 8 | 2 | 3 | 0 | 14 | 15000 / 13500 / 7500 / 3750 | 31 (31) | 16614 | 0 / 0 | 1 | 6 |
+| 480p | 640 × 480 (off: GOP 14, level 31) | 30 | 8 | 2 | 3 | 0 | 8 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12539 | 60000 / 1001 | 2 | 6 |
+| 480p | 480 × 360 | 30 | 8 | 2 | 3 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 22 (22) | 16562 | 60000 / 1001 | 2 | 6 |
+| 576p | 720 × 576 | 50 | 9 | 2 | 3 | 1 | 6 | 15000 / 13500 / 7500 / 3750 | 30 (30) | 16597 | 0 / 0 | 1 | 6 |
+| 576p, 50/60fps off | 720 × 576 | 50 | 9 | 2 | 3 | 1 | 12 | 15000 / 13500 / 7500 / 3750 | 31 (31) | 16597 | 0 / 0 | 1 | 6 |
+| 720p | 1280 × 720 | 60 | 2 | 2 | 0 | 0 | 14 | 26250 / 23625 / 13125 / 9187 | 40 (31) | 28683 | 0 / 0 | 1 | 1 |
+| 720p, 50/60fps off | 1280 × 720 | 30 | 2 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 31 (31) | 16562 | 60000 / 1001 | 1 | 1 |
+| 720p | 640 × 480 | 30 | 2 | 2 | 0 | 0 | 8 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12539 | 60000 / 1001 | 2 | 1 |
+| 1080i | 1920 × 1080 | 30 (60 fields) | 0 | 0 | 0 | 0 | 14 | 30000 / 27000 / 15000 / 10500 | 40 (31) | 32655 | 0 / 0 | 1 | 1 |
+| 1080i | 1280 × 720 | 30 | 0 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 31 (31) | 16562 | 0 / 0 | 1 | 1 |
+| 1080i | 640 × 480 | — | 0 | 2 | 0 | 0 | 8 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12539 | 0 / 0 | 2 | 1 |
+| 1080i | 480 × 360 | — | 0 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 22 (22) | 16562 | 0 / 0 | 2 | 1 |
+| 1080p30 | 1920 × 1080 | 30 | 32 | 2 | 0 | 0 | 8 | 30000 / 27000 / 15000 / 10500 | 40 (31) | 32655 | 60000 / 1001 | 1 | 1 |
+| 1080p30 | 1280 × 720 | 30 | 32 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 31 (31) | 16562 | 60000 / 1001 | 1 | 1 |
+| 1080p30 | 640 × 480 | 30 | 32 | 2 | 0 | 0 | 8 | 11250 / 10125 / 5625 / 2812 | 30 (30) | 12539 | 60000 / 1001 | 2 | 1 |
+| 1080p30 | 480 × 360 | 30 | 32 | 2 | 0 | 0 | 8 | 15000 / 13500 / 7500 / 3750 | 22 (22) | 16562 | 60000 / 1001 | 2 | 1 |
+
+Colour: `colour_primaries` and `matrix_coefficients` (6 SMPTE 170M, 1
+BT.709). The values are the defaults of each output size; the bitrate
+slider of the Windows software changes B (seen: 576p 8000–15000, 720p
+14000–26250 at 60 and 8000–15000 at 30 frames per second, 1080i/1080p
+16000–30000). Maximum 0.9·B, average B/2, minimum 0 up to 4000, B/10
+below 10000, B/4 above, 0.35·B from 26250. `system_rate` = ⌊1.07285·B +
+c⌋ with c = 461.7 (50 Hz source), 470.2 (60 Hz), 504.7 / 521.5 for a
+progressive output at 50 / 60 frames per second (576p, 480p, 720p at 60). "Allow 50/60fps": off encodes 720p at 30 frames per second
+(GOP 8, signalled 60000/1001); on 576p and 480p it switches the GOP
+(6 / 12, 8 / 14) and level (30 / 31), also at 640 × 480 from 480p; no
+effect on 1080i and 1080p30. Scaled outputs of 60 Hz progressive sources
+(480p, 720p, 1080p30) are encoded at 30 frames per second. The 1280 × 720 and 1920 × 1080 output sizes
+of SD sources are scaled by the Windows software (the encoder stays at
+720 × 576). An output size change is NULL, STOP, encoder fields, START
+without front-end writes. Not recorded: 576p with a scaled size (the
+driver follows 480p).
+
+The driver uses these values at the standard output size; 480i and 480p
+follow the same rules (11250, GOP 14 / 15000, GOP 8), not yet confirmed.
+
+## 5. Mode configuration sequence (Observed, driver)
+
+Recorded for 576i, 576p, 720p, 1080i and 1080p30 (source mode changes
+while capturing); the driver follows it at every capture start
+(`gchd_configure_component_exact()`):
+
+1. Input selection (capture start only): front-end bank and `0x51 = ED`,
+   then `0x24 = 0C`, `0x21 = C5`, `0x91 = C8`, `0x0E = 8C`, `0x11 = EC`,
+   `0x54 = FC`, `0x71 = 4C`, `0x04 = CC`.
+2. Mode detection (§3).
+3. Front end per mode: `0xB2`/`0xB5`, the timing block (`0x01`–`0x07`,
+   `0x1E`/`0x1F`), the common block (`0x10`–`0x3B`, `0x17 = C6`), the
+   second per-mode block (`0x39`, `0x2C`, `0x03`, `0x12`, `0x13`, `0x17`,
+   `0x20`, `0x21`, `0x40`, `0x80`–`0x86`), `0xB0`/`0xB1`/`0xAD`
+   (interlaced SD: `0xAD = CC`, `0xB0 = F9` twice, `0xB1 = CC`).
+4. Back end: `0x9C:AB = CC`, `0x98:04 = 95`, the per-mode back-end table
+   (`0x70`, `0x0F`, `0x90`, `0x91`, `0x95`–`0x97`, `0xA0`–`0xA3`), then
+   `0x72 = 88`, `0xC0 = 88`, `0x61 = 98`, `0x63 = 89`, `0x64 = 96`,
+   `0x65 = 88`, `0x04 = 8D`, `0x62 = 91`; pulses `0x0D = C8`, `0x0E =
+   (0x98:F5 & 0x10) | 0x05` and the same with bit 0 clear, repeated until
+   `0x98:F5` reads `72` (usually `05/04`, then `15/14`); `0x9C:0F = E4`.
+5. Front-end colour block (`0x08`–`0x0D`, `0x1E`/`0x1F`, `0x92`–`0xAA`).
+6. Final values per mode: `0xB2` (SD `CF`, HD `CC`), `0xB5` (720p,
+   1080i `CC`, others `C4`), `0x03` (576i `8C`, 576p `84`, 720p `8C`,
+   1080i `0C`, 1080p `04`), `0x04 = CC`, `0xE0 = CC`; pulses again when
+   the back end has not settled; `0x9C:0F = E4`.
+7. Encoder programming (§4), INIT, START.
+
+Source mode change while capturing: the Windows software reads the
+timing measurement (`0x9C:68/67`, `66/65`) about every 0.75 s; after a new
+value it stops (NULL, STOP, 4.3 s after the first new value in one
+recording) and configures the new mode. The driver reads the same
+registers every 0.75 s while capturing; another mode (or no signal) on two
+reads in a row stops the capture, and the detection configures the new
+mode (steps 2–7) and starts again. A loss of the stream for 0.5 s does the
+same.
+
+Not done by the driver: at a source mode change while capturing, the
+Windows software first sets the back end to neutral values (`0x98:70 =
+C8`, `0x90 = 88`, `0x91`–`0xA3 = 77`, `0xC0 = 80`, …) and steps
+`0x9C:04` through 16 or more values with `0x9C:E0 = 6C`, `8C` after each,
+before and after the new configuration (apparently a sampling-phase
+adjustment).
+
+## 6. Output sizes and frame rate (driver)
+
+`VIDIOC_S_FMT` chooses the output size among the sizes the source allows;
+`VIDIOC_ENUM_FRAMESIZES` lists them (source size first):
+
+| Source | Output sizes |
+|---|---|
+| 1080i, 1080p30 | source, 1280 × 720, 640 × 480, 480 × 360 |
+| 720p, 480i, 480p, 576i, 576p | source, 640 × 480, 480 × 360 |
+
+While no capture has detected the source since the input was selected,
+the sizes, the bitrate range and the frame rate follow the component source
+mode detected last. A size the source does not allow gives the source size; the request is
+kept and applies again to a source that allows it. While capturing, a new
+output size (or a new encoder setting) restarts the encoder (NULL, STOP,
+encoder fields, START), as the Windows software does. Scaled outputs are
+progressive; 640 × 480 and 480 × 360 use transport output 2.
+
+Bitrate: the range of `V4L2_CID_MPEG_VIDEO_BITRATE` follows the output in
+effect (highest = default: 30000 kbit/s for 1080i/1080p, 26250 for 720p at
+60, 15000 for 720p at 30, 480p, 576p, 1280 × 720 and 480 × 360, 11250 for
+480i, 576i and 640 × 480; lowest 8/15 of it, as the Windows software's
+slider). In the recordings the highest is encoded CBR and the lowest VBR
+(`v_rate_mode 1`, `v_max_cpb_delay 10`); 480 × 360 always VBR. Where the
+Windows software switches between them is not recorded yet. The driver
+works as for composite: `V4L2_CID_MPEG_VIDEO_BITRATE_MODE` selects CBR or
+VBR (480 × 360 VBR only). Each output mode (the picture encoded:
+480 × 360; 640 × 480 and 480i/576i; 480p/576p; 720p at 60; 720p at 30 and
+1280 × 720 scaled from 1080; 1080i/1080p) keeps the bitrate mode last used
+there and the last bitrate of each mode, the same for every input
+(composite and S-video share 480 × 360 and 640 × 480 / 480i / 576i). A
+change of source mode, output size or "Allow 50/60 fps" (720p) uses that
+output mode's settings. `VIDIOC_G_DV_TIMINGS` gives the mode detected last
+while none is detected.
+
+Control "Allow 50/60 fps" (default on): off encodes 720p at 30 frames per
+second (signalled 60000/1001, GOP 8, 15000 kbit/s) and 576p/480p with GOP
+12/14 and level 31 (also their 640 × 480); no effect on 1080i and
+1080p30. Encoder values per source, output
+and option as in §4. The frame rate (`VIDIOC_G_PARM`,
+`VIDIOC_ENUM_FRAMEINTERVALS`): the source rate; 720p with the option off
+30; scaled outputs 30 (25 from 576i and 576p; 1280 × 720 of 1080i is 30
+progressive frames per second, measured in a captured stream).

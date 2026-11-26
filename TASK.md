@@ -1,59 +1,64 @@
-# TASK T-051 — Component input, all modes
+# TASK T-050 — HDMI input, all modes
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** analysis of the component recording (offline) first
-- **Type:** driver feature (stage 2)
-- **Branch:** `feat/component` (from `dev` 0.5.10)
-- **TODO items:** T-051 (stage 2)
+- **Status:** not started; waiting for the HDMI recordings (TODO R8, R13)
+- **Type:** driver feature (stage 3)
+- **Branch:** `feat/hdmi` (from `dev` 0.5.11)
+- **TODO items:** T-050 (stage 3)
 
 ## Why
 
-Component input is selectable, but its configuration still follows older
-code (the "C++ blocks"): front end, back end and encoder values were never
-compared with a recording with a source, and component capture with a
-source has not been confirmed (`docs/component.md §3`). Stage 2 brings
-component to the level of composite and S-video (RULES D7: within an
-input, the lowest mode first).
+HDMI is the last input. Its configuration still follows older code (the
+"C++ blocks", TODO "Known differences": back end pulses, `0900:0018`,
+encoder timing fields, GOP and bitrate formula); only a 1080p60 source
+with output size changes is recorded (`docs/hdmi.md §4`). Stage 3 brings
+HDMI to the level of component (RULES D7: lowest mode first).
 
 ## Goal (acceptance criteria, draft)
 
-1. Every mode the device offers on component is detected and captured
-   with the recorded configuration: 480i, 480p, 576i, 576p, 720p, 1080i,
-   1080p30 (USB 2.0 limit, maintainer).
-2. Mode changes while capturing, as recorded.
-3. Output sizes and the "Allow 50/60fps" option of the Windows software,
-   as recorded.
-4. Encoder settings of the HDMI/component group (bitrate, mode, profile)
-   with the limits of the recordings; shown in the settings window and
-   the OBS plugin.
+1. Every mode the device offers on HDMI is detected and captured with the
+   recorded configuration (480p, 576p, 720p, 1080i, 1080p; the modes the
+   recordings show; USB 2.0 limit as for component).
+2. Source mode changes while capturing, as recorded.
+3. Output sizes and "Allow 50/60 fps" as recorded, also while capturing.
+4. Bitrate mode and bitrate per output mode, as for component (the output
+   modes are shared with the other inputs), with the ranges of the
+   recordings; the CBR/VBR switch point from R13 also sets the component
+   ranges (now placeholders). Settings window and OBS plugin.
 5. V4L2 reporting (DV timings, size, frame rate, field order) right for
-   each mode; `v4l2-compliance` without failures.
+   each mode; `v4l2-compliance` without failures; a TS sample per mode
+   on `traces` (RULES F3).
 
 ## Evidence
 
-- `traces/component/gchd_component_modes_output-sizes_5060fps_small_part1`
-  and `_part2` (2026-11-25, decoded `.ops.txt` next to them): 576i, then
-  576p, 720p, 1080i, 1080p; output sizes; "Allow 50/60fps" on and off;
-  order not noted (maintainer).
-- No recording of 480i/480p yet (TODO R7).
+- `traces/hdmi/gchd_output_switch_hdmi` (1080p60 source, output sizes;
+  `docs/hdmi.md §4`).
+- Needed: R8 (every HDMI mode, mode changes, output sizes, bitrate,
+  "Allow 50/60 fps") and R13 (bitrate slider from the highest to the
+  lowest and back, values noted).
+- Component analysis for comparison:
+  `traces/ANALYSIS-2026-11-25-component.md`, `docs/component.md §4–§6`.
 
 ## Plan
 
-1. Split the recording into its change sequences (NULL … START), read the
-   detection values (`0x9C:68/67`), the front-end and back-end writes and
-   the encoder fields per sequence, and name each sequence (mode, output
-   size, 50/60 fps option). Result: an analysis note on `traces` and a
-   table in `docs/component.md`.
-2. Ask for single-option recordings where the sequence is unclear.
-3. Compare with the driver's component path; change one item at a time
-   (RULES D5), 576i first.
+1. Split the recordings into their change sequences, read the detection
+   values, front-end and back-end writes and encoder fields per sequence;
+   analysis note on `traces`, table in `docs/hdmi.md`.
+2. R13: find the bitrate where the Windows software switches between CBR
+   and VBR; set the CBR minimum and VBR maximum (HDMI and component).
+3. Compare with the driver's HDMI path; change one item at a time
+   (RULES D5), the lowest mode first.
+4. The emulator on the `tools` branch (`tools/drvemu/`) reproduces each
+   recorded sequence before the hardware test.
+
+## Done so far
+
+## Findings
 
 ## Hardware test (maintainer)
 
-Written with the first driver change.
-
-## Findings
+Not yet (after the recordings and the analysis).
 
 ## Maintainer comments
 

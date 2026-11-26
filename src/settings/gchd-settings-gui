@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-2.0
 """Elgato Game Capture HD settings: a window with the settings of the
-elgato_gchd driver (input, output size, bitrate mode and bitrate, H.264
-profile, stretch of SD input). Changes are applied at once, also while a
+elgato_gchd driver (input, output size, bitrate mode and bitrate, stretch
+of SD input, for component "Allow 50/60 fps"). Changes are applied at once, also while a
 program captures, and the driver remembers them. The window shows changes
 made by other programs (it reads the device every 1.5 s).
 
@@ -28,7 +28,6 @@ INPUTS = ["HDMI", "Component", "Composite", "S-Video"]
 OUTPUTS = [("720x480 NTSC / 720x576 PAL", 720, 480),
            ("640x480", 640, 480), ("480x360", 480, 360)]
 MODES = [("Constant (CBR)", 1), ("Variable (VBR)", 0)]
-PROFILES = [("High", 4), ("Main", 2), ("Baseline", 0)]
 REFRESH_MS = 1500
 
 # Bitrate of composite and S-video in Mbit/s as the device's capture
@@ -69,9 +68,9 @@ class Device:
 
     def read(self):
         """All settings in one call, or None when the device is gone."""
-        rc, out = self.run("-I", "-V", "-C",
+        rc, out = self.run("-I", "-V", "--list-framesizes", "MPEG", "-l", "-C",
                            "video_bitrate,video_bitrate_mode,h264_profile,"
-                           "stretch_sd_input")
+                           "stretch_sd_input,allow_50_60_fps")
         if rc != 0:
             return None
 
@@ -87,6 +86,13 @@ class Device:
             "mode": num(r"video_bitrate_mode:\s*(\d+)", 1),
             "profile": num(r"h264_profile:\s*(\d+)", 4),
             "stretch": num(r"stretch_sd_input:\s*(\d+)", 0),
+            "allow": num(r"allow_50_60_fps:\s*(\d+)", 1),
+            # Range of the bitrate control (component: that of the output).
+            "rate_min": num(r"video_bitrate\s.*?min=(\d+)", 0),
+            "rate_max": num(r"video_bitrate\s.*?max=(\d+)", 0),
+            # Output sizes the source allows (component: source size first).
+            "sizes": [(int(w), int(h)) for w, h in
+                      re.findall(r"Discrete (\d+)x(\d+)", out)],
         }
 
 
@@ -144,12 +150,16 @@ class Window(Gtk.Window):
         self.rate.connect("button-release-event", self.on_release)
         grid.attach(self.rate, 1, 4, 1, 1)
 
-        label("H.264 profile", 5)
-        self.profile = combo([p[0] for p in PROFILES], 5, self.on_profile)
         self.stretch_label = label("Stretch SD input", 6)
         self.stretch = Gtk.Switch(halign=Gtk.Align.START)
         self.stretch.connect("notify::active", self.on_stretch)
         grid.attach(self.stretch, 1, 6, 1, 1)
+        self.allow_label = label("Allow 50/60 fps", 7)
+        self.allow = Gtk.Switch(halign=Gtk.Align.START)
+        self.allow.connect("notify::active", self.on_allow)
+        grid.attach(self.allow, 1, 7, 1, 1)
+        self.out_sizes = None  # component: sizes in the output list
+        self.comp_range = None  # component: bitrate range in Mbit/s
 
         # Status next to the Close button.
         self.status = Gtk.Label(xalign=0, wrap=True)
@@ -173,14 +183,27 @@ class Window(Gtk.Window):
         if self.dragging or self.rate_timer or self.pending:
             return True
         return any(c.get_property("popup-shown")
-                   for c in (self.input, self.output, self.mode, self.profile))
+                   for c in (self.input, self.output, self.mode))
 
     def refresh(self):
         if not self.busy_with_user():
             self.load(quiet=True)
         return True
 
+    def comp_mobile(self):
+        i = self.output.get_active()
+        return bool(self.out_sizes) and 0 <= i < len(self.out_sizes) and \
+            self.out_sizes[i] == (480, 360)
+
     def rate_range(self):
+        if self.comp_range:
+            # Component, as composite: CBR the bitrate from 7/11.25 of the
+            # output's highest to the highest; VBR the average, lowest 8/15
+            # of the highest to half the highest.
+            lo, hi = self.comp_range
+            if self.comp_mobile() or self.mode.get_active() == 1:
+                return lo / 2, hi / 2, hi / 2
+            return round(hi * 7 / 11.25, 2), hi, hi
         out = max(self.output.get_active(), 0)
         if out == 2 or self.mode.get_active() == 1:
             return VBR_RANGE[out]
@@ -204,15 +227,35 @@ class Window(Gtk.Window):
             self.device_label.set_text(path)
             self.set_controls(True)
             self.set_active(self.input, vals["input"])
-            out = {(640, 480): 1, (480, 360): 2}.get(vals["size"], 0)
-            self.set_active(self.output, out)
             analog = vals["input"] >= 2
-            # Composite/S-video only (HDMI/component: their own settings).
-            for w in (self.output_label, self.output, self.stretch_label,
-                      self.stretch, self.mode_label, self.mode,
-                      self.rate_label, self.rate):
+            component = vals["input"] == 1
+            if component:
+                # Resolutions the source allows; the source size first.
+                sizes = vals["sizes"] or [vals["size"]]
+                self.set_output_items(["%dx%d" % s for s in sizes], sizes)
+                out = sizes.index(vals["size"]) if vals["size"] in sizes else 0
+            else:
+                self.set_output_items([o[0] for o in OUTPUTS], None)
+                out = {(640, 480): 1, (480, 360): 2}.get(vals["size"], 0)
+            self.set_active(self.output, out)
+            # Output size: composite/S-video and component; stretch and the
+            # bitrate: composite/S-video; 50/60 fps: component.
+            for w in (self.output_label, self.output):
+                w.set_visible(analog or component)
+            for w in (self.stretch_label, self.stretch):
                 w.set_visible(analog)
-            mobile = analog and out == 2
+            # Component: bitrate mode and bitrate as composite, in the range
+            # the driver gives for the output (known once a source is seen).
+            self.comp_range = None
+            if component and vals["rate_max"] and vals["rate_max"] < 40000000:
+                self.comp_range = (vals["rate_min"] / 1e6, vals["rate_max"] / 1e6)
+            for w in (self.mode_label, self.mode, self.rate_label, self.rate):
+                w.set_visible(analog or self.comp_range is not None)
+            for w in (self.allow_label, self.allow):
+                w.set_visible(component)
+            if self.allow.get_active() != bool(vals["allow"]):
+                self.allow.set_active(bool(vals["allow"]))
+            mobile = (analog and out == 2) or (component and self.comp_mobile())
             self.set_active(self.mode, 1 if mobile or vals["mode"] == 0 else 0)
             self.mode.set_sensitive(not mobile)
             lo, hi, _ = self.rate_range()
@@ -223,8 +266,6 @@ class Window(Gtk.Window):
             adj.set_upper(hi)
             if abs(self.rate.get_value() - shown) > 0.005:
                 self.rate.set_value(min(max(shown, lo), hi))
-            self.set_active(self.profile, next(
-                (i for i, p in enumerate(PROFILES) if p[1] == vals["profile"]), 0))
             if self.stretch.get_active() != bool(vals["stretch"]):
                 self.stretch.set_active(bool(vals["stretch"]))
             if was_missing:
@@ -247,6 +288,17 @@ class Window(Gtk.Window):
         self.status.set_text("")
         return False
 
+    def set_output_items(self, labels, sizes):
+        """Output list for the input (composite/S-video or component)."""
+        model = self.output.get_model()
+        if sizes == self.out_sizes and len(model) == len(labels) and \
+                all(model[i][0] == t for i, t in enumerate(labels)):
+            return
+        self.output.remove_all()
+        for t in labels:
+            self.output.append_text(t)
+        self.out_sizes = sizes
+
     @staticmethod
     def set_active(combo, index):
         if combo.get_active() != index:
@@ -254,7 +306,7 @@ class Window(Gtk.Window):
 
     def set_controls(self, on):
         for w in (self.input, self.output, self.rate, self.mode,
-                  self.profile, self.stretch):
+                  self.stretch, self.allow):
             w.set_sensitive(on)
 
     def apply(self, what, *args, side=False):
@@ -298,7 +350,8 @@ class Window(Gtk.Window):
         value = self.rate.get_value()
         if not lo - 1e-6 <= value <= hi + 1e-6:
             value = default
-        vbr = self.mode.get_active() == 1 or self.output.get_active() == 2
+        vbr = self.mode.get_active() == 1 or self.comp_mobile() or \
+            (not self.out_sizes and self.output.get_active() == 2)
         # Hundredths of Mbit/s, rounded half up (11.25 -> 11250 kbit/s).
         kb = int(value * 100 + 0.5) * (20 if vbr else 10)
         self.apply("Bitrate", "-c", "video_bitrate=%d" % (kb * 1000))
@@ -323,17 +376,20 @@ class Window(Gtk.Window):
         i = c.get_active()
         if i < 0 or self.loading:
             return
-        _, w, h = OUTPUTS[i]
+        if self.out_sizes is not None:
+            # Component: the source size is requested as 1920x1080 (a size
+            # that is never a scaled output, so it stays the source size).
+            w, h = (1920, 1080) if i == 0 else self.out_sizes[i]
+        else:
+            _, w, h = OUTPUTS[i]
+        # The driver loads the bitrate mode and bitrate kept for the new
+        # size (read back once applied); 480x360 is VBR only.
         self.apply("Output size", "-v", "width=%d,height=%d" % (w, h))
+        mobile = (w, h) == (480, 360)
         self.loading = True
-        if i == 2 and self.mode.get_active() != 1:
-            # 480x360 is VBR only: the driver uses its last VBR bitrate.
+        if mobile:
             self.mode.set_active(1)
-            self.loading = False
-            self.apply("Bitrate mode", "-c", "video_bitrate_mode=0",
-                       side=True)
-            self.loading = True
-        self.mode.set_sensitive(i != 2)
+        self.mode.set_sensitive(not mobile)
         self.loading = False
         self.limits_changed()
 
@@ -372,10 +428,9 @@ class Window(Gtk.Window):
         self.apply_rate()
         return False
 
-    def on_profile(self, c):
-        i = c.get_active()
-        if i >= 0:
-            self.apply("H.264 profile", "-c", "h264_profile=%d" % PROFILES[i][1])
+    def on_allow(self, sw, _param):
+        self.apply("Allow 50/60 fps", "-c",
+                   "allow_50_60_fps=%d" % int(sw.get_active()))
 
     def on_stretch(self, sw, _param):
         self.apply("Stretch", "-c", "stretch_sd_input=%d" % int(sw.get_active()))
