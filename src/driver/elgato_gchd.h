@@ -27,10 +27,11 @@
 #define GCHD_REBOOT_GAP_MS 1500
 #define GCHD_START_GRACE_MS 2000
 
-/* Output sizes of composite and S-video (analog_out). */
-#define GCHD_OUT_STANDARD 0 /* source size, 720 x 480 / 576 */
+/* Output sizes (composite/S-video: analog_out; component: hd_out). */
+#define GCHD_OUT_STANDARD 0 /* source size */
 #define GCHD_OUT_640X480  1
 #define GCHD_OUT_MOBILE   2 /* 480 x 360 */
+#define GCHD_OUT_1280X720 3 /* component, 1080i/1080p sources */
 #define GCHD_RING_FRAMES 512
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
@@ -131,6 +132,8 @@ struct gchd {
  int dv_index; /* HDMI/component timings set with S_DV_TIMINGS (gchd_modes[] index) */
  u8 out_active; /* output programmed in the encoder (GCHD_OUT_*) */
  bool stretch; /* composite/S-video: v_in_source_type 2 */
+ u8 hd_out; /* component: requested output size (GCHD_OUT_*) */
+ bool allow_5060; /* component: 50/60 frames per second for 576p and 720p */
  int bitrate_mode; /* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
  bool enc_dirty; /* encoder settings changed while capturing */
  unsigned long start_jiffies; /* last completed START */
@@ -233,5 +236,41 @@ extern const struct v4l2_file_operations vb2_fops;
 void gchd_remember_std(struct gchd *);
 __printf(2, 3) void gchd_mark(struct gchd *, const char *, ...);
 void gchd_mark_start(struct gchd *);
+
+/*
+ * Component output size in effect for the detected source: 1080i/1080p
+ * all sizes; 720p no 1280 x 720 (that is the source size); 480i/576i the
+ * source size or 640 x 480; 480p/576p the source size. Before detection the
+ * requested size.
+ */
+static inline u8 gchd_comp_out_of(const struct gchd *d, u8 o)
+{
+	if (!d->input_height || d->input_height == 1080)
+		return o;
+	if (d->input_height == 720)
+		return o == GCHD_OUT_1280X720 ? GCHD_OUT_STANDARD : o;
+	if (d->input_interlaced)
+		return o == GCHD_OUT_640X480 ? o : GCHD_OUT_STANDARD;
+	return GCHD_OUT_STANDARD;
+}
+
+static inline u8 gchd_comp_out(const struct gchd *d)
+{
+	return gchd_comp_out_of(d, d->hd_out);
+}
+
+/* Output size to encode: composite/S-video preset, component, HDMI source. */
+static inline u8 gchd_out_target(const struct gchd *d)
+{
+	if (d->input >= 2)
+		return d->analog_out;
+	return d->input == 1 ? gchd_comp_out(d) : GCHD_OUT_STANDARD;
+}
+
+/* 640 x 480 and 480 x 360 are encoded on transport output 2. */
+static inline bool gchd_out_ts2(u8 out)
+{
+	return out == GCHD_OUT_640X480 || out == GCHD_OUT_MOBILE;
+}
 
 #endif

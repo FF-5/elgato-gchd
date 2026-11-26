@@ -1999,6 +1999,11 @@ static int gchd_input_configure_mode(struct gchd *d)
  }
  dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
 
+ /* Component: the output size the detected source allows, from the start. */
+ if (d->input == 1) {
+  d->out_active = gchd_out_target(d);
+  d->enc_dirty = false;
+ }
  r = gchd_encoder_program(d);
  if (r)
   return r;
@@ -2031,14 +2036,16 @@ int gchd_analog_mode_reconfigure(struct gchd *d)
 }
 
 /*
- * Output size change while capturing (encoder in STOP): program the encoder
- * for d->analog_out; no decoder or back-end writes. START follows.
+ * Output size change or new encoder settings while capturing (encoder in
+ * STOP), composite/S-video and component: program the encoder for the
+ * output size in effect; no decoder, front-end or back-end writes. START
+ * follows.
  */
 int gchd_analog_output_reconfigure(struct gchd *d)
 {
  int r;
 
- d->out_active = d->analog_out;
+ d->out_active = gchd_out_target(d);
  d->enc_dirty = false;
  r = gchd_encoder_program(d);
  if (r)

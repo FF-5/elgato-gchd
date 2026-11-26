@@ -52,6 +52,8 @@ sudo dkms install elgato-gchd/0.5.10
 | `bitrate_mode` | 1 | Composite/S-video bitrate mode: 0 VBR, 1 CBR. |
 | `bitrate_cbr` | 0 | Composite/S-video: last CBR bitrate in kbit/s, 0 automatic. |
 | `bitrate_vbr` | 0 | Composite/S-video: last VBR bitrate in kbit/s (the control value, twice the average), 0 automatic. |
+| `hd_output` | 0 | Component output size: 0 source size, 1 640 × 480, 2 480 × 360, 3 1280 × 720 (sizes the source does not allow give the source size). |
+| `allow_5060` | 1 | Component: 1 encodes 720p at 60 and 576p/480p at 50/60 frames per second with the short GOP; 0 encodes 720p at 30 frames per second and 576p/480p with the long GOP. |
 | `bitrate_small` | 0 | Composite/S-video: last bitrate of the 480 × 360 output (VBR only) in kbit/s, 0 automatic. |
 | `stretch` | 0 | Stretch standard-definition input (composite/S-video). |
 | `h264_profile` | 4 | Composite/S-video H.264 profile (V4L2 value): 0 baseline, 2 main, 4 high. |

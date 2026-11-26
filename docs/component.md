@@ -141,3 +141,28 @@ C8`, `0x90 = 88`, `0x91`–`0xA3 = 77`, `0xC0 = 80`, …) and steps
 `0x9C:04` through 16 or more values with `0x9C:E0 = 6C`, `8C` after each,
 before and after the new configuration (apparently a sampling-phase
 adjustment).
+
+## 6. Output sizes and frame rate (driver)
+
+`VIDIOC_S_FMT` chooses the output size among the sizes the source allows;
+`VIDIOC_ENUM_FRAMESIZES` lists them (source size first):
+
+| Source | Output sizes |
+|---|---|
+| 1080i, 1080p30 | source, 1280 × 720, 640 × 480, 480 × 360 |
+| 720p | source, 640 × 480, 480 × 360 |
+| 576i, 480i | source, 640 × 480 |
+| 576p, 480p | source |
+
+A size the source does not allow gives the source size; the request is
+kept and applies again to a source that allows it. While capturing, a new
+output size (or a new encoder setting) restarts the encoder (NULL, STOP,
+encoder fields, START), as the Windows software does. Scaled outputs are
+progressive; 640 × 480 and 480 × 360 use transport output 2.
+
+Control "Allow 50/60 fps" (default on): off encodes 720p at 30 frames per
+second (signalled 60000/1001, GOP 8, 15000 kbit/s) and 576p/480p with GOP
+12/14; no effect on 1080i and 1080p30. Encoder values per source, output
+and option as in §4. The frame rate (`VIDIOC_G_PARM`,
+`VIDIOC_ENUM_FRAMEINTERVALS`): the source rate; 720p with the option off
+30; 1280 × 720 of 1080i 60; other scaled outputs 30 (25 from 576i).

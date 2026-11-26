@@ -257,9 +257,10 @@ static int gchd_transcoder_write_start(struct gchd *d,
 {
  bool hdnew = d->family == GCHD_FAMILY_HDNEW;
  /* The small output sizes are encoded progressive on transport output 2. */
- bool out2 = c->out != GCHD_OUT_STANDARD;
+ bool out2 = gchd_out_ts2(c->out);
  bool vbr = c->vbr;
- u8 ip_format = out2 || !gchd_enc_interlaced(d) ? 2 : 0;
+ /* Scaled outputs are encoded progressive. */
+ u8 ip_format = c->out != GCHD_OUT_STANDARD || !gchd_enc_interlaced(d) ? 2 : 0;
  u8 cpb_delay = vbr ? 10 : 3;
 
  GCHD_TC_SET(d, GCHD_TC_V_PID_OUT, GCHD_TS_PID_VIDEO);
@@ -392,11 +393,13 @@ static int gchd_transcoder_write_start(struct gchd *d,
 
 static int gchd_transcoder_program(struct gchd *d, bool start)
 {
- u8 out = d->input >= 2 ? d->out_active : GCHD_OUT_STANDARD;
+ u8 out = d->input >= 1 ? d->out_active : GCHD_OUT_STANDARD;
  u16 width = out == GCHD_OUT_640X480 ? 640 :
-             out == GCHD_OUT_MOBILE ? 480 : d->input_width;
+             out == GCHD_OUT_MOBILE ? 480 :
+             out == GCHD_OUT_1280X720 ? 1280 : d->input_width;
  u16 height = out == GCHD_OUT_640X480 ? 480 :
-              out == GCHD_OUT_MOBILE ? 360 : d->input_height;
+              out == GCHD_OUT_MOBILE ? 360 :
+              out == GCHD_OUT_1280X720 ? 720 : d->input_height;
  u16 src_height = d->input_height;
  u16 fps = d->input_fps_num ? d->input_fps_num : 60;
  u32 auto_bitrate;
@@ -441,34 +444,58 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
  /* Scaled outputs: GOP 6 at 50 Hz, 8 at 60 Hz; else 12 / 14. */
  u16 gop = out != GCHD_OUT_STANDARD ? (fps == 50 ? 6 : 8) : (fps + 10) / 5;
  /*
-  * Component, per source mode (docs/component.md §4): default bitrate
-  * 11250 kbit/s (480i/576i), 15000 (480p/576p), 26250 (720p), 30000
-  * (1080i/1080p); maximum 90 %, average 50 %, minimum 0 up to 4000, 10 %
-  * below 10000, 25 % above, 35 % from 26250; progressive 50/60 frames per
-  * second SD: GOP 6 / 8; 1080p30 signalled as 30000/1001.
+  * Component, per source mode and output size (docs/component.md §4).
+  * Source size: 11250 kbit/s (480i/576i), 15000 (480p/576p), 26250 (720p
+  * at 60 frames per second), 15000 (720p at 30, "Allow 50/60 fps" off),
+  * 30000 (1080i/1080p); 1280 x 720 15000, 640 x 480 11250, 480 x 360
+  * 15000. Maximum 90 %, average 50 %, minimum 0 up to 4000, 10 % below
+  * 10000, 25 % above, 35 % from 26250. 60 Hz progressive sources encoded
+  * at 30 frames per second (1080p30, 720p with the option off, 720p and
+  * 1080p scaled outputs) are signalled 60000/1001.
   */
  bool comp = d->input == 1;
- bool comp_sd_p = comp && src_height <= 576 && !d->input_interlaced;
+ bool comp_sd = comp && src_height <= 576;
+ bool comp_sd_p = comp_sd && !d->input_interlaced;
+ bool comp_half = false;	/* 60 Hz progressive source at 30 frames/s */
+ bool comp_fast = false;	/* progressive output at 50/60 frames/s */
  u32 comp_system_rate = 0;
  u8 comp_level = 0;
 
  if (comp) {
-  u32 def = src_height == 1080 ? 30000 : src_height == 720 ? 26250 :
-            comp_sd_p ? 15000 : 11250;
+  u32 def;
 
+  if (out == GCHD_OUT_STANDARD) {
+   comp_half = (src_height == 1080 && !d->input_interlaced) ||
+               (src_height == 720 && !d->allow_5060);
+   comp_fast = comp_sd_p || (src_height == 720 && !comp_half);
+   def = src_height == 1080 ? 30000 :
+         src_height == 720 ? (comp_half ? 15000 : 26250) :
+         comp_sd_p ? 15000 : 11250;
+   if (comp_sd_p)
+    /* "Allow 50/60 fps" off: GOP 12 (level 31); the stream stays at
+     * 50/60 frames per second. */
+    gop = d->allow_5060 ? (fps == 50 ? 6 : 8) : (fps == 50 ? 12 : 14);
+   else if (comp_half)
+    gop = 8;
+   comp_level = src_height > 576 ? (comp_half && src_height == 720 ? 31 : 40) :
+                comp_sd_p && d->allow_5060 ? 30 : 31;
+  } else {
+   comp_half = !d->input_interlaced && src_height > 576;
+   def = out == GCHD_OUT_640X480 ? 11250 : 15000;
+   gop = comp_sd ? (fps == 50 ? 6 : 8) : 8;
+   comp_level = out == GCHD_OUT_640X480 ? 30 :
+                out == GCHD_OUT_MOBILE ? 22 : 31;
+  }
   bitrate = d->bitrate_forced ? clamp_t(u32, d->bitrate, 2000, 40000) : def;
   auto_max_bitrate = bitrate * 9U / 10U;
   auto_average_bitrate = bitrate / 2U;
   auto_min_bitrate = bitrate <= 4000 ? 0 : bitrate < 10000 ? bitrate / 10U :
                      bitrate < 26250 ? bitrate / 4U : bitrate * 35U / 100U;
-  if (comp_sd_p)
-   gop = fps == 50 ? 6 : 8;
-  comp_level = src_height > 576 ? 40 : comp_sd_p ? 30 : 31;
   /* floor(1.07285 * B + 461.7) at 50 Hz, + 470.2 at 60 Hz; progressive
-   * 50/60 frames per second: +43 / +51. */
+   * output at 50/60 frames per second: +43 / +51. */
   comp_system_rate = ((u32)bitrate * 21457U +
                       (fps == 50 ? 9234000U : 9404000U)) / 20000U;
-  if (!d->input_interlaced && fps >= 50)
+  if (comp_fast)
    comp_system_rate += fps == 50 ? 43 : 51;
  }
  u16 anchor = 3;
@@ -488,14 +515,14 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
   anchor = 1;
  if (d->h264_level_forced) {
   level = d->h264_level;
+ } else if (comp) {
+  level = comp_level;
  } else if (out == GCHD_OUT_640X480) {
   level = 30;
  } else if (out == GCHD_OUT_MOBILE) {
   level = 22;
  } else if (d->input >= 2) {
   level = 31;
- } else if (comp) {
-  level = comp_level;
  } else {
   u32 frame_mb = (width * height) / (16U * 16U);
   u32 mbps = frame_mb * fps;
@@ -547,7 +574,7 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
    .out = out, .vbr = vbr,
    /* Composite/S-video and component: 1 with a 50 Hz source. */
    .vinpelclk = d->input >= 1 && fps == 50,
-   .half_rate = comp && src_height == 1080 && !d->input_interlaced,
+   .half_rate = comp_half,
   };
 
   return gchd_transcoder_write_start(d, &c);

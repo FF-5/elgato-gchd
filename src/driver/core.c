@@ -16,6 +16,7 @@ MODULE_VERSION(GCHD_VERSION);
 
 /* Private V4L2 control "Stretch SD Input". */
 #define V4L2_CID_GCHD_STRETCH (V4L2_CID_USER_BASE + 0x10f1)
+#define V4L2_CID_GCHD_ALLOW_5060 (V4L2_CID_USER_BASE + 0x10f2)
 
 /* Preserve the VB2 read/poll/mmap/ioctl operations while adding lifecycle hooks. */
 static void gchd_release_ref(struct kref *ref)
@@ -107,12 +108,60 @@ static u8 gchd_analog_out_for(u32 width, u32 height)
  return GCHD_OUT_STANDARD;
 }
 
+/* Component: output size of a preset; the source size before detection. */
+static void gchd_comp_out_size(const struct gchd *d, u8 out, u32 *width,
+                               u32 *height)
+{
+ if (out == GCHD_OUT_640X480) {
+  *width = 640; *height = 480;
+ } else if (out == GCHD_OUT_MOBILE) {
+  *width = 480; *height = 360;
+ } else if (out == GCHD_OUT_1280X720) {
+  *width = 1280; *height = 720;
+ } else if (d->input_height) {
+  *width = d->input_width; *height = d->input_height;
+ } else {
+  *width = d->width; *height = d->height;
+ }
+}
+
+/* Component: preset for a requested size; any other size is the source size. */
+static u8 gchd_comp_out_for(u32 width, u32 height)
+{
+ if (width == 1280 && height == 720)
+  return GCHD_OUT_1280X720;
+ return gchd_analog_out_for(width, height);
+}
+
+/*
+ * Component: encoded frame rate of an output: the source rate (720p at 30
+ * with "Allow 50/60 fps" off), 1280 x 720 of 1080i at 60, other scaled
+ * outputs at 30 (25 from 576i).
+ */
+static void gchd_comp_fps(const struct gchd *d, u8 out, u32 *num, u32 *den)
+{
+ *den = 1;
+ if (out == GCHD_OUT_STANDARD) {
+  *num = d->input_fps_num ? d->input_fps_num : 60;
+  *den = d->input_fps_den ? d->input_fps_den : 1;
+  if (d->input_height == 720 && !d->allow_5060) {
+   *num = 30; *den = 1;
+  }
+ } else if (out == GCHD_OUT_1280X720 && d->input_interlaced) {
+  *num = 60;
+ } else {
+  *num = d->input_height == 576 ? 25 : 30;
+ }
+}
+
 /* Field order of the encoded analog stream: top field first (both families). */
 static enum v4l2_field gchd_field(const struct gchd *d)
 {
  if (d->input >= 2)
   return d->analog_out == GCHD_OUT_STANDARD ?
          V4L2_FIELD_INTERLACED_TB : V4L2_FIELD_NONE;
+ if (d->input == 1 && gchd_comp_out(d) != GCHD_OUT_STANDARD)
+  return V4L2_FIELD_NONE;
  return d->input_interlaced ? V4L2_FIELD_INTERLACED : V4L2_FIELD_NONE;
 }
 
@@ -171,6 +220,12 @@ MODULE_PARM_DESC(bitrate_mode, "Bitrate mode: 0 VBR, 1 CBR");
 static unsigned int gchd_set_stretch;
 module_param_named(stretch, gchd_set_stretch, uint, 0644);
 MODULE_PARM_DESC(stretch, "Stretch SD input (composite/S-video): 0 off, 1 on");
+static unsigned int gchd_set_hd_output;
+module_param_named(hd_output, gchd_set_hd_output, uint, 0644);
+MODULE_PARM_DESC(hd_output, "Component output size: 0 source size, 1 640x480, 2 480x360, 3 1280x720");
+static unsigned int gchd_set_allow_5060 = 1;
+module_param_named(allow_5060, gchd_set_allow_5060, uint, 0644);
+MODULE_PARM_DESC(allow_5060, "Component: 50/60 frames per second for 576p/480p and 720p (0 off, 1 on)");
 static unsigned int gchd_set_profile = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
 module_param_named(h264_profile, gchd_set_profile, uint, 0644);
 MODULE_PARM_DESC(h264_profile, "H.264 profile (V4L2 value): 0 baseline, 2 main, 4 high");
@@ -315,8 +370,8 @@ static void gchd_ctrls_show(struct gchd *d);
 /* Store the device's settings in the parameters and announce them. */
 static void gchd_settings_save(struct gchd *d)
 {
- char e[17][40];
- char *envp[18];
+ char e[19][40];
+ char *envp[20];
  const struct gchd_group *a = &d->grp[1], *h = &d->grp[0];
  int i;
 
@@ -329,6 +384,8 @@ static void gchd_settings_save(struct gchd *d)
  gchd_set_bitrate_cbr = a->bitrate[1];
  gchd_set_bitrate_small = a->bitrate[2];
  gchd_set_stretch = d->stretch;
+ gchd_set_hd_output = d->hd_out;
+ gchd_set_allow_5060 = d->allow_5060;
  gchd_set_profile = a->profile;
  gchd_set_level = a->level;
  gchd_set_hd_bitrate_mode = h->bitrate_mode;
@@ -356,9 +413,11 @@ static void gchd_settings_save(struct gchd *d)
  snprintf(e[14], sizeof(e[14]), "GCHD_HD_H264_PROFILE=%u", gchd_set_hd_profile);
  snprintf(e[15], sizeof(e[15]), "GCHD_HD_H264_LEVEL=%u", gchd_set_hd_level);
  snprintf(e[16], sizeof(e[16]), "GCHD_BITRATE_SMALL=%u", gchd_set_bitrate_small);
- for (i = 0; i < 17; ++i)
+ snprintf(e[17], sizeof(e[17]), "GCHD_HD_OUTPUT=%u", gchd_set_hd_output);
+ snprintf(e[18], sizeof(e[18]), "GCHD_ALLOW_5060=%u", gchd_set_allow_5060);
+ for (i = 0; i < 19; ++i)
   envp[i] = e[i];
- envp[17] = NULL;
+ envp[19] = NULL;
  kobject_uevent_env(&d->intf->dev.kobj, KOBJ_CHANGE, envp);
 }
 
@@ -403,6 +462,9 @@ static void gchd_settings_load(struct gchd *d)
                                                       GCHD_OUT_STANDARD;
  d->pixfmt = gchd_set_format ? V4L2_PIX_FMT_MPEG : V4L2_PIX_FMT_H264;
  d->stretch = !!gchd_set_stretch;
+ d->hd_out = gchd_set_hd_output <= GCHD_OUT_1280X720 ? gchd_set_hd_output :
+                                                       GCHD_OUT_STANDARD;
+ d->allow_5060 = !!gchd_set_allow_5060;
  for (i = 0; i < 2; ++i)
   d->analog_std[i] = gchd_set_std[i] == 2 ? V4L2_STD_PAL :
                      gchd_set_std[i] == 1 ? V4L2_STD_NTSC_M : 0;
@@ -1099,7 +1161,7 @@ static int gchd_rx(void *arg)
    * Transport output 1 arrives on 0x81, output 2 (scaled outputs) on 0x84;
    * only the endpoint of the running output is parsed.
    */
-  if (done->endpoint != (d->input >= 2 && READ_ONCE(d->out_active) != GCHD_OUT_STANDARD ?
+  if (done->endpoint != (d->input >= 1 && gchd_out_ts2(READ_ONCE(d->out_active)) ?
                          GCHD_EP_AUX_IN : GCHD_EP_TS_IN)) {
    /* Other endpoint: not parsed. */
   } else if (d->input >= 2 && READ_ONCE(d->out_active) != READ_ONCE(d->analog_out)) {
@@ -1486,6 +1548,22 @@ static void gchd_mode_workfn(struct work_struct *work)
  int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
+ /*
+  * Component: a new output size or changed encoder settings restart the
+  * encoder; the source mode itself is followed by the detection.
+  */
+ if (d->input == 1) {
+  if (d->disconnected || !READ_ONCE(d->capture_active) ||
+      !d->input_configured || !READ_ONCE(d->signal_present) ||
+      (d->out_active == gchd_out_target(d) && !READ_ONCE(d->enc_dirty)))
+   goto out;
+  dev_info(&d->intf->dev, "encoder restart: output %u -> %u%s\n",
+           d->out_active, gchd_out_target(d),
+           READ_ONCE(d->enc_dirty) ? ", settings changed" : "");
+  gchd_mark(d, "restart encoder");
+  output_change = true;
+  goto stop_and_restart;
+ }
  if (d->disconnected || !READ_ONCE(d->capture_active) ||
      d->input < 2 ||
      (d->input_height != 480 && d->input_height != 576) ||
@@ -1667,6 +1745,10 @@ stop_and_restart:
  ev.id = d->input;
  ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
  v4l2_event_queue(&d->vdev, &ev);
+ if (d->input == 1) {
+  dev_info(&d->intf->dev, "component output now %u\n", d->out_active);
+  goto out;
+ }
  dev_info(&d->intf->dev, "analog mode now %s, output %u\n",
           d->input_height == 576 ? (d->input_interlaced ? "576i" : "288p") :
           (d->input_interlaced ? "480i" : "240p"), d->out_active);
@@ -2235,6 +2317,24 @@ static int gchd_enum_framesizes(struct file *f, void *p,
   return 0;
  }
 
+ if (d->input == 1) {
+  /* Source size, then the scaled sizes the source allows. */
+  static const u8 order[] = { GCHD_OUT_STANDARD, GCHD_OUT_1280X720,
+                              GCHD_OUT_640X480, GCHD_OUT_MOBILE };
+
+  for (i = 0; i < ARRAY_SIZE(order); ++i) {
+   if (i && gchd_comp_out_of(d, order[i]) != order[i])
+    continue;
+   if (n++ == s->index) {
+    s->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+    gchd_comp_out_size(d, order[i], &s->discrete.width,
+                       &s->discrete.height);
+    return 0;
+   }
+  }
+  return -EINVAL;
+ }
+
  for (i = 0; i < ARRAY_SIZE(gchd_modes); ++i) {
   if (!gchd_mode_allowed(d, &gchd_modes[i]))
    continue;
@@ -2275,6 +2375,18 @@ static int gchd_enum_frameintervals(struct file *f, void *p,
   return 0;
  }
 
+ if (d->input == 1) {
+  u8 out = gchd_comp_out_of(d, gchd_comp_out_for(v->width, v->height));
+  u32 w, h;
+
+  gchd_comp_out_size(d, out, &w, &h);
+  if (v->index != 0 || w != v->width || h != v->height)
+   return -EINVAL;
+  v->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+  gchd_comp_fps(d, out, &v->discrete.denominator, &v->discrete.numerator);
+  return 0;
+ }
+
  m = NULL;
  for (i = 0; i < ARRAY_SIZE(gchd_modes); ++i) {
   if (gchd_modes[i].width == v->width &&
@@ -2305,6 +2417,8 @@ static int gchd_gfmt(struct file*f,void*p,struct v4l2_format*x)
   */
  if (d->input >= 2)
   gchd_analog_out_size(d, d->analog_out, &d->width, &d->height);
+ else if (d->input == 1)
+  gchd_comp_out_size(d, gchd_comp_out(d), &d->width, &d->height);
  x->fmt.pix.width=d->width;x->fmt.pix.height=d->height;
  x->fmt.pix.pixelformat=d->pixfmt;
  /* Analog inputs are always encoded interlaced (also 240p/288p). */
@@ -2336,6 +2450,16 @@ static const struct gchd_mode *gchd_adjust_fmt(struct gchd *d,
   gchd_analog_out_size(d, out, &pix->width, &pix->height);
   pix->field = out == GCHD_OUT_STANDARD ? V4L2_FIELD_INTERLACED_TB :
                                           V4L2_FIELD_NONE;
+ } else if (d->input == 1) {
+  /* Component: an output size the source allows; the mode is detected. */
+  u8 out = gchd_comp_out_of(d, gchd_comp_out_for(pix->width, pix->height));
+  u32 w, h;
+
+  gchd_comp_out_size(d, out, &w, &h);
+  pix->width = w;
+  pix->height = h;
+  pix->field = out != GCHD_OUT_STANDARD || !d->input_interlaced ?
+               V4L2_FIELD_NONE : V4L2_FIELD_INTERLACED;
  } else {
   m = gchd_find_mode(pix->width, pix->height, interlaced);
   if (!m || !gchd_mode_allowed(d, m))
@@ -2389,8 +2513,20 @@ static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
    * output size is applied to the running capture by an encoder restart
    * (mode worker); the negotiated format of the buffers stays.
    */
-  if (d->input < 2 || x->fmt.pix.pixelformat != d->pixfmt)
+  if (d->input == 0 || x->fmt.pix.pixelformat != d->pixfmt)
    return -EBUSY;
+  if (d->input == 1) {
+   /* Component: the new output size by an encoder restart. */
+   out = gchd_comp_out_for(x->fmt.pix.width, x->fmt.pix.height);
+   if (out != d->hd_out) {
+    gchd_mark(d, "request output %ux%u", x->fmt.pix.width, x->fmt.pix.height);
+    d->hd_out = out;
+    gchd_settings_save(d);
+    if (d->streaming)
+     mod_delayed_work(system_wq, &d->mode_work, 0);
+   }
+   return gchd_gfmt(f, p, x);
+  }
   out = gchd_analog_out_for(x->fmt.pix.width, x->fmt.pix.height);
   if (out != d->analog_out) {
    gchd_mark(d, "request output %ux%u", x->fmt.pix.width, x->fmt.pix.height);
@@ -2402,6 +2538,8 @@ static int gchd_sfmt(struct file*f,void*p,struct v4l2_format*x)
   return gchd_gfmt(f, p, x);
  }
 
+ if (d->input == 1)
+  d->hd_out = gchd_comp_out_for(x->fmt.pix.width, x->fmt.pix.height);
  m = gchd_adjust_fmt(d, &x->fmt.pix);
  if (d->input >= 2)
   gchd_set_analog_out(d, gchd_analog_out_for(x->fmt.pix.width,
@@ -2447,6 +2585,8 @@ static int gchd_g_parm(struct file *f, void *p, struct v4l2_streamparm *a)
 
   t->numerator = pal ? 1 : 1001;
   t->denominator = pal ? 25 : 30000;
+ } else if (d->input == 1) {
+  gchd_comp_fps(d, gchd_comp_out(d), &t->denominator, &t->numerator);
  } else if (d->input_fps_num && d->input_fps_den) {
   t->numerator = d->input_fps_den;
   t->denominator = d->input_fps_num;
@@ -2549,7 +2689,7 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
   * Encoder settings: on composite and S-video a change while capturing
   * restarts the encoder (mode worker); other inputs only while stopped.
   */
- if (d->streaming && d->input < 2)
+ if (d->streaming && d->input == 0)
   return -EBUSY;
 
  switch (c->id) {
@@ -2566,6 +2706,9 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
   break;
  case V4L2_CID_GCHD_STRETCH:
   d->stretch = c->val;
+  break;
+ case V4L2_CID_GCHD_ALLOW_5060:
+  d->allow_5060 = c->val;
   break;
  case V4L2_CID_MPEG_VIDEO_BITRATE:
   d->bitrate = c->val / 1000;
@@ -2774,9 +2917,19 @@ int gchd_v4l2_register(struct gchd*d)
    .type = V4L2_CTRL_TYPE_BOOLEAN,
    .min = 0, .max = 1, .step = 1,
   };
+  static const struct v4l2_ctrl_config allow_cfg = {
+   .ops = &gchd_ctrl_ops,
+   .id = V4L2_CID_GCHD_ALLOW_5060,
+   .name = "Allow 50/60 fps",
+   .type = V4L2_CTRL_TYPE_BOOLEAN,
+   .min = 0, .max = 1, .step = 1,
+  };
   struct v4l2_ctrl_config cfg = stretch_cfg;
 
   cfg.def = d->stretch;
+  v4l2_ctrl_new_custom(&d->ctrls, &cfg, NULL);
+  cfg = allow_cfg;
+  cfg.def = d->allow_5060;
   v4l2_ctrl_new_custom(&d->ctrls, &cfg, NULL);
  }
  if(d->ctrls.error){r=d->ctrls.error;goto err;}
