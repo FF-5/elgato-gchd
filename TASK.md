@@ -209,3 +209,8 @@ bash gchd-test.sh T-051 --branch feat/component
 
 ## Maintainer comments
 
+=== summary (T-051, fb2b097 TASK: T-051 output sizes and Allow 50/60 fps accepted (sixth run))
+PASS | step 3 1080i: output size change while capturing | encoder restarted for 1280x720 while capturing
+PASS | step 4 back to the source size while capturing | encoder restarted for the source size while capturing
+
+FAIL: 0  WARN: 0
