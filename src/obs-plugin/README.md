@@ -20,9 +20,11 @@ properties.
   480 × 360), bitrate mode and bitrate, stretch of SD input; for
   component the output sizes the source allows (the resolutions the
   driver lists, source size first), bitrate mode and bitrate as for
-  composite in the range the driver gives for the output (CBR from 7/11.25
-  of the highest to the highest; VBR the average, 8/15 of the highest to
-  half of it) and "Allow 50/60 fps". Output size, bitrate mode, bitrate
+  composite in the range of the output mode (highest as the driver's:
+  480 × 360 15, 640 × 480 and 480i/576i 11.25, 480p/576p 15, 720p at 60
+  26.25, 720p at 30 and 1280 × 720 15, 1080 30 Mbit/s; CBR from 7/11.25 of
+  the highest to the highest; VBR the average, 8/15 of the highest to half
+  of it) and "Allow 50/60 fps". Output size, bitrate mode, bitrate
   and stretch are hidden for HDMI; stretch for component. The H.264 profile is not offered (the driver's default, as
   the Windows software does). They are the driver's settings, shared with the
   settings window and other programs: the properties show the device's

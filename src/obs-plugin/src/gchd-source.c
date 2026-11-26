@@ -1210,12 +1210,11 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 		 * Component, as composite: CBR from 7/11.25 of the output's
 		 * highest bitrate (placeholder until recorded) to the highest;
 		 * VBR the average, from 8/15 of the highest (recorded) to half
-		 * of it. The highest is the driver's.
+		 * of it. The highest of the output mode, as the driver's.
 		 */
-		double cmax = obs_data_get_double(settings, "comp_rate_max");
+		static const double top[] = { 15.0, 11.25, 15.0, 26.25, 15.0, 30.0 };
+		double cmax = top[oslot];
 
-		if (cmax <= 0)
-			cmax = 30.0;
 		lo = vbr ? cmax * 8 / 15 / 2 : (int)(cmax * 700 / 11.25 + 0.5) / 100.0;
 		hi = def = vbr ? cmax / 2 : cmax;
 	}
@@ -1292,21 +1291,6 @@ static void gchd_comp_sizes(const char *path, char *buf, size_t size)
 	close(fd);
 }
 
-/* Component: range of the bitrate control (the output's), in Mbit/s. */
-static void gchd_comp_rate_range(const char *path, obs_data_t *settings)
-{
-	struct v4l2_queryctrl q = { .id = V4L2_CID_MPEG_VIDEO_BITRATE };
-	int fd = open(path, O_RDWR | O_NONBLOCK);
-
-	if (fd < 0)
-		return;
-	if (ioctl(fd, VIDIOC_QUERYCTRL, &q) == 0 && q.maximum < 40000000) {
-		obs_data_set_double(settings, "comp_rate_min", q.minimum / 1e6);
-		obs_data_set_double(settings, "comp_rate_max", q.maximum / 1e6);
-	}
-	close(fd);
-}
-
 /* Output size list for the input: composite/S-video or component. */
 static void gchd_output_list(obs_property_t *p, obs_data_t *settings,
 			     bool component)
@@ -1372,7 +1356,6 @@ static obs_properties_t *gchd_properties(void *data)
 
 				gchd_comp_sizes(path, sizes, sizeof(sizes));
 				obs_data_set_string(settings, "comp_sizes", sizes);
-				gchd_comp_rate_range(path, settings);
 			}
 			pthread_mutex_lock(&s->lock);
 			s->cur = v;
