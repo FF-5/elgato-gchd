@@ -3,8 +3,9 @@
 **Development-only file** (never merged to `master`, RULES B2).
 
 - **Status:** encoder values and the mode configuration (front end, back
-  end) accepted on hardware; next: HD output sizes and
-  the 50/60 fps option, mode changes while capturing, 480i/480p
+  end) accepted on hardware; output sizes and "Allow 50/60 fps"
+  implemented (hardware test open); next: mode changes while capturing,
+  480i/480p, the settings window and OBS plugin for component
 - **Type:** driver feature (stage 2)
 - **Branch:** `feat/component` (from `dev` 0.5.10)
 - **TODO items:** T-051 (stage 2)
@@ -168,6 +169,20 @@ bash gchd-test.sh T-051 --branch feat/component
   settled): all five modes detected, right picture, encoder values in the
   stream. The maintainer will record 480i, 480p and 720p input and the
   480 × 360 output with an NTSC PS3.
+- Output sizes and "Allow 50/60 fps" (item 3): `S_FMT` on component now
+  chooses the output size (source, 1280 × 720 for 1080i/1080p, 640 × 480,
+  480 × 360 for HD sources, 640 × 480 for 480i/576i), no longer the source
+  mode (the mode comes from the detection); `ENUM_FRAMESIZES`,
+  `ENUM_FRAMEINTERVALS`, `G_PARM` and the field order follow; a change
+  while capturing restarts the encoder (mode worker, as composite);
+  encoder settings on component can now be changed while capturing
+  (restart; before: refused). Control "Allow 50/60 fps" (default on);
+  module parameters `hd_output`, `allow_5060` (uevent, udev rule).
+  Encoder values per source, output and option checked with the driver's
+  encoder programming run in userspace: all 15 recorded combinations
+  reproduced. The settings window and the OBS plugin do not show the
+  component output sizes and the option yet (after the hardware test).
+  480i/480p values follow the same rules until the NTSC recordings.
 
 ## Maintainer comments
 
