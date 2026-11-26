@@ -45,13 +45,14 @@ out() {
 	set_input 1
 	expect "$1: stream ${2}x${3} $4, level $5" "width=$2 height=$3 .*level=$5 .*field_order=$4" comp_cap
 }
-source_mode_unused() {	# source_mode NAME [HINT]
+source_mode() {	# source_mode NAME [HINT]
 	step "component source $1"
+	# Output at the source size while watching.
+	run v4l2-ctl -d $D -v width=1920,height=1080,pixelformat=MPEG
 	viewer_start
 	prompt "A window 'Elgato component' shows the PS3. Set the PS3's video output to $1.${2:+ $2} If the picture freezes or disappears, close the window (it reopens). Press Enter when it shows the PS3 in $1."
 	viewer_stop
-	run v4l2-ctl -d $D -v width=1920,height=1080,pixelformat=MPEG
-	set_input 1
+	# The sizes the source detected by the viewer allows.
 	run v4l2-ctl -d $D --list-framesizes MPEG
 }
 
@@ -78,7 +79,6 @@ run sh -c "(sleep 5; v4l2-ctl -d $D -v width=1280,height=720,pixelformat=MPEG) &
 run comp_cap
 expect "encoder restarted for 1280x720 while capturing" "component output now 3" sh -c "sudo dmesg | tail -80"
 run v4l2-ctl -d $D -v width=1920,height=1080,pixelformat=MPEG
-expect "v4l2-compliance on component: no failures" "Failed: 0" v4l2-compliance -d $D
 
 source_mode 720p "Untick 1080i."
 expect "720p: 1280x720 not offered as a scaled size" "^1$" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | grep -c 1280x720"
@@ -99,4 +99,7 @@ out "576p asked for 640x480: source size" 720 576 progressive 30
 source_mode 576i "Untick 576p."
 out "576i -> 640x480" 640 480 progressive 30
 out "576i source size" 720 576 tt 31
+
+step "v4l2-compliance on component (last: it leaves its own control values)"
+expect "v4l2-compliance on component: no failures" "Failed: 0" v4l2-compliance -d $D
 set_input 2
