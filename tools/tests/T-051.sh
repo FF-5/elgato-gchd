@@ -1,6 +1,7 @@
-# T-051: the settings window and the OBS plugin for component (output
-# sizes the source allows, "Allow 50/60 fps"). The driver parts of T-051
-# were accepted on 2026-11-26.
+# T-051: component bitrate (range per output, CBR at the highest, VBR
+# below) in the driver, the settings window and the OBS plugin; the H.264
+# profile is no longer offered. Output sizes and "Allow 50/60 fps" in the
+# window and the plugin were accepted on 2026-11-26.
 # Needs: the PS3 on component in 1080i (or 1080p), OBS with the plugin.
 
 INST="$REPO/install-driver.sh"
@@ -61,30 +62,45 @@ source_mode() {	# source_mode NAME [HINT]
 	run v4l2-ctl -d $D --list-framesizes MPEG
 }
 
+range_of() {	# the bitrate control's range
+	v4l2-ctl -d $D -l | grep -E '^ *video_bitrate ' | sed 's/.*min=\([0-9]*\) max=\([0-9]*\).*/\1-\2/'
+}
+
 step "install the settings programs and the plugin of this branch"
 run sudo rmmod elgato_gchd
 run bash "$INST" --all --yes --in-terminal < /dev/null
 prompt "Unplug the Elgato and plug it in again; wait 5 s."
 set_input 1
-
 source_mode 1080i "Tick 1080i (and untick 1080p) so the PS3 sends 1080i."
 
+step "driver: bitrate range per output"
+expect "1080i source size: 16-30 Mbit/s" "^16000000-30000000$" range_of
+run v4l2-ctl -d $D -v width=640,height=480,pixelformat=MPEG
+expect "640x480: 6-11.25 Mbit/s" "^6000000-11250000$" range_of
+run v4l2-ctl -d $D -v width=1280,height=720,pixelformat=MPEG
+expect "1280x720: 8-15 Mbit/s" "^8000000-15000000$" range_of
+run v4l2-ctl -d $D -v width=1920,height=1080,pixelformat=MPEG
+run v4l2-ctl -d $D -c video_bitrate=20000000
+expect "1080i at 20 Mbit/s kept" "video_bitrate: 20000000" v4l2-ctl -d $D -C video_bitrate
+run comp_cap
+run v4l2-ctl -d $D -c video_bitrate=30000000
+
 step "settings window"
-prompt "Open 'Elgato Game Capture HD Settings'. Input Component."
-confirm "Output size lists 1920x1080, 1280x720, 640x480, 480x360; an 'Allow 50/60 fps' switch is shown; no Stretch, Bitrate mode or Bitrate?"
-prompt "Choose Output size 1280x720; wait 3 s."
-expect "window: output 1280x720" "1280/720" v4l2-ctl -d $D -V
-prompt "Switch 'Allow 50/60 fps' off; wait 3 s."
-expect "window: Allow 50/60 fps off" "allow_50_60_fps: 0" v4l2-ctl -d $D -C allow_50_60_fps
-prompt "Switch it on again and choose Output size 1920x1080; wait 3 s; leave the window open."
-expect "window: back to the source size" "1920/1080" v4l2-ctl -d $D -V
+prompt "Open 'Elgato Game Capture HD Settings' (Input Component)."
+confirm "a Bitrate slider from 16.00 to 30.00 Mbit/s is shown; no H.264 profile row?"
+prompt "Move the Bitrate slider to about 20.00 and release it; wait 3 s."
+expect "window: about 20 Mbit/s" "video_bitrate: (19[5-9]|20[0-5])[0-9]{5}" v4l2-ctl -d $D -C video_bitrate
+prompt "Choose Output size 640x480; wait 3 s."
+confirm "the slider now goes from 6.00 to 11.25 (and stands at 11.25)?"
+prompt "Choose Output size 1920x1080 and the slider fully to the right (30.00); then Input Composite; wait 3 s."
+confirm "Composite: no H.264 profile row either; Bitrate mode and Bitrate as before?"
+run v4l2-ctl -d $D -i 1
 
 step "OBS plugin"
-prompt "Start OBS (the source 'Elgato Game Capture HD' shown, input Component); open the source's properties."
-confirm "OBS: Output size lists 1920x1080, 1280x720, 640x480, 480x360 and 'Allow 50/60 fps' is shown; no Stretch, Bitrate mode or Bitrate?"
-prompt "In OBS's properties choose 640x480; wait 5 s (the preview follows)."
-expect "OBS: output 640x480" "640/480" v4l2-ctl -d $D -V
-confirm "the preview shows the PS3 at 640x480, and the settings window shows 640x480 by itself?"
-prompt "Choose 1920x1080 again -> OK. Close OBS and the settings window."
+prompt "Start OBS (the source 'Elgato Game Capture HD', input Component); open the source's properties."
+confirm "OBS: a Bitrate slider from 16.00 to 30.00 Mbit/s; no H.264 profile; no Bitrate mode?"
+prompt "In OBS's properties move the Bitrate slider to about 25.00 -> OK; wait 3 s."
+expect "OBS: about 25 Mbit/s" "video_bitrate: (24[5-9]|25[0-5])[0-9]{5}" v4l2-ctl -d $D -C video_bitrate
+prompt "Set it back to 30.00 -> OK. Close OBS and the settings window."
 run obs_log 8
 set_input 2
