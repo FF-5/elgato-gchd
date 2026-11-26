@@ -1637,6 +1637,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  bool family_change = false;
  bool output_change = false;
  bool family_hold = false;
+ const char *stage = "family check";
  int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
@@ -1793,6 +1794,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  if (r)
   goto restart_failed;
 stop_and_restart:
+ stage = "stream stop";
  r = gchd_capture_stop(d);
  if (r)
   goto restart_failed;
@@ -1801,6 +1803,7 @@ stop_and_restart:
  d->ts_partial_len = 0;
  d->input_configured = false;
  gchd_set_lifecycle(d, GCHD_SOURCE_FORMAT_CONFIGURATION);
+ stage = "configuration";
  if (output_change) {
   r = gchd_analog_output_reconfigure(d);
  } else if (family_change) {
@@ -1812,11 +1815,13 @@ stop_and_restart:
  if (r)
   goto restart_failed;
  /* The source can change again during the setup: detect again. */
+ stage = "mode check";
  r = gchd_input_check_mode(d);
  if (r)
   goto restart_failed;
 
  gchd_set_lifecycle(d, GCHD_CAPTURE_START);
+ stage = "start";
  d->last_video_jiffies = jiffies;
  WRITE_ONCE(d->start_pending, true);
  reinit_completion(&d->rx_ready);
@@ -1870,8 +1875,8 @@ stop_and_restart:
 restart_failed:
  WRITE_ONCE(d->capture_active, false);
  gchd_set_lifecycle(d, GCHD_ERROR);
- dev_warn(&d->intf->dev,
-          "analog mode change failed: %d\n", r);
+ dev_warn(&d->intf->dev, "%s failed (%s): %d; detecting again\n",
+          output_change ? "encoder restart" : "analog mode change", stage, r);
  WRITE_ONCE(d->signal_present, false);
  WRITE_ONCE(d->detect_requested, true);
  gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
