@@ -4,7 +4,7 @@
 
 - **Status:** encoder values and the mode configuration (front end, back
   end), output sizes per source and "Allow 50/60 fps" accepted on
-  hardware; size change while capturing: hardware test open; next: mode changes while capturing,
+  hardware, also the size change while capturing; next: mode changes while capturing,
   480i/480p, the settings window and OBS plugin for component
 - **Type:** driver feature (stage 2)
 - **Branch:** `feat/component` (from `dev` 0.5.10)
@@ -206,11 +206,11 @@ bash gchd-test.sh T-051 --branch feat/component
   close, so the background change ran before the capture started (the
   capture began at 1280 × 720). The test now starts the change from the
   test itself, 6 s into the capture, in both directions.
+- T-051 (fb2b097), seventh run: 2/2 PASS: output size change while
+  capturing (1080i: source size → 1280 × 720 and back), encoder restarted
+  each time. Next: the maintainer records 480i/480p (sizes, 50/60 fps
+  option), 720p with 480 × 360 and a source mode change while capturing
+  with the NTSC PS3.
 
 ## Maintainer comments
 
-=== summary (T-051, fb2b097 TASK: T-051 output sizes and Allow 50/60 fps accepted (sixth run))
-PASS | step 3 1080i: output size change while capturing | encoder restarted for 1280x720 while capturing
-PASS | step 4 back to the source size while capturing | encoder restarted for the source size while capturing
-
-FAIL: 0  WARN: 0
