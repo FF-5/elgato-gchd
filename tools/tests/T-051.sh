@@ -1,8 +1,8 @@
-# T-051: component 480i and 480p (NTSC PS3): source size, 640x480 and
-# 480x360, "Allow 50/60 fps" on 480p (also at 640x480). The other modes,
-# output sizes and the size change while capturing were accepted on
-# 2026-11-26 with the PAL PS3.
-# Needs: the NTSC PS3 on component.
+# T-051: component 576p with scaled outputs (PAL PS3): 640x480 and
+# 480x360, "Allow 50/60 fps" at 640x480. Not recorded; the driver follows
+# the 480p recordings. Everything else on component was accepted on
+# 2026-11-26.
+# Needs: the PAL PS3 on component.
 
 D=$DEV
 # comp_cap W H FIELD: 10 s capture; size, field order, frame rate, aspect
@@ -57,23 +57,21 @@ source_mode() {	# source_mode NAME [HINT]
 step "load the test build (fresh plug-in)"
 load_module replug
 set_input 2
-set_fmt 720 480 MPEG
+set_fmt 720 576 MPEG
 set_input 1
 run v4l2-ctl -d $D -c allow_50_60_fps=1
 
-source_mode 480p "Untick 1080p, 1080i and 720p (the PS3 sends the highest resolution ticked)."
-expect "480p: three output sizes offered" "720x480.*640x480.*480x360" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | tr '\n' ' '"
-out "480p, Allow 50/60 fps on" 720 480 progressive 30
-out "480p -> 640x480, option on" 640 480 progressive 30
-out "480p -> 480x360" 480 360 progressive 22
+source_mode 576p "Untick 1080p, 1080i and 720p (the PS3 sends the highest resolution ticked)."
+expect "576p: three output sizes offered" "720x576.*640x480.*480x360" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | tr '\n' ' '"
+out "576p -> 640x480, option on" 640 480 progressive 30
+out "576p -> 480x360" 480 360 progressive 22
 run v4l2-ctl -d $D -c allow_50_60_fps=0
-out "480p -> 640x480, option off" 640 480 progressive 31
-out "480p, Allow 50/60 fps off" 720 480 progressive 31
+out "576p -> 640x480, option off" 640 480 progressive 31
 run v4l2-ctl -d $D -c allow_50_60_fps=1
-
-source_mode 480i "Untick 480p."
-out "480i source size" 720 480 tt 31
-out "480i -> 640x480" 640 480 progressive 30
-out "480i -> 480x360" 480 360 progressive 22
-run v4l2-ctl -d $D -v width=720,height=480,pixelformat=MPEG
+step "576p scaled: picture"
+run v4l2-ctl -d $D -v width=640,height=480,pixelformat=MPEG
+play 12 "576p at 640x480: is the picture right (whole picture, not cut, motion smooth)?"
+run v4l2-ctl -d $D -v width=480,height=360,pixelformat=MPEG
+play 12 "576p at 480x360: is the picture right?"
+run v4l2-ctl -d $D -v width=720,height=576,pixelformat=MPEG
 set_input 2
