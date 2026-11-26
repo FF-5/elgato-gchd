@@ -1,8 +1,8 @@
-# T-051: component bitrate (range per output, CBR at the highest, VBR
-# below) in the driver, the settings window and the OBS plugin; the H.264
-# profile is no longer offered. Output sizes and "Allow 50/60 fps" in the
-# window and the plugin were accepted on 2026-11-26.
-# Needs: the PS3 on component in 1080i (or 1080p), OBS with the plugin.
+# T-051: component bitrate as composite (bitrate mode, a bitrate kept per
+# mode, the output's range; CBR/VBR ranges in the window and the plugin are
+# placeholders until TODO R13); the kept bitrate survives a change to
+# another output size and back.
+# Needs: the PS3 on component in 1080i, OBS with the plugin.
 
 INST="$REPO/install-driver.sh"
 LOGS="$HOME/.config/obs-studio/logs"
@@ -66,6 +66,8 @@ range_of() {	# the bitrate control's range
 	v4l2-ctl -d $D -l | grep -E '^ *video_bitrate ' | sed 's/.*min=\([0-9]*\) max=\([0-9]*\).*/\1-\2/'
 }
 
+rate() { v4l2-ctl -d $D -C video_bitrate; }
+
 step "install the settings programs and the plugin of this branch"
 run sudo rmmod elgato_gchd
 run bash "$INST" --all --yes --in-terminal < /dev/null
@@ -73,34 +75,42 @@ prompt "Unplug the Elgato and plug it in again; wait 5 s."
 set_input 1
 source_mode 1080i "Tick 1080i (and untick 1080p) so the PS3 sends 1080i."
 
-step "driver: bitrate range per output"
-expect "1080i source size: 16-30 Mbit/s" "^16000000-30000000$" range_of
-run v4l2-ctl -d $D -v width=640,height=480,pixelformat=MPEG
-expect "640x480: 6-11.25 Mbit/s" "^6000000-11250000$" range_of
-run v4l2-ctl -d $D -v width=1280,height=720,pixelformat=MPEG
-expect "1280x720: 8-15 Mbit/s" "^8000000-15000000$" range_of
+step "driver: bitrate kept per mode and across output sizes"
 run v4l2-ctl -d $D -v width=1920,height=1080,pixelformat=MPEG
+run v4l2-ctl -d $D -c video_bitrate_mode=1
 run v4l2-ctl -d $D -c video_bitrate=20000000
-expect "1080i at 20 Mbit/s kept" "video_bitrate: 20000000" v4l2-ctl -d $D -C video_bitrate
+run v4l2-ctl -d $D -v width=640,height=480,pixelformat=MPEG
+expect "640x480: the output's highest (20 does not fit)" "video_bitrate: 11250000" rate
+run v4l2-ctl -d $D -v width=1920,height=1080,pixelformat=MPEG
+expect "back at 1920x1080: 20 Mbit/s again (kept)" "video_bitrate: 20000000" rate
+run v4l2-ctl -d $D -c video_bitrate_mode=0
+run v4l2-ctl -d $D -c video_bitrate=16000000
+run v4l2-ctl -d $D -c video_bitrate_mode=1
+expect "CBR: 20 Mbit/s kept" "video_bitrate: 20000000" rate
+run v4l2-ctl -d $D -c video_bitrate_mode=0
+expect "VBR: 16 Mbit/s kept" "video_bitrate: 16000000" rate
 run comp_cap
-run v4l2-ctl -d $D -c video_bitrate=30000000
+run v4l2-ctl -d $D -c video_bitrate_mode=1
 
 step "settings window"
 prompt "Open 'Elgato Game Capture HD Settings' (Input Component)."
-confirm "a Bitrate slider from 16.00 to 30.00 Mbit/s is shown; no H.264 profile row?"
-prompt "Move the Bitrate slider to about 20.00 and release it; wait 3 s."
-expect "window: about 20 Mbit/s" "video_bitrate: (19[5-9]|20[0-5])[0-9]{5}" v4l2-ctl -d $D -C video_bitrate
-prompt "Choose Output size 640x480; wait 3 s."
-confirm "the slider now goes from 6.00 to 11.25 (and stands at 11.25)?"
-prompt "Choose Output size 1920x1080 and the slider fully to the right (30.00); then Input Composite; wait 3 s."
-confirm "Composite: no H.264 profile row either; Bitrate mode and Bitrate as before?"
-run v4l2-ctl -d $D -i 1
+confirm "Bitrate mode is shown; Constant (CBR) with the slider from 18.67 to 30.00 at 20.00?"
+prompt "Choose Variable (VBR); wait 3 s."
+confirm "slider from 8.00 to 15.00 at 8.00 (16 Mbit/s shown as the average)?"
+prompt "Move the slider to about 10.00 and release it; wait 3 s."
+expect "window: VBR about 20 Mbit/s (10.00 average)" "video_bitrate: (19[5-9]|20[0-5])[0-9]{5}" rate
+prompt "Choose Output size 640x480; wait 3 s; then 1920x1080 again; wait 3 s."
+confirm "back at 1920x1080 the slider stands at about 10.00 again (not at the highest)?"
+prompt "Choose Output size 480x360; wait 3 s."
+confirm "Bitrate mode locked to Variable (VBR), slider 4.00 to 7.50?"
+prompt "Output size 1920x1080, Bitrate mode Constant (CBR); wait 3 s; leave the window open."
 
 step "OBS plugin"
-prompt "Start OBS (the source 'Elgato Game Capture HD', input Component); open the source's properties."
-confirm "OBS: a Bitrate slider from 16.00 to 30.00 Mbit/s; no H.264 profile; no Bitrate mode?"
-prompt "In OBS's properties move the Bitrate slider to about 25.00 -> OK; wait 3 s."
-expect "OBS: about 25 Mbit/s" "video_bitrate: (24[5-9]|25[0-5])[0-9]{5}" v4l2-ctl -d $D -C video_bitrate
-prompt "Set it back to 30.00 -> OK. Close OBS and the settings window."
+prompt "Start OBS (source 'Elgato Game Capture HD', input Component); open the source's properties."
+confirm "OBS: Bitrate mode Constant (CBR), Bitrate from 18.67 to 30.00 at about 20.00?"
+prompt "In OBS's properties choose Variable (VBR) -> OK; wait 3 s."
+expect "OBS: VBR with the kept VBR bitrate (about 20 Mbit/s)" "video_bitrate: (19[5-9]|20[0-5])[0-9]{5}" rate
+confirm "the settings window shows Variable (VBR) at about 10.00 by itself?"
+prompt "Back to Constant (CBR), slider 30.00 -> OK. Close OBS and the settings window."
 run obs_log 8
 set_input 2
