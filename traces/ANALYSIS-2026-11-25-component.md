@@ -158,3 +158,45 @@ Readings:
   0.5–3 s later (e.g. `720_output` #3/#4, `480_output` #1/#2,
   `50-60fps_option` #7/#8, #11/#12): the Windows software's first START
   after a source change.
+
+# NTSC PS3 recordings, 2026-11-26
+
+`traces/component/gchd_component_480i_input_output_size`,
+`_480p_input_output_size`, `_720p_to_1080i`,
+`_input_mode_change_small_part1/2` (decoded `.ops.txt` next to them; the
+split recording renamed to `_part1`/`_part2`). The 50/60 fps option was
+toggled wherever available (maintainer).
+
+| Source | Output | Option | IP | GOP | B / max / min | L | system_rate | ts | out |
+|---|---|---|---|---|---|---|---|---|---|
+| 480i | 720×480 | – | 0 | 14 | 11250 / 10125 / 2812 | 31 | 12539 | 0/0 | 1 |
+| 480i | 640×480 | – | 2 | 8 | 11250 / 10125 / 2812 | 30 | 12539 | 0/0 | 2 |
+| 480i | 480×360 | – | 2 | 8 | 15000 / 13500 / 3750 | 22 | 16562 | 0/0 | 2 |
+| 480p | 720×480 | on / off | 2 | 8 / 14 | 15000 / 13500 / 3750 | 30 / 31 | 16614 | 0/0 | 1 |
+| 480p | 640×480 | on / off | 2 | 8 / 14 | 11250 / 10125 / 2812 | 30 / 31 | 12539 | 60000/1001 | 2 |
+| 480p | 480×360 | on | 2 | 8 | 15000 / 13500 / 3750 | 22 | 16562 | 60000/1001 | 2 |
+
+All with `v_in_source_type 3`, `v_vinpelclk 0`, colour 6, `v_format` 4
+(480i) / 8 (480p).
+
+Readings:
+
+- 480i and 480p offer 640×480 and 480×360 (480p also scaled by the
+  encoder, unlike the earlier reading for 576p, which had no recording
+  with a scaled size).
+- Scaled outputs of 60 Hz progressive sources (480p, 720p, 1080p30) are
+  encoded at 30 frames per second (timing 60000/1001).
+- "Allow 50/60fps" on 480p: GOP 8 / 14 and level 30 / 31, also at
+  640×480; the stream stays at 60 frames per second (`system_rate` the
+  same).
+- `system_rate` = ⌊1.07285·B + c⌋ with c = 461.7 (50 Hz), 470.2 (60 Hz),
+  504.7 (50 frames/s progressive output), 521.5 (60 frames/s progressive
+  output): reproduces every recorded value (480p 16614, 720p 28683 and
+  15541, 576p 9087, 12574, 16597).
+- Source mode changes (`input_mode_change`, `720p_to_1080i`): each new
+  mode first starts with the previous mode's encoder values (#2 of part 2:
+  480i with the 1080i values, `v_in_source_type 2`), restarted 3–4 s
+  later with the right ones. `720p_to_1080i`: the new mode is read at
+  58.5 s (`0x9C:68 = A0`), NULL at 62.7 s, START at 67.1 s; the recording
+  ends before the restart. Front end and back end reprogrammed at each
+  change (120–130 writes), as in the first component recording.
