@@ -241,17 +241,12 @@ bash gchd-test.sh T-051 --branch feat/component
   neutral back-end values and `0x9C:04` sweep at the change. Hardware
   test together with 576p's scaled outputs (PAL PS3, no new recordings,
   maintainer).
+- T-051 (d29fbe6), ninth run, PAL PS3: 8/8 PASS: 576p offers three sizes;
+  640 × 480 level 30 (option on) / 31 (off), 480 × 360 level 22, picture
+  right at both; source mode changes while capturing (576p → 720p →
+  1080i → 576p) followed by the driver, the picture came back by itself
+  each time. All driver parts of T-051 accepted; open: the settings
+  window and the OBS plugin for component (output sizes, the option).
 
 ## Maintainer comments
 
-=== summary (T-051, d29fbe6 Component: follow a source mode change while capturing (timing measurement read every 0.75 s by the mode worker, as the Windows software; another mode on two reads hands over to the detection); docs/component.md §5 (T-051))
-PASS | step 2 component source 576p | 576p: three output sizes offered
-PASS | step 2 component source 576p | 576p -> 640x480, option on: stream 640x480 progressive, level 30
-PASS | step 2 component source 576p | 576p -> 480x360: stream 480x360 progressive, level 22
-PASS | step 2 component source 576p | 576p -> 640x480, option off: stream 640x480 progressive, level 31
-PASS | step 3 576p scaled: picture | 576p at 640x480: is the picture right (whole picture, not cut, motion smooth)?
-PASS | step 3 576p scaled: picture | 576p at 480x360: is the picture right?
-PASS | step 4 source mode changes while capturing | after each change the picture came back by itself in the new mode (within a few seconds, without closing the window)?
-PASS | step 4 source mode changes while capturing | the driver followed at least three source mode changes
-
-FAIL: 0  WARN: 0
