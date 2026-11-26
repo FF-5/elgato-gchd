@@ -74,6 +74,33 @@ menu_output() {
 	apply "The output size" -v "width=$w,height=$h"
 }
 
+# Component: the resolutions the source allows (the source size first).
+menu_comp_output() {
+	local sizes n i=0 args=() cur w h s
+	mapfile -t sizes < <(v4l2-ctl -d "$DEV" --list-framesizes MPEG 2>/dev/null | sed -n 's/.*Discrete \([0-9]*x[0-9]*\).*/\1/p')
+	[ ${#sizes[@]} -gt 0 ] || { whiptail --msgbox "No output sizes (no signal?)" 8 40; return; }
+	local def=0
+	cur=$(size_get)
+	for s in "${sizes[@]}"; do
+		[ "$s" = "$cur" ] && def=$i
+		args+=("$i" "$s"); i=$((i + 1))
+	done
+	n=$(whiptail --title "$TITLE" --default-item "$def" \
+		--menu "Output size (component)" 14 50 4 "${args[@]}" 3>&1 1>&2 2>&3) || return
+	# The source size is requested as 1920x1080 (never a scaled size).
+	if [ "$n" = 0 ]; then w=1920 h=1080; else w=${sizes[$n]%x*} h=${sizes[$n]#*x}; fi
+	apply "The output size" -v "width=$w,height=$h"
+}
+
+menu_allow() {
+	local cur n
+	cur=$(ctrl_get allow_50_60_fps)
+	n=$(whiptail --title "$TITLE" --default-item "${cur:-1}" --menu \
+		"Allow 50/60 fps (component: 720p at 60, 480p/576p short GOP)" 12 60 2 \
+		1 On 0 Off 3>&1 1>&2 2>&3) || return
+	apply "Allow 50/60 fps" -c "allow_50_60_fps=$n"
+}
+
 menu_bitrate() {
 	local cur kb
 	cur=$(ctrl_get video_bitrate)
@@ -119,6 +146,10 @@ while :; do
 			bitrate "Bitrate: $(( $(ctrl_get video_bitrate || echo 0) / 1000 )) kbit/s"
 			mode "Bitrate mode: $( [ "$(ctrl_get video_bitrate_mode)" = 0 ] && echo VBR || echo CBR )")
 	fi
+	if [ "${i:-0}" = 1 ]; then
+		items+=(compout "Output size: $(size_get)"
+			allow "Allow 50/60 fps: $( [ "$(ctrl_get allow_50_60_fps)" = 0 ] && echo off || echo on )")
+	fi
 	items+=(profile "H.264 profile: $(ctrl_get h264_profile)")
 	if [ "${i:-0}" -ge 2 ]; then
 		items+=(stretch "Stretch SD input: $( [ "$(ctrl_get stretch_sd_input)" = 1 ] && echo on || echo off )")
@@ -132,6 +163,8 @@ while :; do
 	mode) menu_mode ;;
 	profile) menu_profile ;;
 	stretch) menu_stretch ;;
+	compout) menu_comp_output ;;
+	allow) menu_allow ;;
 	*) break ;;
 	esac
 done

@@ -114,7 +114,8 @@ bitrate slider, switch); the driver remembers them. Changes apply at once,
 also to a running capture, and the window shows changes made by other
 programs. Composite and S-video share one group of settings, HDMI and
 component another; each bitrate mode keeps its last bitrate. Settings that
-do not apply to the selected input are hidden. Without a desktop:
+do not apply to the selected input are hidden. For component the window
+offers the output sizes the source allows and "Allow 50/60 fps". Without a desktop:
 [`src/settings/gchd-settings`](src/settings/gchd-settings) (text menu) or
 `v4l2-ctl`.
 

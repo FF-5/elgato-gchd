@@ -18,8 +18,10 @@ properties.
 - **Properties:** input (HDMI, component, composite, S-video), output size
   of composite and S-video (720x480 NTSC / 720x576 PAL, 640 × 480,
   480 × 360), bitrate mode and bitrate, H.264 profile, stretch of SD
-  input. Output size, bitrate mode, bitrate and stretch are hidden for
-  HDMI and component. They are the driver's settings, shared with the
+  input; for component the output sizes the source allows (the
+  resolutions the driver lists, source size first) and "Allow 50/60 fps".
+  Output size, bitrate mode, bitrate and stretch are hidden for HDMI;
+  bitrate mode, bitrate and stretch for component. They are the driver's settings, shared with the
   settings window and other programs: the properties show the device's
   values when they open and follow changes made elsewhere (checked every
   1.5 s). A change in the dialog is applied to the device 0.5 s after the

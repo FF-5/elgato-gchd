@@ -247,6 +247,13 @@ bash gchd-test.sh T-051 --branch feat/component
   1080i → 576p) followed by the driver, the picture came back by itself
   each time. All driver parts of T-051 accepted; open: the settings
   window and the OBS plugin for component (output sizes, the option).
+- Settings window, OBS plugin and text menu for component (offline):
+  output size list from the driver's `ENUM_FRAMESIZES` (resolutions,
+  source size first; the source size is requested as 1920 × 1080, which
+  is never a scaled size), switch/property "Allow 50/60 fps"; stretch and
+  the bitrate stay hidden for component. Checked here: the window with a
+  stand-in v4l2-ctl (list, switch, commands sent), the plugin's
+  properties with libobs (lists per input, visibility), shellcheck.
 
 ## Maintainer comments
 

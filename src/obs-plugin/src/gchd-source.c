@@ -38,6 +38,7 @@ OBS_DECLARE_MODULE()
 
 /* Private control of the driver: "Stretch SD Input". */
 #define GCHD_CID_STRETCH (V4L2_CID_USER_BASE + 0x10f1)
+#define GCHD_CID_ALLOW_5060 (V4L2_CID_USER_BASE + 0x10f2)
 #define GCHD_IO_SIZE 65424 /* 348 transport-stream packets */
 
 /*
@@ -58,11 +59,13 @@ static const double gchd_vbr_def[3] = { 7.0, 7.0, 7.5 };
 /* Device settings as the properties show them. */
 struct gchd_vals {
 	int input;		/* 0 HDMI, 1 component, 2 composite, 3 S-video */
-	int output;		/* 0 720x480/576, 1 640x480, 2 480x360 */
+	int output;		/* 0 source size, 1 640x480, 2 480x360,
+				   3 1280x720 (component) */
 	int mode;		/* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
 	double rate;		/* Mbit/s as shown (VBR: average) */
 	int profile;		/* V4L2_MPEG_VIDEO_H264_PROFILE_* */
 	bool stretch;
+	bool allow;		/* component: "Allow 50/60 fps" */
 };
 
 /* The values the driver keeps for a setting group (its module parameters). */
@@ -191,7 +194,7 @@ static bool gchd_vals_equal(const struct gchd_vals *a, const struct gchd_vals *b
 {
 	return a->input == b->input && a->output == b->output &&
 	       a->mode == b->mode && a->profile == b->profile &&
-	       a->stretch == b->stretch &&
+	       a->stretch == b->stretch && a->allow == b->allow &&
 	       (int)(a->rate * 100.0 + 0.5) == (int)(b->rate * 100.0 + 0.5);
 }
 
@@ -232,14 +235,16 @@ static void gchd_apply_changes(int fd, const struct gchd_vals *v,
 				     strerror(errno));
 		}
 	}
-	if (analog && (all || v->output != b->output)) {
-		static const unsigned int w[] = { 720, 640, 480 };
-		static const unsigned int h[] = { 480, 480, 360 };
+	if ((analog || v->input == 1) && (all || v->output != b->output)) {
+		/* Component: 1920x1080 is never a scaled size: the source size. */
+		static const unsigned int w[] = { 720, 640, 480, 1280 };
+		static const unsigned int h[] = { 480, 480, 360, 720 };
 		struct v4l2_format fmt = { .type = V4L2_BUF_TYPE_VIDEO_CAPTURE };
+		int oc = v->output >= 0 && v->output <= 3 ? v->output : 0;
 
 		if (ioctl(fd, VIDIOC_G_FMT, &fmt) == 0) {
-			fmt.fmt.pix.width = w[o];
-			fmt.fmt.pix.height = h[o];
+			fmt.fmt.pix.width = v->input == 1 && !oc ? 1920 : w[oc];
+			fmt.fmt.pix.height = v->input == 1 && !oc ? 1080 : h[oc];
 			if (ioctl(fd, VIDIOC_S_FMT, &fmt) < 0)
 				blog(LOG_WARNING, "[gchd] output size: %s",
 				     strerror(errno));
@@ -261,6 +266,8 @@ static void gchd_apply_changes(int fd, const struct gchd_vals *v,
 		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_H264_PROFILE, v->profile);
 	if (analog && (all || v->stretch != b->stretch))
 		gchd_ctrl(fd, GCHD_CID_STRETCH, v->stretch);
+	if (v->input == 1 && (all || v->allow != b->allow))
+		gchd_ctrl(fd, GCHD_CID_ALLOW_5060, v->allow);
 }
 
 /* The transport stream format, keeping the device's output size. */
@@ -296,11 +303,24 @@ static bool gchd_read_device(const char *path, struct gchd_vals *v)
 	if (ioctl(fd, VIDIOC_G_INPUT, &input) == 0)
 		v->input = (int)input;
 	if (ioctl(fd, VIDIOC_G_FMT, &fmt) == 0) {
-		if (fmt.fmt.pix.width == 640 && fmt.fmt.pix.height == 480)
+		struct v4l2_frmsizeenum fs = { .index = 0,
+					       .pixel_format = fmt.fmt.pix.pixelformat };
+		bool source = v->input == 1 &&
+			      ioctl(fd, VIDIOC_ENUM_FRAMESIZES, &fs) == 0 &&
+			      fs.discrete.width == fmt.fmt.pix.width &&
+			      fs.discrete.height == fmt.fmt.pix.height;
+
+		if (source)
+			v->output = 0;
+		else if (fmt.fmt.pix.width == 640 && fmt.fmt.pix.height == 480)
 			v->output = 1;
 		else if (fmt.fmt.pix.width == 480 && fmt.fmt.pix.height == 360)
 			v->output = 2;
+		else if (fmt.fmt.pix.width == 1280 && fmt.fmt.pix.height == 720)
+			v->output = 3;
 	}
+	c.id = GCHD_CID_ALLOW_5060;
+	v->allow = ioctl(fd, VIDIOC_G_CTRL, &c) != 0 || c.value != 0;
 	c.id = V4L2_CID_MPEG_VIDEO_BITRATE_MODE;
 	if (ioctl(fd, VIDIOC_G_CTRL, &c) == 0)
 		v->mode = c.value;
@@ -348,6 +368,8 @@ static void gchd_vals_to_settings(const struct gchd_vals *v,
 	}
 	if (!old || v->stretch != old->stretch)
 		obs_data_set_bool(st, "stretch", v->stretch);
+	if (!old || v->allow != old->allow)
+		obs_data_set_bool(st, "allow", v->allow);
 	if (!old || gchd_group(v->input) != gchd_group(old->input))
 		obs_data_set_int(st, "shown_group", gchd_group(v->input));
 	if (!old || gchd_slot(v->output, v->mode) !=
@@ -939,6 +961,7 @@ static void gchd_update(void *data, obs_data_t *settings)
 	s->cur.mode = (int)obs_data_get_int(settings, "bitrate_mode");
 	s->cur.profile = (int)obs_data_get_int(settings, "profile");
 	s->cur.stretch = obs_data_get_bool(settings, "stretch");
+	s->cur.allow = obs_data_get_bool(settings, "allow");
 	if (obs_data_has_user_value(settings, "shown_mode")) {
 		s->dlg.mode = (int)obs_data_get_int(settings, "shown_mode");
 		s->dlg.rate = obs_data_get_double(settings, "shown_rate");
@@ -1018,6 +1041,8 @@ static void gchd_defaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, "profile",
 				 V4L2_MPEG_VIDEO_H264_PROFILE_HIGH);
 	obs_data_set_default_bool(settings, "stretch", false);
+	obs_data_set_default_bool(settings, "allow", true);
+	obs_data_set_default_string(settings, "comp_sizes", "");
 	obs_data_set_default_int(settings, "shown_group", -1);
 	obs_data_set_default_int(settings, "shown_slot", -1);
 }
@@ -1028,6 +1053,9 @@ static void gchd_defaults(obs_data_t *settings)
  * range follows the mode and the output size; a value outside it is set to
  * the default of the mode.
  */
+static void gchd_output_list(obs_property_t *p, obs_data_t *settings,
+			     bool component);
+
 static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 				  obs_data_t *settings)
 {
@@ -1078,7 +1106,22 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 		obs_data_set_double(settings, "rate", def);
 	}
 
-	obs_property_set_visible(obs_properties_get(props, "output"), analog);
+	{
+		obs_property_t *out = obs_properties_get(props, "output");
+		bool comp = input == 1;
+
+		/* The list matches the input (not rebuilt while unchanged). */
+		const char *first = obs_property_list_item_count(out) ?
+				    obs_property_list_item_name(out, 0) : "";
+		bool analog_list = strcmp(first, "720x480 NTSC / 720x576 PAL") == 0;
+
+		if (analog_list == comp ||
+		    (comp && strcmp(first, "Source resolution") == 0 &&
+		     *obs_data_get_string(settings, "comp_sizes")))
+			gchd_output_list(out, settings, comp);
+		obs_property_set_visible(out, analog || comp);
+		obs_property_set_visible(obs_properties_get(props, "allow"), comp);
+	}
 	obs_property_set_visible(obs_properties_get(props, "stretch"), analog);
 	obs_property_set_visible(obs_properties_get(props, "bitrate_mode"),
 				 analog && !mobile);
@@ -1086,6 +1129,69 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 	obs_property_float_set_limits(obs_properties_get(props, "rate"), lo, hi,
 				      0.01);
 	return true;
+}
+
+/*
+ * Component output sizes the source allows, from the driver (source size
+ * first), as "WxH:code,..." (code: the "output" value).
+ */
+static void gchd_comp_sizes(const char *path, char *buf, size_t size)
+{
+	struct v4l2_frmsizeenum fs = { .pixel_format = V4L2_PIX_FMT_MPEG };
+	size_t n = 0;
+	int fd = open(path, O_RDWR | O_NONBLOCK);
+
+	buf[0] = 0;
+	if (fd < 0)
+		return;
+	for (fs.index = 0; ioctl(fd, VIDIOC_ENUM_FRAMESIZES, &fs) == 0 &&
+			   fs.index < 8; fs.index++) {
+		unsigned int w = fs.discrete.width, h = fs.discrete.height;
+		int code = !fs.index ? 0 : w == 640 ? 1 : w == 480 ? 2 :
+			   w == 1280 ? 3 : -1;
+
+		if (code < 0)
+			continue;
+		n += (size_t)snprintf(buf + n, size - n, "%s%ux%u:%d",
+				      n ? "," : "", w, h, code);
+		if (n >= size)
+			break;
+	}
+	close(fd);
+}
+
+/* Output size list for the input: composite/S-video or component. */
+static void gchd_output_list(obs_property_t *p, obs_data_t *settings,
+			     bool component)
+{
+	const char *sizes = obs_data_get_string(settings, "comp_sizes");
+
+	obs_property_list_clear(p);
+	if (!component) {
+		obs_property_list_add_int(p, "720x480 NTSC / 720x576 PAL", 0);
+		obs_property_list_add_int(p, "640x480", 1);
+		obs_property_list_add_int(p, "480x360", 2);
+		return;
+	}
+	if (!sizes || !*sizes)
+		sizes = "Source resolution:0,1280x720:3,640x480:1,480x360:2";
+	while (*sizes) {
+		char name[32];
+		const char *colon = strchr(sizes, ':');
+		const char *end = strchr(sizes, ',');
+		size_t len;
+
+		if (!colon)
+			break;
+		len = (size_t)(colon - sizes) < sizeof(name) - 1 ?
+			      (size_t)(colon - sizes) : sizeof(name) - 1;
+		memcpy(name, sizes, len);
+		name[len] = 0;
+		obs_property_list_add_int(p, name, atoi(colon + 1));
+		if (!end)
+			break;
+		sizes = end + 1;
+	}
 }
 
 static obs_properties_t *gchd_properties(void *data)
@@ -1114,6 +1220,12 @@ static obs_properties_t *gchd_properties(void *data)
 			if (pending)
 				goto read_done;
 			gchd_vals_to_settings(&v, NULL, settings);
+			if (v.input == 1) {
+				char sizes[160];
+
+				gchd_comp_sizes(path, sizes, sizeof(sizes));
+				obs_data_set_string(settings, "comp_sizes", sizes);
+			}
 			pthread_mutex_lock(&s->lock);
 			s->cur = v;
 			s->base = v;
@@ -1145,6 +1257,7 @@ read_done:
 
 	p = obs_properties_add_list(props, "output", "Output size",
 				    OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	/* Filled for the input by gchd_settings_changed(). */
 	obs_property_list_add_int(p, "720x480 NTSC / 720x576 PAL", 0);
 	obs_property_list_add_int(p, "640x480", 1);
 	obs_property_list_add_int(p, "480x360", 2);
@@ -1172,6 +1285,9 @@ read_done:
 				  V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE);
 
 	obs_properties_add_bool(props, "stretch", "Stretch SD input");
+	obs_property_set_long_description(
+		obs_properties_add_bool(props, "allow", "Allow 50/60 fps"),
+		"Component: 720p at 60 frames per second (off: 30); 480p/576p with the short GOP");
 	return props;
 }
 
