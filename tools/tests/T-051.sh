@@ -1,10 +1,7 @@
-# T-051: component output sizes (1280x720, 640x480, 480x360 as the source
-# allows) and the control "Allow 50/60 fps"; encoder values and mode
-# configuration were accepted on 2026-11-26. Each output is captured and
-# checked in the stream (size, field order, level); one size change while
-# capturing; v4l2-compliance on component. The PS3 sends the highest
-# resolution ticked in its menu: the steps go from 1080p down.
-# Needs: the PS3 on component (1080p, 1080i, 720p, 576p, 576i).
+# T-051: component output size changed while capturing (encoder restart).
+# Output sizes per source and "Allow 50/60 fps" were accepted on
+# 2026-11-26 (sixth run).
+# Needs: the PS3 on component, 1080i ticked in its video output settings.
 
 D=$DEV
 # comp_cap W H FIELD: 10 s capture; size, field order, frame rate, aspect
@@ -61,45 +58,19 @@ load_module replug
 set_input 2
 set_fmt 720 480 MPEG
 set_input 1
-run v4l2-ctl -d $D -c allow_50_60_fps=1
 
-source_mode 1080p
-expect "1080p: four output sizes offered" "1920x1080.*1280x720.*640x480.*480x360" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | tr '\n' ' '"
-out "1080p -> 1280x720" 1280 720 progressive 31
-out "1080p -> 640x480" 640 480 progressive 30
-out "1080p -> 480x360" 480 360 progressive 22
-
-source_mode 1080i "Untick 1080p."
-out "1080i -> 1280x720" 1280 720 progressive 31
-out "1080i -> 640x480" 640 480 progressive 30
-out "1080i -> 480x360" 480 360 progressive 22
-out "1080i source size" 1920 1080 tt 40
+source_mode 1080i "Tick 1080i again (untick 1080p if it is ticked)."
 step "1080i: output size change while capturing"
-run sh -c "(sleep 5; v4l2-ctl -d $D -v width=1280,height=720,pixelformat=MPEG) & sleep 0; true"
-run comp_cap
-expect "encoder restarted for 1280x720 while capturing" "component output now 3" sh -c "sudo dmesg | tail -80"
 run v4l2-ctl -d $D -v width=1920,height=1080,pixelformat=MPEG
-
-source_mode 720p "Untick 1080i."
-expect "720p: 1280x720 not offered as a scaled size" "^1$" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | grep -c 1280x720"
-out "720p -> 640x480" 640 480 progressive 30
-out "720p -> 480x360" 480 360 progressive 22
-run v4l2-ctl -d $D -c allow_50_60_fps=0
-out "720p, Allow 50/60 fps off" 1280 720 progressive 31
-run v4l2-ctl -d $D -c allow_50_60_fps=1
-out "720p, Allow 50/60 fps on" 1280 720 progressive 40
-
-source_mode 576p "Untick 720p."
-run v4l2-ctl -d $D -c allow_50_60_fps=0
-out "576p, Allow 50/60 fps off" 720 576 progressive 31
-run v4l2-ctl -d $D -c allow_50_60_fps=1
-out "576p, Allow 50/60 fps on" 720 576 progressive 30
-out "576p asked for 640x480: source size" 720 576 progressive 30
-
-source_mode 576i "Untick 576p."
-out "576i -> 640x480" 640 480 progressive 30
-out "576i source size" 720 576 tt 31
-
-step "v4l2-compliance on component (last: it leaves its own control values)"
-expect "v4l2-compliance on component: no failures" "Failed: 0" v4l2-compliance -d $D
+set_input 1
+# The size change runs in the background, 6 s after the capture starts.
+( sleep 6; v4l2-ctl -d $D -v width=1280,height=720,pixelformat=MPEG ) >/dev/null 2>&1 &
+run comp_cap
+wait
+expect "encoder restarted for 1280x720 while capturing" "component output now 3" sh -c "sudo dmesg | grep -E 'encoder restart|component output now' | tail -3"
+step "back to the source size while capturing"
+( sleep 6; v4l2-ctl -d $D -v width=1920,height=1080,pixelformat=MPEG ) >/dev/null 2>&1 &
+run comp_cap
+wait
+expect "encoder restarted for the source size while capturing" "component output now 0" sh -c "sudo dmesg | grep -E 'encoder restart|component output now' | tail -3"
 set_input 2
