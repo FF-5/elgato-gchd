@@ -33,10 +33,13 @@ properties.
   when a slider is released); Cancel sets the values from before the
   dialog again. Changes are remembered by the driver. Only values that
   differ from the device are sent, so values the dialog still shows from
-  before never overwrite a change made elsewhere. A change of bitrate
-  mode or input group shows the bitrate (and mode) the driver
-  keeps for it (read from its module parameters); a new bitrate mode is sent alone and the driver uses its
-  kept bitrate unless the slider was moved.
+  before never overwrite a change made elsewhere. A change of input
+  shows the output size the driver keeps for it; a change of output size
+  or input shows the bitrate mode and bitrate the driver keeps for that
+  output size, and a change of bitrate mode the bitrate kept for that mode
+  (read from its module parameters). These are not sent: the driver loads
+  them itself; a new bitrate mode is sent alone unless the slider was
+  moved.
 - **Bitrate:** shown in Mbit/s as in the observed settings
   (`docs/composite.md` §10): VBR as the average (half the bitrate),
   3.00–7.23 for the source size and 640 × 480, 2.00–7.50 for 480 × 360

@@ -112,8 +112,8 @@ the scene instead); the plugin's source shows it stretched.
 changes the input, output size and encoder settings in a window (menus,
 bitrate slider, switch); the driver remembers them. Changes apply at once,
 also to a running capture, and the window shows changes made by other
-programs. Composite and S-video share one group of settings, HDMI and
-component another; each bitrate mode keeps its last bitrate. Settings that
+programs. Each output size keeps the bitrate mode last used there and the
+last bitrate of each mode, the same for every input. Settings that
 do not apply to the selected input are hidden. For component the window
 offers the output sizes the source allows and "Allow 50/60 fps". Without a desktop:
 [`src/settings/gchd-settings`](src/settings/gchd-settings) (text menu) or

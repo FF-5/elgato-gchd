@@ -32,6 +32,9 @@
 #define GCHD_OUT_640X480  1
 #define GCHD_OUT_MOBILE   2 /* 480 x 360 */
 #define GCHD_OUT_1280X720 3 /* component, 1080i/1080p sources */
+/* Bitrate settings: the four output sizes and the HDMI/component source size. */
+#define GCHD_RATE_HD      4
+#define GCHD_RATE_SLOTS   5
 #define GCHD_RING_FRAMES 512
 #define GCHD_RING_BYTES (64ULL * 1024ULL * 1024ULL)
 #define GCHD_MAX_FRAME (8U * 1024U * 1024U)
@@ -174,13 +177,19 @@ struct gchd {
  u32 bitrate;
  u8 h264_profile;
  u8 h264_level;
- /* Encoder settings per group: [0] HDMI/component, [1] composite/S-video. */
+ /* H.264 settings per group: [0] HDMI/component, [1] composite/S-video. */
  struct gchd_group {
-  u16 bitrate[3];  /* kbit/s, 0 automatic: [0] VBR, [1] CBR, [2] 480 x 360 (VBR) */
-  u8 bitrate_mode; /* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
   u8 profile;      /* V4L2_MPEG_VIDEO_H264_PROFILE_* */
   u8 level;        /* level x10, 0 automatic */
  } grp[2];
+ /*
+  * Bitrate settings per output size, the same for every input (see
+  * gchd_rate_slot): the mode last used there and a bitrate per mode.
+  */
+ struct gchd_rates {
+  u16 bitrate[2];  /* kbit/s, 0 automatic: [0] VBR, [1] CBR */
+  u8 bitrate_mode; /* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
+ } rates[GCHD_RATE_SLOTS];
  struct v4l2_ctrl *ctrl_bitrate, *ctrl_mode, *ctrl_profile, *ctrl_level;
  bool ctrl_sync; /* controls set by the driver itself */
  bool mark_rx;   /* timing: mark the first stream data after START */

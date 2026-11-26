@@ -68,11 +68,12 @@ struct gchd_vals {
 	bool allow;		/* component: "Allow 50/60 fps" */
 };
 
-/* The values the driver keeps for a setting group (its module parameters). */
+/* The bitrate settings the driver keeps for an output size (its module
+ * parameters). */
 struct gchd_mem {
 	int mode;
-	double rate[3];		/* kept bitrates as shown (see gchd_slot) */
-	int profile;
+	double rate[2];		/* kept bitrates as shown: [0] VBR, [1] CBR;
+				   negative: the output's default */
 };
 
 #define GCHD_APPLY_DELAY_NS 500000000ULL /* after the last change */
@@ -174,14 +175,26 @@ static int gchd_group(int input)
 }
 
 /*
- * The driver's kept bitrate in use: 0 VBR, 1 CBR, 2 480x360 (VBR only,
- * its own range).
+ * Output size whose bitrate settings the driver uses, in the order of its
+ * out_bitrate_* parameters: 0 composite/S-video source size, 1 640x480,
+ * 2 480x360, 3 1280x720, 4 HDMI/component source size.
  */
-static int gchd_slot(int output, int mode)
+static int gchd_out_slot(int input, int output)
 {
-	if (output == 2)
-		return 2;
-	return mode == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR ? 1 : 0;
+	if (input >= 2)
+		return output == 1 || output == 2 ? output : 0;
+	if (input == 1 && output >= 1 && output <= 3)
+		return output;
+	return 4;
+}
+
+/* The driver's kept bitrate in use: VBR and CBR per output size; 480x360
+ * VBR only. */
+static int gchd_slot(int input, int output, int mode)
+{
+	int o = gchd_out_slot(input, output);
+
+	return o * 2 + (o != 2 && mode == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
 }
 
 static bool gchd_rate_equal(double a, double b)
@@ -202,28 +215,30 @@ static bool gchd_vals_equal(const struct gchd_vals *a, const struct gchd_vals *b
  * Apply the settings V that differ from the device's values B (all with
  * ALL), so that a stale value of the source never overwrites a setting
  * changed elsewhere. Mode, bitrate and profile that the properties filled
- * in themselves (SH: the driver's kept values after a change of bitrate
- * mode or setting group) are not sent: the driver loads them itself. A new
- * bitrate mode is sent alone unless the bitrate was moved too. 480x360 is
- * VBR only.
+ * in themselves (SH: the driver's kept values after a change of output
+ * size, input or bitrate mode) are not sent: the driver loads them itself.
+ * A new bitrate mode is sent alone unless the bitrate was moved too.
+ * 480x360 is VBR only.
  */
 static void gchd_apply_changes(int fd, const struct gchd_vals *v,
 			       const struct gchd_vals *b,
 			       const struct gchd_vals *sh, bool all)
 {
-	int o = v->output >= 0 && v->output <= 2 ? v->output : 0;
 	bool analog = v->input >= 2;
+	int o = v->output >= 0 && v->output <= (analog ? 2 : 3) ? v->output : 0;
 	bool vbr = o == 2 || v->mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
+	/* After a group change the device loads that group's profile. */
 	bool group = gchd_group(v->input) != gchd_group(b->input);
-	bool mobile = (o == 2) != (b->output == 2);
-	/* After a group change the device loads that group's kept values. */
-	const struct gchd_vals *g = group ? sh : b;
-	bool mode_changed = all || mobile || v->mode != g->mode;
+	/* After a change of output size or input the device loads that
+	 * size's kept mode and bitrate. */
+	bool size = gchd_out_slot(v->input, o) !=
+		    gchd_out_slot(b->input, b->output);
+	bool mode_changed = all || (o != 2 && v->mode != (size ? sh : b)->mode);
 	/* After a mode change the device loads that mode's kept bitrate. */
 	bool rate_changed = all || !gchd_rate_equal(v->rate,
-						    mode_changed || group ?
+						    mode_changed || size ?
 							    sh->rate : b->rate);
-	bool profile_changed = all || v->profile != g->profile;
+	bool profile_changed = all || v->profile != (group ? sh : b)->profile;
 
 	if (all || v->input != b->input) {
 		unsigned int input = (unsigned int)v->input, now = 99;
@@ -379,12 +394,18 @@ static void gchd_vals_to_settings(const struct gchd_vals *v,
 		obs_data_set_bool(st, "stretch", v->stretch);
 	if (!old || v->allow != old->allow)
 		obs_data_set_bool(st, "allow", v->allow);
+	if (!old || v->input != old->input)
+		obs_data_set_int(st, "shown_input", v->input);
 	if (!old || gchd_group(v->input) != gchd_group(old->input))
 		obs_data_set_int(st, "shown_group", gchd_group(v->input));
-	if (!old || gchd_slot(v->output, v->mode) !=
-			    gchd_slot(old->output, old->mode))
+	if (!old || gchd_out_slot(v->input, v->output) !=
+			    gchd_out_slot(old->input, old->output))
+		obs_data_set_int(st, "shown_out",
+				 gchd_out_slot(v->input, v->output));
+	if (!old || gchd_slot(v->input, v->output, v->mode) !=
+			    gchd_slot(old->input, old->output, old->mode))
 		obs_data_set_int(st, "shown_slot",
-				 gchd_slot(v->output, v->mode));
+				 gchd_slot(v->input, v->output, v->mode));
 }
 
 static long gchd_param(const char *name)
@@ -404,39 +425,61 @@ static long gchd_param(const char *name)
 	return v;
 }
 
-/*
- * The values the driver keeps for group G (1 composite/S-video, 0
- * HDMI/component), from its module parameters; false if not readable.
- * A bitrate of 0 is the encoder's default (11250 kbit/s, 15000 for
- * 480x360).
- */
-static bool gchd_kept(int g, struct gchd_mem *m)
+/* Entry I of a list parameter of the driver ("a,b,c"); -1 if not readable. */
+static long gchd_param_at(const char *name, int i)
 {
-	const char *pre = g ? "" : "hd_";
-	static const char *const names[] = { "bitrate_vbr", "bitrate_cbr",
-					      "bitrate_small" };
-	char name[40];
-	long v;
+	char path[128], buf[96];
+	const char *p = buf;
+	FILE *f;
+	long v = -1;
 
-	snprintf(name, sizeof(name), "%sbitrate_mode", pre);
-	v = gchd_param(name);
+	snprintf(path, sizeof(path), "/sys/module/elgato_gchd/parameters/%s",
+		 name);
+	f = fopen(path, "r");
+	if (!f)
+		return -1;
+	if (fgets(buf, sizeof(buf), f)) {
+		while (i-- > 0 && p)
+			if ((p = strchr(p, ',')))
+				p++;
+		if (p && *p >= '0' && *p <= '9')
+			v = strtol(p, NULL, 10);
+	}
+	fclose(f);
+	return v;
+}
+
+/*
+ * The bitrate settings the driver keeps for output size O (gchd_out_slot)
+ * when INPUT is selected, from its module parameters; false if not
+ * readable. A bitrate of 0 is the encoder's default: composite/S-video
+ * 11250 kbit/s (15000 for 480x360), component the output's highest (-1:
+ * the caller's default).
+ */
+static bool gchd_kept(int input, int o, struct gchd_mem *m)
+{
+	long v = gchd_param_at("out_bitrate_mode", o);
+	long vbr = gchd_param_at("out_bitrate_vbr", o);
+	long cbr = gchd_param_at("out_bitrate_cbr", o);
+	double def = o == 2 ? 15.0 : 11.25;
+
 	if (v < 0)
 		return false;
-	m->mode = v ? V4L2_MPEG_VIDEO_BITRATE_MODE_CBR :
-		      V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
-	for (int i = 0; i < 3; i++) {
-		long kb;
-
-		snprintf(name, sizeof(name), "%s%s", pre, names[i]);
-		kb = g || i < 2 ? gchd_param(name) : 0;
-		if (kb <= 0)
-			kb = i == 2 ? 15000 : 11250;
-		m->rate[i] = i == 1 ? kb / 1000.0 : kb / 2000.0;
-	}
-	snprintf(name, sizeof(name), "%sh264_profile", pre);
-	v = gchd_param(name);
-	m->profile = v >= 0 ? (int)v : V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
+	m->mode = v && o != 2 ? V4L2_MPEG_VIDEO_BITRATE_MODE_CBR :
+				V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
+	if (input < 2)
+		def = -1;
+	m->rate[0] = vbr > 0 ? vbr / 2000.0 : def / 2;
+	m->rate[1] = cbr > 0 ? cbr / 1000.0 : def;
 	return true;
+}
+
+/* The H.264 profile the driver keeps for group G (1 composite/S-video). */
+static int gchd_kept_profile(int g)
+{
+	long v = gchd_param(g ? "h264_profile" : "hd_h264_profile");
+
+	return v >= 0 ? (int)v : V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
 }
 
 /* ------------------------------------------------------------ decoding */
@@ -1052,7 +1095,9 @@ static void gchd_defaults(obs_data_t *settings)
 	obs_data_set_default_bool(settings, "stretch", false);
 	obs_data_set_default_bool(settings, "allow", true);
 	obs_data_set_default_string(settings, "comp_sizes", "");
+	obs_data_set_default_int(settings, "shown_input", -1);
 	obs_data_set_default_int(settings, "shown_group", -1);
+	obs_data_set_default_int(settings, "shown_out", -1);
 	obs_data_set_default_int(settings, "shown_slot", -1);
 }
 
@@ -1071,35 +1116,56 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 	int input = (int)obs_data_get_int(settings, "input");
 	int g = gchd_group(input);
 	struct gchd_mem kept;
-	bool have = gchd_kept(g, &kept);
+	bool have;
 	bool analog = input >= 2;
-	int o = (int)obs_data_get_int(settings, "output");
+	int o, oslot, ro;
 	bool mobile, vbr;
 	double lo, hi, def, r;
 	int slot;
 
 	UNUSED_PARAMETER(p);
-	if (o < 0 || o > 2)
+
+	/* Other input: the output size the driver keeps for it. */
+	if (input != obs_data_get_int(settings, "shown_input")) {
+		long ko = analog ? gchd_param("output") :
+			  input == 1 ? gchd_param("hd_output") : 0;
+
+		if (ko >= 0 && ko <= (analog ? 2 : 3))
+			obs_data_set_int(settings, "output", ko);
+		obs_data_set_int(settings, "shown_input", input);
+	}
+	/* Other setting group: the profile the driver keeps for it. */
+	if (g != obs_data_get_int(settings, "shown_group")) {
+		int pr = gchd_kept_profile(g);
+
+		obs_data_set_int(settings, "profile", pr);
+		obs_data_set_int(settings, "shown_profile", pr);
+		obs_data_set_int(settings, "shown_group", g);
+	}
+
+	o = (int)obs_data_get_int(settings, "output");
+	if (o < 0 || o > (analog ? 2 : 3))
 		o = 0;
 	mobile = o == 2;
+	ro = o <= 2 ? o : 0;
+	oslot = gchd_out_slot(input, o);
+	have = gchd_kept(input, oslot, &kept);
 
-	/* Other setting group: show the values the driver keeps for it. */
-	if (g != obs_data_get_int(settings, "shown_group")) {
-		if (have) {
+	/* Other output size (or input): the bitrate mode kept for it. */
+	if (oslot != obs_data_get_int(settings, "shown_out")) {
+		if (have && !mobile) {
 			obs_data_set_int(settings, "bitrate_mode", kept.mode);
 			obs_data_set_int(settings, "shown_mode", kept.mode);
-			obs_data_set_int(settings, "profile", kept.profile);
-			obs_data_set_int(settings, "shown_profile", kept.profile);
 		}
-		obs_data_set_int(settings, "shown_group", g);
+		obs_data_set_int(settings, "shown_out", oslot);
 		obs_data_set_int(settings, "shown_slot", -1);
 	}
 
-	slot = gchd_slot(o, (int)obs_data_get_int(settings, "bitrate_mode"));
-	vbr = slot != 1;
-	lo = vbr ? gchd_vbr_min[o] : GCHD_CBR_MIN;
-	hi = vbr ? gchd_vbr_max[o] : GCHD_CBR_MAX;
-	def = vbr ? gchd_vbr_def[o] : GCHD_CBR_DEF;
+	slot = gchd_slot(input, o, (int)obs_data_get_int(settings, "bitrate_mode"));
+	vbr = slot % 2 == 0;
+	lo = vbr ? gchd_vbr_min[ro] : GCHD_CBR_MIN;
+	hi = vbr ? gchd_vbr_max[ro] : GCHD_CBR_MAX;
+	def = vbr ? gchd_vbr_def[ro] : GCHD_CBR_DEF;
 	if (input == 1) {
 		/*
 		 * Component, as composite: CBR from 7/11.25 of the output's
@@ -1116,10 +1182,10 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 	}
 	r = obs_data_get_double(settings, "rate");
 
-	/* Other bitrate mode or 480x360: show the bitrate last used there. */
+	/* Other bitrate mode or output size: the bitrate last used there. */
 	if (slot != obs_data_get_int(settings, "shown_slot")) {
 		if (have)
-			r = kept.rate[slot];
+			r = kept.rate[vbr ? 0 : 1];
 		if (r < lo - 1e-6 || r > hi + 1e-6)
 			r = def;
 		obs_data_set_double(settings, "rate", r);
