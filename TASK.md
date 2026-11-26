@@ -367,3 +367,8 @@ bash gchd-test.sh T-051 --branch feat/component
 
 ## Maintainer comments
 
+=== summary (T-051, 82db078 Component: 1080i at 1280x720 reports 30 frames per second, as the captured stream (was 60) (T-051))
+PASS | step 3 frame rate of 1080i at 1280x720 | G_PARM: 30 frames per second
+PASS | step 3 frame rate of 1080i at 1280x720 | frame intervals: 30 frames per second
+
+FAIL: 0  WARN: 0
