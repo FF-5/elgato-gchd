@@ -12,6 +12,10 @@ reference (`traces` branch). The project is the kernel driver only
 (all modes, mode and input changes, output sizes, bitrate and the other
 settings); then the repository layout and installation scripts; then
 guvcview/OBS support; then component the same way; then HDMI.
+**Before the first `master` merge (maintainer, 2026-11-26):** after HDMI
+the picture and audio settings (T-080), then stage 5 in its order:
+documentation, performance, pre-release test, security, repository
+cleanup.
 
 Legend: **[HW]** maintainer's hardware, **[WIN]** new Windows recording,
 **[OFF]** offline, **(S/M/L)** size. Test results: `logs/hardware-test-log.md`
@@ -82,7 +86,7 @@ input, all modes (T-051, 0.5.11). Test results: `logs/hardware-test-log.md` on t
       recordings; settings window and OBS plugin). Recorded so far: `hdmi/gchd_output_switch_hdmi` (1080p60
       source, output sizes; `docs/hdmi.md §4`).
 
-## Stage 4 — Picture and audio settings (after HDMI, after the release)
+## Stage 4 — Picture and audio settings (after HDMI, before the release)
 
 - [ ] **T-080 [WIN+HW] (M)** Picture settings of the Windows application
       (brightness, contrast, saturation, hue, sharpness, as offered) and
@@ -92,6 +96,54 @@ input, all modes (T-051, 0.5.11). Test results: `logs/hardware-test-log.md` on t
       bulk-OUT filter), changing it while capturing. Settings that reach the
       device become V4L2 controls (`V4L2_CID_BRIGHTNESS`, …, audio via the
       TS stream); application-side settings are not driver features.
+
+## Stage 5 — Release preparation (before the first `master` merge)
+
+In this order, each its own task and branch:
+
+- [ ] **T-097 [OFF] (L)** Documentation rewrite (maintainer, 2026-11-26):
+      `docs/` becomes (1) a reference of the device's communication
+      protocol, every command and register with what it does, and (2) a
+      description of what the driver's code does (structure, state
+      machine, workers, data path, settings). Written to help others
+      understand the device and the code, not how the results were found:
+      no "Observed"/"Driver"/"Unknown" labels, no references to
+      recordings, traces or the analysis; also the READMEs and code
+      comments (RULES C, E10).
+- [ ] **T-098 [OFF+HW] (M)** Performance review (maintainer: "extract
+      everything out of the module"). Measure first: CPU time per second
+      of capture (`perf`, the `timing` parameter), latency of control
+      changes and restarts, per input and output size. Candidates: the
+      data path (bulk-IN URBs, TS packet parsing and PID filtering, ring
+      buffer copies, `read()`/vb2 copies), polling intervals, mailbox round
+      trips. SIMD (SSE2) in a kernel module needs `kernel_fpu_begin()` /
+      `_end()` around it, which saves the FPU state and must not sleep; it
+      pays off only for long copy or scan loops, and the kernel's `memcpy`
+      already uses the fastest copy the CPU offers. Expected gain small
+      (the work is mostly USB transfers); every change measured before and
+      after and proven to give the same stream.
+- [ ] **T-090 (M)** Pre-release test: one test file covering every
+      accepted feature (inputs, standards, modes, mode and family changes,
+      output sizes, bitrate, picture/audio settings, formats,
+      close/reopen, settings persistence, compliance, installer, settings
+      programs, OBS plugin), less detailed than the per-task tests.
+- [ ] **T-099 [OFF] (M)** Security review of all code, last before the
+      merge (maintainer, 2026-11-26): driver (USB data from the device
+      treated as untrusted: lengths and bounds in the bulk-IN and TS
+      parsing, mailbox replies, control and ioctl arguments, module
+      parameters, unplug races, locking), userspace (installer and
+      firmware script: quoting, temporary files, `sudo` use, downloads;
+      udev rule `RUN` command; settings programs; OBS plugin: buffer sizes,
+      parsing of driver output and sysfs). Findings listed by severity;
+      fixed and re-tested before the merge.
+- [ ] **T-100 (S)** Repository cleanup for the release (maintainer,
+      2026-11-26): `master` gets no development material (the merge removes
+      `CLAUDE.md`, `TODO.md`, `TASK.md`, `RULES.md`, RULES B2; `traces` and
+      `tools` never enter `dev` or `master`, RULES B3); the merged feature
+      branches deleted; `traces` and `tools` deleted from GitHub by the
+      maintainer once nothing needs them (the development session cannot
+      delete remote branches; keep a private copy if the recordings may be
+      wanted later, e.g. `git clone --mirror`).
 
 ## Later
 
@@ -111,11 +163,6 @@ input, all modes (T-051, 0.5.11). Test results: `logs/hardware-test-log.md` on t
       installer only in `firmware/` (maintainer 2026-11-18), so a download
       goes there too; the installer only calls the script and checks its
       result.
-- [ ] **T-090 (M)** Pre-release test before the first `master` merge
-      (after HDMI): one test file covering every accepted feature (inputs,
-      standards, modes, mode and family changes, output sizes, bitrate,
-      formats, close/reopen, input persistence, compliance), less detailed
-      than the per-task tests.
 - [ ] **T-093 (S)** After the first release (maintainer): this repository
       is a GitHub fork of the discontinued original. Either ask GitHub
       support to detach the fork (keeps history and stars), or create a

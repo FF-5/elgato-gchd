@@ -80,13 +80,18 @@ documentation.
 
 1. Neutral, third-person, factual wording. No first person, no
    recommendations, no opinions, no "we"/"our"/"should".
-2. Document only behaviour that is verifiable from traces (label
-   **Observed**) or from the driver source (label **Driver**). Unknown
-   effects are labelled **Unknown**, not guessed.
+2. The documentation describes two things (maintainer, 2026-11-26): the
+   device's communication protocol (every command and register, what it
+   does) and what the driver's code does. It helps others understand the
+   device and the code; it does not describe how the results were found.
+   Only what is verified (on the device or in the driver source) is
+   documented; an operation whose effect is not known is named as such,
+   not guessed. No status labels ("Observed", "Driver", "Unknown"; the
+   existing ones are removed in T-097).
 3. No references to the Windows driver, other drivers or applications,
-   reverse engineering, decompilation, the analysis process, repository
-   history, branches, or statements from the maintainer or task notes.
-   Traces may be referred to only indirectly ("observed").
+   reverse engineering, decompilation, recordings, traces, the analysis
+   process, repository history, branches, or statements from the
+   maintainer or task notes.
 4. No links to the `traces` or `tools` branches or to development-only files.
 5. Register, command and constant names in the documentation match the
    driver (`gchd_protocol.h`, `gchd_mailbox.h`, `gchd_transcoder_fields.h`).
