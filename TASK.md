@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** recordings analysed (2026-11-27); implementation next
+- **Status:** implemented (driver, settings window, text menu, OBS plugin); emulator: every recorded HDMI start and source change reproduced; hardware test next
 - **Type:** driver feature (stage 3)
 - **Branch:** `feat/hdmi` (from `dev` 0.5.11)
 - **TODO items:** T-050 (stage 3)
@@ -70,6 +70,25 @@ HDMI to the level of component (RULES D7: lowest mode first).
 
 ## Done so far
 
+- Driver: HDMI receiver setup once per selection, per-mode configuration
+  and colour conversion as recorded, without the back-end blocks
+  (`protocol_common.c` removed); modes 480p, 576p, 720p50/60, 1080i,
+  1080p25/30/50/60 (`0x9C:64/63` lines, `66/65` field rate); encoder values
+  per output mode as component with the HDMI differences (half rate
+  signalled 60/1 or 50/1 on both streams, `v_vinpelclk` 1, `system_rate`
+  constants, SD source type 3 and SMPTE 170M); output sizes, "Allow 50/60
+  fps" and source mode changes while capturing as component; "HDMI Color
+  Range" (`hdmi_range`, rewritten while capturing without a restart);
+  BT.601 for SD RGB sources; colour conversion built from its matrix
+  (`gchd_csc_put`).
+- Bitrate as one slider for every input (driver ranges, window, text
+  menu, OBS plugin): VBR below 10.00 (up to 19.98 Mbit/s), CBR from 10.00.
+- Emulator (`tools/drvemu`, now with HDMI and an encoder field comparison):
+  720p60 and 1080p60 first start, source changes to 576p, 720p50/60,
+  1080p60/50/30/25: 110 of 110 encoder fields as recorded; receiver writes
+  as recorded except the bank selects of the timing polls.
+- Docs: `docs/hdmi.md` §3, §5, READMEs.
+
 ## Findings
 
 - HDMI recordings 2026-11-27 (analysis note on traces): output size
@@ -90,7 +109,12 @@ HDMI to the level of component (RULES D7: lowest mode first).
 
 ## Hardware test (maintainer)
 
-Not yet (after the recordings and the analysis).
+```sh
+cd ~ && git -C elgato-gchd fetch origin
+git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-050.sh > tests/T-050.sh
+bash gchd-test.sh T-050 --branch feat/hdmi
+```
 
 ## Maintainer comments
 

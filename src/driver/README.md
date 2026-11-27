@@ -52,8 +52,9 @@ sudo dkms install elgato-gchd/0.5.11
 | `out_bitrate_mode` | `0,1,1,1,1,1` | Bitrate mode per output mode (0 VBR, 1 CBR), in this order: 480 × 360 (VBR only), 640 × 480 and 720 × 480i/576i, 720 × 480p/576p, 1280 × 720 at 60 frames per second, 1280 × 720 at 30 and scaled from 1080, 1920 × 1080i/1080p. |
 | `out_bitrate_cbr` | `0,0,0,0,0,0` | Last CBR bitrate per output mode (same order) in kbit/s, 0 automatic. |
 | `out_bitrate_vbr` | `0,0,0,0,0,0` | Last VBR bitrate per output mode (same order) in kbit/s (the control value, twice the average), 0 automatic. |
-| `hd_output` | 0 | Component output size: 0 source size, 1 640 × 480, 2 480 × 360, 3 1280 × 720 (sizes the source does not allow give the source size). |
-| `allow_5060` | 1 | Component: 1 encodes 720p at 60 and 576p/480p at 50/60 frames per second with the short GOP; 0 encodes 720p at 30 frames per second and 576p/480p with the long GOP. |
+| `hd_output` | 0 | HDMI/component output size: 0 source size, 1 640 × 480, 2 480 × 360, 3 1280 × 720 (1080 sources only; other sources give the source size). |
+| `allow_5060` | 1 | HDMI/component: 1 encodes 720p at 50/60 and 576p/480p at 50/60 frames per second with the short GOP; 0 encodes 720p at 25/30 frames per second and 576p/480p with the long GOP. |
+| `hdmi_range` | 0 | HDMI colour range of RGB sources: 0 standard, 1 expanded (the RGB values scaled by 255/219). |
 | `stretch` | 0 | Stretch standard-definition input (composite/S-video). |
 | `h264_profile` | 4 | Composite/S-video H.264 profile (V4L2 value): 0 baseline, 2 main, 4 high. |
 | `h264_level` | 0 | Composite/S-video H.264 level × 10 (30–51), 0 automatic. |
@@ -65,23 +66,30 @@ sudo dkms install elgato-gchd/0.5.11
 
 ### Settings per output mode
 
+The bitrate is one setting with two parts, as one slider shows it: below
+10.00 Mbit/s shown, variable bitrate (VBR, `video_bitrate_mode` 0; shown is
+the average, half of `video_bitrate`: VBR from 8/15 of the output's
+highest bitrate up to 19.98 Mbit/s); from 10.00, constant bitrate (CBR,
+`video_bitrate_mode` 1, 10 Mbit/s up to the output's highest). 480 × 360
+is VBR only (4–15 Mbit/s). The highest bitrate of the output in effect is
+the default value of `video_bitrate`; the control's range covers both
+parts. A bitrate outside the range of its mode gives the top of that
+range.
+
 Each output mode (the picture encoded) keeps its own bitrate settings, the
 same for every input: the bitrate mode last used there and the bitrate last
 set in each mode. The output modes, with the highest bitrate: 480 × 360
 (15000 kbit/s, VBR only); 640 × 480 and 720 × 480i/576i (11250);
-720 × 480p/576p (15000); 1280 × 720 at 60 frames per second (26250);
-1280 × 720 at 30 and scaled from 1080 (15000); 1920 × 1080i/1080p (30000).
+720 × 480p/576p (15000); 1280 × 720 at 50/60 frames per second (26250);
+1280 × 720 at 25/30 and scaled from 1080 (15000); 1920 × 1080 (30000).
 The output mode follows the input, the output size, the source mode and
-"Allow 50/60 fps" (720p); on a change the controls show that mode's bitrate
-mode and bitrate. A change of `video_bitrate_mode` loads the bitrate last
-set in that mode, and `video_bitrate` changes the bitrate in use. A kept
-component bitrate outside the output's range gives the highest bitrate of
-that output.
-The bitrate control is volatile: reading it always gives the bitrate in use.
+"Allow 50/60 fps" (720p); on a change the controls show that mode's
+settings.
 
 H.264 profile and level are kept per group: composite and S-video share
-one, HDMI and component another. Output size and stretch apply to composite
-and S-video; output size and "Allow 50/60 fps" to component.
+one, HDMI and component another. Stretch applies to composite and
+S-video; "Allow 50/60 fps" to HDMI and component; "HDMI Color Range" to
+HDMI (changed while capturing without an encoder restart).
 
 ## Remembered settings
 

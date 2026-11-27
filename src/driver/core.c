@@ -1978,7 +1978,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   WRITE_ONCE(d->capture_active, false);
   d->input_configured = false;
   d->input_routed = false;
- d->hdmi_rx_ready = false;
+  d->hdmi_rx_ready = false;
   d->input_detect_prepared = false;
   d->input_prepared = false;
   d->encoder_started = false;
@@ -3058,7 +3058,7 @@ static int gchd_fop_release(struct file *file)
   WRITE_ONCE(d->start_pending, false);
   d->input_configured = false;
   d->input_routed = false;
- d->hdmi_rx_ready = false;
+  d->hdmi_rx_ready = false;
   d->input_detect_prepared = false;
   d->input_prepared = false;
   d->encoder_started = false;

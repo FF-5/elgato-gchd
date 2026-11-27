@@ -33,31 +33,52 @@ Notation and status labels are defined in [README.md](README.md).
 | 3 | Read `0x98:F5` |
 | 4 | Read `0x9C:94` |
 
-## 3. Mode detection and configuration (Driver)
+## 3. Mode detection and configuration
 
-The driver configuration is implemented in `gchd_configure_hdmi_exact()`
-(`src/driver/input.c`).
+Values of device `0x9C` are written and read XOR `0xCC` (bank select
+`CC`/`CE`/`CD`/`4C` = banks 0, 2, 1, 0x80). HDMI does not use the video
+back end (device `0x98`). `gchd_configure_hdmi_exact()` (`src/driver/input.c`):
 
-1. `0x94:41 = 37`, `0x94:4A = AF`, `0x94:4B = AF`; front-end setup including
-   `0x9C:51 = 45`.
-2. Mode detection: bank `CC`, read `0x9C:66/65` and `0x9C:64/63`; bank `CE`,
-   read `0x9C:34` (bit 2 = RGB input). Repeated with a pause between
-   batches; `0x9C:66/65 ≈ AD4D` indicates no signal. Modes:
+1. Receiver setup, once after HDMI was selected (`gchd_hdmi_rx_setup()`):
+   the front-end writes of §1 including `0x9C:51 = 45`, then read `6A` and
+   the BT.601 conversion table in the parameter window (§5).
+2. `9C:AB = 4C` (after reading `94`); timing measurement, repeated until a
+   mode is recognized: bank `CC`, `0x9C:66/65` (field rate), `0x9C:64/63`
+   (lines); bank `CE`, `0x9C:34` (bit 2: RGB source).
 
-   | `0x9C:64/63` | Mode |
+   | `0x9C:64/63` | Lines |
    |---|---|
-   | `B6D7` ± 10 | 1080p60 |
-   | `B081` ± 10 | 1080i60 |
-   | `B05C` ± 10 | 720p60 |
-   | `B0B5`–`B0CD` | 480p, or 576p if `0x9C:66/65` is `BB75` ± 10 |
+   | `B6D7` ± 10 | 1080, progressive |
+   | `B081` ± 10 | 1080, interlaced |
+   | `B05C` ± 10 | 720 |
+   | `B0B5`–`B0CD` | 480 or 576 (576 at 50 Hz) |
 
-3. Per-mode `0x9C:B2`/`B5` (1080: `C4`/`D0`; 720: `CC`/`CC`; 480p/576p:
-   `CF`/`CC`), further front-end writes, parameter table `B0 = E8` … `E9`,
-   back-end retrigger, common back-end blocks, per-mode back-end table.
-4. Colour space from the RGB bit: YUV or RGB table on `0x9C:92`–`AA`.
-   Encoder colour description (`colour_primaries`, `matrix_coefficients`):
-   `1` for HDMI, `6` for analog inputs.
-5. Encoder setup and capture start ([hardware.md §6](hardware.md#6-capture-start-observed)).
+   | `0x9C:66/65` | Field rate |
+   |---|---|
+   | `BA95` ± 10 | 60 Hz |
+   | `BB75` ± 10 | 50 Hz |
+   | `A2F9` ± 10 | 30 Hz |
+   | `A13C` ± 10 | 25 Hz |
+   | `AD4D` ± 10 | no signal |
+
+3. Per mode `0x9C:B2`/`B5`: 1080 at 50/60 Hz `C4`/`D0`, other HD `CC`/`CC`,
+   standard definition `CF`/`CC`.
+4. Status reads (bank `CD` `3E`, `0B`; bank `CE` `34`, `33`, `31` twice,
+   `1B = 30`, `2B`, `77`, `74`, `76`). On the first configuration after the
+   receiver setup, below 1080: read `20`, `1F = DC`, read `29`, `1F = CC`,
+   read `3B`, `04 = CF`, `04 = CD`. Bank `CC`, `40 = CC`.
+5. Bank `CD` reads `3E`, `0B`; bank `CC`: the conversion of the source's
+   standard (BT.601 for standard definition, BT.709 for HD) in the
+   parameter window; `AB = CC`.
+6. Status reads (bank `CE` `6A`, `A7`, `69`; bank `CC` `66/65`, `64/63`), the
+   status reads of step 4 again, bank `CC`; the conversion of the source
+   (§5) without the window; read `8D`, `8A`; `B2 = CC` (standard
+   definition `CF`), `B5 = C4`.
+7. Encoder setup and capture start ([hardware.md §6](hardware.md#6-capture-start-observed)).
+
+While capturing, the mode worker reads `0x9C:64/63` and `66/65` every
+0.75 s; another mode on two reads in a row stops the capture and the
+configuration (steps 2–7) runs again.
 
 ## 4. Capture with a 1080p60 source; output size changes (Observed)
 
@@ -92,5 +113,28 @@ output 2: `v_ts_out_mode = 0`, `a_ts_out_mode = 0`, `a_mode = 0`,
 `v_ts_out2_mode = 1`, `a_ts_out2_mode = 2`, `a2_mode = 3`. For 480 × 360
 additionally `v_rate_mode = 1` and `v_max_cpb_delay = 10`.
 
-The driver encodes HDMI at the input size and always uses transport
-output 1 (Driver).
+The driver encodes HDMI with these output sizes and transport outputs, as
+component ([component.md §6](component.md)).
+
+## 5. Colour conversion
+
+`0x9C:92`–`0x9C:AA` (bank `CC`, 25 bytes): a header byte, a 3 × 3 matrix of
+16-bit big-endian words (15-bit two's complement coefficients, 4096 = 1.0;
+word `in × 3 + out`, output channels Cr, Y, Cb) and three offset words
+(value × 64; Cr, Y, Cb). Parameter window: `B0 = E8`, `B1 = 0C`, the table
+with Y offset `0400`, `AD = C9`, read `8F`, `B0 = E9`. Outside the window
+(also while capturing, after read `3F` and bank `CC`) the Y offset is
+`0401`.
+
+| Source | Header | Coefficients (words 0–8) |
+|---|---|---|
+| YCbCr (component, composite, S-video, HDMI YCbCr) | `66` | identity |
+| HDMI RGB, BT.601, Standard | `40` | 1798 1053 −606 / −1507 2064 −1192 / −291 401 1798 |
+| HDMI RGB, BT.601, Expanded | `55` | 2093 1225 −705 / −1753 2404 −1389 / −340 467 2093 |
+| HDMI RGB, BT.709, Standard | `40` | 1798 750 −414 / −1634 2515 −1384 / −164 254 1798 |
+| HDMI RGB, BT.709, Expanded | `55` | 2093 872 −479 / −1900 2928 −1613 / −192 294 2093 |
+
+Offsets: Cr and Cb `2000` (128), Y `0401` (16). "Expanded" scales the
+coefficients by 255/219. The control "HDMI Color Range" (`hdmi_range`)
+selects Standard or Expanded; a change while capturing rewrites the table
+without an encoder restart.
