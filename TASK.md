@@ -164,3 +164,12 @@ bash gchd-test.sh T-050 --branch feat/hdmi
 
 ## Maintainer comments
 
+=== summary (T-050, 63b9e90 No H.264 profile and level controls (High profile, the level of each output, as recorded; a forced level was kept for good, e.g. after v4l2-compliance); DV timings select the source size (compliance: format narrower than the timings with a scaled output) (T-050))
+PASS | step 2 composite with a signal, then HDMI | The 'Elgato composite' window shows the PS3?
+PASS | step 2 composite with a signal, then HDMI | after_composite_1080p: 1920 1080, progressive, level 40, (30/1|30000/1001) fps, decodes without errors
+PASS | step 2 composite with a signal, then HDMI | no H.264 profile/level controls
+PASS | step 2 composite with a signal, then HDMI | 1080p: bitrate range 10-30 Mbit/s, highest 30
+PASS | step 3 v4l2-compliance (full output), starting with a scaled output size | compliance run 1: 0 failures
+PASS | step 3 v4l2-compliance (full output), starting with a scaled output size | compliance run 2 (right after): 0 failures
+
+FAIL: 0  WARN: 0
