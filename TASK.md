@@ -67,6 +67,19 @@ HDMI to the level of component (RULES D7: lowest mode first).
 
 ## Findings
 
+- HDMI recordings 2026-11-27 (analysis note on traces): output size
+  changes and source mode changes do not touch the back end (`0x98`): an
+  output size change is STOP, NULL, encoder setup, INIT A0, START; a source
+  mode change adds front-end writes only (`9C:AB = 4C`, timing polls until
+  stable, per-mode `B2/B5`, `9C:40 = CC`, colour block in the `B0 = E8` …
+  `E9` window, `AB = CC`). The driver's HDMI path still runs the back-end
+  calibration blocks for every configuration. No recording contains the
+  HDMI selection with a source and the first capture start (all start
+  while capturing): needed to replace the back-end part (TODO R14).
+- The receiver delivers RGB from the PS3; 480p needs the BT.601 matrix
+  (the driver uses the BT.709 one for every RGB source).
+- Encoder values per output mode are the component ones (same tables).
+
 ## Hardware test (maintainer)
 
 Not yet (after the recordings and the analysis).
