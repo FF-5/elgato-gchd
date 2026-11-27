@@ -13,9 +13,10 @@ reference (`traces` branch). The project is the kernel driver only
 settings); then the repository layout and installation scripts; then
 guvcview/OBS support; then component the same way; then HDMI.
 **Before the first `master` merge (maintainer, 2026-11-26):** after HDMI
-the picture and audio settings (T-080), then stage 5 in its order:
-documentation, performance, pre-release test, security, repository
-cleanup.
+the picture and audio settings (T-080), then stage 5 in its order: user
+profiles, the installer download (after Elgato's answer), uninstall with
+the firmware, documentation, performance, pre-release test, security,
+repository cleanup with detaching the fork (maintainer, 2026-11-26/27).
 
 Legend: **[HW]** maintainer's hardware, **[WIN]** new Windows recording,
 **[OFF]** offline, **(S/M/L)** size. Test results: `logs/hardware-test-log.md`
@@ -72,7 +73,8 @@ on the `traces` branch.
   composite, every mode with samples on `traces/hdmi/samples/`); output
   sizes, "Allow 50/60 fps", source mode changes while capturing; "HDMI Color
   Range" (Standard/Expanded) while capturing without a restart; BT.601 for
-  SD RGB sources. 1080i and 480p over HDMI not tested on hardware.
+  SD RGB sources (480p tested 2026-11-27). 1080i over HDMI not tested on
+  hardware.
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller. Once the
   guest kernel disabled the controller's interrupt ("irq 20: nobody
   cared", "Disabling IRQ #20"): USB then very slow, captures stall; only
@@ -105,6 +107,25 @@ slider (T-050, 0.5.12). Test results: `logs/hardware-test-log.md` on the `traces
 
 In this order, each its own task and branch:
 
+- [ ] **T-091 (M)** User profiles (maintainer, 2026-11-18): named sets of
+      all settings (input, output size, format, bitrate, mode, stretch,
+      picture/audio settings, colour range), several per
+      input, recalled at once; the original software has only fixed
+      profiles. Builds on the remembered settings (per output mode); before
+      the first release (maintainer, 2026-11-27).
+- [ ] **T-095 (S)** (Before the first release, maintainer 2026-11-27.) Optional download of the Elgato installer by the
+      firmware script, after the user confirms (link to Elgato's terms, no
+      mirroring, checksum check, URL in one place). **Maintainer: e-mail
+      Elgato (Corsair) and ask whether the script may download the
+      official installer from their server.** Until the answer the script
+      only uses an installer the user downloaded. The script looks for the
+      installer only in `firmware/` (maintainer 2026-11-18), so a download
+      goes there too; the installer only calls the script and checks its
+      result.
+- [ ] **T-101 (S)** Uninstall removes the firmware too (maintainer,
+      2026-11-27): `install-driver.sh --uninstall` also deletes the firmware
+      files it extracted (`/lib/firmware/gchd/`), after asking (default yes;
+      `--yes` without asking); today it keeps them.
 - [ ] **T-097 [OFF] (L)** Documentation rewrite (maintainer, 2026-11-26):
       `docs/` becomes (1) a reference of the device's communication
       protocol, every command and register with what it does, and (2) a
@@ -148,30 +169,15 @@ In this order, each its own task and branch:
       maintainer once nothing needs them (the development session cannot
       delete remote branches; keep a private copy if the recordings may be
       wanted later, e.g. `git clone --mirror`).
-
-## Later
-
-- [ ] **T-091 (M)** User profiles (maintainer, 2026-11-18): named sets of
-      all settings (input, output size, format, bitrate, mode, stretch,
-      H.264 profile/level, later picture/audio settings), several per
-      input, recalled at once; the original software has only fixed
-      profiles. Builds on the remembered settings of T-064 (settings kept
-      per input).
-
-- [ ] **T-095 (S)** Optional download of the Elgato installer by the
-      firmware script, after the user confirms (link to Elgato's terms, no
-      mirroring, checksum check, URL in one place). **Maintainer: e-mail
-      Elgato (Corsair) and ask whether the script may download the
-      official installer from their server.** Until the answer the script
-      only uses an installer the user downloaded. The script looks for the
-      installer only in `firmware/` (maintainer 2026-11-18), so a download
-      goes there too; the installer only calls the script and checks its
-      result.
-- [ ] **T-093 (S)** After the first release (maintainer): this repository
+- [ ] **T-093 (S)** With the repository cleanup, before the first release
+      (maintainer, 2026-11-27): this repository
       is a GitHub fork of the discontinued original. Either ask GitHub
       support to detach the fork (keeps history and stars), or create a
       new repository and push the branches. Consider a distinct name so it
       is not confused with the old userspace driver.
+
+## Later
+
 - [ ] **T-062 (S)** Original-HD family (`0044/004e/0051`): needs a tester.
 - [ ] **T-063 (S)** Versioning and `CHANGELOG.md` for `master` releases.
 

@@ -67,8 +67,11 @@ programs cannot capture from the device at the same time.
 ## Build and install
 
 The installer of the repository installs the plugin
-(`./install-driver.sh --obs`). By hand, packages (Ubuntu): `libobs-dev`, `libavformat-dev`, `libavcodec-dev`,
-`libavutil-dev`, `cmake`, `pkg-config`.
+(`./install-driver.sh --obs`). By hand: the development files of OBS
+(libobs) and FFmpeg (libavformat, libavcodec, libavutil), `cmake` and
+`pkg-config` (Debian and Ubuntu: `libobs-dev`, `libavformat-dev`,
+`libavcodec-dev`, `libavutil-dev`; other distributions have equivalent
+packages).
 
 ```sh
 cmake -S src/obs-plugin -B build/obs-plugin -DCMAKE_BUILD_TYPE=Release

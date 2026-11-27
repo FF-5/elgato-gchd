@@ -7,3 +7,9 @@ build
 .*.cmd
 Module.symvers
 modules.order
+# Elgato's software and the firmware taken from it: never committed
+*.msi
+*.exe
+*.tgz
+*.bin
+*.dll
