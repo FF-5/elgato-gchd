@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** recordings analysed (2026-11-27); implementation next
+- **Status:** implemented (driver, settings window, text menu, OBS plugin); hardware test next
 - **Type:** driver feature (stage 4)
 - **Branch:** `feat/picture-audio` (from `dev` 0.5.12)
 - **TODO items:** T-080 (stage 4)
@@ -59,11 +59,32 @@ settings window, text menu and OBS plugin.
 
 ## Done so far
 
+- Driver: controls `brightness`, `contrast`, `saturation` (−100 … 100),
+  `hue` (−180 … 180) and "Analog Audio Gain (dB)" (−12 … 12, default 0);
+  the colour conversion of the source times the picture adjustment
+  (`gchd_csc_picture()`), the gain registers (`gchd_audio_put()`, also in
+  the input setup instead of the fixed values); changes while capturing
+  through the mode worker without an encoder restart; parameters
+  `picture`, `audio_gain`, uevent, udev rule.
+- Check against the recordings (the driver's code in userspace): brightness
+  ends exact (Y offset words `5C01`, `2B81`), hue ±61.5° in 0.5° steps
+  (cos/sin within 2 of the recorded), contrast/saturation ends 8160 (the
+  recordings 8159; Windows writes some values one lower), every recorded
+  gain code (`A1` −1, `B7` −12, `C5` +1, `C1` +3, `C9` +7, `B1` +11,
+  `BF` +12).
+- Settings window (sliders, "Reset picture"), text menu (Picture, Audio
+  gain), OBS plugin (sliders; audio gain hidden for HDMI).
+
 ## Findings
 
 ## Hardware test (maintainer)
 
-Not yet.
+```sh
+cd ~ && git -C elgato-gchd fetch origin
+git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-080.sh > tests/T-080.sh
+bash gchd-test.sh T-080 --branch feat/picture-audio
+```
 
 ## Maintainer comments
 
