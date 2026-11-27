@@ -6,6 +6,7 @@ int emu_component(struct gchd *d, int prog)
 	int r;
 	d->input = 1; d->family = GCHD_FAMILY_HDNEW;
 	d->h264_profile = 4; d->out_active = 0;
+	d->bitrate_mode = 1; d->allow_5060 = 1; /* CBR, bitrate automatic */
 	r = gchd_configure_component_exact(d);
 	if (r) return r;
 	return prog ? gchd_encoder_program(d) : 0;

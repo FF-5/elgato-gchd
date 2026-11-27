@@ -78,7 +78,7 @@ run v4l2-ctl -d $D -c allow_50_60_fps=1
 
 source_mode "720x480 at 60 Hz (480p)"
 step "480p"
-expect "480p detected (720x480 progressive)" "Active width: 720.*Active height: 480.*Progressive" sh -c "v4l2-ctl -d $D --get-dv-timings | tr '\n' ' '"
+expect "480p detected (720x480 progressive)" "Active width: 720.*Active height: 480.*[Pp]rogressive" sh -c "v4l2-ctl -d $D --get-dv-timings | tr '\n' ' '"
 expect "480p: 720x480, 640x480, 480x360 offered" "720x480.*640x480.*480x360" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | tr '\n' ' '"
 sample 480p 1920x1080 "720 480" progressive 30 "(60/1|60000/1001)"
 run v4l2-ctl -d $D -c allow_50_60_fps=0
