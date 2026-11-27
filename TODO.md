@@ -23,7 +23,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.11): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.12): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -52,9 +52,10 @@ on the `traces` branch.
   settings window and text menu, installer with three install types. One
   global setting shared by all programs; bitrate mode and bitrates kept
   per output mode (480 × 360; 640 × 480 and 480i/576i; 480p/576p; 720p at
-  60; 720p at 30 and 1280 × 720; 1080), the same for every input; H.264
-  profile and level per group (composite/S-video, HDMI/component);
-  changes from any program apply live. Installer: the core
+  60; 720p at 30 and 1280 × 720; 1080), the same for every input; the
+  bitrate as one slider (below 10.00 VBR shown as the average, from 10.00
+  CBR); H.264 High profile at the recorded level per output (no profile or
+  level controls); changes from any program apply live. Installer: the core
   (driver) always, the settings programs and the OBS plugin optional
   (T-096). Stretch SD input as in the Windows software (size kept, 16:9
   aspect ratio in the stream; the OBS plugin widens, OBS's Media Source
@@ -63,9 +64,15 @@ on the `traces` branch.
   recorded mode configuration and encoder values; source mode changes
   followed while capturing; output sizes per source (source size,
   1280 × 720 for 1080 sources, 640 × 480, 480 × 360) and "Allow 50/60 fps",
-  also while capturing; bitrate mode and range per output (CBR/VBR range
-  limits placeholders until R13); DV timings, size, frame rate and field
-  order per mode; TS samples on `traces/component/samples/`.
+  also while capturing; DV timings, size, frame rate and field order per
+  mode; TS samples on `traces/component/samples/`.
+  HDMI (T-050): 480p, 576p, 720p50/60, 1080p25/30/50/60 (1080p50/60 at
+  25/30 frames per second) with the recorded receiver configuration (no
+  back end) and encoder values, tested with a laptop (cold start, after
+  composite, every mode with samples on `traces/hdmi/samples/`); output
+  sizes, "Allow 50/60 fps", source mode changes while capturing; "HDMI Color
+  Range" (Standard/Expanded) while capturing without a restart; BT.601 for
+  SD RGB sources. 1080i and 480p over HDMI not tested on hardware.
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller. Once the
   guest kernel disabled the controller's interrupt ("irq 20: nobody
   cared", "Disabling IRQ #20"): USB then very slow, captures stall; only
@@ -77,18 +84,8 @@ Stage 1 (composite and S-video, 0.5.6), driver-only layout (T-070),
 licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
 0.5.8), OBS and other applications (T-060, 0.5.9), stretch as in the
 Windows software and optional installer parts (T-096, 0.5.10), component
-input, all modes (T-051, 0.5.11). Test results: `logs/hardware-test-log.md` on the `traces` branch.
-
-## Stage 3 — HDMI
-
-- [ ] **T-050 [WIN+HW] (L)** HDMI, all modes, mode changes, output sizes
-      and settings as for component (bitrate per output mode, ranges of the
-      recordings; settings window and OBS plugin), "HDMI Color Range"
-      (Standard/Expanded), BT.601 conversion for SD RGB sources. Bitrate as
-      one slider like the Windows software for every input (maintainer,
-      2026-11-27): its lower part VBR, its upper part CBR, the mode follows
-      the position (driver, settings window, text menu, OBS plugin). Recorded so far: `hdmi/gchd_output_switch_hdmi` (1080p60
-      source, output sizes; `docs/hdmi.md §4`).
+input, all modes (T-051, 0.5.11), HDMI, all modes, and the bitrate as one
+slider (T-050, 0.5.12). Test results: `logs/hardware-test-log.md` on the `traces` branch.
 
 ## Stage 4 — Picture and audio settings (after HDMI, before the release)
 
@@ -194,7 +191,10 @@ In this order, each its own task and branch:
       `feat/installer`, `feat/output-size`, `feat/ts-audio`, `feat/app-bridge`,
       `fix/stretch`,
       `fix/analog-robustness`, `fix/close-lifecycle`, `fix/v4l2-compliance`,
-      `feat/component`.
+      `feat/component`, `feat/hdmi`.
+- [ ] HDMI 1080i: not testable (the PS3 fails HDCP on the device; no
+      laptop offers 1080i); detection value and encoder values from the
+      component 1080i and the older code (maintainer, 2026-11-27).
 - [ ] Encoder restart while capturing timed out once after 27 s (-110;
       component 1080i at 1280 × 720, bitrate change, 2026-11-26; not seen
       in eight changes since). The driver detects again and resumes; the
@@ -206,8 +206,6 @@ Change one at a time (RULES D5), when the mode can be tested.
 
 | Item | Driver | Recordings |
 |---|---|---|
-| `system_rate` | composite/S-video (T-061) and component (T-051) as recorded; HDMI `1.075 × (bitrate + 320) + 256` | `⌊1.07285 × bitrate + 461.7⌋` (PAL; NTSC +8) |
-| HDMI encoder and back end | C++ blocks (`65`/`64` pulses, `0900:0018 = 00 0A`, `v_vinpelclk = 0`, `time_scale_l = 0`, `num_units_in_tick = 0`, GOP 14, bitrate formula) | `05`/`15` pulses, `02 0A`, `v_vinpelclk = 1`, `time_scale_l = 60`, `num_units_in_tick = 1`, GOP 8, bitrate per output size |
 | Composite prefix | `02 = C9 … 28 = 88` written on the first composite start after loading the module | written only after S-video (HDMI → composite writes none of them) |
 | Initial analog detection | waits until `0x88:CA` reads `7E` or `66`; family re-checked before START | unknown (no recording of a 480i start) |
 | Receive queue at restart | URBs queued after INIT A0, before START | queued before the first encoder write |
@@ -226,6 +224,4 @@ a short note what was done and when (seconds) helps.
 
 | # | Recording | For | Status |
 |---|---|---|---|
-| R8 | HDMI with a signal: every mode, mode changes, output sizes, bitrate | stage 3, T-050 | recorded 2026-11-27 (480p60, 720p60, 1080p60 with output sizes, Allow 50/60 fps and HDMI Color Range; source mode changes 576p, 720p50/60, 1080p50/60; `traces/hdmi/`); 1080i over HDMI not recorded |
-| R13 | Bitrate slider moved slowly through its whole range, values shown noted | where VBR ends and CBR starts per output | recorded 2026-11-27 for 640 × 480, 720p at 30, 1080i (CBR part), 720p at 60 (CBR part) (`traces/component/*_output_bitrate_change_small`); **needed**: 1080 and 720p at 60, the lower half of the slider slowly into CBR (VBR top end; maintainer, 2026-11-27) |
 | R9 | One recording per picture/audio setting changed while capturing | stage 4, T-080 | recorded 2026-11-27 (brightness, contrast, saturation, hue, analog audio gain; `traces/`); the positive audio gain steps to be confirmed by a level measurement |

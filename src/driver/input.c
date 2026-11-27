@@ -794,6 +794,8 @@ int gchd_component_mode_changed(struct gchd *d)
  return 1;
 }
 
+static bool gchd_hdmi_mode(struct gchd *d, u32 lines, u32 rate);
+
 int gchd_probe_video_source(struct gchd *d)
 {
  u32 sum6665 = 0, sum6463 = 0, count6665 = 0, count6463 = 0;
@@ -810,22 +812,8 @@ int gchd_probe_video_source(struct gchd *d)
   dev_info(&d->intf->dev,
            "gchd-diag detect HDMI: samples6665=%u avg6665=0x%04x samples6463=%u avg6463=0x%04x rgb=%u\n",
            count6665, value6665, count6463, value6463, d->rgb_input);
-  if (!gchd_hdmi_timing_valid(value6463) ||
-      abs((int)value6665 - 0xad4d) < 10)
+  if (!gchd_hdmi_mode(d, value6463, value6665))
    return -ENOLINK;
-  if (value6463 >= 0xb6cd && value6463 <= 0xb6e1) {
-   d->input_width=1920; d->input_height=1080; d->input_interlaced=false;
-  } else if (value6463 >= 0xb077 && value6463 <= 0xb08b) {
-   d->input_width=1920; d->input_height=1080; d->input_interlaced=true;
-  } else if (value6463 >= 0xb052 && value6463 <= 0xb066) {
-   d->input_width=1280; d->input_height=720; d->input_interlaced=false;
-  } else {
-   d->input_width=720;
-   d->input_height=(value6665 >= 0xbb6b && value6665 <= 0xbb7f) ? 576 : 480;
-   d->input_interlaced=false;
-  }
-  d->input_fps_num=d->input_height==576 ? 50 : 60;
-  d->input_fps_den=1;
  } else if (d->input == 1) {
   u8 hi, lo;
   u32 value6867;
@@ -859,10 +847,10 @@ int gchd_probe_video_source(struct gchd *d)
    d->input_width=720; d->input_height=480; d->input_interlaced=true; d->input_fps_num=60;
   }
   d->input_fps_den=1;
-  d->comp_seen.width = d->input_width;
-  d->comp_seen.height = d->input_height;
-  d->comp_seen.fps = d->input_fps_num;
-  d->comp_seen.interlaced = d->input_interlaced;
+  d->seen[d->input == 1].width = d->input_width;
+  d->seen[d->input == 1].height = d->input_height;
+  d->seen[d->input == 1].fps = d->input_fps_num;
+  d->seen[d->input == 1].interlaced = d->input_interlaced;
  } else {
   u8 v, std, be_status = 0;
 
@@ -957,39 +945,238 @@ int gchd_probe_video_source(struct gchd *d)
  return 0;
 }
 
-static int gchd_configure_hdmi_exact(struct gchd *d)
+/*
+ * Colour conversion of the front end (0x9C:92-AA): a header byte, a 3 x 3
+ * matrix of 15-bit two's complement coefficients (4096 = 1.0; word
+ * in * 3 + out, outputs Cr, Y, Cb) and three offsets (x 64: Cr, Y, Cb),
+ * 16-bit big-endian. YCbCr sources get the identity; RGB sources (HDMI) the
+ * BT.601 (standard definition) or BT.709 conversion, "Expanded" range
+ * scaled by 255/219.
+ */
+struct gchd_csc {
+ u8 header;
+ s16 m[9];
+};
+
+static const struct gchd_csc gchd_csc_ycbcr = {
+ 0x66, { 4096, 0, 0, 0, 4096, 0, 0, 0, 4096 } };
+static const struct gchd_csc gchd_csc_rgb[2][2] = {
+ { /* BT.601: standard, expanded */
+  { 0x40, { 1798, 1053, -606, -1507, 2064, -1192, -291, 401, 1798 } },
+  { 0x55, { 2093, 1225, -705, -1753, 2404, -1389, -340, 467, 2093 } } },
+ { /* BT.709 */
+  { 0x40, { 1798, 750, -414, -1634, 2515, -1384, -164, 254, 1798 } },
+  { 0x55, { 2093, 872, -479, -1900, 2928, -1613, -192, 294, 2093 } } },
+};
+
+/* Write a conversion table; Y_OFFSET is the luma offset word. */
+static int gchd_csc_put(struct gchd *d, const struct gchd_csc *c, u16 y_offset)
 {
- u8 v, reply;
- u32 sum6665=0, sum6463=0, count6665=0, count6463=0;
- u32 value6665, value6463;
- int r, i, j;
+ u8 b[25];
+ u16 off[3] = { 0x2000, y_offset, 0x2000 };
+ unsigned int i;
 
+ b[0] = c->header;
+ for (i = 0; i < 9; ++i) {
+  b[1 + 2 * i] = ((u16)c->m[i] & 0x7fff) >> 8;
+  b[2 + 2 * i] = (u16)c->m[i] & 0xff;
+ }
+ for (i = 0; i < 3; ++i) {
+  b[19 + 2 * i] = off[i] >> 8;
+  b[20 + 2 * i] = off[i] & 0xff;
+ }
+ for (i = 0; i < ARRAY_SIZE(b); ++i)
+  GCHD_FE_W(d, 0x92 + i, b[i] ^ GCHD_FE_XOR);
+ return 0;
+}
 
- GCHD_AUX_W(d, 0x41, 0x37); GCHD_AUX_W(d, 0x4a, 0xaf); GCHD_AUX_W(d, 0x4b, 0xaf); GCHD_FE_R(d, 0x3f, v);
+/* The conversion of the selected input and source in use. */
+static const struct gchd_csc *gchd_csc_of(const struct gchd *d)
+{
+ if (d->input != 0 || !d->rgb_input)
+  return &gchd_csc_ycbcr;
+ return &gchd_csc_rgb[d->input_height > 576][d->hdmi_range != 0];
+}
+
+/* Colour conversion of the source in use. */
+int gchd_csc_apply(struct gchd *d)
+{
+ return gchd_csc_put(d, gchd_csc_of(d), 0x0401);
+}
+
+/* While capturing: the same, in bank CC. */
+int gchd_csc_update(struct gchd *d)
+{
+ u8 v;
+
+ GCHD_FE_R(d, 0x3f, v);
+ GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
+ return gchd_csc_apply(d);
+}
+
+/*
+ * HDMI mode from the receiver's measurements: 0x9C:64/63 (lines) and
+ * 0x9C:66/65 (field rate: about BA95 60 Hz, BB75 50 Hz, A2F9 30 Hz, A13C
+ * 25 Hz; AD4D no signal). False if no mode is recognized.
+ */
+static bool gchd_hdmi_classify(u32 lines, u32 rate, struct gchd_seen *m)
+{
+ m->fps = abs((int)rate - 0xbb75) < 10 ? 50 :
+          abs((int)rate - 0xa2f9) < 10 ? 30 :
+          abs((int)rate - 0xa13c) < 10 ? 25 : 60;
+ if (!gchd_hdmi_timing_valid(lines) || abs((int)rate - 0xad4d) < 10)
+  return false;
+ m->interlaced = false;
+ if (lines >= 0xb6cd && lines <= 0xb6e1) {
+  m->width = 1920; m->height = 1080;
+ } else if (lines >= 0xb077 && lines <= 0xb08b) {
+  m->width = 1920; m->height = 1080; m->interlaced = true;
+ } else if (lines >= 0xb052 && lines <= 0xb066) {
+  m->width = 1280; m->height = 720;
+ } else {
+  m->width = 720; m->height = m->fps == 50 ? 576 : 480;
+ }
+ return true;
+}
+
+/* Use the measured HDMI mode; false if none is recognized. */
+static bool gchd_hdmi_mode(struct gchd *d, u32 lines, u32 rate)
+{
+ struct gchd_seen m;
+
+ if (!gchd_hdmi_classify(lines, rate, &m))
+  return false;
+ d->input_width = m.width;
+ d->input_height = m.height;
+ d->input_interlaced = m.interlaced;
+ d->input_fps_num = m.fps;
+ d->input_fps_den = 1;
+ d->seen[0] = m;
+ return true;
+}
+
+/*
+ * HDMI while capturing: read the timing measurement once (mode worker).
+ * Returns 1 when it shows no signal or another mode than the configured
+ * one, 0 when it matches, a negative error code when the read fails.
+ */
+int gchd_hdmi_mode_changed(struct gchd *d)
+{
+ struct gchd_seen m;
+ u8 hi, lo;
+ u32 lines, rate;
+
+ GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
+ GCHD_FE_R(d, 0x64, hi);
+ GCHD_FE_R(d, 0x63, lo);
+ lines = (u32)hi << 8 | lo;
+ GCHD_FE_R(d, 0x66, hi);
+ GCHD_FE_R(d, 0x65, lo);
+ rate = (u32)hi << 8 | lo;
+ if (!gchd_hdmi_classify(lines, rate, &m))
+  return 1;
+ return m.height != d->input_height || m.interlaced != d->input_interlaced ||
+        m.fps != d->input_fps_num;
+}
+
+/* Status reads of the receiver between the configuration steps. */
+static int gchd_hdmi_status(struct gchd *d)
+{
+ u8 v;
+
+ GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcd);
+ GCHD_FE_R(d, 0x3e, v); GCHD_FE_R(d, 0x0b, v);
+ GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xce);
+ GCHD_FE_R(d, 0x34, v); GCHD_FE_R(d, 0x33, v);
+ GCHD_FE_R(d, 0x31, v); GCHD_FE_R(d, 0x31, v);
+ GCHD_FE_W(d, 0x1b, 0x30);
+ GCHD_FE_R(d, 0x2b, v); GCHD_FE_R(d, 0x77, v);
+ GCHD_FE_R(d, 0x74, v); GCHD_FE_R(d, 0x76, v);
+ return 0;
+}
+
+/* Conversion table in the receiver's parameter window (B0 = E8 ... E9). */
+static int gchd_hdmi_csc_window(struct gchd *d, const struct gchd_csc *c)
+{
+ u8 v;
+ int r;
+
+ GCHD_FE_W(d, 0xb0, 0xe8); GCHD_FE_W(d, 0xb1, 0x0c);
+ r = gchd_csc_put(d, c, 0x0400);
+ if (r)
+  return r;
+ GCHD_FE_W(d, 0xad, 0xc9);
+ GCHD_FE_R(d, 0x8f, v);
+ GCHD_FE_W(d, 0xb0, 0xe9);
+ return 0;
+}
+
+/*
+ * Receiver setup after selecting HDMI (once per selection): input select,
+ * receiver registers and an initial BT.601 conversion in the parameter
+ * window. The back end (device 0x98) is not used by HDMI.
+ */
+static int gchd_hdmi_rx_setup(struct gchd *d)
+{
+ u8 v;
+ int r;
+
+ GCHD_FE_R(d, 0x3f, v);
  GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_R(d, 0x94, v); GCHD_FE_W(d, 0xab, 0x4c); GCHD_FE_R(d, 0x3f, v);
  GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xce); GCHD_FE_W(d, 0x1b, 0x33); GCHD_FE_R(d, 0x3f, v);
  GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_R(d, 0x88, v); GCHD_FE_W(d, 0xb7, 0xce); GCHD_FE_W(d, 0xb8, 0xdc);
  GCHD_FE_W(d, 0xb8, 0xcc); GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xce); GCHD_FE_W(d, 0x07, 0x38);
  GCHD_FE_W(d, 0x07, 0xc8); GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_W(d, GCHD_FE_REG_INPUT_SEL, GCHD_FE_SEL_HDMI);
  GCHD_FE_R(d, 0x88, v); GCHD_FE_W(d, 0xb7, 0xcc);
- r=gchd_do_enable(d,0,0); if(r)return r;
+ r = gchd_do_enable(d, 0, 0);
+ if (r)
+  return r;
  GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xce); GCHD_FE_R(d, 0x3e, v); GCHD_FE_W(d, 0x01, 0xad);
  GCHD_FE_R(d, 0x3b, v); GCHD_FE_W(d, 0x04, 0xcd); GCHD_FE_W(d, 0x06, 0xc4); GCHD_FE_R(d, 0x36, v);
  GCHD_FE_W(d, 0x09, 0xe4); GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_R(d, 0x6b, v);
  GCHD_FE_W(d, 0x54, 0xec); GCHD_FE_R(d, 0x93, v); GCHD_FE_W(d, 0xac, 0x4c); GCHD_FE_R(d, 0x3f, v);
  GCHD_FE_W(d, GCHD_FE_REG_BANK, 0x4c); GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_R(d, 0xf1, v);
  GCHD_FE_W(d, 0xce, 0x4c); GCHD_FE_R(d, 0xf0, v); GCHD_FE_W(d, 0xcf, 0xce); GCHD_FE_R(d, 0x3f, v);
+ GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_R(d, 0x6a, v);
+ r = gchd_hdmi_csc_window(d, &gchd_csc_rgb[0][0]);
+ if (r)
+  return r;
+ d->hdmi_rx_ready = true;
+ return 0;
+}
 
- for (i=0; i<max_t(unsigned int, 1, signal_active_retries); i++) {
+/*
+ * HDMI configuration for the measured mode (first start and every source
+ * change): timing measurement, per-mode receiver values, conversion of the
+ * source (BT.709 in the parameter window, then the source's own).
+ */
+static int gchd_configure_hdmi_exact(struct gchd *d)
+{
+ u32 sum6665 = 0, sum6463 = 0, count6665 = 0, count6463 = 0;
+ u32 value6665, value6463;
+ bool hd, mode, first = !d->hdmi_rx_ready;
+ u8 v;
+ int r, i, j;
+
+ if (first) {
+  r = gchd_hdmi_rx_setup(d);
+  if (r)
+   return r;
+ }
+ GCHD_FE_R(d, 0x94, v); GCHD_FE_W(d, 0xab, 0x4c);
+
+ for (i = 0; i < max_t(unsigned int, 1, signal_active_retries); i++) {
   unsigned int retry_limit;
 
-  sum6665=sum6463=count6665=count6463=0;
-  for (j=0;j<10;j++) {
-   r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->rgb_input);
-   if(r)return r;
+  sum6665 = sum6463 = count6665 = count6463 = 0;
+  for (j = 0; j < 10; j++) {
+   r = gchd_hdmi_read_signal(d, &sum6463, &count6463, &sum6665,
+                             &count6665, &d->rgb_input);
+   if (r)
+    return r;
   }
-  value6665=sum6665/count6665;
-  value6463=sum6463/count6463;
+  value6665 = sum6665 / count6665;
+  value6463 = sum6463 / count6463;
   retry_limit = gchd_hdmi_timing_valid(value6463) ?
    max_t(unsigned int, 1, signal_active_retries) :
    max_t(unsigned int, 1, signal_inactive_retries);
@@ -1000,83 +1187,60 @@ static int gchd_configure_hdmi_exact(struct gchd *d)
   if (signal_poll_delay_ms)
    msleep(signal_poll_delay_ms);
  }
- value6665=sum6665/count6665;
- value6463=sum6463/count6463;
- /*
-  * The timing register can retain a plausible value with no source attached.
-  * Require both a recognized timing and a non-idle 0x6665 measurement.
-  * 0xad4d +/- 10 is the no-signal value.
-  */
- d->signal_present = gchd_hdmi_timing_valid(value6463) &&
-                     abs((int)value6665 - 0xad4d) >= 10;
-
- if (d->input_width == 0) {
-  value6463=sum6463/count6463;
-  if (value6463 >= 0xb6cd && value6463 <= 0xb6e1) { d->input_width=1920; d->input_height=1080; d->input_interlaced=false; }
-  else if (value6463 >= 0xb077 && value6463 <= 0xb08b) { d->input_width=1920; d->input_height=1080; d->input_interlaced=true; }
-  else if (value6463 >= 0xb052 && value6463 <= 0xb066) { d->input_width=1280; d->input_height=720; d->input_interlaced=false; }
-  else if (value6463 >= 0xb0b5 && value6463 <= 0xb0cd) { d->input_width=720; d->input_height=480; d->input_interlaced=false; }
-  else {
-   /*
-    * No recognizable timing is not a setup failure. Use the driver's
-    * default HDMI mode so the receiver can be configured before a source
-    * is connected; signal status remains false until timing is detected.
-    */
-   d->input_width=1280;
-   d->input_height=720;
-   d->input_interlaced=false;
-   d->input_fps_num=60;
-   d->input_fps_den=1;
+ value6665 = sum6665 / count6665;
+ value6463 = sum6463 / count6463;
+ mode = gchd_hdmi_mode(d, value6463, value6665);
+ d->signal_present = mode;
+ if (!mode) {
+  /* The receiver stays set up; the measurement is repeated later. */
+  if (!d->input_width) {
+   d->input_width = 1280; d->input_height = 720;
+   d->input_interlaced = false; d->input_fps_num = 60; d->input_fps_den = 1;
   }
-  if (d->input_height==480 && value6665 >= 0xbb6b && value6665 <= 0xbb7f)
-   d->input_height=576;
- }
- if (!d->signal_present)
   return -ENOLINK;
-
- if (!d->input_fps_num) {
-  d->input_fps_num = (d->input_height==576)?50:60; d->input_fps_den=1;
  }
 
+ hd = d->input_height > 576;
  GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
- if (d->input_width==1920) { GCHD_FE_W(d, 0xb2, 0xc4); GCHD_FE_W(d, 0xb5, 0xd0); }
- else if (d->input_width==1280) { GCHD_FE_W(d, 0xb2, 0xcc); GCHD_FE_W(d, 0xb5, 0xcc); }
+ /* Per mode: 1080 at 50/60 Hz, other HD, standard definition. */
+ if (d->input_width == 1920 && d->input_fps_num >= 50) { GCHD_FE_W(d, 0xb2, 0xc4); GCHD_FE_W(d, 0xb5, 0xd0); }
+ else if (hd) { GCHD_FE_W(d, 0xb2, 0xcc); GCHD_FE_W(d, 0xb5, 0xcc); }
  else { GCHD_FE_W(d, 0xb2, 0xcf); GCHD_FE_W(d, 0xb5, 0xcc); }
- GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xce); GCHD_FE_W(d, 0x1b, 0x30);
- GCHD_FE_W(d, 0x1f, 0xdc); GCHD_FE_R(d, 0x29, v); GCHD_FE_W(d, 0x1f, 0xcc); GCHD_FE_R(d, 0x3b, v);
- GCHD_FE_W(d, 0x04, 0xcf); GCHD_FE_W(d, 0x04, 0xcd); GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
- GCHD_FE_W(d, 0x40, 0xcc); GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcd);
- GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_W(d, 0xb0, 0xe8); GCHD_FE_W(d, 0xb1, 0x0c); GCHD_FE_W(d, 0xad, 0xc9);
- GCHD_FE_R(d, 0x8f, v); GCHD_FE_W(d, 0xb0, 0xe9); GCHD_FE_R(d, 0x3f, v);
- GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_W(d, 0xab, 0xcc);
- GCHD_BRIDGE_W(d, 0x99, 0x89, 0xf5); GCHD_BRIDGE_R(d, &reply, 1);
- GCHD_BRIDGE_W(d, 0x99, 0x89, 0xfd); GCHD_BRIDGE_R(d, &reply, 1);
- GCHD_BRIDGE_W(d, 0x99, 0x89, 0xf5); GCHD_BRIDGE_R(d, &reply, 1);
- GCHD_BRIDGE_W(d, 0x99, 0x89, 0xfc); GCHD_BRIDGE_R(d, &reply, 1);
- GCHD_BRIDGE_W(d, 0x99, 0x89, 0xf3); GCHD_BRIDGE_R(d, &reply, 1);
- GCHD_BE_W(d, 0x0c, 0x89);
- GCHD_BRIDGE_W(d, 0x99, 0x89, 0xf5); GCHD_BRIDGE_R(d, &reply, 1);
- GCHD_BE_W(d, GCHD_BE_REG_PULSE, 0x65);
- GCHD_BE_W(d, GCHD_BE_REG_PULSE, 0x64);
-
- r=gchd_common_block_a(d); if(r)return r;
- r=gchd_setup_subblock_exact(d); if(r)return r;
- GCHD_BRIDGE_W(d, 0x99, 0x89, 0x6b); GCHD_BRIDGE_R(d, &reply, 1);
- GCHD_BE_W(d, 0xc0, 0x80);
- GCHD_BE_W(d, 0xa2, 0x77);
- GCHD_BRIDGE_W(d, 0x99, 0x89, 0x58); GCHD_BRIDGE_R(d, &reply, 1);
- GCHD_BE_W(d, 0xc0, 0x77);
-
- r=gchd_common_block_b1(d, d->input_width != 1920 && !d->input_interlaced); if(r)return r;
- r=gchd_common_block_b2(d); if(r)return r;
- r=gchd_common_block_b3(d); if(r)return r;
- r=gchd_common_block_c(d); if(r)return r;
- r=gchd_hdmi_read_signal(d,&sum6463,&count6463,&sum6665,&count6665,&d->rgb_input); if(r)return r;
-
- GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
- r=gchd_color_space_exact(d); if(r)return r;
+ r = gchd_hdmi_status(d);
+ if (r)
+  return r;
+ /* After the receiver setup, below 1080: equalizer reset pulses. */
+ if (first && d->input_width != 1920) {
+  GCHD_FE_R(d, 0x20, v);
+  GCHD_FE_W(d, 0x1f, 0xdc); GCHD_FE_R(d, 0x29, v); GCHD_FE_W(d, 0x1f, 0xcc);
+  GCHD_FE_R(d, 0x3b, v); GCHD_FE_W(d, 0x04, 0xcf); GCHD_FE_W(d, 0x04, 0xcd);
+ }
+ GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_W(d, 0x40, 0xcc);
+ GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcd);
+ GCHD_FE_R(d, 0x3e, v); GCHD_FE_R(d, 0x0b, v);
+ GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
+ r = gchd_hdmi_csc_window(d, &gchd_csc_rgb[hd][0]);
+ if (r)
+  return r;
+ GCHD_FE_W(d, 0xab, 0xcc);
+ GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xce);
+ GCHD_FE_R(d, 0x6a, v); GCHD_FE_R(d, 0xa7, v); GCHD_FE_R(d, 0x69, v);
+ GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
+ r = gchd_hdmi_read_signal(d, &sum6463, &count6463, &sum6665, &count6665,
+                           &d->rgb_input);
+ if (r)
+  return r;
+ r = gchd_hdmi_status(d);
+ if (r)
+  return r;
+ GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc);
+ r = gchd_csc_apply(d);
+ if (r)
+  return r;
+ GCHD_FE_R(d, 0x8d, v); GCHD_FE_R(d, 0x8a, v);
+ GCHD_FE_W(d, 0xb2, hd ? 0xcc : 0xcf);
+ GCHD_FE_W(d, 0xb5, 0xc4);
  return 0;
-
 }
 
 int gchd_setup_subblock_exact(struct gchd *d)
@@ -1092,46 +1256,14 @@ int gchd_color_space_exact(struct gchd *d)
   GCHD_SEQ_FE(0x09, 0x4c), GCHD_SEQ_FE(0x0a, 0x4c),
   GCHD_SEQ_FE(0x1e, 0x98), GCHD_SEQ_FE(0x1f, 0xc9),
  };
- static const struct gchd_mail_cmd yuv[] = {
-  GCHD_SEQ_FE(0x92, 0xaa),GCHD_SEQ_FE(0x93, 0xdc),
-  GCHD_SEQ_FE(0x94, 0xcc),GCHD_SEQ_FE(0x95, 0xcc),
-  GCHD_SEQ_FE(0x96, 0xcc),GCHD_SEQ_FE(0x97, 0xcc),
-  GCHD_SEQ_FE(0x98, 0xcc),GCHD_SEQ_FE(0x99, 0xcc),
-  GCHD_SEQ_FE(0x9a, 0xcc),GCHD_SEQ_FE(0x9b, 0xdc),
-  GCHD_SEQ_FE(0x9c, 0xcc),GCHD_SEQ_FE(0x9d, 0xcc),
-  GCHD_SEQ_FE(0x9e, 0xcc),GCHD_SEQ_FE(0x9f, 0xcc),
-  GCHD_SEQ_FE(0xa0, 0xcc),GCHD_SEQ_FE(0xa1, 0xcc),
-  GCHD_SEQ_FE(0xa2, 0xcc),GCHD_SEQ_FE(0xa3, 0xdc),
-  GCHD_SEQ_FE(0xa4, 0xcc),GCHD_SEQ_FE(0xa5, 0xec),
-  GCHD_SEQ_FE(0xa6, 0xcc),GCHD_SEQ_FE(0xa7, 0xc8),
-  GCHD_SEQ_FE(0xa8, 0xcd),GCHD_SEQ_FE(0xa9, 0xec),
-  GCHD_SEQ_FE(0xaa, 0xcc),
- };
- static const struct gchd_mail_cmd rgb[] __maybe_unused = {
-  GCHD_SEQ_FE(0x92, 0x8c),GCHD_SEQ_FE(0x93, 0xcb),
-  GCHD_SEQ_FE(0x94, 0xca),GCHD_SEQ_FE(0x95, 0xce),
-  GCHD_SEQ_FE(0x96, 0x22),GCHD_SEQ_FE(0x97, 0xb2),
-  GCHD_SEQ_FE(0x98, 0xae),GCHD_SEQ_FE(0x99, 0xb5),
-  GCHD_SEQ_FE(0x9a, 0x52),GCHD_SEQ_FE(0x9b, 0xc5),
-  GCHD_SEQ_FE(0x9c, 0x1f),GCHD_SEQ_FE(0x9d, 0xb6),
-  GCHD_SEQ_FE(0x9e, 0x54),GCHD_SEQ_FE(0x9f, 0xb3),
-  GCHD_SEQ_FE(0xa0, 0x90),GCHD_SEQ_FE(0xa1, 0xcc),
-  GCHD_SEQ_FE(0xa2, 0x32),GCHD_SEQ_FE(0xa3, 0xcb),
-  GCHD_SEQ_FE(0xa4, 0xca),GCHD_SEQ_FE(0xa5, 0xec),
-  GCHD_SEQ_FE(0xa6, 0xcc),GCHD_SEQ_FE(0xa7, 0xc8),
-  GCHD_SEQ_FE(0xa8, 0xcd),GCHD_SEQ_FE(0xa9, 0xec),
-  GCHD_SEQ_FE(0xaa, 0xcc),
- };
  int r;
+
  if (d->input == 1) {
-  r=gchd_mail_seq(d,prefix,ARRAY_SIZE(prefix));
-  if(r)return r;
+  r = gchd_mail_seq(d, prefix, ARRAY_SIZE(prefix));
+  if (r)
+   return r;
  }
- /* HDMI selects RGB/YUV from the front-end status bit (0x9C:34 bit 2).
-  * Component and Composite use YUV. */
- if (d->input == 0 && d->rgb_input)
-  return gchd_mail_seq(d,rgb,ARRAY_SIZE(rgb));
- return gchd_mail_seq(d,yuv,ARRAY_SIZE(yuv));
+ return gchd_csc_apply(d);
 }
 
 /*
@@ -2035,8 +2167,8 @@ static int gchd_input_configure_mode(struct gchd *d)
  }
  dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
 
- /* Component: the output size the detected source allows, from the start. */
- if (d->input == 1) {
+ /* HDMI/component: the output size the detected source allows, from the start. */
+ if (gchd_hd(d)) {
   d->out_active = gchd_out_target(d);
   d->enc_dirty = false;
  }

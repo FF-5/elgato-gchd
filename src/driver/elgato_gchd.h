@@ -161,9 +161,11 @@ struct gchd {
  bool input_prepared;
  bool mode_forced;
  bool bitrate_forced;
- bool h264_level_forced;
  bool signal_present;
  bool rgb_input;
+ u8 hdmi_range;     /* HDMI RGB colour range: 0 standard, 1 expanded */
+ bool hdmi_rx_ready; /* HDMI receiver set up since the input was selected */
+ bool csc_dirty;     /* colour conversion to rewrite while capturing */
  unsigned long last_video_jiffies;
  u16 saved_enable_state;
  u16 hw_enable_state;
@@ -176,20 +178,16 @@ struct gchd {
  u32 input_width, input_height;
  u32 input_fps_num, input_fps_den;
  bool input_interlaced;
- /* Component: the source mode detected last (sizes and bitrate range
-  * while no capture has detected the source since the input was chosen). */
- struct {
+ /*
+  * HDMI ([0]) and component ([1]): the source mode detected last (sizes,
+  * bitrate range and frame rate while no capture has detected the source
+  * since the input was chosen).
+  */
+ struct gchd_seen {
   u32 width, height, fps;
   bool interlaced;
- } comp_seen;
+ } seen[2];
  u32 bitrate;
- u8 h264_profile;
- u8 h264_level;
- /* H.264 settings per group: [0] HDMI/component, [1] composite/S-video. */
- struct gchd_group {
-  u8 profile;      /* V4L2_MPEG_VIDEO_H264_PROFILE_* */
-  u8 level;        /* level x10, 0 automatic */
- } grp[2];
  /*
   * Bitrate settings per output mode (GCHD_RATE_*), the same for every
   * input: the mode last used there and a bitrate per mode; rate_slot is the
@@ -200,7 +198,7 @@ struct gchd {
   u16 bitrate[2];  /* kbit/s, 0 automatic: [0] VBR, [1] CBR */
   u8 bitrate_mode; /* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
  } rates[GCHD_RATE_SLOTS];
- struct v4l2_ctrl *ctrl_bitrate, *ctrl_mode, *ctrl_profile, *ctrl_level;
+ struct v4l2_ctrl *ctrl_bitrate, *ctrl_mode;
  bool ctrl_sync; /* controls set by the driver itself */
  bool mark_rx;   /* timing: mark the first stream data after START */
  bool mark_user; /* timing: mark the first buffer after START */
@@ -229,6 +227,9 @@ int gchd_input_start(struct gchd *);
 int gchd_input_check_mode(struct gchd *);
 int gchd_component_mode_changed(struct gchd *);
 void gchd_bitrate_range(struct gchd *);
+int gchd_csc_apply(struct gchd *);
+int gchd_csc_update(struct gchd *);
+int gchd_hdmi_mode_changed(struct gchd *);
 int gchd_input_read_family(struct gchd *, u8 *);
 void gchd_input_log_status(struct gchd *, const char *);
 int gchd_input_read_lock(struct gchd *, u8 *, u8 *);
@@ -244,11 +245,6 @@ int gchd_analog_output_reconfigure(struct gchd *);
 bool gchd_analog_pal60_hold(struct gchd *, u8, unsigned long, bool *);
 int gchd_analog_pal_mode_change(struct gchd *, bool);
 int gchd_analog_poll_backend(struct gchd *);
-int gchd_common_block_a(struct gchd *);
-int gchd_common_block_b1(struct gchd *, bool);
-int gchd_common_block_b2(struct gchd *);
-int gchd_common_block_b3(struct gchd *);
-int gchd_common_block_c(struct gchd *);
 int gchd_color_space_exact(struct gchd *);
 int gchd_setup_subblock_exact(struct gchd *);
 void gchd_input_stop(struct gchd *);
@@ -270,29 +266,41 @@ void gchd_mark_start(struct gchd *);
  * all sizes; 720p and SD sources (480i, 480p, 576i, 576p) all but
  * 1280 x 720. Before detection the requested size.
  */
-/* Component source mode: the detected one, else the one detected last. */
-static inline u32 gchd_comp_src_height(const struct gchd *d)
+/* HDMI and component: the mode detected last on the selected input. */
+static inline const struct gchd_seen *gchd_seen(const struct gchd *d)
 {
-	return d->input_height ? d->input_height : d->comp_seen.height;
+	return &d->seen[d->input == 1];
 }
 
-static inline bool gchd_comp_src_interlaced(const struct gchd *d)
+/* HDMI and component (the HD inputs). */
+static inline bool gchd_hd(const struct gchd *d)
 {
-	return d->input_height ? d->input_interlaced : d->comp_seen.interlaced;
+	return d->input <= 1;
 }
 
-static inline u8 gchd_comp_out_of(const struct gchd *d, u8 o)
+/* HD source mode: the detected one, else the one detected last. */
+static inline u32 gchd_hd_src_height(const struct gchd *d)
 {
-	u32 h = gchd_comp_src_height(d);
+	return d->input_height ? d->input_height : gchd_seen(d)->height;
+}
+
+static inline bool gchd_hd_src_interlaced(const struct gchd *d)
+{
+	return d->input_height ? d->input_interlaced : gchd_seen(d)->interlaced;
+}
+
+static inline u8 gchd_hd_out_of(const struct gchd *d, u8 o)
+{
+	u32 h = gchd_hd_src_height(d);
 
 	if (!h || h == 1080)
 		return o;
 	return o == GCHD_OUT_1280X720 ? GCHD_OUT_STANDARD : o;
 }
 
-static inline u8 gchd_comp_out(const struct gchd *d)
+static inline u8 gchd_hd_out(const struct gchd *d)
 {
-	return gchd_comp_out_of(d, d->hd_out);
+	return gchd_hd_out_of(d, d->hd_out);
 }
 
 /* Output size to encode: composite/S-video preset, component, HDMI source. */
@@ -300,7 +308,7 @@ static inline u8 gchd_out_target(const struct gchd *d)
 {
 	if (d->input >= 2)
 		return d->analog_out;
-	return d->input == 1 ? gchd_comp_out(d) : GCHD_OUT_STANDARD;
+	return gchd_hd(d) ? gchd_hd_out(d) : GCHD_OUT_STANDARD;
 }
 
 /*
@@ -310,10 +318,10 @@ static inline u8 gchd_out_target(const struct gchd *d)
  * 640 x 480 11250, 480 x 360 15000. The lowest is 8/15 of it. 0: no source
  * detected yet.
  */
-static inline u32 gchd_comp_bitrate_max(const struct gchd *d)
+static inline u32 gchd_hd_bitrate_max(const struct gchd *d)
 {
-	u8 out = gchd_comp_out(d);
-	u32 h = gchd_comp_src_height(d);
+	u8 out = gchd_hd_out(d);
+	u32 h = gchd_hd_src_height(d);
 
 	if (!h)
 		return 0;
@@ -325,24 +333,52 @@ static inline u32 gchd_comp_bitrate_max(const struct gchd *d)
 		return 30000;
 	if (h == 720)
 		return d->allow_5060 ? 26250 : 15000;
-	return gchd_comp_src_interlaced(d) ? 11250 : 15000;
-}
-
-static inline u32 gchd_comp_bitrate_min(const struct gchd *d)
-{
-	return gchd_comp_bitrate_max(d) * 8 / 15;
+	return gchd_hd_src_interlaced(d) ? 11250 : 15000;
 }
 
 /*
- * Component bitrate in use: the one set, when inside the output's range,
- * else the highest.
+ * Bitrate of the output in effect, for every input, as one slider: VBR
+ * (shown as the average, B/2) below 10.00, CBR from 10.00 (B) to the
+ * output's highest; 480 x 360 is VBR only up to its highest. kbit/s; 0:
+ * not known yet (HDMI/component before a source was seen).
  */
-static inline u32 gchd_comp_bitrate(const struct gchd *d)
+static inline u32 gchd_bitrate_top(const struct gchd *d)
 {
-	u32 hi = gchd_comp_bitrate_max(d);
+	if (d->input >= 2)
+		return d->analog_out == GCHD_OUT_MOBILE ? 15000 : 11250;
+	return gchd_hd_bitrate_max(d);
+}
 
-	if (d->bitrate_forced && d->bitrate >= gchd_comp_bitrate_min(d) &&
-	    d->bitrate <= hi)
+/* VBR in use: the mode set, or 480 x 360. */
+static inline bool gchd_bitrate_vbr(const struct gchd *d)
+{
+	return gchd_out_target(d) == GCHD_OUT_MOBILE ||
+	       d->bitrate_mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
+}
+
+static inline u32 gchd_bitrate_lo(const struct gchd *d, bool vbr)
+{
+	if (!vbr)
+		return 10000;
+	return gchd_out_target(d) == GCHD_OUT_MOBILE ? 4000 :
+	       gchd_bitrate_top(d) * 8 / 15;
+}
+
+/* VBR up to 9.99 shown (19980 kbit/s): 10.00 is the first CBR value. */
+static inline u32 gchd_bitrate_hi(const struct gchd *d, bool vbr)
+{
+	return vbr && gchd_out_target(d) != GCHD_OUT_MOBILE ? 19980 :
+	       gchd_bitrate_top(d);
+}
+
+/* Bitrate in use: the one kept for the mode when inside its range, else the
+ * top of the range. */
+static inline u32 gchd_bitrate_eff(const struct gchd *d)
+{
+	bool vbr = gchd_bitrate_vbr(d);
+	u32 lo = gchd_bitrate_lo(d, vbr), hi = gchd_bitrate_hi(d, vbr);
+
+	if (d->bitrate_forced && d->bitrate >= lo && d->bitrate <= hi)
 		return d->bitrate;
 	return hi;
 }

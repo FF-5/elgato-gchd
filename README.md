@@ -12,8 +12,8 @@ Elgato.
 |---|---|
 | Composite | Supported: NTSC 480i/240p, PAL 576i/288p, mode changes while capturing, output sizes, bitrate |
 | S-video | Supported, as composite |
-| Component | In development |
-| HDMI | In development |
+| Component | Supported: 480i, 480p, 576i, 576p, 720p, 1080i, 1080p30, mode changes while capturing, output sizes, "Allow 50/60 fps", bitrate |
+| HDMI | Supported: 480p, 576p, 720p50/60, 1080p25/30/50/60 (1080p50/60 encoded at 25/30 frames per second), output sizes, "Allow 50/60 fps", colour range |
 
 Supported device: Elgato Game Capture HD (USB `0fd9:005d`). The older
 revisions `0fd9:0044`, `0fd9:004e` and `0fd9:0051` are recognized but not
@@ -80,7 +80,7 @@ Driver with DKMS, and the udev rule:
 
 ```sh
 sudo dkms add ./src/driver
-sudo dkms install elgato-gchd/0.5.11
+sudo dkms install elgato-gchd/0.5.12
 sudo modprobe elgato_gchd
 sudo cp udev-rules/55-elgato-gchd-device.rules udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
@@ -110,13 +110,16 @@ the scene instead); the plugin's source shows it stretched.
 "Elgato Game Capture HD Settings" in the application menu
 ([`src/settings/gchd-settings-gui`](src/settings/gchd-settings-gui))
 changes the input, output size and encoder settings in a window (menus,
-bitrate slider, switch); the driver remembers them. Changes apply at once,
+bitrate slider, switches); the driver remembers them. Changes apply at once,
 also to a running capture, and the window shows changes made by other
-programs. Each output mode (480 × 360, 640 × 480 and 480i/576i,
-480p/576p, 720p at 60, 720p at 30, 1080) keeps the bitrate mode last used
-there and the last bitrate of each mode, the same for every input. Settings that
-do not apply to the selected input are hidden. For component the window
-offers the output sizes the source allows and "Allow 50/60 fps". Without a desktop:
+programs. The bitrate is one slider: below 10.00 Mbit/s variable (VBR,
+shown as the average), from 10.00 constant (CBR), up to the highest
+bitrate of the output; 480 × 360 is VBR only. Each output mode (480 × 360,
+640 × 480 and 480i/576i, 480p/576p, 720p at 60, 720p at 30 and 1280 × 720,
+1080) keeps its bitrate, the same for every input. Settings that do not
+apply to the selected input are hidden. For HDMI and component the window
+offers the output sizes the source allows and "Allow 50/60 fps", for HDMI
+the colour range (Standard, Expanded). Without a desktop:
 [`src/settings/gchd-settings`](src/settings/gchd-settings) (text menu) or
 `v4l2-ctl`.
 
