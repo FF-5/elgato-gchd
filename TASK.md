@@ -41,7 +41,9 @@ HDMI to the level of component (RULES D7: lowest mode first).
   R13).
 - Analysis: `traces/ANALYSIS-2026-11-27-hdmi-picture-audio-bitrate.md`
   (colour block, HDMI encoder values per mode, bitrate slider).
-- Still needed: VBR top end for 1080 and 720p at 60 (TODO R13).
+- `traces/component/gchd_{1920x1080i,1280x720p60}_output_bitrate_change_2_small`
+  (slider through the VBR/CBR change), `traces/hdmi/gchd_hdmi_{720p60,1080p60}_input_start_small`
+  (first HDMI start; analysis §7).
 
 ## Decisions (maintainer, 2026-11-27)
 
@@ -49,6 +51,9 @@ HDMI to the level of component (RULES D7: lowest mode first).
   part VBR (shown as the average), its upper part CBR; the bitrate mode
   menu goes (driver control kept for V4L2 clients, set by the driver).
 - Default analog audio gain 0 dB (T-080).
+- Bitrate slider: VBR for a shown value below 10.00 (average, B = 2 ×
+  shown), CBR from 10.00 (B = shown) up to the output's highest, for every
+  output; 480 × 360 VBR only (no gap between the two parts).
 
 ## Plan
 
@@ -76,6 +81,9 @@ HDMI to the level of component (RULES D7: lowest mode first).
   calibration blocks for every configuration. No recording contains the
   HDMI selection with a source and the first capture start (all start
   while capturing): needed to replace the back-end part (TODO R14).
+- First HDMI start recorded (720p60, 1080p60): no back-end writes at all;
+  the front-end sequence is in the analysis §7. The driver's HDMI path gets
+  that sequence without the back-end blocks.
 - The receiver delivers RGB from the PS3; 480p needs the BT.601 matrix
   (the driver uses the BT.709 one for every RGB source).
 - Encoder values per output mode are the component ones (same tables).
