@@ -372,9 +372,10 @@ static inline u32 gchd_bitrate_lo(const struct gchd *d, bool vbr)
 	       gchd_bitrate_top(d) * 8 / 15;
 }
 
+/* VBR up to 9.99 shown (19980 kbit/s): 10.00 is the first CBR value. */
 static inline u32 gchd_bitrate_hi(const struct gchd *d, bool vbr)
 {
-	return vbr && gchd_out_target(d) != GCHD_OUT_MOBILE ? 20000 :
+	return vbr && gchd_out_target(d) != GCHD_OUT_MOBILE ? 19980 :
 	       gchd_bitrate_top(d);
 }
 
