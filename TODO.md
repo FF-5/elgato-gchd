@@ -113,7 +113,11 @@ In this order, each its own task and branch:
       picture/audio settings, colour range), several per
       input, recalled at once; the original software has only fixed
       profiles. Builds on the remembered settings (per output mode); before
-      the first release (maintainer, 2026-11-27).
+      the first release (maintainer, 2026-11-27). Decided 2026-11-27: per user
+      (`~/.config`), the bitrate of the profile's output size, the OBS
+      plugin with the same functions as the settings window; the settings
+      window in the system settings menu (*System > Preferences >
+      Hardware*). In work on `feat/profiles`.
 - [ ] **T-095 (S)** (Before the first release, maintainer 2026-11-27.) Optional download of the Elgato installer by the
       firmware script, after the user confirms (link to Elgato's terms, no
       mirroring, checksum check, URL in one place). **Maintainer: e-mail

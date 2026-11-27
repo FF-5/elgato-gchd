@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** plan (2026-11-27); maintainer to confirm the open points
+- **Status:** implemented (command, settings window, text menu, OBS plugin); hardware test next
 - **Type:** userspace feature (stage 5)
 - **Branch:** `feat/profiles` (from `dev` 0.5.13)
 - **TODO items:** T-091 (stage 5)
@@ -21,44 +21,57 @@ composite"), several per input, recalled at once.
 2. Save the current settings as a named profile, load one (all settings
    applied at once, also while capturing), rename, delete, list (all or
    those of the current input).
-3. Available in the settings window, the text menu and the OBS plugin,
-   all using the same profiles.
+3. Available in the settings window, the text menu and the OBS plugin
+   (the same functions in all three: not everyone installs the settings
+   programs; maintainer 2026-11-27), all using the same profiles.
 4. Loading a profile leaves the driver's remembered settings at the
    loaded values (the udev rule keeps working as today).
 
-## Plan (proposed defaults; open points below)
+## Decisions (maintainer, 2026-11-27)
 
-1. One command, `gchd-profile` (shell, installed with the settings
-   programs): `save NAME`, `load NAME`, `list [--input N]`, `delete NAME`,
-   `rename OLD NEW`, `show NAME`. It reads and writes the settings through
-   `v4l2-ctl` like the other programs; no driver change.
-2. Storage: one plain text file per profile,
-   `${XDG_CONFIG_HOME:-~/.config}/elgato-gchd/profiles/NAME.conf`,
-   `key=value` lines (versioned header line, unknown keys ignored, values
-   checked against the control ranges before applying). Names: letters,
-   digits, space, `-`, `_`, at most 64 characters.
-3. Load order: input first, then the output size, then the other
-   controls; one encoder restart at most.
-4. Settings window: a "Profile" row (choose → load; "Save as…", "Delete").
-   Text menu: a "Profiles" item (load, save, delete). OBS plugin: a
-   profile list in the source properties with a "Load" button (calls
-   `gchd-profile load`).
-5. Docs: README sections for the three programs and `gchd-profile`.
-6. Hardware test (`tools/tests/T-091.sh`): save, change everything, load,
-   check every control; load while capturing (one restart at most); the
-   same through the window, menu and OBS; profiles of another input.
+- Profiles per user (`~/.config`).
+- A profile holds the bitrate of its own output size only.
+- The OBS plugin saves, renames and deletes too, not only loads.
+- The settings window belongs to the system settings menu (*System >
+  Preferences > Hardware*), not *Applications > Video* (players, editors).
+- The format (H.264 / transport stream) is not part of a profile: the
+  capturing program chooses it.
 
-## Open points (maintainer)
+## Done so far
 
-- Profiles per user (`~/.config`, proposed) or for every user of the
-  computer (`/etc`, needs `sudo` to save)?
-- Should a profile also hold the bitrates of every output mode (all six
-  kept values), or only the bitrate of its own output size (proposed)?
-- Should the OBS plugin only load profiles (proposed), or also save them?
+- `gchd-profile` (`src/settings/`, installed with the core in
+  `/usr/local/bin`, removed with it; profiles kept): `save NAME
+  [--replace]`, `load`, `list [--input N]`, `show`, `delete`, `rename`;
+  files `~/.config/elgato-gchd/profiles/NAME.conf` (version line,
+  `key=value`, values checked before a load); names letters, digits,
+  space, `.`, `_`, `-`, at most 64. Load: input (only if different; refused:
+  nothing else changed, status 2), output size, then all controls of that
+  input in one call. Exit status 0 / 1 error / 2 not all applied / 3
+  exists or missing. Checked with a simulated device (every setting back
+  after a load, refusals, rename, delete).
+- Settings window: Profile row at the top (list with the current input's
+  profiles first; Load, Save as..., Rename..., Delete with confirmation);
+  checked under a virtual display (save, load, rename, delete).
+- Text menu: "Profiles" item (load, save with replace question, rename,
+  delete); checked with a scripted whiptail.
+- OBS plugin: "Profiles" group (Profile list, Load profile, Save to this
+  profile and Delete profile with a second click, New name, Save as new
+  profile, Rename to the new name, result message for a minute); runs
+  `gchd-profile` with `posix_spawnp` (no shell); checked in a harness
+  with the simulated device.
+- Desktop entry: `Categories=Settings;HardwareSettings;`.
+- READMEs (top level: Profiles section, menu location; OBS plugin).
 
 ## Hardware test (maintainer)
 
-Not yet.
+```sh
+cd ~ && git -C elgato-gchd fetch origin
+git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-091.sh > tests/T-091.sh
+bash gchd-test.sh T-091 --branch feat/profiles
+```
+
+Needs the PS3 on composite and OBS with the plugin.
 
 ## Maintainer comments
 
