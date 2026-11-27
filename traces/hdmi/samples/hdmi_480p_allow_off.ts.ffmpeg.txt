@@ -1,3 +1,0 @@
-[in#0 @ 0x5fd499d0cd40] Error opening input: Invalid data found when processing input
-Error opening input file /home/ff5/gchd-test-logs/T-050-samples/hdmi_480p_allow_off.ts.
-Error opening input files: Invalid data found when processing input
