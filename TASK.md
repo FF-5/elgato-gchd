@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** implemented (driver, settings window, text menu, OBS plugin); hardware test next
+- **Status:** first hardware run: composite picture settings and positive audio gain fail; waiting for recordings R15, R16 (TODO)
 - **Type:** driver feature (stage 4)
 - **Branch:** `feat/picture-audio` (from `dev` 0.5.12)
 - **TODO items:** T-080 (stage 4)
