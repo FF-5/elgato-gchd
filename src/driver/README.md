@@ -33,7 +33,7 @@ DKMS:
 
 ```sh
 sudo dkms add ./src/driver
-sudo dkms install elgato-gchd/0.5.11
+sudo dkms install elgato-gchd/0.5.12
 ```
 
 ## Module parameters

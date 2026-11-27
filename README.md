@@ -13,7 +13,7 @@ Elgato.
 | Composite | Supported: NTSC 480i/240p, PAL 576i/288p, mode changes while capturing, output sizes, bitrate |
 | S-video | Supported, as composite |
 | Component | Supported: 480i, 480p, 576i, 576p, 720p, 1080i, 1080p30, mode changes while capturing, output sizes, "Allow 50/60 fps", bitrate |
-| HDMI | In development: 480p, 576p, 720p50/60, 1080p25/30/50/60 (1080p50/60 encoded at 25/30 frames per second), output sizes, "Allow 50/60 fps", colour range |
+| HDMI | Supported: 480p, 576p, 720p50/60, 1080p25/30/50/60 (1080p50/60 encoded at 25/30 frames per second), output sizes, "Allow 50/60 fps", colour range |
 
 Supported device: Elgato Game Capture HD (USB `0fd9:005d`). The older
 revisions `0fd9:0044`, `0fd9:004e` and `0fd9:0051` are recognized but not
@@ -80,7 +80,7 @@ Driver with DKMS, and the udev rule:
 
 ```sh
 sudo dkms add ./src/driver
-sudo dkms install elgato-gchd/0.5.11
+sudo dkms install elgato-gchd/0.5.12
 sudo modprobe elgato_gchd
 sudo cp udev-rules/55-elgato-gchd-device.rules udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
