@@ -235,4 +235,6 @@ a short note what was done and when (seconds) helps.
 
 | # | Recording | For | Status |
 |---|---|---|---|
+| R15 | Composite (and S-video), capturing: each picture slider 0 → −100 → 0 → +100 → 0 (hue ±180), a few seconds per position | registers of the picture settings on the analog decoder path | **needed** for T-080 (2026-11-27) |
+| R16 | Composite, capturing, a steady sound if possible: audio gain from 0 dB in single +1 dB steps to +12 dB, 3 s each, values noted; then down to −12 dB the same way | the positive gain codes and `0x94:41 = 57` | **needed** for T-080 (2026-11-27) |
 | R9 | One recording per picture/audio setting changed while capturing | stage 4, T-080 | recorded 2026-11-27 (brightness, contrast, saturation, hue, analog audio gain; `traces/`); the positive audio gain steps to be confirmed by a level measurement |
