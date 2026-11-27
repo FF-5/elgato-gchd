@@ -1,5 +1,7 @@
-# T-050: HDMI after a composite capture with a signal, the bitrate range
-# at 1080p, v4l2-compliance with its full output. Accepted on 2026-11-27
+# T-050: HDMI after a composite capture with a signal (output size chosen
+# after selecting HDMI), the bitrate range at 1080p, the H.264 level without
+# the removed profile/level controls, v4l2-compliance (DV timings with a
+# scaled output size before) with its full output. Accepted on 2026-11-27
 # (laptop on HDMI): cold start, modes and samples, output sizes, Allow
 # 50/60 fps, colour range, source change, bitrate slider in driver, window
 # and OBS, composite slider ranges.
@@ -51,6 +53,8 @@ source_mode() {	# source_mode NAME [HINT]
 sample() {
 	local f=$SAMPLES/hdmi_$1.ts pos
 	mkdir -p $SAMPLES
+	# HDMI first: the output size belongs to the selected input.
+	set_input 0
 	size ${2%x*} ${2#*x}
 	set_input 0
 	timeout -k 5 20 head -c 20000000 < $D > $f.raw 2>/dev/null
@@ -87,9 +91,12 @@ confirm "The 'Elgato composite' window shows the PS3?"
 touch $CVSTOP; pkill -f "window_title Elgato composite" 2>/dev/null; wait $CV 2>/dev/null; sleep 2
 run sh -c "sudo dmesg | grep -E 'configuring|analog mode|signal detected' | tail -3"
 sample after_composite_1080p 1920x1080 "1920 1080" progressive 40 "(30/1|30000/1001)"
+expect "no H.264 profile/level controls" "^0$" sh -c "v4l2-ctl -d $D -l | grep -c 'h264_profile\|h264_level'"
 expect "1080p: bitrate range 10-30 Mbit/s, highest 30" "^10000000-30000000 30000000$" range_of
 
-step "v4l2-compliance (full output)"
+step "v4l2-compliance (full output), starting with a scaled output size"
+set_input 0
+size 1280 720
 CO=$HOME/gchd-test-logs/T-050-compliance.txt
 v4l2-compliance -d $D > $CO 2>&1
 run sh -c "grep -E 'fail|FAIL|warn' $CO | head -20; grep -E '^Total' $CO"
