@@ -28,7 +28,7 @@ int gchd_mail_read(struct gchd *d, u8 port, u8 *b, u8 len)
 	if (pend >= 0 && len == 1) {
 		int n = nseq[pend][pend_reg];
 		/* Detection registers: the value of the settled source. */
-		if (pend == 0 && pend_reg >= 0x65 && pend_reg <= 0x68 && n) pos[pend][pend_reg] = n - 1;
+		if (pend == 0 && pend_reg >= 0x63 && pend_reg <= 0x68 && n) pos[pend][pend_reg] = n - 1;
 		int v = n ? seq[pend][pend_reg][pos[pend][pend_reg] < n ? pos[pend][pend_reg]++ : n - 1] : 0xff;
 		b[0] = v;
 		printf("READ   %s:%02X -> %02X\n", pend==0?"9C":pend==1?"98":"88", pend_reg, b[0]);
@@ -44,6 +44,7 @@ int gchd_scmd(struct gchd *d, u8 c, u8 m, u16 v){ printf("SCMD   %d mode=%02X da
 int gchd_state_cmd(struct gchd *d, u8 c, u8 m, u16 v, ...){ printf("STATE  %d mode=%02X data=%04X\n", c, m, v); return 0; }
 int gchd_return_to_stop(struct gchd *d){ printf("RETURN_TO_STOP\n"); return 0; }
 void gchd_remember_std(struct gchd *d){}
+void gchd_bitrate_range(struct gchd *d){}
 int ___ratelimit(void *a, const char *f){ return 0; }
 void __dynamic_dev_dbg(void *a, ...){}
 unsigned long __msecs_to_jiffies(unsigned int m){ return m; }
@@ -54,6 +55,7 @@ void msleep(unsigned int m){ jiffies += m; }
 void usleep_range_state(unsigned long a, unsigned long b, unsigned int s){ jiffies += 1; }
 struct gchd *emu_dev(void);
 int emu_component(struct gchd *d, int prog);
+int emu_hdmi(struct gchd *d, int prog, int range, int rx, int allow);
 int main(int argc, char **argv)
 {
 	char line[256]; FILE *f;
@@ -66,6 +68,10 @@ int main(int argc, char **argv)
 			if (i >= 0 && nseq[i][reg] < 4096) seq[i][reg][nseq[i][reg]++] = val;
 		}
 	}
-	printf("# result %d\n", emu_component(emu_dev(), argc > 2));
+	if (argc > 3 && !strcmp(argv[3], "hdmi"))
+		printf("# result %d\n", emu_hdmi(emu_dev(), 1, argc > 4 ? atoi(argv[4]) : 0,
+		       argc > 5 ? atoi(argv[5]) : 0, argc > 6 ? atoi(argv[6]) : 1));
+	else
+		printf("# result %d\n", emu_component(emu_dev(), argc > 2));
 	return 0;
 }
