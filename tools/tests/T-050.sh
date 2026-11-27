@@ -1,12 +1,10 @@
-# T-050: HDMI, all modes (a laptop's HDMI output): the recorded configuration
-# without the back end, encoder values per mode, TS samples (RULES F3),
-# output sizes and "Allow 50/60 fps", HDMI Color Range while capturing,
-# source mode changes while capturing; the bitrate as one slider (below
-# 10.00 VBR, from 10.00 CBR) in the driver, the settings window and OBS;
-# composite bitrate ranges of the slider model; HDMI after composite;
-# v4l2-compliance.
-# Needs: a laptop on HDMI (the Elgato as a second display, mirrored), the
-# PS3 on composite, OBS with the plugin.
+# T-050: HDMI after a composite capture with a signal, the bitrate range
+# at 1080p, v4l2-compliance with its full output. Accepted on 2026-11-27
+# (laptop on HDMI): cold start, modes and samples, output sizes, Allow
+# 50/60 fps, colour range, source change, bitrate slider in driver, window
+# and OBS, composite slider ranges.
+# Needs: the laptop on HDMI at 1920x1080 60 Hz, the PS3 on composite (on,
+# showing its menu).
 
 INST="$REPO/install-driver.sh"
 LOGS="$HOME/.config/obs-studio/logs"
@@ -72,109 +70,30 @@ N0=0
 mark() { N0=$(sudo dmesg | wc -l); }
 count_new() { sudo dmesg | tail -n +$((N0 + 1)) | grep -cE "$1"; }
 
-step "install the settings programs and the plugin of this branch"
+CVSTOP=/tmp/gchd-cviewer-stop
+step "install"
 run sudo rmmod elgato_gchd
-run bash "$INST" --all --yes --in-terminal < /dev/null
-prompt "Connect the laptop's HDMI output to the Elgato (laptop on, the Elgato as a second display, mirrored) and the PS3 to composite (PS3 on). Unplug the Elgato and plug it in again; wait 5 s (the first capture is a cold start with HDMI selected)."
-set_input 0
-run v4l2-ctl -d $D -c allow_50_60_fps=1,hdmi_color_range=0
+run bash "$INST" --core --yes --in-terminal < /dev/null
+prompt "Laptop on HDMI at 1920x1080 60 Hz; PS3 on composite (on, showing its menu). Unplug the Elgato and plug it in again; wait 5 s."
 
-source_mode "1280x720 at 60 Hz"
-step "720p"
-sample 720p 1920x1080 "1280 720" progressive 40 "(60/1|60000/1001)"
-expect "720p: 1280x720, 640x480, 480x360 offered (no scaled 1280x720)" "1280x720.*640x480.*480x360" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | tr '\n' ' '"
-run v4l2-ctl -d $D -c allow_50_60_fps=0
-sample 720p_allow_off 1920x1080 "1280 720" progressive 31 "(30/1|30000/1001)"
-run v4l2-ctl -d $D -c allow_50_60_fps=1
-sample 720p_640x480 640x480 "640 480" progressive 30 "(30/1|30000/1001)"
-
-source_mode "1920x1080 at 60 Hz"
-step "1080p"
-sample 1080p 1920x1080 "1920 1080" progressive 40 "(30/1|30000/1001)"
-sample 1080p_1280x720 1280x720 "1280 720" progressive 31 "(30/1|30000/1001)"
-sample 1080p_480x360 480x360 "480 360" progressive 22 "(30/1|30000/1001)"
-expect "1080p: 16-30 Mbit/s range covers VBR from 8.00 and CBR to 30.00" "^10000000-30000000 30000000$" range_of
-
-step "HDMI Color Range while capturing (1080p)"
-size 1920 1080
-set_input 0
-mark
-viewer_start
-prompt "Watch the 'Elgato HDMI' window for 10 s, then press Enter."
-run v4l2-ctl -d $D -c hdmi_color_range=1
-confirm "With Expanded the picture became more contrasty (blacks darker, whites brighter) at once, without the picture stopping?"
-run v4l2-ctl -d $D -c hdmi_color_range=0
-confirm "Back to Standard, the picture is as before?"
-viewer_stop
-expect "no encoder restart for the colour range" "^0$" count_new "encoder restart"
-
-source_mode "1920x1080 at 50 Hz" "If the laptop offers no 50 Hz, choose the lowest refresh it offers for 1920x1080 (30, 25 or 24 Hz) and note it."
-step "1080p at 50 Hz (or the lower rate)"
-run v4l2-ctl -d $D --get-dv-timings
-sample 1080p_low 1920x1080 "1920 1080" progressive 40 "(25/1|30/1|30000/1001|24/1|24000/1001)"
-source_mode "720x576 at 50 Hz (or 720x480 at 60 Hz)" "If the laptop offers neither, choose 640x480 and note it."
-step "SD progressive"
-run v4l2-ctl -d $D --get-dv-timings
-sample sd 1920x1080 "720 (480|576)" progressive 30 '(50/1|60/1|60000/1001)'
-run v4l2-ctl -d $D -c allow_50_60_fps=0
-sample sd_allow_off 1920x1080 "720 (480|576)" progressive 31 '(50/1|60/1|60000/1001)'
-run v4l2-ctl -d $D -c allow_50_60_fps=1
-
-step "source mode change while capturing"
-size 1920 1080
-set_input 0
-mark
-viewer_start
-prompt "While the 'Elgato HDMI' window shows the laptop, set the laptop's HDMI display to 1280x720 at 60 Hz (the picture may go away for a few seconds and comes back). Press Enter when it shows 720p again."
-viewer_stop
-expect "the driver followed the source change" "^[1-9]" count_new "HDMI source mode changed while capturing"
-run sh -c "sudo dmesg | tail -n +$((N0 + 1)) | grep -E 'HDMI|detected|failed' | tail -12"
-
-step "bitrate as one slider (driver, 720p)"
-size 1920 1080
-run v4l2-ctl -d $D -c video_bitrate_mode=1,video_bitrate=20000000
-expect "720p CBR 20 Mbit/s" "video_bitrate_mode: 1 video_bitrate: 20000000" rates
-run v4l2-ctl -d $D -c video_bitrate_mode=0,video_bitrate=19000000
-expect "720p VBR 19 Mbit/s (9.50 shown)" "video_bitrate_mode: 0 video_bitrate: 19000000" rates
-run v4l2-ctl -d $D -c video_bitrate_mode=0,video_bitrate=25000000
-expect "VBR above 19.98 Mbit/s gives 19.98" "video_bitrate_mode: 0 video_bitrate: 19980000" rates
-run v4l2-ctl -d $D -c video_bitrate_mode=1,video_bitrate=10000000
-expect "CBR 10 Mbit/s (10.00, the first CBR value)" "video_bitrate_mode: 1 video_bitrate: 10000000" rates
-
-step "settings window"
-prompt "Open 'Elgato Game Capture HD Settings' (Input HDMI)."
-confirm "Rows: Output size (1920... source size, 640x480, 480x360), Bitrate (one slider, no Bitrate mode row), Allow 50/60 fps, HDMI color range; the slider ends at 26.25?"
-prompt "Move the slider to about 9.50 and release it; wait 3 s."
-expect "window 9.50: VBR 19 Mbit/s" "video_bitrate_mode: 0 video_bitrate: 1(8[5-9]|9[0-5])[0-9]{5}" rates
-prompt "Move the slider to about 15.00 and release it; wait 3 s."
-expect "window 15.00: CBR 15 Mbit/s" "video_bitrate_mode: 1 video_bitrate: 1(4[5-9]|5[0-5])[0-9]{5}" rates
-prompt "Choose HDMI color range Expanded; wait 3 s."
-expect "window: Expanded" "hdmi_color_range: 1" v4l2-ctl -d $D -C hdmi_color_range
-prompt "Choose Standard again; choose Output size 480x360; wait 3 s."
-confirm "480x360: the slider goes from 2.00 to 7.50 (VBR)?"
-prompt "Choose the source size again; close the window."
-
-step "OBS plugin"
-prompt "Start OBS (source 'Elgato Game Capture HD', input HDMI); open the source's properties."
-confirm "OBS: Output size, Bitrate (one slider, at about 15.00), Allow 50/60 fps and HDMI color range are shown, no Bitrate mode?"
-prompt "Move the bitrate slider to about 8.00 -> OK; wait 3 s."
-expect "OBS 8.00: VBR 16 Mbit/s" "video_bitrate_mode: 0 video_bitrate: 1(5[5-9]|6[0-5])[0-9]{5}" rates
-prompt "Close OBS."
-run obs_log 6
-
-step "composite: bitrate ranges of the slider, then HDMI after composite"
+step "composite with a signal, then HDMI"
 set_input 2
 size 720 480
-expect "composite source size: 6 to 19.98 Mbit/s, highest 11.25" "^6000000-19980000 11250000$" range_of
-size 480 360
-expect "composite 480x360: 4 to 15 Mbit/s" "^4000000-15000000 15000000$" range_of
-size 720 480
-set_input 2
-expect "composite capture (PS3) before HDMI" "width=720 height=(480|576)" sh -c "timeout -k 5 20 head -c 6000000 < $D > /tmp/gchd-c.ts; ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of default=nw=1 /tmp/gchd-c.ts | tr '\n' ' '"
-sample after_composite 1920x1080 "1280 720" progressive 40 "(60/1|60000/1001)"
+rm -f $CVSTOP
+( while [ ! -e $CVSTOP ]; do v4l2-ctl -d $D -i 2 >/dev/null 2>&1; ffplay -loglevel error -autoexit -window_title "Elgato composite" -f mpegts $D >/dev/null 2>&1; sleep 1; done ) &
+CV=$!
+prompt "A window 'Elgato composite' should show the PS3 (composite). If it stays black, check the PS3's composite cable and that the PS3 shows its menu. Press Enter when the window shows the PS3."
+confirm "The 'Elgato composite' window shows the PS3?"
+touch $CVSTOP; pkill -f "window_title Elgato composite" 2>/dev/null; wait $CV 2>/dev/null; sleep 2
+run sh -c "sudo dmesg | grep -E 'configuring|analog mode|signal detected' | tail -3"
+sample after_composite_1080p 1920x1080 "1920 1080" progressive 40 "(30/1|30000/1001)"
+expect "1080p: bitrate range 10-30 Mbit/s, highest 30" "^10000000-30000000 30000000$" range_of
 
-step "v4l2-compliance"
-run sh -c "v4l2-compliance -d $D 2>&1 | tail -3"
-expect "compliance: 0 failures" "Failed: 0" sh -c "v4l2-compliance -d $D 2>&1 | grep -E '^Total'"
-run ls -l $SAMPLES
-prompt "Upload the folder $SAMPLES to the traces branch as traces/hdmi/samples/ (the .ts, .raw, .ffprobe.txt, .ffmpeg.txt files)."
+step "v4l2-compliance (full output)"
+CO=$HOME/gchd-test-logs/T-050-compliance.txt
+v4l2-compliance -d $D > $CO 2>&1
+run sh -c "grep -E 'fail|FAIL|warn' $CO | head -20; grep -E '^Total' $CO"
+expect "compliance run 1: 0 failures" "Failed: 0" grep -E '^Total' $CO
+v4l2-compliance -d $D > $CO.2 2>&1
+run sh -c "grep -E 'fail|FAIL|warn' $CO.2 | head -20; grep -E '^Total' $CO.2"
+expect "compliance run 2 (right after): 0 failures" "Failed: 0" grep -E '^Total' $CO.2
