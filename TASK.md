@@ -137,3 +137,12 @@ bash gchd-test.sh T-080 --branch feat/picture-audio
 
 ## Maintainer comments
 
+=== summary (T-080, 0da30db T-080: composite/S-video capture start writes the picture settings instead of fixed decoder values)
+PASS | step 2 settings kept from the capture start: composite | composite from the start: black and white and brighter than normal?
+PASS | step 2 settings kept from the capture start: composite | composite after the signal came back: still black and white and brighter?
+PASS | step 2 settings kept from the capture start: composite | composite at 0: normal colours and brightness (like before this test)?
+PASS | step 3 settings kept from the capture start: S-video | S-video from the start: black and white and brighter than normal?
+PASS | step 3 settings kept from the capture start: S-video | S-video after the signal came back: still black and white and brighter?
+PASS | step 3 settings kept from the capture start: S-video | S-video at 0: normal colours and brightness (like before this test)?
+
+FAIL: 0  WARN: 0
