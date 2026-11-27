@@ -20,7 +20,7 @@ properties.
   480 × 360; HDMI and component: the sizes the source allows, as the
   driver lists them, source size first), bitrate, stretch of SD input
   (composite and S-video), "Allow 50/60 fps" (HDMI and component), HDMI
-  color range (Standard, Expanded). The H.264 profile is not offered (the
+  color range (Standard, Expanded). The H.264 profile and level are automatic (the
   driver's default). They are the driver's settings, shared with the
   settings window and other programs: the properties show the device's
   values when they open and follow changes made elsewhere (checked every

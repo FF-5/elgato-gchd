@@ -56,12 +56,9 @@ sudo dkms install elgato-gchd/0.5.11
 | `allow_5060` | 1 | HDMI/component: 1 encodes 720p at 50/60 and 576p/480p at 50/60 frames per second with the short GOP; 0 encodes 720p at 25/30 frames per second and 576p/480p with the long GOP. |
 | `hdmi_range` | 0 | HDMI colour range of RGB sources: 0 standard, 1 expanded (the RGB values scaled by 255/219). |
 | `stretch` | 0 | Stretch standard-definition input (composite/S-video). |
-| `h264_profile` | 4 | Composite/S-video H.264 profile (V4L2 value): 0 baseline, 2 main, 4 high. |
-| `h264_level` | 0 | Composite/S-video H.264 level × 10 (30–51), 0 automatic. |
 | `std_composite` | 0 | Last standard detected on composite: 0 unknown, 1 NTSC (60 Hz), 2 PAL (50 Hz); sets the format before the first detection. |
 | `std_svideo` | 0 | The same for S-video. |
-| `hd_h264_profile` | 4 | HDMI/component H.264 profile (V4L2 value). |
-| `hd_h264_level` | 0 | HDMI/component H.264 level × 10 (30–51), 0 automatic. |
+| `h264_profile`, `h264_level`, `hd_h264_profile`, `hd_h264_level` | | Older settings files: ignored (H.264 High profile, the level of each output). |
 | `bitrate`, `bitrate_mode`, `bitrate_cbr`, `bitrate_vbr`, `bitrate_small`, `hd_bitrate_mode`, `hd_bitrate_cbr`, `hd_bitrate_vbr` | | Older settings files (bitrate settings per group): read only when no `out_bitrate_*` parameter is given; composite/S-video values for 480 × 360 and 640 × 480 / 480i / 576i, HDMI/component values for the other output modes. |
 
 ### Settings per output mode
@@ -86,14 +83,14 @@ The output mode follows the input, the output size, the source mode and
 "Allow 50/60 fps" (720p); on a change the controls show that mode's
 settings.
 
-H.264 profile and level are kept per group: composite and S-video share
-one, HDMI and component another. Stretch applies to composite and
+The stream is H.264 High profile at the level of each output (no
+controls). Stretch applies to composite and
 S-video; "Allow 50/60 fps" to HDMI and component; "HDMI Color Range" to
 HDMI (changed while capturing without an encoder restart).
 
 ## Remembered settings
 
-The parameters from `input` to `hd_h264_level` (except the older-file ones) hold the settings in use. When
+The parameters from `input` to `hdmi_range` (except the older-file ones) hold the settings in use. When
 an application changes one of them (or a new standard is detected), the
 driver updates the parameters and sends a `change` uevent with all values. The udev rule
 [`../../udev-rules/56-elgato-gchd-settings.rules`](../../udev-rules/56-elgato-gchd-settings.rules)

@@ -515,20 +515,9 @@ static int gchd_transcoder_program(struct gchd *d, bool start)
  u8 profile;
  u8 level;
 
- /*
-  * V4L2 profile values are API enum values; the Fujitsu encoder uses
-  * 1=High and 2=Main. Baseline is mapped to Main.
-  */
- if (d->h264_profile == V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)
-  profile = 1;
- else
-  profile = 2;
-
- if (d->h264_profile == V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE)
-  anchor = 1;
- if (d->h264_level_forced) {
-  level = d->h264_level;
- } else if (comp) {
+ /* High profile (encoder value 1); the level per input and output. */
+ profile = 1;
+ if (comp) {
   level = comp_level;
  } else if (out == GCHD_OUT_640X480) {
   level = 30;

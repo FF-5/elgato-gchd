@@ -78,7 +78,6 @@ struct gchd_vals {
 				   3 1280x720 (component) */
 	int mode;		/* V4L2_MPEG_VIDEO_BITRATE_MODE_* */
 	double rate;		/* Mbit/s as shown (VBR: average) */
-	int profile;		/* V4L2_MPEG_VIDEO_H264_PROFILE_* */
 	bool stretch;
 	bool allow;		/* HDMI/component: "Allow 50/60 fps" */
 	int range;		/* HDMI colour range: 0 standard, 1 expanded */
@@ -104,7 +103,7 @@ struct gchd_src {
 	char *device;		/* /dev/videoN, empty: first found */
 	struct gchd_vals cur;	/* the source's settings */
 	struct gchd_vals base;	/* the device's values at the last sync or apply */
-	struct gchd_vals dlg;	/* mode, rate, profile the properties set
+	struct gchd_vals dlg;	/* mode and rate the properties set
 				   themselves (not the user's changes) */
 	bool have_base;
 	pthread_mutex_t lock;	/* device, cur, base, dlg, apply_pending */
@@ -187,11 +186,6 @@ static int gchd_kbps(double shown, bool vbr)
 	return (int)(shown * 100.0 + 0.5) * (vbr ? 20 : 10);
 }
 
-static int gchd_group(int input)
-{
-	return input >= 2 ? 1 : 0;
-}
-
 /*
  * Output mode whose bitrate settings the driver uses (the picture encoded),
  * in the order of its out_bitrate_* parameters: 0 480x360, 1 640x480 and
@@ -225,7 +219,7 @@ static bool gchd_rate_equal(double a, double b)
 static bool gchd_vals_equal(const struct gchd_vals *a, const struct gchd_vals *b)
 {
 	return a->input == b->input && a->output == b->output &&
-	       a->mode == b->mode && a->profile == b->profile &&
+	       a->mode == b->mode &&
 	       a->stretch == b->stretch && a->allow == b->allow &&
 	       a->src_h == b->src_h && a->src_i == b->src_i &&
 	       a->range == b->range &&
@@ -235,7 +229,7 @@ static bool gchd_vals_equal(const struct gchd_vals *a, const struct gchd_vals *b
 /*
  * Apply the settings V that differ from the device's values B (all with
  * ALL), so that a stale value of the source never overwrites a setting
- * changed elsewhere. The bitrate and profile that the properties filled in
+ * changed elsewhere. The bitrate that the properties filled in
  * themselves (SH: the driver's kept values after a change of output mode or
  * input) are not sent: the driver loads them itself. The bitrate mode
  * follows the slider value (sent with the bitrate).
@@ -246,14 +240,11 @@ static void gchd_apply_changes(int fd, const struct gchd_vals *v,
 {
 	bool analog = v->input >= 2;
 	int o = v->output >= 0 && v->output <= (analog ? 2 : 3) ? v->output : 0;
-	/* After a group change the device loads that group's profile. */
-	bool group = gchd_group(v->input) != gchd_group(b->input);
 	/* After a change of output mode (output size, input, option) the
 	 * device loads that mode's kept bitrate; the source is the device's. */
 	struct gchd_vals vs = *v;
 	int oslot;
 	bool size, rate_changed;
-	bool profile_changed = all || v->profile != (group ? sh : b)->profile;
 
 	vs.output = o;
 	vs.src_h = b->src_h;
@@ -296,8 +287,6 @@ static void gchd_apply_changes(int fd, const struct gchd_vals *v,
 		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_BITRATE,
 			  gchd_kbps(v->rate, m == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR) * 1000);
 	}
-	if (profile_changed)
-		gchd_ctrl(fd, V4L2_CID_MPEG_VIDEO_H264_PROFILE, v->profile);
 	if (analog && (all || v->stretch != b->stretch))
 		gchd_ctrl(fd, GCHD_CID_STRETCH, v->stretch);
 	if (!analog && (all || v->allow != b->allow))
@@ -379,9 +368,6 @@ static bool gchd_read_device(const char *path, struct gchd_vals *v)
 		v->mode = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
 	v->rate = v->mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR ? kb / 2000.0 :
 								kb / 1000.0;
-	c.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE;
-	if (ioctl(fd, VIDIOC_G_CTRL, &c) == 0)
-		v->profile = c.value;
 	c.id = GCHD_CID_STRETCH;
 	if (ioctl(fd, VIDIOC_G_CTRL, &c) == 0)
 		v->stretch = c.value != 0;
@@ -392,7 +378,7 @@ static bool gchd_read_device(const char *path, struct gchd_vals *v)
 /*
  * Device values into the settings, all of them or (with OLD) those that
  * differ from OLD. The "shown_" keys record what the properties show
- * without a change by the user: mode, bitrate and profile are applied only
+ * without a change by the user: mode and bitrate are applied only
  * when they differ from them.
  */
 static void gchd_vals_to_settings(const struct gchd_vals *v,
@@ -410,10 +396,6 @@ static void gchd_vals_to_settings(const struct gchd_vals *v,
 		obs_data_set_double(st, "rate", v->rate);
 		obs_data_set_double(st, "shown_rate", v->rate);
 	}
-	if (!old || v->profile != old->profile) {
-		obs_data_set_int(st, "profile", v->profile);
-		obs_data_set_int(st, "shown_profile", v->profile);
-	}
 	if (!old || v->stretch != old->stretch)
 		obs_data_set_bool(st, "stretch", v->stretch);
 	if (!old || v->allow != old->allow)
@@ -422,8 +404,6 @@ static void gchd_vals_to_settings(const struct gchd_vals *v,
 		obs_data_set_int(st, "hdmi_range", v->range);
 	if (!old || v->input != old->input)
 		obs_data_set_int(st, "shown_input", v->input);
-	if (!old || gchd_group(v->input) != gchd_group(old->input))
-		obs_data_set_int(st, "shown_group", gchd_group(v->input));
 	if (!old || v->src_h != old->src_h || v->src_i != old->src_i) {
 		obs_data_set_int(st, "src_h", v->src_h);
 		obs_data_set_bool(st, "src_i", v->src_i);
@@ -494,14 +474,6 @@ static bool gchd_kept(int input, int o, struct gchd_mem *m)
 	m->rate[0] = vbr > 0 ? vbr / 2000.0 : o == 0 ? 7.5 : GCHD_SWITCH - 0.01;
 	m->rate[1] = cbr > 0 ? cbr / 1000.0 : gchd_top[o];
 	return true;
-}
-
-/* The H.264 profile the driver keeps for group G (1 composite/S-video). */
-static int gchd_kept_profile(int g)
-{
-	long v = gchd_param(g ? "h264_profile" : "hd_h264_profile");
-
-	return v >= 0 ? (int)v : V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
 }
 
 /* ------------------------------------------------------------ decoding */
@@ -981,9 +953,8 @@ static void *gchd_worker(void *data)
 							   all);
 					close(fd);
 					blog(LOG_INFO,
-					     "[gchd] settings applied: input %d, output %d, mode %d, %.2f Mbit/s, profile %d, stretch %d",
-					     cur.input, cur.output, cur.mode, cur.rate,
-					     cur.profile, cur.stretch);
+					     "[gchd] settings applied: input %d, output %d, mode %d, %.2f Mbit/s, stretch %d",
+					     cur.input, cur.output, cur.mode, cur.rate, cur.stretch);
 				}
 			}
 			v = apply ? cur : base;
@@ -1033,7 +1004,6 @@ static void gchd_update(void *data, obs_data_t *settings)
 	s->cur.output = (int)obs_data_get_int(settings, "output");
 	s->cur.rate = obs_data_get_double(settings, "rate");
 	s->cur.mode = (int)obs_data_get_int(settings, "bitrate_mode");
-	s->cur.profile = (int)obs_data_get_int(settings, "profile");
 	s->cur.stretch = obs_data_get_bool(settings, "stretch");
 	s->cur.allow = obs_data_get_bool(settings, "allow");
 	s->cur.range = (int)obs_data_get_int(settings, "hdmi_range");
@@ -1042,7 +1012,6 @@ static void gchd_update(void *data, obs_data_t *settings)
 	if (obs_data_has_user_value(settings, "shown_mode")) {
 		s->dlg.mode = (int)obs_data_get_int(settings, "shown_mode");
 		s->dlg.rate = obs_data_get_double(settings, "shown_rate");
-		s->dlg.profile = (int)obs_data_get_int(settings, "shown_profile");
 	}
 	if (s->created && s->have_base && !gchd_vals_equal(&s->cur, &s->base)) {
 		s->apply_pending = true;
@@ -1115,13 +1084,10 @@ static void gchd_defaults(obs_data_t *settings)
 	obs_data_set_default_double(settings, "rate", 11.25);
 	obs_data_set_default_int(settings, "bitrate_mode",
 				 V4L2_MPEG_VIDEO_BITRATE_MODE_CBR);
-	obs_data_set_default_int(settings, "profile",
-				 V4L2_MPEG_VIDEO_H264_PROFILE_HIGH);
 	obs_data_set_default_bool(settings, "stretch", false);
 	obs_data_set_default_bool(settings, "allow", true);
 	obs_data_set_default_string(settings, "comp_sizes", "");
 	obs_data_set_default_int(settings, "shown_input", -1);
-	obs_data_set_default_int(settings, "shown_group", -1);
 	obs_data_set_default_int(settings, "shown_out", -1);
 	obs_data_set_default_int(settings, "hdmi_range", 0);
 }
@@ -1139,7 +1105,6 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 				  obs_data_t *settings)
 {
 	int input = (int)obs_data_get_int(settings, "input");
-	int g = gchd_group(input);
 	struct gchd_mem kept;
 	bool have;
 	bool analog = input >= 2;
@@ -1157,15 +1122,6 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 			obs_data_set_int(settings, "output", ko);
 		obs_data_set_int(settings, "shown_input", input);
 	}
-	/* Other setting group: the profile the driver keeps for it. */
-	if (g != obs_data_get_int(settings, "shown_group")) {
-		int pr = gchd_kept_profile(g);
-
-		obs_data_set_int(settings, "profile", pr);
-		obs_data_set_int(settings, "shown_profile", pr);
-		obs_data_set_int(settings, "shown_group", g);
-	}
-
 	o = (int)obs_data_get_int(settings, "output");
 	if (o < 0 || o > (analog ? 2 : 3))
 		o = 0;
@@ -1363,8 +1319,6 @@ read_done:
 	obs_property_float_set_suffix(p, " Mbit/s");
 	obs_property_set_long_description(
 		p, "Below 10.00 variable (VBR, the average bitrate); from 10.00 constant (CBR); 480x360 VBR only");
-
-	/* H.264 profile: not offered (the driver's default). */
 
 	obs_properties_add_bool(props, "stretch", "Stretch SD input");
 	obs_property_set_long_description(

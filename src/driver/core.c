@@ -232,12 +232,6 @@ MODULE_PARM_DESC(allow_5060, "HDMI/component: 50/60 frames per second for 576p/4
 static unsigned int gchd_set_hdmi_range;
 module_param_named(hdmi_range, gchd_set_hdmi_range, uint, 0644);
 MODULE_PARM_DESC(hdmi_range, "HDMI colour range of RGB sources: 0 standard, 1 expanded");
-static unsigned int gchd_set_profile = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
-module_param_named(h264_profile, gchd_set_profile, uint, 0644);
-MODULE_PARM_DESC(h264_profile, "H.264 profile (V4L2 value): 0 baseline, 2 main, 4 high");
-static unsigned int gchd_set_level;
-module_param_named(h264_level, gchd_set_level, uint, 0644);
-MODULE_PARM_DESC(h264_level, "H.264 level x10 (30-51), 0 automatic");
 /*
  * Latency marks for benchmarks: "gchd-timing: <microseconds> <event>" at
  * requests, device commands and their completion, and the first stream
@@ -327,31 +321,20 @@ static unsigned int gchd_set_hd_bitrate_vbr;
 module_param_named(hd_bitrate_vbr, gchd_set_hd_bitrate_vbr, uint, 0444);
 MODULE_PARM_DESC(hd_bitrate_vbr, "Older settings files: HDMI/component VBR bitrate");
 
-/* H.264 settings of the HDMI/component group (h264_* above: composite/S-video). */
-static unsigned int gchd_set_hd_profile = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
-module_param_named(hd_h264_profile, gchd_set_hd_profile, uint, 0644);
-MODULE_PARM_DESC(hd_h264_profile, "HDMI/component: H.264 profile (V4L2 value)");
-static unsigned int gchd_set_hd_level;
-module_param_named(hd_h264_level, gchd_set_hd_level, uint, 0644);
-MODULE_PARM_DESC(hd_h264_level, "HDMI/component: H.264 level x10 (30-51), 0 automatic");
+/* Older settings files: H.264 profile and level, now automatic (ignored). */
+static unsigned int gchd_set_old_h264[4];
+module_param_named(h264_profile, gchd_set_old_h264[0], uint, 0444);
+MODULE_PARM_DESC(h264_profile, "Older settings files: ignored");
+module_param_named(h264_level, gchd_set_old_h264[1], uint, 0444);
+MODULE_PARM_DESC(h264_level, "Older settings files: ignored");
+module_param_named(hd_h264_profile, gchd_set_old_h264[2], uint, 0444);
+MODULE_PARM_DESC(hd_h264_profile, "Older settings files: ignored");
+module_param_named(hd_h264_level, gchd_set_old_h264[3], uint, 0444);
+MODULE_PARM_DESC(hd_h264_level, "Older settings files: ignored");
 
 static unsigned int gchd_std_param(v4l2_std_id std)
 {
  return !std ? 0 : gchd_std_is_50hz(std) ? 2 : 1;
-}
-
-/* V4L2 H.264 level menu values and the level x10 they stand for. */
-static const u8 gchd_levels[][2] = {
- { V4L2_MPEG_VIDEO_H264_LEVEL_3_0, 30 }, { V4L2_MPEG_VIDEO_H264_LEVEL_3_1, 31 },
- { V4L2_MPEG_VIDEO_H264_LEVEL_3_2, 32 }, { V4L2_MPEG_VIDEO_H264_LEVEL_4_0, 40 },
- { V4L2_MPEG_VIDEO_H264_LEVEL_4_1, 41 }, { V4L2_MPEG_VIDEO_H264_LEVEL_4_2, 42 },
- { V4L2_MPEG_VIDEO_H264_LEVEL_5_0, 50 }, { V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 51 },
-};
-
-/* Settings group of the selected input: 1 composite/S-video, 0 HDMI/component. */
-static unsigned int gchd_group(const struct gchd *d)
-{
- return d->input >= 2;
 }
 
 /*
@@ -411,37 +394,16 @@ static void gchd_rate_load(struct gchd *d)
  gchd_rate_load_bitrate(d);
 }
 
-/* Keep the H.264 settings in use in their group. */
-static void gchd_group_store(struct gchd *d)
-{
- struct gchd_group *g = &d->grp[gchd_group(d)];
-
- g->profile = d->h264_profile;
- g->level = d->h264_level_forced ? d->h264_level : 0;
-}
-
-/* Use the H.264 settings of the selected input's group. */
-static void gchd_group_load(struct gchd *d)
-{
- const struct gchd_group *g = &d->grp[gchd_group(d)];
-
- d->h264_profile = g->profile;
- d->h264_level_forced = g->level != 0;
- d->h264_level = g->level ? g->level : 41;
-}
-
 static void gchd_ctrls_show(struct gchd *d);
 
 /* Store the device's settings in the parameters and announce them. */
 static void gchd_settings_save(struct gchd *d)
 {
- char (*e)[64] = kmalloc_array(16, sizeof(*e), GFP_KERNEL);
- char *envp[17];
- const struct gchd_group *a = &d->grp[1], *h = &d->grp[0];
+ char (*e)[64] = kmalloc_array(12, sizeof(*e), GFP_KERNEL);
+ char *envp[13];
  const struct gchd_rates *r = d->rates;
  int i;
 
- gchd_group_store(d);
  gchd_rate_store(d);
  gchd_set_output = d->analog_out;
  gchd_set_format = d->pixfmt == V4L2_PIX_FMT_MPEG;
@@ -454,10 +416,6 @@ static void gchd_settings_save(struct gchd *d)
  gchd_set_hd_output = d->hd_out;
  gchd_set_allow_5060 = d->allow_5060;
  gchd_set_hdmi_range = d->hdmi_range;
- gchd_set_profile = a->profile;
- gchd_set_level = a->level;
- gchd_set_hd_profile = h->profile;
- gchd_set_hd_level = h->level;
  gchd_set_std[0] = gchd_std_param(d->analog_std[0]);
  gchd_set_std[1] = gchd_std_param(d->analog_std[1]);
 
@@ -476,18 +434,14 @@ static void gchd_settings_save(struct gchd *d)
           gchd_set_out_vbr[0], gchd_set_out_vbr[1], gchd_set_out_vbr[2],
           gchd_set_out_vbr[3], gchd_set_out_vbr[4], gchd_set_out_vbr[5]);
  snprintf(e[6], sizeof(e[6]), "GCHD_STRETCH=%u", gchd_set_stretch);
- snprintf(e[7], sizeof(e[7]), "GCHD_H264_PROFILE=%u", gchd_set_profile);
- snprintf(e[8], sizeof(e[8]), "GCHD_H264_LEVEL=%u", gchd_set_level);
- snprintf(e[9], sizeof(e[9]), "GCHD_STD_COMPOSITE=%u", gchd_set_std[0]);
- snprintf(e[10], sizeof(e[10]), "GCHD_STD_SVIDEO=%u", gchd_set_std[1]);
- snprintf(e[11], sizeof(e[11]), "GCHD_HD_H264_PROFILE=%u", gchd_set_hd_profile);
- snprintf(e[12], sizeof(e[12]), "GCHD_HD_H264_LEVEL=%u", gchd_set_hd_level);
- snprintf(e[13], sizeof(e[13]), "GCHD_HD_OUTPUT=%u", gchd_set_hd_output);
- snprintf(e[14], sizeof(e[14]), "GCHD_ALLOW_5060=%u", gchd_set_allow_5060);
- snprintf(e[15], sizeof(e[15]), "GCHD_HDMI_RANGE=%u", gchd_set_hdmi_range);
- for (i = 0; i < 16; ++i)
+ snprintf(e[7], sizeof(e[7]), "GCHD_STD_COMPOSITE=%u", gchd_set_std[0]);
+ snprintf(e[8], sizeof(e[8]), "GCHD_STD_SVIDEO=%u", gchd_set_std[1]);
+ snprintf(e[9], sizeof(e[9]), "GCHD_HD_OUTPUT=%u", gchd_set_hd_output);
+ snprintf(e[10], sizeof(e[10]), "GCHD_ALLOW_5060=%u", gchd_set_allow_5060);
+ snprintf(e[11], sizeof(e[11]), "GCHD_HDMI_RANGE=%u", gchd_set_hdmi_range);
+ for (i = 0; i < 12; ++i)
   envp[i] = e[i];
- envp[16] = NULL;
+ envp[12] = NULL;
  kobject_uevent_env(&d->intf->dev.kobj, KOBJ_CHANGE, envp);
  kfree(e);
 }
@@ -500,21 +454,6 @@ void gchd_remember_std(struct gchd *d)
  if (gchd_set_std[0] != gchd_std_param(d->analog_std[0]) ||
      gchd_set_std[1] != gchd_std_param(d->analog_std[1]))
   gchd_settings_save(d);
-}
-
-/* H.264 settings of one group from its parameters. */
-static void gchd_group_param(struct gchd_group *g, unsigned int profile,
-                             unsigned int level)
-{
- unsigned int i;
-
- g->profile = profile == V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE ||
-              profile == V4L2_MPEG_VIDEO_H264_PROFILE_MAIN ?
-              profile : V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
- g->level = 0;
- for (i = 0; i < ARRAY_SIZE(gchd_levels); ++i)
-  if (gchd_levels[i][1] == level)
-   g->level = level;
 }
 
 static u16 gchd_rate_param(unsigned int kb)
@@ -575,9 +514,6 @@ static void gchd_settings_load(struct gchd *d)
   r->bitrate[0] = gchd_rate_param(gchd_set_out_vbr[i]);
   r->bitrate[1] = gchd_rate_param(gchd_set_out_cbr[i]);
  }
- gchd_group_param(&d->grp[1], gchd_set_profile, gchd_set_level);
- gchd_group_param(&d->grp[0], gchd_set_hd_profile, gchd_set_hd_level);
- gchd_group_load(d);
  gchd_rate_load(d);
 }
 
@@ -2126,7 +2062,6 @@ static int gchd_ginput(struct file *f, void *p, unsigned int *i)
 
 static int gchd_set_input(struct gchd *d, unsigned int i)
 {
- bool group_changed;
  int r;
 
  if (i > 3)
@@ -2207,17 +2142,10 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  WRITE_ONCE(d->signal_present, false);
  gchd_ring_free(&d->ring); WRITE_ONCE(d->wait_sps, true); d->ts_out_len = 0; WRITE_ONCE(d->wait_pat, true); d->ts_base_valid = false;
  d->ts_partial_len = 0;
- /*
-  * The H.264 settings of the new input's group (composite/S-video,
-  * HDMI/component); the bitrate settings of its output mode follow below
-  * (gchd_bitrate_range()).
-  */
- gchd_group_store(d);
- group_changed = gchd_group(d) != (i >= 2);
+ /* The bitrate settings of the new input's output mode follow below
+  * (gchd_bitrate_range()). */
  d->previous_input = d->input;
  d->input = i;
- if (group_changed)
-  gchd_group_load(d);
  gchd_update_tvnorms(d);
  gchd_set_lifecycle(d, GCHD_INPUT_SELECTION);
  mutex_lock(&gchd_last_input_lock);
@@ -2328,6 +2256,8 @@ static int gchd_g_dv_timings(struct file *f, void *p, struct v4l2_dv_timings *t)
  return 0;
 }
 
+static void gchd_set_out(struct gchd *d, u8 out);
+
 static int gchd_s_dv_timings(struct file *f, void *p, struct v4l2_dv_timings *t)
 {
  struct gchd *d = video_drvdata(f);
@@ -2352,6 +2282,8 @@ static int gchd_s_dv_timings(struct file *f, void *p, struct v4l2_dv_timings *t)
  if (vb2_is_busy(&d->vbq))
   return i == gchd_dv_current(d) ? 0 : -EBUSY;
  m = &gchd_modes[i];
+ /* New timings: encoded at the source size (no scaled output). */
+ gchd_set_out(d, GCHD_OUT_STANDARD);
  d->dv_index = i;
  d->input_width = m->width;
  d->input_height = m->height;
@@ -2832,17 +2764,6 @@ void gchd_bitrate_range(struct gchd *d)
  mutex_unlock(d->ctrls.lock);
 }
 
-/* Level menu value of the settings in use (automatic: 4.1). */
-static s32 gchd_ctrl_level_value(const struct gchd *d)
-{
- unsigned int i;
-
- for (i = 0; i < ARRAY_SIZE(gchd_levels); ++i)
-  if (d->h264_level_forced && gchd_levels[i][1] == d->h264_level)
-   return gchd_levels[i][0];
- return V4L2_MPEG_VIDEO_H264_LEVEL_4_1;
-}
-
 /*
  * Show the settings in use in the controls (after a change of the input or
  * the output size). Not called from a control handler (takes the handler
@@ -2853,17 +2774,12 @@ static void gchd_ctrls_show(struct gchd *d)
  WRITE_ONCE(d->ctrl_sync, true);
  if (d->ctrl_mode)
   v4l2_ctrl_s_ctrl(d->ctrl_mode, d->bitrate_mode);
- if (d->ctrl_profile)
-  v4l2_ctrl_s_ctrl(d->ctrl_profile, d->h264_profile);
- if (d->ctrl_level)
-  v4l2_ctrl_s_ctrl(d->ctrl_level, gchd_ctrl_level_value(d));
  WRITE_ONCE(d->ctrl_sync, false);
 }
 
 static int gchd_ctrl(struct v4l2_ctrl *c)
 {
  struct gchd *d = container_of(c->handler, struct gchd, ctrls);
- u8 level;
 
  /* Values shown by the driver itself (input or output size change). */
  if (READ_ONCE(d->ctrl_sync))
@@ -2908,26 +2824,6 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
   if (d->bitrate < 1)
    d->bitrate = 1;
   gchd_rate_store(d);
-  break;
- case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
-  if (c->val > V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)
-   return -EINVAL;
-  d->h264_profile = c->val;
-  break;
- case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
-  switch (c->val) {
-  case V4L2_MPEG_VIDEO_H264_LEVEL_3_0: level = 30; break;
-  case V4L2_MPEG_VIDEO_H264_LEVEL_3_1: level = 31; break;
-  case V4L2_MPEG_VIDEO_H264_LEVEL_3_2: level = 32; break;
-  case V4L2_MPEG_VIDEO_H264_LEVEL_4_0: level = 40; break;
-  case V4L2_MPEG_VIDEO_H264_LEVEL_4_1: level = 41; break;
-  case V4L2_MPEG_VIDEO_H264_LEVEL_4_2: level = 42; break;
-  case V4L2_MPEG_VIDEO_H264_LEVEL_5_0: level = 50; break;
-  case V4L2_MPEG_VIDEO_H264_LEVEL_5_1: level = 51; break;
-  default: return -EINVAL;
-  }
-  d->h264_level = level;
-  d->h264_level_forced = true;
   break;
  default:
   return -EINVAL;
@@ -3078,11 +2974,6 @@ int gchd_v4l2_register(struct gchd*d)
  v4l2_ctrl_handler_init(&d->ctrls,7);
  /* Control defaults are the remembered settings (gchd_settings_load()). */
  {
-  unsigned int i, level_def = V4L2_MPEG_VIDEO_H264_LEVEL_4_1;
-
-  for (i = 0; i < ARRAY_SIZE(gchd_levels); ++i)
-   if (d->h264_level_forced && gchd_levels[i][1] == d->h264_level)
-    level_def = gchd_levels[i][0];
   d->ctrl_bitrate = v4l2_ctrl_new_std(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_BITRATE,32000,40000000,1000,
                     gchd_ctrl_bitrate_value(d));
   if (d->ctrl_bitrate)
@@ -3090,10 +2981,6 @@ int gchd_v4l2_register(struct gchd*d)
                              V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
   d->ctrl_mode = v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
    V4L2_MPEG_VIDEO_BITRATE_MODE_CBR,0,d->bitrate_mode);
-  d->ctrl_profile = v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_PROFILE,V4L2_MPEG_VIDEO_H264_PROFILE_HIGH,
-   ~(BIT(V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)|BIT(V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)),d->h264_profile);
-  /* Levels below 3.0 are not offered (0xff skips 1.0 ... 2.2). */
-  d->ctrl_level = v4l2_ctrl_new_std_menu(&d->ctrls,&gchd_ctrl_ops,V4L2_CID_MPEG_VIDEO_H264_LEVEL,V4L2_MPEG_VIDEO_H264_LEVEL_5_1,0xff,level_def);
   {
    struct v4l2_ctrl *power = v4l2_ctrl_new_std(&d->ctrls, &gchd_ctrl_ops,
                                                V4L2_CID_DV_RX_POWER_PRESENT, 0, 1, 0, 0);

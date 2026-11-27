@@ -68,7 +68,7 @@ class Device:
     def read(self):
         """All settings in one call, or None when the device is gone."""
         rc, out = self.run("-I", "-V", "--list-framesizes", "MPEG", "-l", "-C",
-                           "video_bitrate,video_bitrate_mode,h264_profile,"
+                           "video_bitrate,video_bitrate_mode,"
                            "stretch_sd_input,allow_50_60_fps,hdmi_color_range")
         if rc != 0:
             return None
@@ -83,7 +83,6 @@ class Device:
             "size": (int(m.group(1)), int(m.group(2))) if m else None,
             "bitrate": num(r"video_bitrate:\s*(\d+)", 11250000),
             "mode": num(r"video_bitrate_mode:\s*(\d+)", 1),
-            "profile": num(r"h264_profile:\s*(\d+)", 4),
             "stretch": num(r"stretch_sd_input:\s*(\d+)", 0),
             "allow": num(r"allow_50_60_fps:\s*(\d+)", 1),
             "range": num(r"hdmi_color_range:\s*(\d+)", 0),

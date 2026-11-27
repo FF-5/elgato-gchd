@@ -195,6 +195,9 @@ In this order, each its own task and branch:
       `fix/stretch`,
       `fix/analog-robustness`, `fix/close-lifecycle`, `fix/v4l2-compliance`,
       `feat/component`.
+- [ ] HDMI 1080i: not testable (the PS3 fails HDCP on the device; no
+      laptop offers 1080i); detection value and encoder values from the
+      component 1080i and the older code (maintainer, 2026-11-27).
 - [ ] Encoder restart while capturing timed out once after 27 s (-110;
       component 1080i at 1280 × 720, bitrate change, 2026-11-26; not seen
       in eight changes since). The driver detects again and resumes; the
