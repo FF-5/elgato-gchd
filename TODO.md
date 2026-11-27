@@ -24,7 +24,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.12): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.13): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -75,6 +75,11 @@ on the `traces` branch.
   Range" (Standard/Expanded) while capturing without a restart; BT.601 for
   SD RGB sources (480p tested 2026-11-27). 1080i over HDMI not tested on
   hardware.
+  Picture and audio (T-080): brightness, contrast, saturation, hue on
+  every input (HDMI RGB sources after the RGB conversion), analog audio
+  gain −12 … +12 dB (measured 1 dB per step with a steady tone), live
+  without an encoder restart, kept from the capture start and after the
+  signal returns, remembered across replug.
 - Test setup: VirtualBox with the USB 3.0 (xHCI) controller. Once the
   guest kernel disabled the controller's interrupt ("irq 20: nobody
   cared", "Disabling IRQ #20"): USB then very slow, captures stall; only
@@ -87,21 +92,17 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
 0.5.8), OBS and other applications (T-060, 0.5.9), stretch as in the
 Windows software and optional installer parts (T-096, 0.5.10), component
 input, all modes (T-051, 0.5.11), HDMI, all modes, and the bitrate as one
-slider (T-050, 0.5.12). Test results: `logs/hardware-test-log.md` on the `traces` branch.
+slider (T-050, 0.5.12), picture settings and analog audio gain (T-080,
+0.5.13). Test results: `logs/hardware-test-log.md` on the `traces` branch.
 
 ## Stage 4 — Picture and audio settings (after HDMI, before the release)
 
-- [ ] **T-080 [WIN+HW] (M)** (Recorded 2026-11-27, analysis
-      `traces/ANALYSIS-2026-11-27-hdmi-picture-audio-bitrate.md`: picture
-      settings are the colour conversion block `0x9C:92`–`AA`, audio gain
-      `0x94:41/4A/4B`; default gain 0 dB, maintainer 2026-11-27.) Picture settings of the Windows application
-      (brightness, contrast, saturation, hue, sharpness, as offered) and
-      audio settings (volume/gain, audio input selection, as offered). First
-      find out for each whether it is sent to the device or applied by the
-      application: one Windows recording per setting (reduced with the
-      bulk-OUT filter), changing it while capturing. Settings that reach the
-      device become V4L2 controls (`V4L2_CID_BRIGHTNESS`, …, audio via the
-      TS stream); application-side settings are not driver features.
+- [x] **T-080 (M)** Picture settings (brightness, contrast, saturation,
+      hue; HDMI/component in the colour conversion `0x9C:92`–`AA`,
+      composite/S-video in the decoder `0x88:10`–`15`) and the analog audio
+      gain (−12 … +12 dB, `0x94:41/4A/4B`, 1 dB per step measured) as V4L2
+      controls, live without an encoder restart, remembered, in the
+      settings window, text menu and OBS plugin (0.5.13, 2026-11-27).
 
 ## Stage 5 — Release preparation (before the first `master` merge)
 
@@ -126,6 +127,38 @@ In this order, each its own task and branch:
       2026-11-27): `install-driver.sh --uninstall` also deletes the firmware
       files it extracted (`/lib/firmware/gchd/`), after asking (default yes;
       `--yes` without asking); today it keeps them.
+- [ ] **T-102 (L)** Test suite shipped with the driver (maintainer,
+      2026-11-27), replacing the single pre-release test file. Lives on
+      its own orphan branch `tests`, separate from development and releases
+      (maintainer, 2026-11-27; RULES B3); other people fetch it from there
+      to test what the maintainer cannot. Grows from `tools/gchd-test.sh` and the per-task
+      test files (their helpers: `capture` with size, frame rate and field
+      order, dmesg check, `prompt`, `confirm`, summary and log).
+      - **Driver, per input** (composite, S-video, component, HDMI): deep
+        tests of everything for that input (every standard and source
+        mode, mode and family changes while capturing, output sizes,
+        stretch/allow options, bitrate modes and limits, picture settings,
+        audio gain with a level measurement, colour range, formats,
+        close/reopen, unplug while capturing, settings persistence,
+        compliance). Fully automated: the user is only asked to change the
+        cable/input or to change the source mode while a viewer window is
+        open (as with the PS3 tests).
+      - **Settings window, text menu, OBS plugin**: interactive tests in
+        which the user operates the interface and the script checks the
+        result through the driver (as the T-080 window/OBS steps).
+      - **One launcher** asking what to run: a single input or program,
+        the full deep test, or the full fast test (a chosen subset of the
+        deep tests that checks general function in a short time; each test
+        is tagged deep or fast in one place).
+      - **Cases needing outside testers** shown in the launcher with a
+        direct link to their GitHub issue: the original GCHD family
+        (`0044/004e/0051`, T-062) and HDMI 1080i; the issues are created
+        at the first `master` merge (T-100) and the links kept in one place
+        (the repository URL may change with T-093).
+      - A summary at the end to paste into an issue (device, kernel,
+        driver version, PASS/FAIL per test, log path).
+      - Documentation for testers (how to run, what each part needs:
+        sources, cables, OBS), neutral product docs (RULES C).
 - [ ] **T-097 [OFF] (L)** Documentation rewrite (maintainer, 2026-11-26):
       `docs/` becomes (1) a reference of the device's communication
       protocol, every command and register with what it does, and (2) a
@@ -147,11 +180,9 @@ In this order, each its own task and branch:
       already uses the fastest copy the CPU offers. Expected gain small
       (the work is mostly USB transfers); every change measured before and
       after and proven to give the same stream.
-- [ ] **T-090 (M)** Pre-release test: one test file covering every
-      accepted feature (inputs, standards, modes, mode and family changes,
-      output sizes, bitrate, picture/audio settings, formats,
-      close/reopen, settings persistence, compliance, installer, settings
-      programs, OBS plugin), less detailed than the per-task tests.
+- [ ] **T-090 (M)** Pre-release test: the full deep test of T-102 (every
+      input, the settings window, text menu and OBS plugin) and the
+      installer, on the release candidate.
 - [ ] **T-099 [OFF] (M)** Security review of all code, last before the
       merge (maintainer, 2026-11-26): driver (USB data from the device
       treated as untrusted: lengths and bounds in the bulk-IN and TS
@@ -170,10 +201,16 @@ In this order, each its own task and branch:
       delete remote branches; keep a private copy if the recordings may be
       wanted later, e.g. `git clone --mirror`). Also (maintainer,
       2026-11-27): the guidelines this project is developed with (RULES,
-      the agent instructions of CLAUDE.md, the test runner workflow) as a
-      contributor guide on `master` for people who continue the work, also
-      with an AI agent (e.g. `CONTRIBUTING.md` and `AGENTS.md`, without the
-      development history and maintainer notes).
+      the agent instructions of CLAUDE.md, the test runner workflow) made
+      usable by people who continue the work, also with an AI agent: they
+      stay development files on `dev` (never on `master`, which holds only
+      the product, RULES B2), cleaned of the development history and
+      maintainer notes; the `master` README points to `dev` for
+      contributors. At the merge, GitHub
+      issues for the cases that need outside testers (original GCHD
+      family, HDMI 1080i), each saying exactly which part of the T-102
+      suite to run (fetched from the `tests` branch); the launcher links
+      to them.
 - [ ] **T-093 (S)** With the repository cleanup, before the first release
       (maintainer, 2026-11-27): this repository
       is a GitHub fork of the discontinued original. Either ask GitHub
@@ -235,4 +272,6 @@ a short note what was done and when (seconds) helps.
 
 | # | Recording | For | Status |
 |---|---|---|---|
-| R9 | One recording per picture/audio setting changed while capturing | stage 4, T-080 | recorded 2026-11-27 (brightness, contrast, saturation, hue, analog audio gain; `traces/`); the positive audio gain steps to be confirmed by a level measurement |
+| R15 | Composite (and S-video), capturing: each picture slider 0 → −100 → 0 → +100 → 0 (hue ±180), a few seconds per position | registers of the picture settings on the analog decoder path | received 2026-11-27 (composite): `0x88:10`–`15`, analysis §8 |
+| R16 | Composite, capturing, a steady sound if possible: audio gain from 0 dB in single +1 dB steps to +12 dB, 3 s each, values noted; then down to −12 dB the same way | the positive gain codes and `0x94:41 = 57` | received 2026-11-27: the driver's codes match every step, analysis §8 |
+| R9 | One recording per picture/audio setting changed while capturing | stage 4, T-080 | recorded 2026-11-27 (brightness, contrast, saturation, hue, analog audio gain; `traces/`); positive steps confirmed by a level measurement (T-080, 2026-11-27) |

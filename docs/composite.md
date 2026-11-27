@@ -38,7 +38,8 @@ the decoder (§8).
    `0x9C:B3 = 33`; bank `CE`, `0x9C:27 = 33`; bank `CC`; read `0x9C:6E`;
    `0x9C:51 = 44` (input selector); read `0x88:FA`.
 2. Decoder tuning, three passes on `0x88:10`–`15`:
-   `6F D4 D0 08 08 88`, then `6F EA D0 08 08 88`, then `6F EA D0 1B 1B 88`.
+   `6F D4 D0 08 08 88`, then `6F EA D0 08 08 88`, then the picture settings
+   (§12; neutral `6F EA D0 1B 1B 88`).
 3. Read `0x88:FA` (`06`) and `0x88:CA` (`FE`); `0x88:07 = 8A`, `08 = 9B`,
    `09 = 7A`, `28 = 88`; read `0x88:FD`; `0x88:06 = 08`.
 4. Read `0x88:E7` (`69`), `F1` (`7E`), `CB` (`6E`), `CA`.
@@ -280,12 +281,27 @@ setup after the firmware INIT, as the initialization recording does; the
 switch from the standard output to a scaled one then follows the sequence
 of §4 steps 5–8 without the back-end table.
 
-## 11. Analog audio gain (Observed)
+## 11. Analog audio gain
 
-The application's analog audio gain (default −12 dB) writes the auxiliary
-registers `0x94:4A` and `0x94:4B` (same value, one per channel) and
-`0x94:41`. At −12 dB: `41 = 37`, `4A = 4B = B7` (the values written during
-input setup). While the slider was dragged between −12 dB and +12 dB the
-values `A7`, `AF`, `B5`, `B7`, `BB` were written with `41 = 37` and `BF`,
-`C1`, `C5`, `C9` with `41 = 57`. No control transfers or encoder writes
-follow. The exact value for each dB step has not been recorded.
+Registers `0x94:41`, `0x94:4A`, `0x94:4B` ([commands.md](commands.md),
+device `0x94`): written alone while capturing, and with the setting in use
+during the input setup of component, composite and S-video. The driver's
+default is 0 dB (`41 = 37`, `4A = 4B = AF`).
+
+## 12. Picture settings
+
+Brightness, contrast, saturation and hue are registers of the decoder,
+`0x88:10`–`15`, values sent XOR `0x88`. All six are written together, while
+capturing, as the third tuning pass of the input setup (§3 step 2), and at
+every capture start after the encoder start (before `0x94:47 = F9`).
+
+| Register | Setting | Value (before the XOR) | Neutral (wire) |
+|---|---|---|---|
+| `10` | Brightness | signed, −25 + 1.28 × setting, limited to −128 … 127 | `6F` |
+| `11` | Contrast | 98 + 0.64 × setting, 0 … 255 | `EA` |
+| `12` | — | fixed | `D0` |
+| `13`, `14` | Saturation (both) | 147 + 1.28 × setting, 0 … 255 | `1B` |
+| `15` | Hue | signed, 128 per 180°, −128 … 127 | `88` |
+
+The setting is −100 … +100 (hue −180° … +180°). `gchd_dec_picture()`.
+

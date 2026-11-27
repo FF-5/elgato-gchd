@@ -18,6 +18,7 @@ MODULE_VERSION(GCHD_VERSION);
 #define V4L2_CID_GCHD_STRETCH (V4L2_CID_USER_BASE + 0x10f1)
 #define V4L2_CID_GCHD_ALLOW_5060 (V4L2_CID_USER_BASE + 0x10f2)
 #define V4L2_CID_GCHD_HDMI_RANGE (V4L2_CID_USER_BASE + 0x10f3)
+#define V4L2_CID_GCHD_AUDIO_GAIN (V4L2_CID_USER_BASE + 0x10f4)
 
 /* Preserve the VB2 read/poll/mmap/ioctl operations while adding lifecycle hooks. */
 static void gchd_release_ref(struct kref *ref)
@@ -232,6 +233,13 @@ MODULE_PARM_DESC(allow_5060, "HDMI/component: 50/60 frames per second for 576p/4
 static unsigned int gchd_set_hdmi_range;
 module_param_named(hdmi_range, gchd_set_hdmi_range, uint, 0644);
 MODULE_PARM_DESC(hdmi_range, "HDMI colour range of RGB sources: 0 standard, 1 expanded");
+static int gchd_set_picture[4];
+static int gchd_set_picture_n;
+module_param_array_named(picture, gchd_set_picture, int, &gchd_set_picture_n, 0644);
+MODULE_PARM_DESC(picture, "Brightness, contrast, saturation (-100 ... 100), hue (-180 ... 180 degrees)");
+static int gchd_set_audio_gain;
+module_param_named(audio_gain, gchd_set_audio_gain, int, 0644);
+MODULE_PARM_DESC(audio_gain, "Analog audio gain in dB (-12 ... 12)");
 /*
  * Latency marks for benchmarks: "gchd-timing: <microseconds> <event>" at
  * requests, device commands and their completion, and the first stream
@@ -399,8 +407,8 @@ static void gchd_ctrls_show(struct gchd *d);
 /* Store the device's settings in the parameters and announce them. */
 static void gchd_settings_save(struct gchd *d)
 {
- char (*e)[64] = kmalloc_array(12, sizeof(*e), GFP_KERNEL);
- char *envp[13];
+ char (*e)[64] = kmalloc_array(14, sizeof(*e), GFP_KERNEL);
+ char *envp[15];
  const struct gchd_rates *r = d->rates;
  int i;
 
@@ -416,6 +424,11 @@ static void gchd_settings_save(struct gchd *d)
  gchd_set_hd_output = d->hd_out;
  gchd_set_allow_5060 = d->allow_5060;
  gchd_set_hdmi_range = d->hdmi_range;
+ gchd_set_picture[0] = d->brightness;
+ gchd_set_picture[1] = d->contrast;
+ gchd_set_picture[2] = d->saturation;
+ gchd_set_picture[3] = d->hue;
+ gchd_set_audio_gain = d->audio_gain;
  gchd_set_std[0] = gchd_std_param(d->analog_std[0]);
  gchd_set_std[1] = gchd_std_param(d->analog_std[1]);
 
@@ -439,9 +452,12 @@ static void gchd_settings_save(struct gchd *d)
  snprintf(e[9], sizeof(e[9]), "GCHD_HD_OUTPUT=%u", gchd_set_hd_output);
  snprintf(e[10], sizeof(e[10]), "GCHD_ALLOW_5060=%u", gchd_set_allow_5060);
  snprintf(e[11], sizeof(e[11]), "GCHD_HDMI_RANGE=%u", gchd_set_hdmi_range);
- for (i = 0; i < 12; ++i)
+ snprintf(e[12], sizeof(e[12]), "GCHD_PICTURE=%d,%d,%d,%d", gchd_set_picture[0],
+          gchd_set_picture[1], gchd_set_picture[2], gchd_set_picture[3]);
+ snprintf(e[13], sizeof(e[13]), "GCHD_AUDIO_GAIN=%d", gchd_set_audio_gain);
+ for (i = 0; i < 14; ++i)
   envp[i] = e[i];
- envp[12] = NULL;
+ envp[14] = NULL;
  kobject_uevent_env(&d->intf->dev.kobj, KOBJ_CHANGE, envp);
  kfree(e);
 }
@@ -500,6 +516,11 @@ static void gchd_settings_load(struct gchd *d)
                                                        GCHD_OUT_STANDARD;
  d->allow_5060 = !!gchd_set_allow_5060;
  d->hdmi_range = !!gchd_set_hdmi_range;
+ d->brightness = clamp(gchd_set_picture[0], -100, 100);
+ d->contrast = clamp(gchd_set_picture[1], -100, 100);
+ d->saturation = clamp(gchd_set_picture[2], -100, 100);
+ d->hue = clamp(gchd_set_picture[3], -180, 180);
+ d->audio_gain = clamp(gchd_set_audio_gain, -12, 12);
  for (i = 0; i < 2; ++i)
   d->analog_std[i] = gchd_set_std[i] == 2 ? V4L2_STD_PAL :
                      gchd_set_std[i] == 1 ? V4L2_STD_NTSC_M : 0;
@@ -1590,13 +1611,21 @@ static void gchd_mode_workfn(struct work_struct *work)
  int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
- /* Colour conversion (picture settings, HDMI colour range): no restart. */
+ /* Picture settings (colour conversion on HDMI/component, decoder on
+  * composite/S-video), HDMI colour range, analog audio gain: no restart. */
  if (READ_ONCE(d->csc_dirty) && !d->disconnected &&
      READ_ONCE(d->capture_active) && d->input_configured) {
   WRITE_ONCE(d->csc_dirty, false);
-  r = gchd_csc_update(d);
+  r = gchd_hd(d) ? gchd_csc_update(d) : gchd_dec_picture(d);
   if (r)
    dev_warn(&d->intf->dev, "colour conversion update failed: %d\n", r);
+ }
+ if (READ_ONCE(d->audio_dirty) && !d->disconnected &&
+     READ_ONCE(d->capture_active) && d->input_configured && d->input >= 1) {
+  WRITE_ONCE(d->audio_dirty, false);
+  r = gchd_audio_put(d);
+  if (r)
+   dev_warn(&d->intf->dev, "audio gain update failed: %d\n", r);
  }
  /*
   * HDMI/component: a new output size or changed encoder settings restart
@@ -2810,11 +2839,33 @@ static int gchd_ctrl(struct v4l2_ctrl *c)
   gchd_bitrate_range_locked(d);
   break;
  case V4L2_CID_GCHD_HDMI_RANGE:
+ case V4L2_CID_BRIGHTNESS:
+ case V4L2_CID_CONTRAST:
+ case V4L2_CID_SATURATION:
+ case V4L2_CID_HUE:
   /* Only the colour conversion changes: no encoder restart. */
-  d->hdmi_range = c->val;
+  if (c->id == V4L2_CID_GCHD_HDMI_RANGE)
+   d->hdmi_range = c->val;
+  else if (c->id == V4L2_CID_BRIGHTNESS)
+   d->brightness = c->val;
+  else if (c->id == V4L2_CID_CONTRAST)
+   d->contrast = c->val;
+  else if (c->id == V4L2_CID_SATURATION)
+   d->saturation = c->val;
+  else
+   d->hue = c->val;
   gchd_settings_save(d);
   if (d->streaming) {
    WRITE_ONCE(d->csc_dirty, true);
+   mod_delayed_work(system_wq, &d->mode_work, 0);
+  }
+  return 0;
+ case V4L2_CID_GCHD_AUDIO_GAIN:
+  /* Only the audio gain registers: no encoder restart. */
+  d->audio_gain = c->val;
+  gchd_settings_save(d);
+  if (d->streaming) {
+   WRITE_ONCE(d->audio_dirty, true);
    mod_delayed_work(system_wq, &d->mode_work, 0);
   }
   return 0;
@@ -3020,9 +3071,28 @@ int gchd_v4l2_register(struct gchd*d)
   cfg = allow_cfg;
   cfg.def = d->allow_5060;
   v4l2_ctrl_new_custom(&d->ctrls, &cfg, NULL);
+  static const struct v4l2_ctrl_config gain_cfg = {
+   .ops = &gchd_ctrl_ops,
+   .id = V4L2_CID_GCHD_AUDIO_GAIN,
+   .name = "Analog Audio Gain (dB)",
+   .type = V4L2_CTRL_TYPE_INTEGER,
+   .min = -12, .max = 12, .step = 1,
+  };
+
   cfg = range_cfg;
   cfg.def = d->hdmi_range;
   v4l2_ctrl_new_custom(&d->ctrls, &cfg, NULL);
+  cfg = gain_cfg;
+  cfg.def = d->audio_gain;
+  v4l2_ctrl_new_custom(&d->ctrls, &cfg, NULL);
+  v4l2_ctrl_new_std(&d->ctrls, &gchd_ctrl_ops, V4L2_CID_BRIGHTNESS,
+                    -100, 100, 1, d->brightness);
+  v4l2_ctrl_new_std(&d->ctrls, &gchd_ctrl_ops, V4L2_CID_CONTRAST,
+                    -100, 100, 1, d->contrast);
+  v4l2_ctrl_new_std(&d->ctrls, &gchd_ctrl_ops, V4L2_CID_SATURATION,
+                    -100, 100, 1, d->saturation);
+  v4l2_ctrl_new_std(&d->ctrls, &gchd_ctrl_ops, V4L2_CID_HUE,
+                    -180, 180, 1, d->hue);
  }
  if(d->ctrls.error){r=d->ctrls.error;goto err;}
  memset(&d->vbq,0,sizeof(d->vbq));d->vbq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE;d->vbq.io_modes=VB2_MMAP|VB2_READ;d->vbq.timestamp_flags=V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;d->vbq.dev=&d->intf->dev;

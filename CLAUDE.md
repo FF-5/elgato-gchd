@@ -54,6 +54,7 @@ material.
 | feature branches | One per task |
 | `traces` (orphan) | USB recordings sorted by input, decoded listings, analysis notes |
 | `tools` (orphan) | Development scripts (pcapng decoder, comparison tools) |
+| `tests` (orphan) | Hardware test suite (from T-102; until then the runner is on `tools`) |
 | `master` | Releases, maintainer only |
 
 ## Hardware testing

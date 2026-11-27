@@ -38,6 +38,7 @@ and re-check them before every commit.
    | feature branches | One per task, from `dev`. | `dev` (`--no-ff`) |
    | `traces` (orphan) | USB trace recordings and all analysis material. | never |
    | `tools` (orphan) | Development scripts (comparison tools, generators). | never |
+   | `tests` (orphan) | The hardware test suite (runner, per-input and per-program tests) for the maintainer and outside testers. | never |
 
 2. **Development-only files never reach `master`:** `CLAUDE.md`, `TODO.md`,
    `TASK.md`, `RULES.md`. When the maintainer merges `dev` into `master`, the merge
@@ -52,8 +53,13 @@ and re-check them before every commit.
    ```
 
    The last command must print nothing. Nothing that refers to these files
-   may be shipped (code, `docs/`, `src/*/README.md`).
-3. **Tools and analysis material never enter `dev` or `master`.** New scripts
+   may be shipped (code, `docs/`, `src/*/README.md`). `master` holds only
+   the product: driver, OBS plugin and settings sources, installer, udev
+   rules, `docs/`, READMEs, credits and licences. Contributor guides and
+   agent instructions stay development files on `dev` (maintainer,
+   2026-11-27).
+3. **Tools, tests and analysis material never enter `dev` or `master`.**
+   The test suite lives on `tests`, separate from development and releases. New scripts
    are written on the `tools` branch (or a feature branch made from it) and
    used from a worktree or with `git show origin/tools:tools/<script>`. Traces,
    decoded trace listings, logs and analysis notes go to the `traces` branch.
