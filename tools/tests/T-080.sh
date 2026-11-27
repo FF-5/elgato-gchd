@@ -1,12 +1,8 @@
-# T-080, second run: the picture settings on composite and S-video (now in
-# the analog decoder) and on component; the audio gain measured in steps
-# with a steady sound. (Passed in the first run: controls, audio while
-# capturing, -12 dB, replug, HDMI RGB, window, OBS, text menu, compliance.)
-# Needs: the PS3 (composite, S-video, component cables) and a steady sound
-# on the Elgato's analog audio input for the measurement (a phone or laptop
-# headphone output with a 3.5 mm to RCA cable playing a continuous 1 kHz
-# tone, or a PS3 screen with constant sound).
-
+# T-080, third run: the picture settings on composite and S-video (analog
+# decoder; the second run built the old code). Passed before: controls,
+# audio gain in steps, replug, HDMI RGB, component picture settings,
+# window, OBS, text menu, compliance.
+# Needs: the PS3 with the composite and the S-video cable.
 INST="$REPO/install-driver.sh"
 D=$DEV
 VSTOP=/tmp/gchd-viewer-stop
@@ -78,22 +74,4 @@ prompt "Connect the PS3 with the S-video cable."
 set_input 3
 sweep 3 S-video
 
-step "picture settings: component"
-prompt "Connect the PS3 with the component cable (480p or 720p)."
-set_input 1
-sweep 1 component
-
-step "audio gain measured in steps (steady sound)"
-prompt "Connect the steady sound (continuous tone, medium volume, not changing) to the Elgato's analog audio input (red/white); composite video can stay. Start the sound now."
-L0=$(level 0); Lm6=$(level -6); Lm12=$(level -12); Lp1=$(level 1); Lp6=$(level 6); Lp12=$(level 12); L0b=$(level 0)
-log "mean volume (dB): 0: $L0, -6: $Lm6, -12: $Lm12, +1: $Lp1, +6: $Lp6, +12: $Lp12, 0 again: $L0b"
-say "mean volume (dB): 0: $L0, -6: $Lm6, -12: $Lm12, +1: $Lp1, +6: $Lp6, +12: $Lp12, 0 again: $L0b"
-expect "sound steady (0 dB twice within 1 dB)" "^ok" louder "$L0" "$L0b" -1 1
-expect "-6 dB: 6 dB quieter (4-8)" "^ok" louder "$Lm6" "$L0" 4 8
-expect "-12 dB: 12 dB quieter (10-14)" "^ok" louder "$Lm12" "$L0" 10 14
-expect "+1 dB: 1 dB louder (0-2)" "^ok" louder "$L0" "$Lp1" 0 2
-expect "+6 dB: 6 dB louder (4-8)" "^ok" louder "$L0" "$Lp6" 4 8
-expect "+12 dB: 12 dB louder (10-14; less if the tone clips)" "^ok" louder "$L0" "$Lp12" 10 14
-run v4l2-ctl -d $D -c analog_audio_gain_db=0
-prompt "Stop the sound; reconnect the PS3 audio if you like."
 set_input 2

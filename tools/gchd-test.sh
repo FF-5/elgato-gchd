@@ -99,7 +99,14 @@ build() {
 	if [ -n "$BRANCH" ]; then
 		run git checkout -q "$BRANCH" || exit 1
 	fi
-	run git pull -q --ff-only
+	if ! run git pull -q --ff-only; then
+		say "git pull failed: the test would run old code. Remove or move the files git names above, then start the test again."
+		exit 1
+	fi
+	if [ -n "$BRANCH" ] && [ "$(git rev-parse HEAD)" != "$(git rev-parse "origin/$BRANCH")" ]; then
+		say "checkout is not at origin/$BRANCH; stopping."
+		exit 1
+	fi
 	if [ -f "$REPO/src/driver/core.c" ]; then KSRC=$REPO/src/driver
 	elif [ -f "$REPO/src/core.c" ]; then KSRC=$REPO/src
 	else KSRC=$REPO/dkms; fi
