@@ -1,7 +1,8 @@
-# T-050 addition: HDMI 480p (720x480 at 60 Hz) from the laptop: samples at
-# the source size with "Allow 50/60 fps" on and off, 640x480 and 480x360.
-# T-050 is accepted (2026-11-27); 576p was tested, 480p not yet.
-# Needs: the laptop on HDMI.
+# T-050 addition: HDMI 480p with "Allow 50/60 fps" off (the last run's
+# sample was empty: the receiver measured an unknown mode in YCbCr for 20 s,
+# the next capture 480p again). Taken twice, in two captures. Everything
+# else of 480p was accepted on 2026-11-27.
+# Needs: the laptop on HDMI at 720x480 60 Hz.
 
 INST="$REPO/install-driver.sh"
 LOGS="$HOME/.config/obs-studio/logs"
@@ -77,15 +78,12 @@ set_input 0
 run v4l2-ctl -d $D -c allow_50_60_fps=1
 
 source_mode "720x480 at 60 Hz (480p)"
-step "480p"
-expect "480p detected (720x480 progressive)" "Active width: 720.*Active height: 480.*[Pp]rogressive" sh -c "v4l2-ctl -d $D --get-dv-timings | tr '\n' ' '"
-expect "480p: 720x480, 640x480, 480x360 offered" "720x480.*640x480.*480x360" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | tr '\n' ' '"
-sample 480p 1920x1080 "720 480" progressive 30 "(60/1|60000/1001)"
+step "480p, Allow 50/60 fps off, twice"
 run v4l2-ctl -d $D -c allow_50_60_fps=0
+mark
 sample 480p_allow_off 1920x1080 "720 480" progressive 31 "(60/1|60000/1001)"
+sample 480p_allow_off_2 1920x1080 "720 480" progressive 31 "(60/1|60000/1001)"
 run v4l2-ctl -d $D -c allow_50_60_fps=1
-sample 480p_640x480 640x480 "640 480" progressive 30 "(30/1|30000/1001)"
-sample 480p_480x360 480x360 "480 360" progressive 22 "(30/1|30000/1001)"
-size 1920 1080
+run sh -c "sudo dmesg | tail -n +$((N0 + 1)) | grep -E 'detect HDMI|detected' | uniq -c | tail -8"
 run ls -l $SAMPLES
-prompt "Upload the hdmi_480p* files from $SAMPLES to traces/hdmi/samples/."
+prompt "Upload the hdmi_480p_allow_off* files from $SAMPLES to traces/hdmi/samples/ (replacing the empty one)."
