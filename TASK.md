@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** composite/S-video picture settings in the decoder; fourth hardware run (settings kept at the capture start) next
+- **Status:** done, merged into `dev` as 0.5.13 (2026-11-27)
 - **Type:** driver feature (stage 4)
 - **Branch:** `feat/picture-audio` (from `dev` 0.5.12)
 - **TODO items:** T-080 (stage 4)
@@ -121,6 +121,10 @@ settings window, text menu and OBS plugin.
   writes the picture settings there (`6F EA D0 1B 1B 88` at neutral).
   Fixed: composite/S-video write `gchd_dec_picture()` there (so the
   neutral picture now also matches Windows from the start).
+- T-080 fourth run (0da30db): composite and S-video, saturation −100 and
+  brightness +40 set before the capture shown from the start, kept after
+  the signal returned, normal at 0: 6 PASS, 0 FAIL. Acceptance criteria
+  met; merged as 0.5.13.
 - Maintainer (2026-11-27): `master` holds only the product (sources, docs,
   READMEs); contributor guides and agent files stay on `dev` (RULES B2,
   TODO T-100). The test suite lives on its own branch `tests` (RULES B3,
@@ -137,12 +141,3 @@ bash gchd-test.sh T-080 --branch feat/picture-audio
 
 ## Maintainer comments
 
-=== summary (T-080, 0da30db T-080: composite/S-video capture start writes the picture settings instead of fixed decoder values)
-PASS | step 2 settings kept from the capture start: composite | composite from the start: black and white and brighter than normal?
-PASS | step 2 settings kept from the capture start: composite | composite after the signal came back: still black and white and brighter?
-PASS | step 2 settings kept from the capture start: composite | composite at 0: normal colours and brightness (like before this test)?
-PASS | step 3 settings kept from the capture start: S-video | S-video from the start: black and white and brighter than normal?
-PASS | step 3 settings kept from the capture start: S-video | S-video after the signal came back: still black and white and brighter?
-PASS | step 3 settings kept from the capture start: S-video | S-video at 0: normal colours and brightness (like before this test)?
-
-FAIL: 0  WARN: 0
