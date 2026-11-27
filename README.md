@@ -52,9 +52,11 @@ the programs use no distribution-specific features.
      missing (it stops if that fails), builds the driver in `build/`,
      installs it with DKMS (when available; the driver is then rebuilt
      after kernel updates), installs the udev rules (remembered settings,
-     device name `/dev/elgato-gchd`) and loads the driver.
+     device name `/dev/elgato-gchd`) and the profile command
+     `gchd-profile`, and loads the driver.
    - **Settings programs (optional):** the settings window ("Elgato Game
-     Capture HD Settings" in the application menu) and the text menu
+     Capture HD Settings" among the system settings of the application
+     menu, for example *System > Preferences > Hardware*) and the text menu
      `gchd-settings`. Without them the settings are changed with
      `v4l2-ctl` (or in the OBS plugin's properties).
    - **OBS plugin (optional):** builds the plugin in `build/obs-plugin`
@@ -110,7 +112,8 @@ the scene instead); the plugin's source shows it stretched.
 
 ### Settings
 
-"Elgato Game Capture HD Settings" in the application menu
+"Elgato Game Capture HD Settings" among the system settings of the
+application menu (for example *System > Preferences > Hardware*)
 ([`src/settings/gchd-settings-gui`](src/settings/gchd-settings-gui))
 changes the input, output size and encoder settings in a window (menus,
 bitrate slider, switches); the driver remembers them. Changes apply at once,
@@ -127,6 +130,26 @@ hue) and the analog audio gain (−12 … +12 dB) are offered for every input
 (the gain for the analog audio of component, composite and S-video). Without a desktop:
 [`src/settings/gchd-settings`](src/settings/gchd-settings) (text menu) or
 `v4l2-ctl`.
+
+### Profiles
+
+A profile is a named set of all settings (input, output size, bitrate,
+stretch, "Allow 50/60 fps", HDMI colour range, picture settings, audio
+gain), for example one per console. The settings window, the text menu
+and the OBS plugin save, load, rename and delete them; all use the same
+profiles, kept per user in `~/.config/elgato-gchd/profiles/` (one text
+file each). Loading applies every setting at once, also while a program
+captures (at most one encoder restart). The command behind them,
+[`src/settings/gchd-profile`](src/settings/gchd-profile), is installed
+with the core:
+
+```sh
+gchd-profile save "PS3 component"     # the current settings
+gchd-profile list                     # name and input of each profile
+gchd-profile load "PS3 component"
+gchd-profile rename "PS3 component" "PS3 720p"
+gchd-profile delete "PS3 720p"
+```
 
 ### Command line
 

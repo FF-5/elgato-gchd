@@ -1,0 +1,250 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+#
+# gchd-profile: named sets of all settings of the Elgato Game Capture HD
+# (elgato_gchd driver), saved and loaded at once. Used by the settings
+# window, the text menu and the OBS plugin; also usable on its own.
+#
+#   gchd-profile [-d DEVICE] save NAME [--replace]
+#                                 the current settings as profile NAME
+#   gchd-profile [-d DEVICE] load NAME
+#                                 apply all settings of NAME (also while
+#                                 a program captures)
+#   gchd-profile list [--input N] profiles, one per line: NAME, a tab, the
+#                                 input number (0 HDMI, 1 component,
+#                                 2 composite, 3 S-video)
+#   gchd-profile show NAME        the profile's settings
+#   gchd-profile delete NAME
+#   gchd-profile rename OLD NEW
+#
+# DEVICE: default /dev/elgato-gchd, else the first device of the driver.
+# Profiles: one file per profile in ${XDG_CONFIG_HOME:-~/.config}/elgato-gchd/profiles.
+# Names: letters, digits, space, '.', '_', '-'; at most 64 characters; not
+# starting with a space, '.' or '-'.
+# A profile holds: input, output size, bitrate and its mode (of the
+# profile's output size), stretch SD input, Allow 50/60 fps, HDMI color
+# range, brightness, contrast, saturation, hue, analog audio gain.
+#
+# Exit status: 0 done; 1 error; 2 not all settings applied (load: a program
+# captures and the device refused a change; the message names it; a
+# refused input change leaves every setting as it was);
+# 3 the profile exists (save without --replace) or does not exist.
+#
+# Needs: v4l2-ctl (package v4l-utils).
+
+set -u
+
+DIR=${XDG_CONFIG_HOME:-$HOME/.config}/elgato-gchd/profiles
+HEADER="# elgato-gchd profile 1"
+# Controls a profile holds, with their ranges.
+CONTROLS="video_bitrate_mode:0:1 video_bitrate:1:40000000
+stretch_sd_input:0:1 allow_50_60_fps:0:1 hdmi_color_range:0:1
+brightness:-100:100 contrast:-100:100 saturation:-100:100 hue:-180:180
+analog_audio_gain_db:-12:12"
+
+die() { echo "gchd-profile: $1" >&2; exit "${2:-1}"; }
+
+usage() {
+	sed -n '/^#   gchd-profile/,/^#   gchd-profile rename/p' "$0" | sed 's/^# \{0,1\}//' >&2
+	exit 1
+}
+
+find_dev() {
+	local v drv
+	[ -e /dev/elgato-gchd ] && { echo /dev/elgato-gchd; return 0; }
+	for v in /sys/class/video4linux/video*; do
+		drv=$(basename "$(readlink -f "$v/device/driver" 2>/dev/null)")
+		[ "$drv" = elgato_gchd ] && { echo "/dev/$(basename "$v")"; return 0; }
+	done
+	return 1
+}
+
+need_dev() {
+	command -v v4l2-ctl >/dev/null || die "v4l2-ctl is needed (package v4l-utils)"
+	[ -n "$DEV" ] || DEV=$(find_dev) ||
+		die "no Elgato Game Capture HD found (driver loaded, device plugged in?)"
+	[ -e "$DEV" ] || die "$DEV not found"
+}
+
+check_name() {
+	[[ "$1" =~ ^[A-Za-z0-9_][A-Za-z0-9\ ._-]{0,63}$ ]] ||
+		die "invalid profile name '$1' (letters, digits, space, '.', '_', '-'; at most 64)"
+}
+
+file_of() { printf '%s/%s.conf' "$DIR" "$1"; }
+
+# value FILE KEY: the value of KEY in a profile file.
+value() { sed -n "s/^$2=//p" "$1" | head -1; }
+
+# check_file FILE: a profile of this version with valid values.
+check_file() {
+	local f=$1 c k lo hi v
+	[ "$(head -1 "$f")" = "$HEADER" ] || die "$f: not a profile of this version"
+	v=$(value "$f" input)
+	[[ "$v" =~ ^[0-3]$ ]] || die "$f: invalid input '$v'"
+	v=$(value "$f" output)
+	[[ "$v" =~ ^[0-3]$ ]] || die "$f: invalid output '$v'"
+	for c in $CONTROLS; do
+		IFS=: read -r k lo hi <<< "$c"
+		v=$(value "$f" "$k")
+		[ -z "$v" ] && continue
+		{ [[ "$v" =~ ^-?[0-9]+$ ]] && [ "$v" -ge "$lo" ] && [ "$v" -le "$hi" ]; } ||
+			die "$f: invalid $k '$v'"
+	done
+}
+
+cmd_save() {
+	local name=${1:-} replace=${2:-} f tmp out input w h o first k
+	check_name "$name"
+	[ -z "$replace" ] || [ "$replace" = --replace ] || usage
+	f=$(file_of "$name")
+	[ -e "$f" ] && [ -z "$replace" ] && die "profile '$name' exists (--replace overwrites it)" 3
+	need_dev
+	out=$(v4l2-ctl -d "$DEV" -I -V --list-framesizes MPEG -C \
+		"$(for c in $CONTROLS; do printf '%s,' "${c%%:*}"; done | sed 's/,$//')" 2>&1) ||
+		die "cannot read the settings: $out"
+	input=$(printf '%s\n' "$out" | sed -n 's/^Video input *: *\([0-9]\).*/\1/p')
+	w=$(printf '%s\n' "$out" | sed -n 's#.*Width/Height *: *\([0-9]*\)/.*#\1#p')
+	h=$(printf '%s\n' "$out" | sed -n 's#.*Width/Height *: *[0-9]*/\([0-9]*\).*#\1#p')
+	first=$(printf '%s\n' "$out" | sed -n 's/.*Discrete \([0-9]*x[0-9]*\).*/\1/p' | head -1)
+	# Output: 0 the standard size (composite/S-video 720x480/576;
+	# HDMI/component the source size), 1 640x480, 2 480x360, 3 1280x720
+	# (HDMI/component, scaled).
+	if [ "${input:-2}" -le 1 ] && [ "${w}x${h}" = "$first" ]; then o=0
+	else
+		case "${w}x${h}" in
+		640x480) o=1 ;; 480x360) o=2 ;; 1280x720) o=3 ;; *) o=0 ;;
+		esac
+	fi
+	mkdir -p "$DIR" || die "cannot create $DIR"
+	tmp=$(mktemp "$DIR/.save.XXXXXX") || die "cannot write in $DIR"
+	{
+		echo "$HEADER"
+		echo "input=${input:-2}"
+		echo "output=$o"
+		for c in $CONTROLS; do
+			k=${c%%:*}
+			printf '%s=%s\n' "$k" "$(printf '%s\n' "$out" | sed -n "s/^$k: //p" | head -1)"
+		done
+	} > "$tmp" || { rm -f "$tmp"; die "cannot write $f"; }
+	mv -f "$tmp" "$f" || { rm -f "$tmp"; die "cannot write $f"; }
+}
+
+# set_step DESCRIPTION ARGS...: one v4l2-ctl change; a refusal is reported
+# and remembered (status 2).
+FAILED=0
+set_step() {
+	local desc=$1 out
+	shift
+	out=$(v4l2-ctl -d "$DEV" "$@" 2>&1) && return 0
+	FAILED=1
+	if printf '%s' "$out" | grep -qi busy; then
+		echo "gchd-profile: $desc not changed: a program captures from the device" >&2
+	else
+		echo "gchd-profile: $desc not changed: $out" >&2
+	fi
+}
+
+cmd_load() {
+	local name=${1:-} f input o now ctrls k v
+	check_name "$name"
+	f=$(file_of "$name")
+	[ -f "$f" ] || die "no profile '$name'" 3
+	check_file "$f"
+	need_dev
+	input=$(value "$f" input)
+	o=$(value "$f" output)
+	now=$(v4l2-ctl -d "$DEV" -I 2>/dev/null | sed -n 's/^Video input *: *\([0-9]\).*/\1/p')
+	# A different input only: selecting the same one detects the source
+	# again. Refused: nothing else is changed (it would go to the other input).
+	if [ "$now" != "$input" ]; then
+		set_step "The input" -i "$input"
+		[ $FAILED = 0 ] || exit 2
+	fi
+	# HDMI/component: 1920x1080 is never a scaled size: the source size.
+	case "$o" in
+	1) set_step "The output size" -v width=640,height=480 ;;
+	2) set_step "The output size" -v width=480,height=360 ;;
+	3) [ "$input" -le 1 ] && set_step "The output size" -v width=1280,height=720 ;;
+	*) if [ "$input" -le 1 ]; then set_step "The output size" -v width=1920,height=1080
+	   else set_step "The output size" -v width=720,height=480; fi ;;
+	esac
+	# The other settings in one call (at most one encoder restart): the
+	# bitrate after the size (the driver keeps one per output size); only
+	# the settings of the profile's input.
+	ctrls=
+	for k in video_bitrate_mode video_bitrate brightness contrast saturation hue; do
+		v=$(value "$f" "$k"); [ -n "$v" ] && ctrls+="$k=$v,"
+	done
+	if [ "$input" -ge 2 ]; then k=stretch_sd_input; v=$(value "$f" $k); [ -n "$v" ] && ctrls+="$k=$v,"; fi
+	if [ "$input" -le 1 ]; then k=allow_50_60_fps; v=$(value "$f" $k); [ -n "$v" ] && ctrls+="$k=$v,"; fi
+	if [ "$input" = 0 ]; then k=hdmi_color_range; v=$(value "$f" $k); [ -n "$v" ] && ctrls+="$k=$v,"; fi
+	if [ "$input" -ge 1 ]; then k=analog_audio_gain_db; v=$(value "$f" $k); [ -n "$v" ] && ctrls+="$k=$v,"; fi
+	[ -n "$ctrls" ] && set_step "The settings" -c "${ctrls%,}"
+	[ $FAILED = 0 ] || exit 2
+}
+
+cmd_list() {
+	local filter='' f n i
+	case "${1:-}" in
+	"") ;;
+	--input) [[ "${2:-}" =~ ^[0-3]$ ]] || usage; filter=$2 ;;
+	*) usage ;;
+	esac
+	[ -d "$DIR" ] || return 0
+	for f in "$DIR"/*.conf; do
+		[ -f "$f" ] || continue
+		n=$(basename "$f" .conf)
+		[[ "$n" =~ ^[A-Za-z0-9_][A-Za-z0-9\ ._-]{0,63}$ ]] || continue
+		[ "$(head -1 "$f")" = "$HEADER" ] || continue
+		i=$(value "$f" input)
+		[[ "$i" =~ ^[0-3]$ ]] || continue
+		[ -z "$filter" ] || [ "$i" = "$filter" ] || continue
+		printf '%s\t%s\n' "$n" "$i"
+	done | LC_ALL=C sort -f
+}
+
+cmd_show() {
+	local f
+	check_name "${1:-}"
+	f=$(file_of "$1")
+	[ -f "$f" ] || die "no profile '$1'" 3
+	check_file "$f"
+	tail -n +2 "$f"
+}
+
+cmd_delete() {
+	local f
+	check_name "${1:-}"
+	f=$(file_of "$1")
+	[ -f "$f" ] || die "no profile '$1'" 3
+	rm -f "$f" || die "cannot delete $f"
+}
+
+cmd_rename() {
+	local a b
+	check_name "${1:-}"; check_name "${2:-}"
+	a=$(file_of "$1"); b=$(file_of "$2")
+	[ -f "$a" ] || die "no profile '$1'" 3
+	[ "$1" = "$2" ] && return 0
+	[ -e "$b" ] && die "profile '$2' exists" 3
+	mv "$a" "$b" || die "cannot rename $a"
+}
+
+DEV=
+if [ "${1:-}" = -d ]; then
+	[ -n "${2:-}" ] || usage
+	DEV=$2
+	shift 2
+fi
+cmd=${1:-}
+shift || true
+case "$cmd" in
+save) [ $# -ge 1 ] && [ $# -le 2 ] || usage; cmd_save "$@" ;;
+load) [ $# = 1 ] || usage; cmd_load "$1" ;;
+list) cmd_list "$@" ;;
+show) [ $# = 1 ] || usage; cmd_show "$1" ;;
+delete) [ $# = 1 ] || usage; cmd_delete "$1" ;;
+rename) [ $# = 2 ] || usage; cmd_rename "$1" "$2" ;;
+*) usage ;;
+esac

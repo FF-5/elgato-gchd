@@ -4,7 +4,8 @@
 # gchd-settings: settings of the Elgato Game Capture HD (elgato_gchd
 # driver) in a text menu: input, output size, bitrate, stretch of SD input,
 # for HDMI and component "Allow 50/60 fps", for HDMI the colour range,
-# picture settings, analog audio gain. The driver remembers the settings.
+# picture settings, analog audio gain; profiles (named sets of all
+# settings, with gchd-profile). The driver remembers the settings.
 #
 #   gchd-settings [DEVICE]      DEVICE: default /dev/elgato-gchd, else the
 #                               first device of the driver
@@ -33,6 +34,10 @@ command -v whiptail >/dev/null || die "whiptail is needed (package whiptail)"
 command -v v4l2-ctl >/dev/null || die "v4l2-ctl is needed (package v4l-utils)"
 DEV=${1:-$(find_dev)} || die "no Elgato Game Capture HD found (driver loaded, device plugged in?)"
 [ -e "$DEV" ] || die "$DEV not found"
+
+# gchd-profile: next to this program, else in PATH.
+PROFILE=$(dirname "$(readlink -f "$0")")/gchd-profile
+[ -x "$PROFILE" ] || PROFILE=$(command -v gchd-profile || true)
 
 ctrl_get() { v4l2-ctl -d "$DEV" -C "$1" 2>/dev/null | sed -n 's/.*: //p'; }
 input_get() { v4l2-ctl -d "$DEV" -I 2>/dev/null | sed -n 's/^Video input *: *\([0-9]\).*/\1/p'; }
@@ -167,6 +172,67 @@ value_menu() {
 	apply "$2" -c "$1=$v"
 }
 
+# choose_profile TEXT: a profile name (those of the current input first).
+choose_profile() {
+	local inputs=(HDMI Component Composite S-Video) i n args=() names=() k=0 list
+	i=$(input_get)
+	list=$( { "$PROFILE" list | awk -F '\t' -v i="${i:-2}" '$2 == i'
+		  "$PROFILE" list | awk -F '\t' -v i="${i:-2}" '$2 != i'; } )
+	[ -n "$list" ] || { whiptail --title "$TITLE" --msgbox "No profiles saved yet." 8 40; return 1; }
+	while IFS=$'\t' read -r n i; do
+		names+=("$n"); args+=("$k" "$n (${inputs[$i]})"); k=$((k + 1))
+	done <<< "$list"
+	k=$(whiptail --title "$TITLE" --menu "$1" 18 70 10 "${args[@]}" 3>&1 1>&2 2>&3) || return 1
+	printf '%s\n' "${names[$k]}"
+}
+
+# ask_profile_name TEXT DEFAULT: a valid new name.
+ask_profile_name() {
+	local v
+	v=$(whiptail --title "$TITLE" --inputbox "$1 (letters, digits, space, '.', '_', '-'; at most 64)" 10 70 "$2" 3>&1 1>&2 2>&3) || return 1
+	[[ "$v" =~ ^[A-Za-z0-9_][A-Za-z0-9\ ._-]{0,63}$ ]] ||
+		{ whiptail --title "$TITLE" --msgbox "Invalid name: $v" 8 60; return 1; }
+	printf '%s\n' "$v"
+}
+
+# profile_run ARGS...: gchd-profile with its message shown on an error.
+profile_run() {
+	local out
+	out=$("$PROFILE" "$@" 2>&1) && return 0
+	whiptail --title "$TITLE" --msgbox "${out:-gchd-profile failed}" 12 70
+	return 1
+}
+
+menu_profiles() {
+	local n name new
+	[ -n "$PROFILE" ] || { whiptail --title "$TITLE" --msgbox "gchd-profile is not installed." 8 50; return; }
+	n=$(whiptail --title "$TITLE" --menu "Profiles (named sets of all settings)" 14 60 4 \
+		load "Load a profile" save "Save the settings as a profile" \
+		rename "Rename a profile" delete "Delete a profile" 3>&1 1>&2 2>&3) || return
+	case "$n" in
+	load)
+		name=$(choose_profile "Load profile") || return
+		profile_run -d "$DEV" load "$name" &&
+			whiptail --title "$TITLE" --msgbox "Profile '$name' loaded." 8 60 ;;
+	save)
+		name=$(ask_profile_name "Profile name" "") || return
+		if "$PROFILE" show "$name" >/dev/null 2>&1; then
+			whiptail --title "$TITLE" --yesno "Replace profile '$name' with the current settings?" 8 60 || return
+			profile_run -d "$DEV" save "$name" --replace
+		else
+			profile_run -d "$DEV" save "$name"
+		fi && whiptail --title "$TITLE" --msgbox "Profile '$name' saved." 8 60 ;;
+	rename)
+		name=$(choose_profile "Rename profile") || return
+		new=$(ask_profile_name "New name of '$name'" "$name") || return
+		profile_run rename "$name" "$new" ;;
+	delete)
+		name=$(choose_profile "Delete profile") || return
+		whiptail --title "$TITLE" --yesno "Delete profile '$name'?" 8 60 || return
+		profile_run delete "$name" ;;
+	esac
+}
+
 menu_picture() {
 	local n
 	n=$(whiptail --title "$TITLE" --menu "Picture" 15 60 5 \
@@ -185,7 +251,8 @@ menu_picture() {
 while :; do
 	inputs=(HDMI Component Composite S-Video)
 	i=$(input_get)
-	items=(input "Input: ${inputs[${i:-0}]}")
+	items=(profiles "Profiles: load, save, rename, delete"
+		input "Input: ${inputs[${i:-0}]}")
 	# Output size and bitrate for every input; stretch composite/S-video;
 	# 50/60 fps HDMI and component; colour range HDMI.
 	if [ "${i:-0}" -ge 2 ]; then
@@ -206,9 +273,10 @@ while :; do
 	if [ "${i:-0}" -ge 1 ]; then
 		items+=(gain "Audio gain: $(ctrl_get analog_audio_gain_db) dB")
 	fi
-	choice=$(whiptail --title "$TITLE ($DEV)" --menu "Settings (remembered by the driver)" 20 90 10 \
+	choice=$(whiptail --title "$TITLE ($DEV)" --menu "Settings (remembered by the driver)" 21 90 11 \
 		"${items[@]}" quit "Quit" 3>&1 1>&2 2>&3) || break
 	case "$choice" in
+	profiles) menu_profiles ;;
 	input) menu_input ;;
 	output) menu_output ;;
 	bitrate) menu_bitrate ;;

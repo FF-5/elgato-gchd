@@ -12,8 +12,12 @@
  * settings calls run in a worker thread, never in OBS's user interface.
  * The capture device runs while the source is shown. Deinterlacing is OBS's
  * own (Yadif 2x, top field first, set once when the source is created).
+ * Profiles (named sets of all settings) are saved, loaded, renamed and
+ * deleted with the gchd-profile command, shared with the settings window
+ * and text menu.
  */
 
+#define _GNU_SOURCE /* pipe2() */
 #include <obs-module.h>
 #include <util/platform.h>
 #include <util/threading.h>
@@ -28,9 +32,11 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <pthread.h>
+#include <spawn.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <linux/videodev2.h>
 
@@ -143,6 +149,12 @@ struct gchd_src {
 	bool blanked;		/* black picture shown (no signal) */
 	bool created;
 	int fd;
+
+	/* profiles (user interface thread only) */
+	char profile_msg[300];	/* result of the last profile action */
+	uint64_t profile_msg_at; /* shown for a minute */
+	char confirm[80];	/* action:name waiting for a second click */
+	uint64_t confirm_at;
 };
 
 /* ------------------------------------------------------------ device */
@@ -1275,6 +1287,9 @@ static void gchd_output_list(obs_property_t *p, obs_data_t *settings,
 	}
 }
 
+static void gchd_profile_props(obs_properties_t *props, struct gchd_src *s,
+			       int input);
+
 static obs_properties_t *gchd_properties(void *data)
 {
 	obs_properties_t *props = obs_properties_create();
@@ -1364,7 +1379,339 @@ read_done:
 	obs_property_set_long_description(
 		obs_properties_get(props, "audio_gain"),
 		"Gain of the analog audio input (component, composite, S-video)");
+	{
+		struct gchd_src *s = data;
+		int input = 2;
+
+		if (s) {
+			pthread_mutex_lock(&s->lock);
+			input = s->cur.input;
+			pthread_mutex_unlock(&s->lock);
+		}
+		gchd_profile_props(props, s, input);
+	}
 	return props;
+}
+
+/* ------------------------------------------------------------ profiles */
+
+extern char **environ;
+
+/*
+ * gchd-profile (from PATH) with ARGV; its output (stdout and stderr, up to
+ * SIZE - 1 bytes, last newline removed) in OUT. Returns the exit status,
+ * -1 when it cannot be run.
+ */
+static int gchd_profile_run(char *const argv[], char *out, size_t size)
+{
+	posix_spawn_file_actions_t fa;
+	size_t n = 0;
+	int pfd[2], st = 0, r;
+	pid_t pid;
+
+	out[0] = '\0';
+	if (pipe2(pfd, O_CLOEXEC) < 0)
+		return -1;
+	posix_spawn_file_actions_init(&fa);
+	posix_spawn_file_actions_addopen(&fa, 0, "/dev/null", O_RDONLY, 0);
+	posix_spawn_file_actions_adddup2(&fa, pfd[1], 1);
+	posix_spawn_file_actions_adddup2(&fa, pfd[1], 2);
+	r = posix_spawnp(&pid, "gchd-profile", &fa, NULL, argv, environ);
+	posix_spawn_file_actions_destroy(&fa);
+	close(pfd[1]);
+	if (r != 0) {
+		close(pfd[0]);
+		snprintf(out, size, "gchd-profile not found (install the driver's core part)");
+		return -1;
+	}
+	for (;;) {
+		char buf[512];
+		ssize_t k = read(pfd[0], buf, sizeof(buf));
+
+		if (k < 0 && errno == EINTR)
+			continue;
+		if (k <= 0)
+			break;
+		for (ssize_t i = 0; i < k && n + 1 < size; i++)
+			out[n++] = buf[i];
+	}
+	close(pfd[0]);
+	out[n] = '\0';
+	while (n && out[n - 1] == '\n')
+		out[--n] = '\0';
+	while (waitpid(pid, &st, 0) < 0)
+		if (errno != EINTR)
+			return -1;
+	return WIFEXITED(st) ? WEXITSTATUS(st) : -1;
+}
+
+/* A profile name gchd-profile accepts. */
+static bool gchd_profile_name_ok(const char *name)
+{
+	size_t n = strlen(name);
+
+	if (n == 0 || n > 64 || name[0] == ' ' || name[0] == '.' || name[0] == '-')
+		return false;
+	for (size_t i = 0; i < n; i++) {
+		char c = name[i];
+
+		if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+		      (c >= '0' && c <= '9') || c == ' ' || c == '.' || c == '_' ||
+		      c == '-'))
+			return false;
+	}
+	return true;
+}
+
+/* Profile list: those of INPUT first, then the others. */
+static void gchd_profile_list(obs_property_t *p, int input)
+{
+	static const char *const names[] = { "HDMI", "Component", "Composite",
+					     "S-Video" };
+	char *argv[] = { "gchd-profile", "list", NULL };
+	char out[8192];
+	int count = 0;
+
+	if (gchd_profile_run(argv, out, sizeof(out)) == 0) {
+		for (int pass = 0; pass < 2; pass++) {
+			char *save = NULL, *buf = bstrdup(out);
+
+			for (char *line = strtok_r(buf, "\n", &save); line;
+			     line = strtok_r(NULL, "\n", &save)) {
+				char *tab = strrchr(line, '\t'), label[100];
+				int in;
+
+				if (!tab || tab[1] < '0' || tab[1] > '3')
+					continue;
+				*tab = '\0';
+				in = tab[1] - '0';
+				if ((in == input) != (pass == 0))
+					continue;
+				snprintf(label, sizeof(label), "%s (%s)", line,
+					 names[in]);
+				obs_property_list_add_string(p, label, line);
+				count++;
+			}
+			bfree(buf);
+		}
+	}
+	if (!count)
+		obs_property_list_add_string(p, "(no profiles saved)", "");
+}
+
+/*
+ * A destructive action (replace, delete) runs on the second click within
+ * 5 s; the first one asks for it in the message.
+ */
+static bool gchd_confirmed(struct gchd_src *s, const char *action,
+			   const char *name, const char *question)
+{
+	char key[80];
+	uint64_t now = os_gettime_ns();
+
+	snprintf(key, sizeof(key), "%s:%s", action, name);
+	if (!strcmp(key, s->confirm) && now - s->confirm_at < 5000000000ULL) {
+		s->confirm[0] = '\0';
+		return true;
+	}
+	snprintf(s->confirm, sizeof(s->confirm), "%s", key);
+	s->confirm_at = now;
+	snprintf(s->profile_msg, sizeof(s->profile_msg), "%s", question);
+	return false;
+}
+
+/* Profile button: ACTION on the chosen profile or the new name. */
+static bool gchd_profile_action(void *data, const char *action)
+{
+	struct gchd_src *s = data;
+	obs_data_t *st;
+	char path[300], out[160], chosen[80], name[80];
+	bool dev;
+
+	if (!s)
+		return false;
+	s->profile_msg_at = os_gettime_ns(); /* every action sets a message */
+	st = obs_source_get_settings(s->source);
+	snprintf(chosen, sizeof(chosen), "%s", obs_data_get_string(st, "profile"));
+	snprintf(name, sizeof(name), "%s", obs_data_get_string(st, "profile_name"));
+	obs_data_release(st);
+	/* Leading and trailing spaces of a typed name are not part of it. */
+	{
+		char *a = name, *e;
+
+		while (*a == ' ')
+			a++;
+		memmove(name, a, strlen(a) + 1);
+		e = name + strlen(name);
+		while (e > name && e[-1] == ' ')
+			*--e = '\0';
+	}
+	dev = gchd_path(s, path, sizeof(path));
+
+	if (!strcmp(action, "load") || !strcmp(action, "replace") ||
+	    !strcmp(action, "rename") || !strcmp(action, "delete")) {
+		if (!chosen[0]) {
+			snprintf(s->profile_msg, sizeof(s->profile_msg),
+				 "Choose a profile first.");
+			return true;
+		}
+	}
+	if (!strcmp(action, "save") || !strcmp(action, "rename")) {
+		if (!gchd_profile_name_ok(name)) {
+			snprintf(s->profile_msg, sizeof(s->profile_msg),
+				 "Type a new name: letters, digits, space, '.', '_', '-' (not first), at most 64 characters.");
+			return true;
+		}
+	}
+	if ((!strcmp(action, "load") || !strcmp(action, "save") ||
+	     !strcmp(action, "replace")) && !dev) {
+		snprintf(s->profile_msg, sizeof(s->profile_msg),
+			 "No Elgato Game Capture HD connected.");
+		return true;
+	}
+
+	if (!strcmp(action, "load")) {
+		char *argv[] = { "gchd-profile", "-d", path, "load", chosen, NULL };
+		int r;
+
+		/* A change of the user still waiting would undo the profile. */
+		pthread_mutex_lock(&s->lock);
+		s->apply_pending = false;
+		pthread_mutex_unlock(&s->lock);
+		r = gchd_profile_run(argv, out, sizeof(out));
+		snprintf(s->profile_msg, sizeof(s->profile_msg),
+			 r == 0 ? "Profile '%s' loaded." : "Profile '%s' not loaded completely: %s",
+			 chosen, out);
+		blog(LOG_INFO, "[gchd] profile '%s' loaded: %d", chosen, r);
+	} else if (!strcmp(action, "save")) {
+		char *argv[] = { "gchd-profile", "-d", path, "save", name, NULL };
+		int r = gchd_profile_run(argv, out, sizeof(out));
+
+		if (r == 3)
+			snprintf(s->profile_msg, sizeof(s->profile_msg),
+				 "Profile '%s' exists: choose it and use \"Save to this profile\".",
+				 name);
+		else
+			snprintf(s->profile_msg, sizeof(s->profile_msg),
+				 r == 0 ? "Profile '%s' saved." : "Profile '%s' not saved: %s",
+				 name, out);
+		if (r == 0) {
+			st = obs_source_get_settings(s->source);
+			obs_data_set_string(st, "profile", name);
+			obs_data_set_string(st, "profile_name", "");
+			obs_data_release(st);
+		}
+	} else if (!strcmp(action, "replace")) {
+		char *argv[] = { "gchd-profile", "-d", path, "save", chosen,
+				 "--replace", NULL };
+		char q[200];
+		int r;
+
+		snprintf(q, sizeof(q),
+			 "Click \"Save to this profile\" again to replace '%s' with the current settings.",
+			 chosen);
+		if (!gchd_confirmed(s, action, chosen, q))
+			return true;
+		r = gchd_profile_run(argv, out, sizeof(out));
+		snprintf(s->profile_msg, sizeof(s->profile_msg),
+			 r == 0 ? "Profile '%s' saved." : "Profile '%s' not saved: %s",
+			 chosen, out);
+	} else if (!strcmp(action, "rename")) {
+		char *argv[] = { "gchd-profile", "rename", chosen, name, NULL };
+		int r = gchd_profile_run(argv, out, sizeof(out));
+
+		snprintf(s->profile_msg, sizeof(s->profile_msg),
+			 r == 0 ? "Profile '%s' renamed to '%s'." : "Profile '%s' not renamed: %s",
+			 chosen, r == 0 ? name : out);
+		if (r == 0) {
+			st = obs_source_get_settings(s->source);
+			obs_data_set_string(st, "profile", name);
+			obs_data_set_string(st, "profile_name", "");
+			obs_data_release(st);
+		}
+	} else if (!strcmp(action, "delete")) {
+		char *argv[] = { "gchd-profile", "delete", chosen, NULL };
+		char q[200];
+		int r;
+
+		snprintf(q, sizeof(q), "Click \"Delete profile\" again to delete '%s'.",
+			 chosen);
+		if (!gchd_confirmed(s, action, chosen, q))
+			return true;
+		r = gchd_profile_run(argv, out, sizeof(out));
+		snprintf(s->profile_msg, sizeof(s->profile_msg),
+			 r == 0 ? "Profile '%s' deleted." : "Profile '%s' not deleted: %s",
+			 chosen, out);
+		if (r == 0) {
+			st = obs_source_get_settings(s->source);
+			obs_data_set_string(st, "profile", "");
+			obs_data_release(st);
+		}
+	}
+	return true; /* properties rebuilt: list, message, device values */
+}
+
+static bool gchd_profile_load(obs_properties_t *props, obs_property_t *p, void *data)
+{
+	UNUSED_PARAMETER(props);
+	UNUSED_PARAMETER(p);
+	return gchd_profile_action(data, "load");
+}
+
+static bool gchd_profile_save(obs_properties_t *props, obs_property_t *p, void *data)
+{
+	UNUSED_PARAMETER(props);
+	UNUSED_PARAMETER(p);
+	return gchd_profile_action(data, "save");
+}
+
+static bool gchd_profile_replace(obs_properties_t *props, obs_property_t *p, void *data)
+{
+	UNUSED_PARAMETER(props);
+	UNUSED_PARAMETER(p);
+	return gchd_profile_action(data, "replace");
+}
+
+static bool gchd_profile_rename(obs_properties_t *props, obs_property_t *p, void *data)
+{
+	UNUSED_PARAMETER(props);
+	UNUSED_PARAMETER(p);
+	return gchd_profile_action(data, "rename");
+}
+
+static bool gchd_profile_delete(obs_properties_t *props, obs_property_t *p, void *data)
+{
+	UNUSED_PARAMETER(props);
+	UNUSED_PARAMETER(p);
+	return gchd_profile_action(data, "delete");
+}
+
+/* The "Profiles" group of the properties. */
+static void gchd_profile_props(obs_properties_t *props, struct gchd_src *s,
+			       int input)
+{
+	obs_properties_t *pp = obs_properties_create();
+	obs_property_t *p;
+
+	p = obs_properties_add_list(pp, "profile", "Profile", OBS_COMBO_TYPE_LIST,
+				    OBS_COMBO_FORMAT_STRING);
+	gchd_profile_list(p, input);
+	obs_properties_add_button(pp, "profile_load", "Load profile",
+				  gchd_profile_load);
+	obs_properties_add_button(pp, "profile_replace", "Save to this profile",
+				  gchd_profile_replace);
+	obs_properties_add_button(pp, "profile_delete", "Delete profile",
+				  gchd_profile_delete);
+	obs_properties_add_text(pp, "profile_name", "New name", OBS_TEXT_DEFAULT);
+	obs_properties_add_button(pp, "profile_save", "Save as new profile",
+				  gchd_profile_save);
+	obs_properties_add_button(pp, "profile_rename", "Rename to the new name",
+				  gchd_profile_rename);
+	if (s && s->profile_msg[0] &&
+	    os_gettime_ns() - s->profile_msg_at < 60000000000ULL)
+		obs_properties_add_text(pp, "profile_msg", s->profile_msg,
+					OBS_TEXT_INFO);
+	obs_properties_add_group(props, "profiles", "Profiles", OBS_GROUP_NORMAL, pp);
 }
 
 static struct obs_source_info gchd_source_info = {

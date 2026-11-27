@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=Elgato Game Capture HD Settings
-Comment=Input, output size and encoder settings of the Elgato Game Capture HD
+Comment=Input, output size, encoder and picture settings and profiles of the Elgato Game Capture HD
 Exec=gchd-settings-gui
 Icon=camera-video
 Terminal=false
-Categories=AudioVideo;Video;Settings;
+Categories=Settings;HardwareSettings;
