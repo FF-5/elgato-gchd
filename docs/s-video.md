@@ -25,7 +25,7 @@ composite. A 240p source is encoded as 720 × 480 interlaced, as on composite.
 | 3 | Read `0x88:FD`; `0x88:06 = 08`; read `0x88:F8`; `0x88:03 = 28` |
 | 4 | `0x9C:B3 = 33`; bank `CE`, `0x9C:27 = 33`; bank `CC`; read `0x9C:6E` |
 | 5 | `0x9C:51 = 44`; `0900:0018` written `02 0E`, then `03 0E` twice |
-| 6 | Decoder tuning passes on `0x88:10`–`15`: `6F D4 D0 08 08 88`, `6F EA D0 08 08 88`, `6F EA D0 1B 1B 88` |
+| 6 | Decoder tuning passes on `0x88:10`–`15`: `6F D4 D0 08 08 88`, `6F EA D0 08 08 88`, then the picture settings ([composite.md §12](composite.md#12-picture-settings)) |
 | 7 | `0x88:07 = 8A`, `08 = 9B`, `09 = 7A`, `28 = 8A`, `06 = 08` |
 | 8 | Read `0x88:FA`, `CA`, `E7`, `F1`; read `0x98:8B` |
 | 9 | Back end: `0x98:04 = 95`, `70 = D0`, `0F = 88`, `90`–`A3` as for composite 480i ([composite.md §3](composite.md#3-480i-lock-and-capture-start-observed)); `72 = 88`, `C0 = 88`, `61 = 98`, `63 = 89`, `64 = 96`, `65 = 88`, `04 = 8D`, `62 = 91` |

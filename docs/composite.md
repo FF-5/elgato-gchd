@@ -292,7 +292,8 @@ default is 0 dB (`41 = 37`, `4A = 4B = AF`).
 
 Brightness, contrast, saturation and hue are registers of the decoder,
 `0x88:10`–`15`, values sent XOR `0x88`. All six are written together, while
-capturing and as the third tuning pass of the input setup (§3 step 2).
+capturing, as the third tuning pass of the input setup (§3 step 2), and at
+every capture start after the encoder start (before `0x94:47 = F9`).
 
 | Register | Setting | Value (before the XOR) | Neutral (wire) |
 |---|---|---|---|

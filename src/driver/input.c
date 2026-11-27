@@ -286,12 +286,17 @@ static int gchd_post_encoder_prefix(struct gchd *d)
  GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
 
  GCHD_DEC_W(d, 0x28, 0x88);
- GCHD_DEC_W(d, 0x10, 0x88);
- GCHD_DEC_W(d, 0x11, 0xd4);
- GCHD_DEC_W(d, 0x12, 0xd0);
- GCHD_DEC_W(d, 0x13, 0x08);
- GCHD_DEC_W(d, 0x14, 0x08);
- GCHD_DEC_W(d, 0x15, 0x88);
+ if (d->input >= 2) {
+  /* Composite, S-video: the picture settings. */
+  GCHD_TRY(gchd_dec_picture(d));
+ } else {
+  GCHD_DEC_W(d, 0x10, 0x88);
+  GCHD_DEC_W(d, 0x11, 0xd4);
+  GCHD_DEC_W(d, 0x12, 0xd0);
+  GCHD_DEC_W(d, 0x13, 0x08);
+  GCHD_DEC_W(d, 0x14, 0x08);
+  GCHD_DEC_W(d, 0x15, 0x88);
+ }
 
  GCHD_AUX_W(d, 0x47, 0xf9);
  GCHD_AUX_W(d, 0x40, 0xf3);
