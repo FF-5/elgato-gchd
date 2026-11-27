@@ -67,3 +67,16 @@ Not yet.
 
 ## Maintainer comments
 
+I'd like to the the following as well before merge to master:
+- Move the user settings profiles to before the master merge.
+- The same for the asking Elgato about linking their software in the repo.
+- The same for detaching from the fork.
+- Create a new TODO item to have the uninstall feature of the script to also remove the firmware.
+- Add the Elgato software to the gitignore so it never gets pushed.
+- Remove from all documentation (including repo READMEs) writing about my Linux test system. You can add a "tested on (distro)..." but we want to keep it distro agnostic.
+
+=== summary (T-050, 47469ac TASK: T-080 (picture and audio settings) after T-050)
+PASS | step 3 480p, Allow 50/60 fps off, twice | 480p_allow_off: 720 480, progressive, level 31, (60/1|60000/1001) fps, decodes without errors
+PASS | step 3 480p, Allow 50/60 fps off, twice | 480p_allow_off_2: 720 480, progressive, level 31, (60/1|60000/1001) fps, decodes without errors
+
+FAIL: 0  WARN: 0
