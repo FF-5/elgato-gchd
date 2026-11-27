@@ -55,6 +55,8 @@ sudo dkms install elgato-gchd/0.5.12
 | `hd_output` | 0 | HDMI/component output size: 0 source size, 1 640 × 480, 2 480 × 360, 3 1280 × 720 (1080 sources only; other sources give the source size). |
 | `allow_5060` | 1 | HDMI/component: 1 encodes 720p at 50/60 and 576p/480p at 50/60 frames per second with the short GOP; 0 encodes 720p at 25/30 frames per second and 576p/480p with the long GOP. |
 | `hdmi_range` | 0 | HDMI colour range of RGB sources: 0 standard, 1 expanded (the RGB values scaled by 255/219). |
+| `picture` | `0,0,0,0` | Brightness, contrast, saturation (−100 … 100) and hue (−180 … 180 degrees). |
+| `audio_gain` | 0 | Analog audio gain in dB (−12 … 12; component, composite, S-video). |
 | `stretch` | 0 | Stretch standard-definition input (composite/S-video). |
 | `std_composite` | 0 | Last standard detected on composite: 0 unknown, 1 NTSC (60 Hz), 2 PAL (50 Hz); sets the format before the first detection. |
 | `std_svideo` | 0 | The same for S-video. |
@@ -87,6 +89,13 @@ The stream is H.264 High profile at the level of each output (no
 controls). Stretch applies to composite and
 S-video; "Allow 50/60 fps" to HDMI and component; "HDMI Color Range" to
 HDMI (changed while capturing without an encoder restart).
+
+Picture settings (`brightness`, `contrast`, `saturation`, `hue`; every
+input) and the analog audio gain (`analog_audio_gain_db`; component,
+composite, S-video) are changed while capturing without an encoder restart.
+Contrast scales the luma, saturation the chroma, hue rotates the chroma
+(±61.5° at ±180), brightness moves the black level; on HDMI RGB sources
+after the RGB conversion.
 
 ## Remembered settings
 

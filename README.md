@@ -122,7 +122,9 @@ bitrate of the output; 480 × 360 is VBR only. Each output mode (480 × 360,
 1080) keeps its bitrate, the same for every input. Settings that do not
 apply to the selected input are hidden. For HDMI and component the window
 offers the output sizes the source allows and "Allow 50/60 fps", for HDMI
-the colour range (Standard, Expanded). Without a desktop:
+the colour range (Standard, Expanded). Picture settings (brightness, contrast, saturation,
+hue) and the analog audio gain (−12 … +12 dB) are offered for every input
+(the gain for the analog audio of component, composite and S-video). Without a desktop:
 [`src/settings/gchd-settings`](src/settings/gchd-settings) (text menu) or
 `v4l2-ctl`.
 

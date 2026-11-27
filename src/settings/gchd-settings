@@ -3,8 +3,8 @@
 #
 # gchd-settings: settings of the Elgato Game Capture HD (elgato_gchd
 # driver) in a text menu: input, output size, bitrate, stretch of SD input,
-# for HDMI and component "Allow 50/60 fps", for HDMI the colour range. The
-# driver remembers the settings.
+# for HDMI and component "Allow 50/60 fps", for HDMI the colour range,
+# picture settings, analog audio gain. The driver remembers the settings.
 #
 #   gchd-settings [DEVICE]      DEVICE: default /dev/elgato-gchd, else the
 #                               first device of the driver
@@ -156,6 +156,32 @@ menu_stretch() {
 	apply "Stretch" -c "stretch_sd_input=$n"
 }
 
+# value_menu CONTROL LABEL LOW HIGH: a whole number in LOW ... HIGH.
+value_menu() {
+	local cur v
+	cur=$(ctrl_get "$1")
+	v=$(whiptail --title "$TITLE" --inputbox "$2 ($3 to $4, 0 neutral)" 10 60 \
+		"${cur:-0}" 3>&1 1>&2 2>&3) || return
+	{ [[ "$v" =~ ^-?[0-9]+$ ]] && [ "$v" -ge "$3" ] && [ "$v" -le "$4" ]; } ||
+		{ whiptail --msgbox "Not between $3 and $4: $v" 8 50; return; }
+	apply "$2" -c "$1=$v"
+}
+
+menu_picture() {
+	local n
+	n=$(whiptail --title "$TITLE" --menu "Picture" 15 60 5 \
+		brightness "Brightness: $(ctrl_get brightness)" \
+		contrast "Contrast: $(ctrl_get contrast)" \
+		saturation "Saturation: $(ctrl_get saturation)" \
+		hue "Hue: $(ctrl_get hue) degrees" \
+		reset "Reset (all 0)" 3>&1 1>&2 2>&3) || return
+	case "$n" in
+	hue) value_menu hue "Hue in degrees" -180 180 ;;
+	reset) apply "The picture settings" -c "brightness=0,contrast=0,saturation=0,hue=0" ;;
+	*) value_menu "$n" "${n^}" -100 100 ;;
+	esac
+}
+
 while :; do
 	inputs=(HDMI Component Composite S-Video)
 	i=$(input_get)
@@ -176,13 +202,19 @@ while :; do
 	if [ "${i:-0}" -ge 2 ]; then
 		items+=(stretch "Stretch SD input: $( [ "$(ctrl_get stretch_sd_input)" = 1 ] && echo on || echo off )")
 	fi
-	choice=$(whiptail --title "$TITLE ($DEV)" --menu "Settings (remembered by the driver)" 18 70 7 \
+	items+=(picture "Picture: brightness $(ctrl_get brightness), contrast $(ctrl_get contrast), saturation $(ctrl_get saturation), hue $(ctrl_get hue)")
+	if [ "${i:-0}" -ge 1 ]; then
+		items+=(gain "Audio gain: $(ctrl_get analog_audio_gain_db) dB")
+	fi
+	choice=$(whiptail --title "$TITLE ($DEV)" --menu "Settings (remembered by the driver)" 20 90 10 \
 		"${items[@]}" quit "Quit" 3>&1 1>&2 2>&3) || break
 	case "$choice" in
 	input) menu_input ;;
 	output) menu_output ;;
 	bitrate) menu_bitrate ;;
 	range) menu_range ;;
+	picture) menu_picture ;;
+	gain) value_menu analog_audio_gain_db "Audio gain in dB" -12 12 ;;
 	stretch) menu_stretch ;;
 	compout) menu_comp_output ;;
 	allow) menu_allow ;;

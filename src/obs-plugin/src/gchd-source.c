@@ -40,6 +40,20 @@ OBS_DECLARE_MODULE()
 #define GCHD_CID_STRETCH (V4L2_CID_USER_BASE + 0x10f1)
 #define GCHD_CID_ALLOW_5060 (V4L2_CID_USER_BASE + 0x10f2)
 #define GCHD_CID_HDMI_RANGE (V4L2_CID_USER_BASE + 0x10f3)
+#define GCHD_CID_AUDIO_GAIN (V4L2_CID_USER_BASE + 0x10f4)
+
+/* Picture settings and the analog audio gain: settings key and control. */
+static const struct {
+	const char *key, *name;
+	unsigned int id;
+	int lo, hi;
+} gchd_pic[5] = {
+	{ "brightness", "Brightness", V4L2_CID_BRIGHTNESS, -100, 100 },
+	{ "contrast", "Contrast", V4L2_CID_CONTRAST, -100, 100 },
+	{ "saturation", "Saturation", V4L2_CID_SATURATION, -100, 100 },
+	{ "hue", "Hue (degrees)", V4L2_CID_HUE, -180, 180 },
+	{ "audio_gain", "Audio gain (dB)", GCHD_CID_AUDIO_GAIN, -12, 12 },
+};
 #define GCHD_IO_SIZE 65424 /* 348 transport-stream packets */
 
 /*
@@ -81,6 +95,7 @@ struct gchd_vals {
 	bool stretch;
 	bool allow;		/* HDMI/component: "Allow 50/60 fps" */
 	int range;		/* HDMI colour range: 0 standard, 1 expanded */
+	int pic[5];		/* gchd_pic[] values */
 	int src_h;		/* HDMI/component source: height, 0 unknown */
 	bool src_i;		/* interlaced */
 };
@@ -222,7 +237,7 @@ static bool gchd_vals_equal(const struct gchd_vals *a, const struct gchd_vals *b
 	       a->mode == b->mode &&
 	       a->stretch == b->stretch && a->allow == b->allow &&
 	       a->src_h == b->src_h && a->src_i == b->src_i &&
-	       a->range == b->range &&
+	       a->range == b->range && !memcmp(a->pic, b->pic, sizeof(a->pic)) &&
 	       (int)(a->rate * 100.0 + 0.5) == (int)(b->rate * 100.0 + 0.5);
 }
 
@@ -293,6 +308,9 @@ static void gchd_apply_changes(int fd, const struct gchd_vals *v,
 		gchd_ctrl(fd, GCHD_CID_ALLOW_5060, v->allow);
 	if (v->input == 0 && (all || v->range != b->range))
 		gchd_ctrl(fd, GCHD_CID_HDMI_RANGE, v->range);
+	for (int i = 0; i < 5; i++)
+		if ((all || v->pic[i] != b->pic[i]) && (i < 4 || v->input >= 1))
+			gchd_ctrl(fd, gchd_pic[i].id, v->pic[i]);
 }
 
 /* The transport stream format, keeping the device's output size. */
@@ -348,6 +366,10 @@ static bool gchd_read_device(const char *path, struct gchd_vals *v)
 	v->allow = ioctl(fd, VIDIOC_G_CTRL, &c) != 0 || c.value != 0;
 	c.id = GCHD_CID_HDMI_RANGE;
 	v->range = ioctl(fd, VIDIOC_G_CTRL, &c) == 0 && c.value != 0;
+	for (int i = 0; i < 5; i++) {
+		c.id = gchd_pic[i].id;
+		v->pic[i] = ioctl(fd, VIDIOC_G_CTRL, &c) == 0 ? c.value : 0;
+	}
 	{
 		struct v4l2_dv_timings t = { 0 };
 
@@ -402,6 +424,9 @@ static void gchd_vals_to_settings(const struct gchd_vals *v,
 		obs_data_set_bool(st, "allow", v->allow);
 	if (!old || v->range != old->range)
 		obs_data_set_int(st, "hdmi_range", v->range);
+	for (int i = 0; i < 5; i++)
+		if (!old || v->pic[i] != old->pic[i])
+			obs_data_set_int(st, gchd_pic[i].key, v->pic[i]);
 	if (!old || v->input != old->input)
 		obs_data_set_int(st, "shown_input", v->input);
 	if (!old || v->src_h != old->src_h || v->src_i != old->src_i) {
@@ -1007,6 +1032,8 @@ static void gchd_update(void *data, obs_data_t *settings)
 	s->cur.stretch = obs_data_get_bool(settings, "stretch");
 	s->cur.allow = obs_data_get_bool(settings, "allow");
 	s->cur.range = (int)obs_data_get_int(settings, "hdmi_range");
+	for (int i = 0; i < 5; i++)
+		s->cur.pic[i] = (int)obs_data_get_int(settings, gchd_pic[i].key);
 	s->cur.src_h = (int)obs_data_get_int(settings, "src_h");
 	s->cur.src_i = obs_data_get_bool(settings, "src_i");
 	if (obs_data_has_user_value(settings, "shown_mode")) {
@@ -1090,6 +1117,8 @@ static void gchd_defaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, "shown_input", -1);
 	obs_data_set_default_int(settings, "shown_out", -1);
 	obs_data_set_default_int(settings, "hdmi_range", 0);
+	for (int i = 0; i < 5; i++)
+		obs_data_set_default_int(settings, gchd_pic[i].key, 0);
 }
 
 /*
@@ -1174,6 +1203,7 @@ static bool gchd_settings_changed(obs_properties_t *props, obs_property_t *p,
 	}
 	obs_property_set_visible(obs_properties_get(props, "stretch"), analog);
 	obs_property_set_visible(obs_properties_get(props, "hdmi_range"), input == 0);
+	obs_property_set_visible(obs_properties_get(props, "audio_gain"), input >= 1);
 	/* A little above the highest: OBS's slider counts whole steps, and
 	 * the last one is lost to rounding for some ranges (29.99 instead
 	 * of 30.00); values are rounded to hundredths. */
@@ -1328,6 +1358,12 @@ read_done:
 				    OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
 	obs_property_list_add_int(p, "Standard", 0);
 	obs_property_list_add_int(p, "Expanded", 1);
+	for (int i = 0; i < 5; i++)
+		obs_properties_add_int_slider(props, gchd_pic[i].key, gchd_pic[i].name,
+					      gchd_pic[i].lo, gchd_pic[i].hi, 1);
+	obs_property_set_long_description(
+		obs_properties_get(props, "audio_gain"),
+		"Gain of the analog audio input (component, composite, S-video)");
 	return props;
 }
 

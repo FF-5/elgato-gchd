@@ -9,4 +9,4 @@
 # Forget the settings: delete /etc/modprobe.d/elgato-gchd-settings.conf.
 
 ACTION=="change", SUBSYSTEM=="usb", ENV{GCHD_INPUT}=="?*", \
-  RUN+="/bin/sh -c 'echo options elgato_gchd input=$env{GCHD_INPUT} output=$env{GCHD_OUTPUT} format=$env{GCHD_FORMAT} out_bitrate_mode=$env{GCHD_OUT_BITRATE_MODE} out_bitrate_cbr=$env{GCHD_OUT_BITRATE_CBR} out_bitrate_vbr=$env{GCHD_OUT_BITRATE_VBR} stretch=$env{GCHD_STRETCH} hd_output=$env{GCHD_HD_OUTPUT} allow_5060=$env{GCHD_ALLOW_5060} hdmi_range=$env{GCHD_HDMI_RANGE} std_composite=$env{GCHD_STD_COMPOSITE} std_svideo=$env{GCHD_STD_SVIDEO} > /etc/modprobe.d/elgato-gchd-settings.conf'"
+  RUN+="/bin/sh -c 'echo options elgato_gchd input=$env{GCHD_INPUT} output=$env{GCHD_OUTPUT} format=$env{GCHD_FORMAT} out_bitrate_mode=$env{GCHD_OUT_BITRATE_MODE} out_bitrate_cbr=$env{GCHD_OUT_BITRATE_CBR} out_bitrate_vbr=$env{GCHD_OUT_BITRATE_VBR} stretch=$env{GCHD_STRETCH} hd_output=$env{GCHD_HD_OUTPUT} allow_5060=$env{GCHD_ALLOW_5060} hdmi_range=$env{GCHD_HDMI_RANGE} picture=$env{GCHD_PICTURE} audio_gain=$env{GCHD_AUDIO_GAIN} std_composite=$env{GCHD_STD_COMPOSITE} std_svideo=$env{GCHD_STD_SVIDEO} > /etc/modprobe.d/elgato-gchd-settings.conf'"

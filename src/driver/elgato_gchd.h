@@ -166,6 +166,10 @@ struct gchd {
  u8 hdmi_range;     /* HDMI RGB colour range: 0 standard, 1 expanded */
  bool hdmi_rx_ready; /* HDMI receiver set up since the input was selected */
  bool csc_dirty;     /* colour conversion to rewrite while capturing */
+ bool audio_dirty;   /* audio gain to write while capturing */
+ s8 brightness, contrast, saturation; /* -100 ... +100 */
+ s16 hue;            /* degrees, -180 ... +180 */
+ s8 audio_gain;      /* analog audio, dB, -12 ... +12 */
  unsigned long last_video_jiffies;
  u16 saved_enable_state;
  u16 hw_enable_state;
@@ -229,6 +233,7 @@ int gchd_component_mode_changed(struct gchd *);
 void gchd_bitrate_range(struct gchd *);
 int gchd_csc_apply(struct gchd *);
 int gchd_csc_update(struct gchd *);
+int gchd_audio_put(struct gchd *);
 int gchd_hdmi_mode_changed(struct gchd *);
 int gchd_input_read_family(struct gchd *, u8 *);
 void gchd_input_log_status(struct gchd *, const char *);

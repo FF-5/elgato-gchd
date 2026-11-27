@@ -754,9 +754,9 @@ route:
   r = gchd_mail_seq(d, tune, ARRAY_SIZE(tune));
   if (r) return r;
  }
- GCHD_AUX_W(d, 0x41, 0x37);
- GCHD_AUX_W(d, 0x4a, 0xb7);
- GCHD_AUX_W(d, 0x4b, 0xb7);
+ r = gchd_audio_put(d);
+ if (r)
+  return r;
 
  d->input_detect_prepared = true;
  return 0;
@@ -998,10 +998,92 @@ static const struct gchd_csc *gchd_csc_of(const struct gchd *d)
  return &gchd_csc_rgb[d->input_height > 576][d->hdmi_range != 0];
 }
 
-/* Colour conversion of the source in use. */
+/* sin(n / 2 degrees) x 4096, n = 0 ... 180. */
+static const u16 gchd_sin_half[181] = {
+ 0, 36, 71, 107, 143, 179, 214, 250, 286, 321, 357, 393,
+ 428, 464, 499, 535, 570, 605, 641, 676, 711, 746, 782, 817,
+ 852, 887, 921, 956, 991, 1026, 1060, 1095, 1129, 1163, 1198, 1232,
+ 1266, 1300, 1334, 1367, 1401, 1434, 1468, 1501, 1534, 1567, 1600, 1633,
+ 1666, 1699, 1731, 1763, 1796, 1828, 1860, 1891, 1923, 1954, 1986, 2017,
+ 2048, 2079, 2110, 2140, 2171, 2201, 2231, 2261, 2290, 2320, 2349, 2379,
+ 2408, 2436, 2465, 2493, 2522, 2550, 2578, 2605, 2633, 2660, 2687, 2714,
+ 2741, 2767, 2793, 2820, 2845, 2871, 2896, 2921, 2946, 2971, 2996, 3020,
+ 3044, 3068, 3091, 3115, 3138, 3161, 3183, 3206, 3228, 3250, 3271, 3293,
+ 3314, 3335, 3355, 3376, 3396, 3416, 3435, 3455, 3474, 3492, 3511, 3529,
+ 3547, 3565, 3582, 3600, 3617, 3633, 3650, 3666, 3681, 3697, 3712, 3727,
+ 3742, 3756, 3770, 3784, 3798, 3811, 3824, 3837, 3849, 3861, 3873, 3884,
+ 3896, 3906, 3917, 3927, 3937, 3947, 3956, 3966, 3974, 3983, 3991, 3999,
+ 4006, 4014, 4021, 4027, 4034, 4040, 4046, 4051, 4056, 4061, 4065, 4070,
+ 4074, 4077, 4080, 4083, 4086, 4088, 4090, 4092, 4094, 4095, 4095, 4096,
+ 4096,
+};
+
+/* Picture setting -100 ... +100 as 0 ... 255 (128 neutral). */
+static int gchd_pic_v(int setting)
+{
+ return ((setting + 100) * 255 + 100) / 200;
+}
+
+/*
+ * The conversion of the source with the picture settings: contrast scales
+ * Y (v x 32), saturation Cr and Cb (v x 32), hue rotates Cr/Cb (0.5 degree
+ * steps, +/-61.5 degrees at +/-180), all applied after the source's
+ * conversion; brightness moves the Y offset (16 + (v - 128) x 1.25).
+ */
+static void gchd_csc_picture(const struct gchd *d, struct gchd_csc *c,
+                             u16 *y_offset)
+{
+ const struct gchd_csc *m = gchd_csc_of(d);
+ s32 con = gchd_pic_v(d->contrast) * 32, sat = gchd_pic_v(d->saturation) * 32;
+ int n = DIV_ROUND_CLOSEST(d->hue * 123, 180);
+ s32 sn = (n < 0 ? -1 : 1) * gchd_sin_half[abs(n)];
+ s32 cs = gchd_sin_half[180 - abs(n)];
+ s32 a[9] = { 0 };
+ int in, out, k;
+
+ /* Adjustment in YCbCr (word in * 3 + out; channels Cr, Y, Cb). */
+ a[0] = DIV_ROUND_CLOSEST(sat * cs, 4096);
+ a[2] = -DIV_ROUND_CLOSEST(sat * sn, 4096);
+ a[6] = DIV_ROUND_CLOSEST(sat * sn, 4096);
+ a[8] = a[0];
+ a[4] = con;
+ c->header = m->header;
+ for (in = 0; in < 3; ++in)
+  for (out = 0; out < 3; ++out) {
+   s32 sum = 0;
+
+   for (k = 0; k < 3; ++k)
+    sum += a[k * 3 + out] * m->m[in * 3 + k];
+   c->m[in * 3 + out] = clamp_t(s32, DIV_ROUND_CLOSEST(sum, 4096),
+                                -16384, 16383);
+  }
+ *y_offset = (((16 + (gchd_pic_v(d->brightness) - 128) * 5 / 4) & 0x1ff) << 6) | 1;
+}
+
+/* Conversion of the source in use, with the picture settings. */
 int gchd_csc_apply(struct gchd *d)
 {
- return gchd_csc_put(d, gchd_csc_of(d), 0x0401);
+ struct gchd_csc c;
+ u16 y_offset;
+
+ gchd_csc_picture(d, &c, &y_offset);
+ return gchd_csc_put(d, &c, y_offset);
+}
+
+/*
+ * Analog audio gain (-12 ... +12 dB, device 0x94): 0x41 = 37, or 57 for a
+ * 20 dB boost above 0 dB; 0x4A/0x4B (left, right) attenuation code A7 + 2
+ * per dB, sent XOR 0x08.
+ */
+int gchd_audio_put(struct gchd *d)
+{
+ int g = clamp_t(int, d->audio_gain, -12, 12);
+ u8 code = 0xa7 + 2 * (g > 0 ? 20 - g : -g);
+
+ GCHD_AUX_W(d, 0x41, g > 0 ? 0x57 : 0x37);
+ GCHD_AUX_W(d, 0x4a, code ^ 0x08);
+ GCHD_AUX_W(d, 0x4b, code ^ 0x08);
+ return 0;
 }
 
 /* While capturing: the same, in bank CC. */
@@ -1536,7 +1618,7 @@ static int gchd_configure_composite_exact(struct gchd *d)
  d->dec_svideo = d->input == 3;
  GCHD_DEC_W(d, 0x3c, 0x6b);
 
- GCHD_AUX_W(d, 0x41, 0x37); GCHD_AUX_W(d, 0x4a, 0xb7); GCHD_AUX_W(d, 0x4b, 0xb7);
+ r = gchd_audio_put(d); if (r) return r;
  GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
  v &= 0x0f;
  d->signal_present = (v == 6 || v == 7);
@@ -1855,7 +1937,7 @@ static int gchd_configure_component_exact(struct gchd *d)
  u32 value6867,value6665;
  int r,i,j;
 
- GCHD_AUX_W(d, 0x41, 0x37); GCHD_AUX_W(d, 0x4a, 0xaf); GCHD_AUX_W(d, 0x4b, 0xaf);
+ r = gchd_audio_put(d); if (r) return r;
  GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_R(d, 0x94, v); GCHD_FE_W(d, 0xab, 0x4c); GCHD_FE_R(d, 0x3f, v);
  GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xce); GCHD_FE_W(d, 0x1b, 0x33); GCHD_FE_R(d, 0x3f, v); GCHD_FE_W(d, GCHD_FE_REG_BANK, 0xcc); GCHD_FE_R(d, 0x88, v);
  GCHD_FE_W(d, 0xb7, 0xce); GCHD_FE_W(d, 0xb8, 0xdc); GCHD_FE_W(d, 0xb8, 0xcc); GCHD_FE_R(d, 0x3f, v);

@@ -134,7 +134,18 @@ with Y offset `0400`, `AD = C9`, read `8F`, `B0 = E9`. Outside the window
 | HDMI RGB, BT.709, Standard | `40` | 1798 750 −414 / −1634 2515 −1384 / −164 254 1798 |
 | HDMI RGB, BT.709, Expanded | `55` | 2093 872 −479 / −1900 2928 −1613 / −192 294 2093 |
 
-Offsets: Cr and Cb `2000` (128), Y `0401` (16). "Expanded" scales the
+Offsets: Cr and Cb `2000` (128), Y `0401` (16).
+
+Picture settings (every input) are applied to the table of the source
+(`gchd_csc_picture()`): the setting −100 … +100 as v = 0 … 255 (128 at 0);
+contrast multiplies the Y output by v × 32 / 4096, saturation the Cr and Cb
+outputs by the same scale, hue rotates Cr/Cb by θ (0.5° steps, θ = hue ×
+123 / 180 half-degrees: ±61.5° at ±180; Cr→Cr and Cb→Cb cos θ, Cr→Cb
+−sin θ, Cb→Cr +sin θ); brightness sets the Y offset to 16 + (v − 128) ×
+5 / 4 (9 bits, two's complement, in bits 14–6 of the offset word). Each
+change rewrites the table while capturing (read `3F`, bank `CC`).
+
+"Expanded" scales the
 coefficients by 255/219. The control "HDMI Color Range" (`hdmi_range`)
 selects Standard or Expanded; a change while capturing rewrites the table
 without an encoder restart.

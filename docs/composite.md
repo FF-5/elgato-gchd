@@ -280,12 +280,9 @@ setup after the firmware INIT, as the initialization recording does; the
 switch from the standard output to a scaled one then follows the sequence
 of §4 steps 5–8 without the back-end table.
 
-## 11. Analog audio gain (Observed)
+## 11. Analog audio gain
 
-The application's analog audio gain (default −12 dB) writes the auxiliary
-registers `0x94:4A` and `0x94:4B` (same value, one per channel) and
-`0x94:41`. At −12 dB: `41 = 37`, `4A = 4B = B7` (the values written during
-input setup). While the slider was dragged between −12 dB and +12 dB the
-values `A7`, `AF`, `B5`, `B7`, `BB` were written with `41 = 37` and `BF`,
-`C1`, `C5`, `C9` with `41 = 57`. No control transfers or encoder writes
-follow. The exact value for each dB step has not been recorded.
+Registers `0x94:41`, `0x94:4A`, `0x94:4B` ([commands.md](commands.md),
+device `0x94`): written alone while capturing, and with the setting in use
+during the input setup of component, composite and S-video. The driver's
+default is 0 dB (`41 = 37`, `4A = 4B = AF`).
