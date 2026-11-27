@@ -1,7 +1,6 @@
-# T-080, third run: the picture settings on composite and S-video (analog
-# decoder; the second run built the old code). Passed before: controls,
-# audio gain in steps, replug, HDMI RGB, component picture settings,
-# window, OBS, text menu, compliance.
+# T-080, fourth run: picture settings made before the capture are used
+# from the capture start and kept after the signal returns (composite,
+# S-video); the neutral picture at 0. Passed before: everything else.
 # Needs: the PS3 with the composite and the S-video cable.
 INST="$REPO/install-driver.sh"
 D=$DEV
@@ -60,18 +59,28 @@ set_input 2
 run v4l2-ctl -d $D -v width=720,height=480,pixelformat=MPEG
 run v4l2-ctl -d $D -c brightness=0,contrast=0,saturation=0,hue=0,analog_audio_gain_db=0
 
-step "picture settings: composite"
-sweep 2 composite
-run v4l2-ctl -d $D -c saturation=-100
-viewer_start 2 "Elgato composite"
-prompt "Saturation is -100 (black and white). Switch the PS3 off and on again (or pull the yellow cable for 5 s and put it back); wait until the picture is back."
-confirm "Composite after the signal came back: still black and white?"
-viewer_stop
-run v4l2-ctl -d $D -c saturation=0
+# kept INPUT NAME: settings before the capture, then a signal loss.
+kept() {
+	run v4l2-ctl -d $D -c saturation=-100,brightness=40
+	viewer_start $1 "Elgato $2"
+	prompt "A window 'Elgato $2' shows the PS3."
+	confirm "$2 from the start: black and white and brighter than normal?"
+	prompt "Pull the video cable (yellow for composite, the S-video plug) for 5 s and put it back; wait until the picture is back."
+	confirm "$2 after the signal came back: still black and white and brighter?"
+	viewer_stop
+	run v4l2-ctl -d $D -c saturation=0,brightness=0
+	viewer_start $1 "Elgato $2"
+	prompt "Watch the window 'Elgato $2' again (all settings 0)."
+	confirm "$2 at 0: normal colours and brightness (like before this test)?"
+	viewer_stop
+}
 
-step "picture settings: S-video"
+step "settings kept from the capture start: composite"
+kept 2 composite
+
+step "settings kept from the capture start: S-video"
 prompt "Connect the PS3 with the S-video cable."
 set_input 3
-sweep 3 S-video
+kept 3 S-video
 
 set_input 2
