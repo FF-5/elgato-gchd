@@ -2,6 +2,7 @@
 
 Recordings (uploaded 2026-11-26/27, decoded `.ops.txt` next to them):
 
+- HDMI source in all HDMI recordings: a laptop's HDMI output (maintainer).
 - `traces/hdmi/gchd_hdmi_{480p60,720p60,1080p60}_input_small`: one source
   mode each, every output size, "Allow 50/60fps" on/off, "HDMI Color Range"
   Standard/Expanded on some outputs (maintainer).
