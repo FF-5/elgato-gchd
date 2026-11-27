@@ -126,6 +126,37 @@ In this order, each its own task and branch:
       2026-11-27): `install-driver.sh --uninstall` also deletes the firmware
       files it extracted (`/lib/firmware/gchd/`), after asking (default yes;
       `--yes` without asking); today it keeps them.
+- [ ] **T-102 (L)** Test suite shipped with the driver (maintainer,
+      2026-11-27), replacing the single pre-release test file. Lives on
+      `master` (e.g. `tests/`), so other people can test what the
+      maintainer cannot. Grows from `tools/gchd-test.sh` and the per-task
+      test files (their helpers: `capture` with size, frame rate and field
+      order, dmesg check, `prompt`, `confirm`, summary and log).
+      - **Driver, per input** (composite, S-video, component, HDMI): deep
+        tests of everything for that input (every standard and source
+        mode, mode and family changes while capturing, output sizes,
+        stretch/allow options, bitrate modes and limits, picture settings,
+        audio gain with a level measurement, colour range, formats,
+        close/reopen, unplug while capturing, settings persistence,
+        compliance). Fully automated: the user is only asked to change the
+        cable/input or to change the source mode while a viewer window is
+        open (as with the PS3 tests).
+      - **Settings window, text menu, OBS plugin**: interactive tests in
+        which the user operates the interface and the script checks the
+        result through the driver (as the T-080 window/OBS steps).
+      - **One launcher** asking what to run: a single input or program,
+        the full deep test, or the full fast test (a chosen subset of the
+        deep tests that checks general function in a short time; each test
+        is tagged deep or fast in one place).
+      - **Cases needing outside testers** shown in the launcher with a
+        direct link to their GitHub issue: the original GCHD family
+        (`0044/004e/0051`, T-062) and HDMI 1080i; the issues are created
+        at the first `master` merge (T-100) and the links kept in one place
+        (the repository URL may change with T-093).
+      - A summary at the end to paste into an issue (device, kernel,
+        driver version, PASS/FAIL per test, log path).
+      - Documentation for testers (how to run, what each part needs:
+        sources, cables, OBS), neutral product docs (RULES C).
 - [ ] **T-097 [OFF] (L)** Documentation rewrite (maintainer, 2026-11-26):
       `docs/` becomes (1) a reference of the device's communication
       protocol, every command and register with what it does, and (2) a
@@ -147,11 +178,9 @@ In this order, each its own task and branch:
       already uses the fastest copy the CPU offers. Expected gain small
       (the work is mostly USB transfers); every change measured before and
       after and proven to give the same stream.
-- [ ] **T-090 (M)** Pre-release test: one test file covering every
-      accepted feature (inputs, standards, modes, mode and family changes,
-      output sizes, bitrate, picture/audio settings, formats,
-      close/reopen, settings persistence, compliance, installer, settings
-      programs, OBS plugin), less detailed than the per-task tests.
+- [ ] **T-090 (M)** Pre-release test: the full deep test of T-102 (every
+      input, the settings window, text menu and OBS plugin) and the
+      installer, on the release candidate.
 - [ ] **T-099 [OFF] (M)** Security review of all code, last before the
       merge (maintainer, 2026-11-26): driver (USB data from the device
       treated as untrusted: lengths and bounds in the bulk-IN and TS
@@ -173,7 +202,10 @@ In this order, each its own task and branch:
       the agent instructions of CLAUDE.md, the test runner workflow) as a
       contributor guide on `master` for people who continue the work, also
       with an AI agent (e.g. `CONTRIBUTING.md` and `AGENTS.md`, without the
-      development history and maintainer notes).
+      development history and maintainer notes). At the merge, GitHub
+      issues for the cases that need outside testers (original GCHD
+      family, HDMI 1080i), each saying exactly which part of the T-102
+      suite to run; the launcher links to them.
 - [ ] **T-093 (S)** With the repository cleanup, before the first release
       (maintainer, 2026-11-27): this repository
       is a GitHub fork of the discontinued original. Either ask GitHub
@@ -235,6 +267,6 @@ a short note what was done and when (seconds) helps.
 
 | # | Recording | For | Status |
 |---|---|---|---|
-| R15 | Composite (and S-video), capturing: each picture slider 0 → −100 → 0 → +100 → 0 (hue ±180), a few seconds per position | registers of the picture settings on the analog decoder path | **needed** for T-080 (2026-11-27) |
-| R16 | Composite, capturing, a steady sound if possible: audio gain from 0 dB in single +1 dB steps to +12 dB, 3 s each, values noted; then down to −12 dB the same way | the positive gain codes and `0x94:41 = 57` | **needed** for T-080 (2026-11-27) |
+| R15 | Composite (and S-video), capturing: each picture slider 0 → −100 → 0 → +100 → 0 (hue ±180), a few seconds per position | registers of the picture settings on the analog decoder path | received 2026-11-27 (composite): `0x88:10`–`15`, analysis §8 |
+| R16 | Composite, capturing, a steady sound if possible: audio gain from 0 dB in single +1 dB steps to +12 dB, 3 s each, values noted; then down to −12 dB the same way | the positive gain codes and `0x94:41 = 57` | received 2026-11-27: the driver's codes match every step, analysis §8 |
 | R9 | One recording per picture/audio setting changed while capturing | stage 4, T-080 | recorded 2026-11-27 (brightness, contrast, saturation, hue, analog audio gain; `traces/`); the positive audio gain steps to be confirmed by a level measurement |

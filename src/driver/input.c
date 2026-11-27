@@ -744,16 +744,13 @@ route:
    GCHD_SEQ_DEC(0x13, 0x08),
    GCHD_SEQ_DEC(0x14, 0x08),
    GCHD_SEQ_DEC(0x15, 0x88),
-   GCHD_SEQ_DEC(0x10, 0x6f),
-   GCHD_SEQ_DEC(0x11, 0xea),
-   GCHD_SEQ_DEC(0x12, 0xd0),
-   GCHD_SEQ_DEC(0x13, 0x1b),
-   GCHD_SEQ_DEC(0x14, 0x1b),
-   GCHD_SEQ_DEC(0x15, 0x88),
   };
   r = gchd_mail_seq(d, tune, ARRAY_SIZE(tune));
   if (r) return r;
  }
+ /* Third pass: the picture settings (neutral 6F EA D0 1B 1B 88). */
+ r = gchd_dec_picture(d);
+ if (r) return r;
  r = gchd_audio_put(d);
  if (r)
   return r;
@@ -1071,9 +1068,34 @@ int gchd_csc_apply(struct gchd *d)
 }
 
 /*
- * Analog audio gain (-12 ... +12 dB, device 0x94): 0x41 = 37, or 57 for a
- * 20 dB boost above 0 dB; 0x4A/0x4B (left, right) attenuation code A7 + 2
- * per dB, sent XOR 0x08.
+ * Picture settings of the analog decoder (composite, S-video), device 0x88,
+ * values sent XOR 0x88: 10 brightness (signed, neutral -25), 11 contrast
+ * (98), 13 and 14 saturation (147), 15 hue (signed, 0); 12 stays D0. Each
+ * moves 1.28 per step from neutral (contrast 0.64; hue 128 per 180
+ * degrees), limited to the register range.
+ */
+int gchd_dec_picture(struct gchd *d)
+{
+ int b = clamp_t(int, -25 + DIV_ROUND_CLOSEST(d->brightness * 128, 100),
+                 -128, 127);
+ int c = clamp_t(int, 98 + DIV_ROUND_CLOSEST(d->contrast * 64, 100), 0, 255);
+ int s = clamp_t(int, 147 + DIV_ROUND_CLOSEST(d->saturation * 128, 100),
+                 0, 255);
+ int h = clamp_t(int, DIV_ROUND_CLOSEST(d->hue * 128, 180), -128, 127);
+
+ GCHD_DEC_W(d, 0x10, (u8)b ^ 0x88);
+ GCHD_DEC_W(d, 0x11, (u8)c ^ 0x88);
+ GCHD_DEC_W(d, 0x12, 0xd0);
+ GCHD_DEC_W(d, 0x13, (u8)s ^ 0x88);
+ GCHD_DEC_W(d, 0x14, (u8)s ^ 0x88);
+ GCHD_DEC_W(d, 0x15, (u8)h ^ 0x88);
+ return 0;
+}
+
+/*
+ * Analog audio gain (-12 ... +12 dB, device 0x94): 0x41 = 37 for 0 ... -12
+ * dB, 57 above 0 dB; 0x4A/0x4B (left, right) attenuation code A7 + 2 per
+ * dB (above 0 dB: 20 - gain), sent XOR 0x08.
  */
 int gchd_audio_put(struct gchd *d)
 {

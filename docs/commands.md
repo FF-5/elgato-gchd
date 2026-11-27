@@ -72,7 +72,7 @@ Repeated reads used by the driver:
 | `06` | `86` digital inputs, `08` analog inputs | Input prefix. |
 | `07`, `08`, `09` | `8A`, `9B`, `7A` | Written on every NTSC lock and mode change. |
 | `0A` | `8F`, then `98` | Written during the 480i → 240p change. Unknown. |
-| `10`–`15` | three tuning passes | See [composite.md](composite.md). |
+| `10`–`15` | three tuning passes; XOR `88` | Picture settings: `10` brightness, `11` contrast, `13`/`14` saturation, `15` hue ([composite.md §12](composite.md#12-picture-settings)). |
 | `14` | `D2` | S-video path. |
 | `28` | `88` (480i), `8A` (240p) | Changes with the analog line format. |
 | `CA` (read) | `FE` unlocked, `7E` 480i, `66` 240p, `EE`/`E6` transitional | **Lock and format status** (`GCHD_DEC_REG_LOCK`). |
@@ -83,7 +83,7 @@ Repeated reads used by the driver:
 
 | Register | Values | Use |
 |---|---|---|
-| `41` | `37`, `57` | Analog audio gain range: `57` adds 20 dB (gain above 0 dB). |
+| `41` | `37`, `57` | Analog audio gain range: `37` for 0 … −12 dB, `57` above 0 dB. |
 | `4A`, `4B` | code XOR `08` | Analog audio attenuation, left and right: code `A7` + 2 per dB (`41 = 37`: 0 … −12 dB, `AF` … `B7` on the wire; `41 = 57`: +12 … +1 dB as 8 … 19 dB attenuation). `gchd_audio_put()`. |
 
 ### Device `0x98` — video back end

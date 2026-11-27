@@ -136,7 +136,8 @@ with Y offset `0400`, `AD = C9`, read `8F`, `B0 = E9`. Outside the window
 
 Offsets: Cr and Cb `2000` (128), Y `0401` (16).
 
-Picture settings (every input) are applied to the table of the source
+Picture settings (HDMI and component; composite and S-video: the decoder,
+[composite.md §12](composite.md#12-picture-settings)) are applied to the table of the source
 (`gchd_csc_picture()`): the setting −100 … +100 as v = 0 … 255 (128 at 0);
 contrast multiplies the Y output by v × 32 / 4096, saturation the Cr and Cb
 outputs by the same scale, hue rotates Cr/Cb by θ (0.5° steps, θ = hue ×

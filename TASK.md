@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** first hardware run: composite picture settings and positive audio gain fail; waiting for recordings R15, R16 (TODO)
+- **Status:** composite/S-video picture settings in the decoder; second hardware run next
 - **Type:** driver feature (stage 4)
 - **Branch:** `feat/picture-audio` (from `dev` 0.5.12)
 - **TODO items:** T-080 (stage 4)
@@ -74,6 +74,13 @@ settings window, text menu and OBS plugin.
   `BF` +12).
 - Settings window (sliders, "Reset picture"), text menu (Picture, Audio
   gain), OBS plugin (sliders; audio gain hidden for HDMI).
+- Composite and S-video: the picture settings are the decoder's registers
+  `0x88:10`–`15` (recordings R15, analysis §8): `gchd_dec_picture()`,
+  written as the third tuning pass of the input setup and while capturing
+  (mode worker); every recorded end value reproduced except contrast +100
+  (driver 162, the recording's highest 155).
+- Audio: the recording of every step (R16) has exactly the driver's codes;
+  the second run measures the levels with a steady sound.
 
 ## Findings
 
@@ -94,6 +101,8 @@ settings window, text menu and OBS plugin.
   "+20 dB" reading of `0x94:41 = 57` is wrong (from this one value about
   +11 dB, ±2 for the changing music); the positive half needs a recording
   with single steps and a steady sound.
+- Recordings R15/R16 (2026-11-27): see Done so far; the doc comment of
+  `0x94:41` no longer claims +20 dB.
 
 ## Hardware test (maintainer)
 

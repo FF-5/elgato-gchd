@@ -94,8 +94,10 @@ Picture settings (`brightness`, `contrast`, `saturation`, `hue`; every
 input) and the analog audio gain (`analog_audio_gain_db`; component,
 composite, S-video) are changed while capturing without an encoder restart.
 Contrast scales the luma, saturation the chroma, hue rotates the chroma
-(±61.5° at ±180), brightness moves the black level; on HDMI RGB sources
-after the RGB conversion.
+(±61.5° at ±180 on HDMI and component), brightness moves the black level;
+on HDMI RGB sources after the RGB conversion. HDMI and component apply them
+in the colour conversion of the input front end, composite and S-video in
+the analog decoder.
 
 ## Remembered settings
 

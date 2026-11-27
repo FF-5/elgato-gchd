@@ -1611,12 +1611,12 @@ static void gchd_mode_workfn(struct work_struct *work)
  int r = 0;
 
  mutex_lock(&d->lifecycle_lock);
- /* Colour conversion (picture settings, HDMI colour range) and the
-  * analog audio gain: no restart. */
+ /* Picture settings (colour conversion on HDMI/component, decoder on
+  * composite/S-video), HDMI colour range, analog audio gain: no restart. */
  if (READ_ONCE(d->csc_dirty) && !d->disconnected &&
      READ_ONCE(d->capture_active) && d->input_configured) {
   WRITE_ONCE(d->csc_dirty, false);
-  r = gchd_csc_update(d);
+  r = gchd_hd(d) ? gchd_csc_update(d) : gchd_dec_picture(d);
   if (r)
    dev_warn(&d->intf->dev, "colour conversion update failed: %d\n", r);
  }

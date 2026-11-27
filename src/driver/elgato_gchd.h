@@ -233,6 +233,7 @@ int gchd_component_mode_changed(struct gchd *);
 void gchd_bitrate_range(struct gchd *);
 int gchd_csc_apply(struct gchd *);
 int gchd_csc_update(struct gchd *);
+int gchd_dec_picture(struct gchd *);
 int gchd_audio_put(struct gchd *);
 int gchd_hdmi_mode_changed(struct gchd *);
 int gchd_input_read_family(struct gchd *, u8 *);
