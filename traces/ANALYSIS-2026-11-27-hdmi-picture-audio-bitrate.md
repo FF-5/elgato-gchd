@@ -156,3 +156,38 @@ Source mode changes (`input_switching`) repeat steps 5–10 after STOP/NULL.
 The driver's HDMI path matches steps 2–3 and parts of 6–8, and in addition
 runs the back-end blocks (retrigger, calibration, per-mode table): not
 needed for HDMI.
+
+## 8. Composite picture settings and audio gain (2026-11-27, second set)
+
+Recordings `traces/composite/gchd_composite_{brightness,contrast,saturation,hue}_small.pcapng`
+(each slider 0 → −100 → 0 → +100 → 0, hue ±180, composite, capturing) and
+`gchd_composite_audio_0_{+12,-12}db_small.pcapng` (single 1 dB steps).
+
+Picture: no `0x9C` writes at all. Every change writes the six decoder
+registers `0x88:10`–`15` (same values as the third tuning pass at neutral,
+`6F EA D0 1B 1B 88`); one register per setting changes. Values are sent XOR
+`0x88` (the only key that makes every sweep monotonic in all four):
+
+| Reg | Setting | Neutral (XOR 88) | −100 | +100 |
+|---|---|---|---|---|
+| `10` | brightness, signed | −25 (`6F`) | −128 (`08`) | +103 (`EF`) |
+| `11` | contrast | 98 (`EA`) | 34 (`AA`) | 155 (`13`) |
+| `13`=`14` | saturation | 147 (`1B`) | 19 (`9B`) | 255 (`77`) |
+| `15` | hue, signed | 0 (`88`) | −128 (`08`, −180°) | +127 (`F7`, +180°) |
+| `12` | — | `D0` throughout | | |
+
+Model: neutral + 1.28 × setting, limited to the register range: brightness
+−25 − 128 = −153 → −128, −25 + 128 = 103 (exact); saturation 147 − 128 = 19
+(exact), 275 → 255; hue 128 per 180° → −128/+127. Contrast 0.64 per step:
+98 − 64 = 34 (exact); +100 would give 162, the recording's highest is 155
+(slider probably not at the end; check on hardware). Driver:
+`gchd_dec_picture()`, also as the third tuning pass.
+
+Audio: `0x94` writes per step (wire values). Negative: `41 = 37`, then
+`4A = 4B` = `A1 A3 A5 A7 B9 BB BD BF B1 B3 B5 B7` for −1 … −12. Positive:
+`4A = 4B` first, then `41 = 57`: `C5 C3 C1 CF CD CB C9 B7 B5 B3 B1 BF` for
++1 … +12 (XOR 08: `CD` … `B7`, code A7 + 2 × (20 − gain)). These are exactly
+the driver's values. The hardware result (+6 dB measured −3.1 dB against
+0 dB, T-080 first run) is then the device's real response to Windows' own
+settings, or a measurement error from the music; to be measured with a
+steady tone in steps (T-080 second run).
