@@ -1,12 +1,7 @@
-# T-050: HDMI after a composite capture with a signal (output size chosen
-# after selecting HDMI), the bitrate range at 1080p, the H.264 level without
-# the removed profile/level controls, v4l2-compliance (DV timings with a
-# scaled output size before) with its full output. Accepted on 2026-11-27
-# (laptop on HDMI): cold start, modes and samples, output sizes, Allow
-# 50/60 fps, colour range, source change, bitrate slider in driver, window
-# and OBS, composite slider ranges.
-# Needs: the laptop on HDMI at 1920x1080 60 Hz, the PS3 on composite (on,
-# showing its menu).
+# T-050 addition: HDMI 480p (720x480 at 60 Hz) from the laptop: samples at
+# the source size with "Allow 50/60 fps" on and off, 640x480 and 480x360.
+# T-050 is accepted (2026-11-27); 576p was tested, 480p not yet.
+# Needs: the laptop on HDMI.
 
 INST="$REPO/install-driver.sh"
 LOGS="$HOME/.config/obs-studio/logs"
@@ -74,33 +69,23 @@ N0=0
 mark() { N0=$(sudo dmesg | wc -l); }
 count_new() { sudo dmesg | tail -n +$((N0 + 1)) | grep -cE "$1"; }
 
-CVSTOP=/tmp/gchd-cviewer-stop
 step "install"
 run sudo rmmod elgato_gchd
 run bash "$INST" --core --yes --in-terminal < /dev/null
-prompt "Laptop on HDMI at 1920x1080 60 Hz; PS3 on composite (on, showing its menu). Unplug the Elgato and plug it in again; wait 5 s."
-
-step "composite with a signal, then HDMI"
-set_input 2
-size 720 480
-rm -f $CVSTOP
-( while [ ! -e $CVSTOP ]; do v4l2-ctl -d $D -i 2 >/dev/null 2>&1; ffplay -loglevel error -autoexit -window_title "Elgato composite" -f mpegts $D >/dev/null 2>&1; sleep 1; done ) &
-CV=$!
-prompt "A window 'Elgato composite' should show the PS3 (composite). If it stays black, check the PS3's composite cable and that the PS3 shows its menu. Press Enter when the window shows the PS3."
-confirm "The 'Elgato composite' window shows the PS3?"
-touch $CVSTOP; pkill -f "window_title Elgato composite" 2>/dev/null; wait $CV 2>/dev/null; sleep 2
-run sh -c "sudo dmesg | grep -E 'configuring|analog mode|signal detected' | tail -3"
-sample after_composite_1080p 1920x1080 "1920 1080" progressive 40 "(30/1|30000/1001)"
-expect "no H.264 profile/level controls" "^0$" sh -c "v4l2-ctl -d $D -l | grep -c 'h264_profile\|h264_level'"
-expect "1080p: bitrate range 10-30 Mbit/s, highest 30" "^10000000-30000000 30000000$" range_of
-
-step "v4l2-compliance (full output), starting with a scaled output size"
+prompt "Laptop on HDMI. Unplug the Elgato and plug it in again; wait 5 s."
 set_input 0
-size 1280 720
-CO=$HOME/gchd-test-logs/T-050-compliance.txt
-v4l2-compliance -d $D > $CO 2>&1
-run sh -c "grep -E 'fail|FAIL|warn' $CO | head -20; grep -E '^Total' $CO"
-expect "compliance run 1: 0 failures" "Failed: 0" grep -E '^Total' $CO
-v4l2-compliance -d $D > $CO.2 2>&1
-run sh -c "grep -E 'fail|FAIL|warn' $CO.2 | head -20; grep -E '^Total' $CO.2"
-expect "compliance run 2 (right after): 0 failures" "Failed: 0" grep -E '^Total' $CO.2
+run v4l2-ctl -d $D -c allow_50_60_fps=1
+
+source_mode "720x480 at 60 Hz (480p)"
+step "480p"
+expect "480p detected (720x480 progressive)" "Active width: 720.*Active height: 480.*Progressive" sh -c "v4l2-ctl -d $D --get-dv-timings | tr '\n' ' '"
+expect "480p: 720x480, 640x480, 480x360 offered" "720x480.*640x480.*480x360" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | tr '\n' ' '"
+sample 480p 1920x1080 "720 480" progressive 30 "(60/1|60000/1001)"
+run v4l2-ctl -d $D -c allow_50_60_fps=0
+sample 480p_allow_off 1920x1080 "720 480" progressive 31 "(60/1|60000/1001)"
+run v4l2-ctl -d $D -c allow_50_60_fps=1
+sample 480p_640x480 640x480 "640 480" progressive 30 "(30/1|30000/1001)"
+sample 480p_480x360 480x360 "480 360" progressive 22 "(30/1|30000/1001)"
+size 1920 1080
+run ls -l $SAMPLES
+prompt "Upload the hdmi_480p* files from $SAMPLES to traces/hdmi/samples/."
