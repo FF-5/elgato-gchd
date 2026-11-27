@@ -83,12 +83,19 @@ input, all modes (T-051, 0.5.11). Test results: `logs/hardware-test-log.md` on t
 
 - [ ] **T-050 [WIN+HW] (L)** HDMI, all modes, mode changes, output sizes
       and settings as for component (bitrate per output mode, ranges of the
-      recordings; settings window and OBS plugin). Recorded so far: `hdmi/gchd_output_switch_hdmi` (1080p60
+      recordings; settings window and OBS plugin), "HDMI Color Range"
+      (Standard/Expanded), BT.601 conversion for SD RGB sources. Bitrate as
+      one slider like the Windows software for every input (maintainer,
+      2026-11-27): its lower part VBR, its upper part CBR, the mode follows
+      the position (driver, settings window, text menu, OBS plugin). Recorded so far: `hdmi/gchd_output_switch_hdmi` (1080p60
       source, output sizes; `docs/hdmi.md §4`).
 
 ## Stage 4 — Picture and audio settings (after HDMI, before the release)
 
-- [ ] **T-080 [WIN+HW] (M)** Picture settings of the Windows application
+- [ ] **T-080 [WIN+HW] (M)** (Recorded 2026-11-27, analysis
+      `traces/ANALYSIS-2026-11-27-hdmi-picture-audio-bitrate.md`: picture
+      settings are the colour conversion block `0x9C:92`–`AA`, audio gain
+      `0x94:41/4A/4B`; default gain 0 dB, maintainer 2026-11-27.) Picture settings of the Windows application
       (brightness, contrast, saturation, hue, sharpness, as offered) and
       audio settings (volume/gain, audio input selection, as offered). First
       find out for each whether it is sent to the device or applied by the
@@ -219,7 +226,6 @@ a short note what was done and when (seconds) helps.
 
 | # | Recording | For | Status |
 |---|---|---|---|
-| R8 | HDMI with a signal: every mode, mode changes, output sizes, bitrate | stage 3, T-050 | **needed** at stage 3 (1080p60 output sizes exist) |
-| R11 | Composite, standard size and 640 × 480: bitrate slider at about ¾ and just before the right end (the CBR position), a few seconds each, values shown noted | Bitrate range above B = 14460 (VBR maximum) | needed (until then the settings windows offer the observed range: CBR 7.00–11.25, VBR average 3.00–7.23) |
-| R13 | HDMI (or component), one source mode: the bitrate slider moved slowly from the highest to the lowest and back, a few seconds per step, values shown noted | where the Windows software switches between CBR and VBR on HD inputs: CBR minimum and VBR maximum for component (now placeholders: CBR from 7/11.25 of the highest, VBR up to half the highest as average) | **needed** with the HDMI recordings (maintainer, 2026-11-26) |
-| R9 | One recording per picture/audio setting changed while capturing; for the audio gain: single steps with the displayed dB noted (e.g. −12, −6, 0, +6, +12 dB, pause between them) | stage 4, T-080 | needed after the release (gain registers known: `composite.md` §11) |
+| R8 | HDMI with a signal: every mode, mode changes, output sizes, bitrate | stage 3, T-050 | recorded 2026-11-27 (480p60, 720p60, 1080p60 with output sizes, Allow 50/60 fps and HDMI Color Range; source mode changes 576p, 720p50/60, 1080p50/60; `traces/hdmi/`); 1080i over HDMI not recorded |
+| R13 | Bitrate slider moved slowly through its whole range, values shown noted | where VBR ends and CBR starts per output | recorded 2026-11-27 for 640 × 480, 720p at 30, 1080i (CBR part), 720p at 60 (CBR part) (`traces/component/*_output_bitrate_change_small`); **needed**: 1080 and 720p at 60, the lower half of the slider slowly into CBR (VBR top end; maintainer, 2026-11-27) |
+| R9 | One recording per picture/audio setting changed while capturing | stage 4, T-080 | recorded 2026-11-27 (brightness, contrast, saturation, hue, analog audio gain; `traces/`); the positive audio gain steps to be confirmed by a level measurement |

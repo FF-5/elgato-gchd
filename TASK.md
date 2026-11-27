@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** not started; waiting for the HDMI recordings (TODO R8, R13)
+- **Status:** recordings analysed (2026-11-27); implementation next
 - **Type:** driver feature (stage 3)
 - **Branch:** `feat/hdmi` (from `dev` 0.5.11)
 - **TODO items:** T-050 (stage 3)
@@ -32,25 +32,36 @@ HDMI to the level of component (RULES D7: lowest mode first).
 
 ## Evidence
 
-- `traces/hdmi/gchd_output_switch_hdmi` (1080p60 source, output sizes;
-  `docs/hdmi.md §4`).
-- Needed: R8 (every HDMI mode, mode changes, output sizes, bitrate,
-  "Allow 50/60 fps") and R13 (bitrate slider from the highest to the
-  lowest and back, values noted).
-- Component analysis for comparison:
-  `traces/ANALYSIS-2026-11-25-component.md`, `docs/component.md §4–§6`.
+- `traces/hdmi/gchd_hdmi_{480p60,720p60,1080p60}_input_small` (every output
+  size, "Allow 50/60fps", "HDMI Color Range" on some outputs),
+  `gchd_hdmi_input_switching{,_extra}_small` (576p, 720p50/60, 1080p50/60),
+  `gchd_output_switch_hdmi` (1080p60, older); decoded `.ops.txt` next to
+  them.
+- `traces/component/gchd_*_output_bitrate_change_small` (bitrate slider,
+  R13).
+- Analysis: `traces/ANALYSIS-2026-11-27-hdmi-picture-audio-bitrate.md`
+  (colour block, HDMI encoder values per mode, bitrate slider).
+- Still needed: VBR top end for 1080 and 720p at 60 (TODO R13).
+
+## Decisions (maintainer, 2026-11-27)
+
+- Bitrate: one slider like the Windows software for every input; its lower
+  part VBR (shown as the average), its upper part CBR; the bitrate mode
+  menu goes (driver control kept for V4L2 clients, set by the driver).
+- Default analog audio gain 0 dB (T-080).
 
 ## Plan
 
-1. Split the recordings into their change sequences, read the detection
-   values, front-end and back-end writes and encoder fields per sequence;
-   analysis note on `traces`, table in `docs/hdmi.md`.
-2. R13: find the bitrate where the Windows software switches between CBR
-   and VBR; set the CBR minimum and VBR maximum (HDMI and component).
-3. Compare with the driver's HDMI path; change one item at a time
-   (RULES D5), the lowest mode first.
-4. The emulator on the `tools` branch (`tools/drvemu/`) reproduces each
-   recorded sequence before the hardware test.
+1. HDMI configuration per mode from the recordings (front end, back end,
+   encoder values as for component: the encoder tables are the same per
+   output mode); compare with the driver's HDMI path, one item at a time;
+   the emulator on `tools` reproduces each recorded sequence first.
+2. HDMI colour conversion: BT.601 for 480p/576p RGB, BT.709 for HD;
+   "HDMI Color Range" Standard/Expanded as a control (remembered).
+3. Bitrate as one slider (driver: ranges per output mode, VBR below the
+   CBR start; window, text menu, OBS plugin).
+4. HDMI source mode changes while capturing, output sizes, Allow 50/60 fps,
+   V4L2 reporting, compliance, TS samples.
 
 ## Done so far
 
