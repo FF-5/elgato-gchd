@@ -1,9 +1,11 @@
-# T-080: picture settings (brightness, contrast, saturation, hue) and the
-# analog audio gain: while capturing without an encoder restart, the gain
-# measured as the audio level, remembered after a replug, HDMI RGB with
-# picture settings, settings window, text menu, OBS plugin, compliance.
-# Needs: the PS3 on composite playing something with continuous sound (a
-# video or game music), the laptop on HDMI, OBS with the plugin.
+# T-080, second run: the picture settings on composite and S-video (now in
+# the analog decoder) and on component; the audio gain measured in steps
+# with a steady sound. (Passed in the first run: controls, audio while
+# capturing, -12 dB, replug, HDMI RGB, window, OBS, text menu, compliance.)
+# Needs: the PS3 (composite, S-video, component cables) and a steady sound
+# on the Elgato's analog audio input for the measurement (a phone or laptop
+# headphone output with a 3.5 mm to RCA cable playing a continuous 1 kHz
+# tone, or a PS3 screen with constant sound).
 
 INST="$REPO/install-driver.sh"
 D=$DEV
@@ -35,88 +37,63 @@ level() {
 	timeout -k 5 25 head -c 30000000 < $D > $f 2>/dev/null
 	ffmpeg -hide_banner -ss 4 -t 8 -i $f -map 0:a -af volumedetect -f null - 2>&1 | sed -n 's/.*mean_volume: \(-*[0-9.]*\) dB.*/\1/p'
 }
+# louder A B MIN MAX: B - A within MIN ... MAX dB.
+louder() { [ -n "$1" ] && [ -n "$2" ] || { echo "no (no level measured)"; return; }; awk -v a="$1" -v b="$2" -v lo="$3" -v hi="$4" 'BEGIN { d = b - a; print (d >= lo && d <= hi ? "ok" : "no"), d }'; }
+# sweep INPUT NAME: each picture setting to both ends and back.
+sweep() {
+	mark
+	viewer_start $1 "Elgato $2"
+	prompt "A window 'Elgato $2' shows the PS3. Watch it during the next changes (3 s each)."
+	for c in "brightness=-100" "brightness=100" "brightness=0"; do run v4l2-ctl -d $D -c $c; sleep 3; done
+	confirm "$2 brightness: dark, then bright, then normal, without stopping?"
+	for c in "contrast=-100" "contrast=100" "contrast=0"; do run v4l2-ctl -d $D -c $c; sleep 3; done
+	confirm "$2 contrast: flat, then hard, then normal?"
+	for c in "saturation=-100" "saturation=100" "saturation=0"; do run v4l2-ctl -d $D -c $c; sleep 3; done
+	confirm "$2 saturation: black and white, then very colourful, then normal?"
+	for c in "hue=-180" "hue=180" "hue=0"; do run v4l2-ctl -d $D -c $c; sleep 3; done
+	confirm "$2 hue: colours shifted one way, then the other way, then normal?"
+	viewer_stop
+	expect "$2: no encoder restart for the picture changes" "^0$" count_new "encoder restart"
+}
 
 step "install"
 run sudo rmmod elgato_gchd
 run bash "$INST" --all --yes --in-terminal < /dev/null
-prompt "PS3 on composite playing something with continuous sound; laptop on HDMI. Unplug the Elgato and plug it in again; wait 5 s."
+prompt "PS3 on composite (video and audio). Unplug the Elgato and plug it in again; wait 5 s."
 set_input 2
 run v4l2-ctl -d $D -v width=720,height=480,pixelformat=MPEG
 run v4l2-ctl -d $D -c brightness=0,contrast=0,saturation=0,hue=0,analog_audio_gain_db=0
-expect "controls present, all 0" "brightness: 0 contrast: 0 saturation: 0 hue: 0 analog_audio_gain_db: 0" pic
 
-step "picture settings while capturing (composite)"
-mark
+step "picture settings: composite"
+sweep 2 composite
+run v4l2-ctl -d $D -c saturation=-100
 viewer_start 2 "Elgato composite"
-prompt "A window 'Elgato composite' shows the PS3. Watch it during the next changes (each is applied 3 s later)."
-for c in "brightness=-100" "brightness=100" "brightness=0"; do run v4l2-ctl -d $D -c $c; sleep 3; done
-confirm "Brightness: the picture became dark, then bright, then normal, without stopping?"
-for c in "contrast=-100" "contrast=100" "contrast=0"; do run v4l2-ctl -d $D -c $c; sleep 3; done
-confirm "Contrast: flat grey, then very hard, then normal?"
-for c in "saturation=-100" "saturation=100" "saturation=0"; do run v4l2-ctl -d $D -c $c; sleep 3; done
-confirm "Saturation: black and white, then very colourful, then normal?"
-for c in "hue=-180" "hue=180" "hue=0"; do run v4l2-ctl -d $D -c $c; sleep 3; done
-confirm "Hue: the colours shifted one way, then the other way, then normal?"
-run v4l2-ctl -d $D -c analog_audio_gain_db=-12; sleep 4
-run v4l2-ctl -d $D -c analog_audio_gain_db=12; sleep 4
-run v4l2-ctl -d $D -c analog_audio_gain_db=0; sleep 2
-confirm "Audio: quieter, then louder (maybe distorted), then normal, while the picture kept running?"
+prompt "Saturation is -100 (black and white). Switch the PS3 off and on again (or pull the yellow cable for 5 s and put it back); wait until the picture is back."
+confirm "Composite after the signal came back: still black and white?"
 viewer_stop
-expect "no encoder restart for picture or audio changes" "^0$" count_new "encoder restart"
+run v4l2-ctl -d $D -c saturation=0
 
-step "audio gain measured (composite)"
-L0=$(level 0); Lm=$(level -12); Lp=$(level 6)
-log "mean volume: 0 dB: $L0, -12 dB: $Lm, +6 dB: $Lp"
-say "mean volume: 0 dB: $L0 dB, -12 dB: $Lm dB, +6 dB: $Lp dB"
-expect "-12 dB: about 12 dB quieter (8-16)" "^ok" sh -c "awk -v a='$L0' -v b='$Lm' 'BEGIN { d = a - b; print (d >= 8 && d <= 16 ? \"ok\" : \"no\"), d }'"
-expect "+6 dB: about 6 dB louder (3-9)" "^ok" sh -c "awk -v a='$L0' -v b='$Lp' 'BEGIN { d = b - a; print (d >= 3 && d <= 9 ? \"ok\" : \"no\"), d }'"
-v4l2-ctl -d $D -c analog_audio_gain_db=0
+step "picture settings: S-video"
+prompt "Connect the PS3 with the S-video cable."
+set_input 3
+sweep 3 S-video
 
-step "remembered after a replug"
-run v4l2-ctl -d $D -c brightness=20,contrast=-10,saturation=30,hue=45,analog_audio_gain_db=-3
-prompt "Unplug the Elgato and plug it in again; wait 5 s."
-expect "kept: 20 -10 30 45 -3" "brightness: 20 contrast: -10 saturation: 30 hue: 45 analog_audio_gain_db: -3" pic
-run v4l2-ctl -d $D -c brightness=0,contrast=0,saturation=0,hue=0,analog_audio_gain_db=0
+step "picture settings: component"
+prompt "Connect the PS3 with the component cable (480p or 720p)."
+set_input 1
+sweep 1 component
 
-step "HDMI (laptop, RGB): picture settings with the RGB conversion"
-viewer_start 0 "Elgato HDMI"
-prompt "A window 'Elgato HDMI' shows the laptop."
-run v4l2-ctl -d $D -c saturation=-100; sleep 3
-confirm "HDMI: black and white?"
-run v4l2-ctl -d $D -c saturation=0,contrast=50; sleep 3
-confirm "HDMI: harder contrast, colours right (no tint)?"
-run v4l2-ctl -d $D -c hdmi_color_range=1; sleep 3
-confirm "Expanded with contrast +50: still a picture with the colours right (even harder)?"
-run v4l2-ctl -d $D -c hdmi_color_range=0,contrast=0
-viewer_stop
-
-step "settings window"
-prompt "Open 'Elgato Game Capture HD Settings' (Input Composite)."
-confirm "Rows Brightness, Contrast, Saturation, Hue (degrees), Audio gain (dB) with sliders at 0, and a 'Reset picture' button?"
-prompt "Move Brightness to about 40; wait 2 s."
-expect "window: brightness about 40" "brightness: (3[5-9]|4[0-5]) " pic
-prompt "Click 'Reset picture'; wait 2 s. Choose Input HDMI; wait 3 s."
-expect "window: reset" "brightness: 0 contrast: 0 saturation: 0 hue: 0" pic
-confirm "HDMI: the Audio gain row is hidden, the picture rows are shown?"
-prompt "Close the window."
-
-step "OBS plugin"
-prompt "Start OBS (source 'Elgato Game Capture HD', input Composite); open the source's properties."
-confirm "OBS: sliders Brightness, Contrast, Saturation, Hue (degrees), Audio gain (dB)?"
-prompt "Set Hue to -60 -> OK; wait 3 s."
-expect "OBS: hue -60" "hue: -60 " pic
-run v4l2-ctl -d $D -c hue=0
-prompt "Close OBS."
-
-step "text menu"
-prompt "Run gchd-settings in another terminal: choose Picture, Contrast, enter 25; then Quit."
-expect "text menu: contrast 25" "contrast: 25 " pic
-run v4l2-ctl -d $D -c contrast=0
-
-step "v4l2-compliance"
-CO=$HOME/gchd-test-logs/T-080-compliance.txt
-v4l2-compliance -d $D > $CO 2>&1
-run sh -c "grep -E 'fail|FAIL' $CO | head -10; grep -E '^Total' $CO"
-expect "compliance: 0 failures" "Failed: 0" grep -E '^Total' $CO
-run v4l2-ctl -d $D -c brightness=0,contrast=0,saturation=0,hue=0,analog_audio_gain_db=0
+step "audio gain measured in steps (steady sound)"
+prompt "Connect the steady sound (continuous tone, medium volume, not changing) to the Elgato's analog audio input (red/white); composite video can stay. Start the sound now."
+L0=$(level 0); Lm6=$(level -6); Lm12=$(level -12); Lp1=$(level 1); Lp6=$(level 6); Lp12=$(level 12); L0b=$(level 0)
+log "mean volume (dB): 0: $L0, -6: $Lm6, -12: $Lm12, +1: $Lp1, +6: $Lp6, +12: $Lp12, 0 again: $L0b"
+say "mean volume (dB): 0: $L0, -6: $Lm6, -12: $Lm12, +1: $Lp1, +6: $Lp6, +12: $Lp12, 0 again: $L0b"
+expect "sound steady (0 dB twice within 1 dB)" "^ok" louder "$L0" "$L0b" -1 1
+expect "-6 dB: 6 dB quieter (4-8)" "^ok" louder "$Lm6" "$L0" 4 8
+expect "-12 dB: 12 dB quieter (10-14)" "^ok" louder "$Lm12" "$L0" 10 14
+expect "+1 dB: 1 dB louder (0-2)" "^ok" louder "$L0" "$Lp1" 0 2
+expect "+6 dB: 6 dB louder (4-8)" "^ok" louder "$L0" "$Lp6" 4 8
+expect "+12 dB: 12 dB louder (10-14; less if the tone clips)" "^ok" louder "$L0" "$Lp12" 10 14
+run v4l2-ctl -d $D -c analog_audio_gain_db=0
+prompt "Stop the sound; reconnect the PS3 audio if you like."
 set_input 2
