@@ -168,7 +168,12 @@ In this order, each its own task and branch:
       branches deleted; `traces` and `tools` deleted from GitHub by the
       maintainer once nothing needs them (the development session cannot
       delete remote branches; keep a private copy if the recordings may be
-      wanted later, e.g. `git clone --mirror`).
+      wanted later, e.g. `git clone --mirror`). Also (maintainer,
+      2026-11-27): the guidelines this project is developed with (RULES,
+      the agent instructions of CLAUDE.md, the test runner workflow) as a
+      contributor guide on `master` for people who continue the work, also
+      with an AI agent (e.g. `CONTRIBUTING.md` and `AGENTS.md`, without the
+      development history and maintainer notes).
 - [ ] **T-093 (S)** With the repository cleanup, before the first release
       (maintainer, 2026-11-27): this repository
       is a GitHub fork of the discontinued original. Either ask GitHub
