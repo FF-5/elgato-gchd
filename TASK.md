@@ -103,9 +103,21 @@ HDMI to the level of component (RULES D7: lowest mode first).
 - First HDMI start recorded (720p60, 1080p60): no back-end writes at all;
   the front-end sequence is in the analysis §7. The driver's HDMI path gets
   that sequence without the back-end blocks.
-- The receiver delivers RGB from the PS3; 480p needs the BT.601 matrix
+- The receiver delivers RGB from the source (a laptop's HDMI output in
+  every HDMI recording; the PS3 is not used on HDMI); 480p needs the BT.601 matrix
   (the driver uses the BT.709 one for every RGB source).
 - Encoder values per output mode are the component ones (same tables).
+- Back end and HDMI (maintainer's question, 2026-11-27): both start
+  recordings switch from component. Evidence that HDMI does not use the
+  back end: the device initialization writes one fixed back-end block
+  (the driver writes the same), Windows selects HDMI after it without
+  further back-end writes (initialization recording, no source), and HDMI
+  source mode changes never write the back end while analog mode changes
+  rewrite its per-mode tables. Not recorded with a source: a cold start
+  with HDMI selected and HDMI after composite/S-video; the test covers
+  both (if they fail: a Windows recording of composite → HDMI).
+- Not covered: 1080i over HDMI (no source offered it; detection value from
+  the older code), 24 Hz sources (no field-rate value known).
 
 ## Hardware test (maintainer)
 
