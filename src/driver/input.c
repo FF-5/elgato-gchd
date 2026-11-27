@@ -1093,9 +1093,9 @@ int gchd_dec_picture(struct gchd *d)
 }
 
 /*
- * Analog audio gain (-12 ... +12 dB, device 0x94): 0x41 = 37 for 0 ... -12
- * dB, 57 above 0 dB; 0x4A/0x4B (left, right) attenuation code A7 + 2 per
- * dB (above 0 dB: 20 - gain), sent XOR 0x08.
+ * Analog audio gain (-12 ... +12 dB, device 0x94): 0x41 = 37, or 57 for a
+ * 20 dB boost above 0 dB; 0x4A/0x4B (left, right) attenuation code A7 + 2
+ * per dB, sent XOR 0x08.
  */
 int gchd_audio_put(struct gchd *d)
 {

@@ -128,8 +128,9 @@ In this order, each its own task and branch:
       `--yes` without asking); today it keeps them.
 - [ ] **T-102 (L)** Test suite shipped with the driver (maintainer,
       2026-11-27), replacing the single pre-release test file. Lives on
-      `master` (e.g. `tests/`), so other people can test what the
-      maintainer cannot. Grows from `tools/gchd-test.sh` and the per-task
+      its own orphan branch `tests`, separate from development and releases
+      (maintainer, 2026-11-27; RULES B3); other people fetch it from there
+      to test what the maintainer cannot. Grows from `tools/gchd-test.sh` and the per-task
       test files (their helpers: `capture` with size, frame rate and field
       order, dmesg check, `prompt`, `confirm`, summary and log).
       - **Driver, per input** (composite, S-video, component, HDMI): deep
@@ -199,13 +200,16 @@ In this order, each its own task and branch:
       delete remote branches; keep a private copy if the recordings may be
       wanted later, e.g. `git clone --mirror`). Also (maintainer,
       2026-11-27): the guidelines this project is developed with (RULES,
-      the agent instructions of CLAUDE.md, the test runner workflow) as a
-      contributor guide on `master` for people who continue the work, also
-      with an AI agent (e.g. `CONTRIBUTING.md` and `AGENTS.md`, without the
-      development history and maintainer notes). At the merge, GitHub
+      the agent instructions of CLAUDE.md, the test runner workflow) made
+      usable by people who continue the work, also with an AI agent: they
+      stay development files on `dev` (never on `master`, which holds only
+      the product, RULES B2), cleaned of the development history and
+      maintainer notes; the `master` README points to `dev` for
+      contributors. At the merge, GitHub
       issues for the cases that need outside testers (original GCHD
       family, HDMI 1080i), each saying exactly which part of the T-102
-      suite to run; the launcher links to them.
+      suite to run (fetched from the `tests` branch); the launcher links
+      to them.
 - [ ] **T-093 (S)** With the repository cleanup, before the first release
       (maintainer, 2026-11-27): this repository
       is a GitHub fork of the discontinued original. Either ask GitHub

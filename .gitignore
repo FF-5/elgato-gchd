@@ -4,7 +4,10 @@ build
 *.ko
 *.mod
 *.mod.c
+*.i
 .*.cmd
+.*.o.d
+.*.d
 Module.symvers
 modules.order
 # Elgato's software and the firmware taken from it: never committed

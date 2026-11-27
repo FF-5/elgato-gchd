@@ -83,7 +83,7 @@ Repeated reads used by the driver:
 
 | Register | Values | Use |
 |---|---|---|
-| `41` | `37`, `57` | Analog audio gain range: `37` for 0 … −12 dB, `57` above 0 dB. |
+| `41` | `37`, `57` | Analog audio gain range: `37` for 0 … −12 dB, `57` adds 20 dB (gain above 0 dB). |
 | `4A`, `4B` | code XOR `08` | Analog audio attenuation, left and right: code `A7` + 2 per dB (`41 = 37`: 0 … −12 dB, `AF` … `B7` on the wire; `41 = 57`: +12 … +1 dB as 8 … 19 dB attenuation). `gchd_audio_put()`. |
 
 ### Device `0x98` — video back end
