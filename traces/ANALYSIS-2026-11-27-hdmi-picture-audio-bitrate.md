@@ -106,3 +106,52 @@ component values); 720p60 GOP 14, 26250, level 40 / at 30 GOP 8, 15000,
 `v_vinpelclk = 1` for every HDMI mode. Source mode changes: STOP, INIT A0,
 encoder setup, START, as for component (`input_switching`). Detection on
 `9C:66/65` and `9C:64/63`.
+
+## 7. Later recordings (2026-11-27)
+
+### Bitrate slider, 1080i and 720p at 60 (`*_output_bitrate_change_2_small`)
+
+Slider moved from CBR down into VBR: 1080i CBR 17440 … 12320, then VBR
+19840 (average 9.92), 16000; 720p at 60 CBR 15470 … 10640, then VBR 19600
+(9.80), 16800, 14000. Every output: VBR up to about 10 (average), CBR from
+about 10.4–12.3. Maintainer decision: VBR below a shown 10.00, CBR from
+10.00, for every output (480 × 360 VBR only).
+
+### First HDMI start (`gchd_hdmi_{720p60,1080p60}_input_start_small`)
+
+HDMI selected with a source connected, up to the first START. No back-end
+(`0x98`) writes at all, no `0x94` writes. Sequence:
+
+1. Before the selection: polls `9C:94` (read), `9C:AB = 4C`, reads `2B`,
+   `2A`, `60` (about 0.5 s apart).
+2. Digital-input prefix: `0x88:06 = 86`, read `0x88:F8`, `0x88:03 = 2F`,
+   `9C:B3 = CC`, bank `CE` `9C:27 = CC`; `0900:0018 = 02 0E`, then `02 0A`
+   (twice, each read back).
+3. Receiver setup as the driver's (bank `CC`: read `94`, `AB = 4C`; bank `CE`
+   `1B = 33`; bank `CC` read `88`, `B7 = CE`, `B8 = DC`, `B8 = CC`; bank `CE`
+   `07 = 38`, `07 = C8`; bank `CC` `51 = 45`, read `88`, `B7 = CC`;
+   `0900:0018 = 02 0A`; bank `CE` `01 = AD` (after read `3E`), `04 = CD`,
+   `06 = C4` (after read `3B`), `09 = E4` (after read `36`); bank `CC`
+   `54 = EC` (read `6B`), `AC = 4C` (read `93`); bank `4C` and back;
+   `CE = 4C` (read `F1`), `CF = CE` (read `F0`)).
+4. Read `6A`; window `B0 = E8`, `B1 = 0C`, the RGB 601 Standard table with
+   Y offset `0x0400`, `AD = C9`, read `8F`, `B0 = E9`.
+5. Timing polls (`AB = 4C`; bank `CC` `6A`, `64/63`; bank `CE` `16/17`;
+   bank `CC` `66/65`) about 20 times until stable.
+6. Per mode `B2`/`B5`: 1080 `C4`/`D0`, 720 `CC`/`CC`, SD `CF`/`CC`.
+7. Status block (bank `CD` `3E`, `0B`; bank `CE` `34`, `33`, `31` ×2;
+   `1B = 30`; `2B`, `77`, `74`, `76`); read `20`; `1F = DC`, read `29`,
+   `1F = CC`; read `3B`, `04 = CF`, `04 = CD`; bank `CC` `40 = CC`.
+8. Window `B0 = E8`, `B1 = 0C`, RGB 709 Standard table (Y offset `0400`),
+   `AD = C9`, read `8F`, `B0 = E9`, `AB = CC`.
+9. Status reads (bank `CE` `6A`, `A7`, `69`; bank `CC` `66/65`; bank `CE`
+   `78`, `7F`–`7A`, `76`), the same status block again, then the table of
+   the "HDMI Color Range" setting (here Expanded, Y offset `0401`) without
+   the window; reads `8D`, `8A`; `B2 = CC` (SD `CF`), `B5 = C4` (sometimes
+   `CC` and `C4` only after START).
+10. INIT A0, START.
+
+Source mode changes (`input_switching`) repeat steps 5–10 after STOP/NULL.
+The driver's HDMI path matches steps 2–3 and parts of 6–8, and in addition
+runs the back-end blocks (retrigger, calibration, per-mode table): not
+needed for HDMI.
