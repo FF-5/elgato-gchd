@@ -1,10 +1,12 @@
-# T-050: HDMI, all modes (PS3 over HDMI): the recorded configuration
+# T-050: HDMI, all modes (a laptop's HDMI output): the recorded configuration
 # without the back end, encoder values per mode, TS samples (RULES F3),
 # output sizes and "Allow 50/60 fps", HDMI Color Range while capturing,
 # source mode changes while capturing; the bitrate as one slider (below
 # 10.00 VBR, from 10.00 CBR) in the driver, the settings window and OBS;
-# composite bitrate ranges of the slider model; v4l2-compliance.
-# Needs: the PS3 on HDMI, OBS with the plugin.
+# composite bitrate ranges of the slider model; HDMI after composite;
+# v4l2-compliance.
+# Needs: a laptop on HDMI (the Elgato as a second display, mirrored), the
+# PS3 on composite, OBS with the plugin.
 
 INST="$REPO/install-driver.sh"
 LOGS="$HOME/.config/obs-studio/logs"
@@ -16,8 +18,8 @@ obs_log() {
 D=$DEV
 SAMPLES=$HOME/gchd-test-logs/T-050-samples
 
-# Live viewer: ffplay restarted whenever it ends, so the PS3's menus can be
-# used while watching.
+# Live viewer: ffplay restarted whenever it ends, so the source can be
+# changed while watching.
 VSTOP=/tmp/gchd-viewer-stop
 viewer_start() {
 	rm -f $VSTOP
@@ -39,7 +41,7 @@ source_mode() {	# source_mode NAME [HINT]
 	step "HDMI source $1"
 	size 1920 1080
 	viewer_start
-	prompt "A window 'Elgato HDMI' shows the PS3. Set the PS3's video output (Settings, Display Settings, Video Output Settings, HDMI) to $1.${2:+ $2} If the picture freezes or disappears, close the window (it reopens). Press Enter when it shows the PS3 in $1."
+	prompt "A window 'Elgato HDMI' shows the laptop's HDMI picture. In the laptop's display settings set the HDMI display (the Elgato) to $1.${2:+ $2} If the picture freezes or disappears, close the window (it reopens). Press Enter when it shows the laptop in $1."
 	viewer_stop
 	run v4l2-ctl -d $D --list-framesizes MPEG
 	run v4l2-ctl -d $D --get-dv-timings
@@ -73,11 +75,11 @@ count_new() { sudo dmesg | tail -n +$((N0 + 1)) | grep -cE "$1"; }
 step "install the settings programs and the plugin of this branch"
 run sudo rmmod elgato_gchd
 run bash "$INST" --all --yes --in-terminal < /dev/null
-prompt "Connect the PS3 to the Elgato's HDMI input (PS3 on). Unplug the Elgato and plug it in again; wait 5 s."
+prompt "Connect the laptop's HDMI output to the Elgato (laptop on, the Elgato as a second display, mirrored) and the PS3 to composite (PS3 on). Unplug the Elgato and plug it in again; wait 5 s (the first capture is a cold start with HDMI selected)."
 set_input 0
 run v4l2-ctl -d $D -c allow_50_60_fps=1,hdmi_color_range=0
 
-source_mode 720p "Tick only 720p."
+source_mode "1280x720 at 60 Hz"
 step "720p"
 sample 720p 1920x1080 "1280 720" progressive 40 "(60/1|60000/1001)"
 expect "720p: 1280x720, 640x480, 480x360 offered (no scaled 1280x720)" "1280x720.*640x480.*480x360" sh -c "v4l2-ctl -d $D --list-framesizes MPEG | tr '\n' ' '"
@@ -86,7 +88,7 @@ sample 720p_allow_off 1920x1080 "1280 720" progressive 31 "(30/1|30000/1001)"
 run v4l2-ctl -d $D -c allow_50_60_fps=1
 sample 720p_640x480 640x480 "640 480" progressive 30 "(30/1|30000/1001)"
 
-source_mode 1080p "Tick only 1080p."
+source_mode "1920x1080 at 60 Hz"
 step "1080p"
 sample 1080p 1920x1080 "1920 1080" progressive 40 "(30/1|30000/1001)"
 sample 1080p_1280x720 1280x720 "1280 720" progressive 31 "(30/1|30000/1001)"
@@ -106,10 +108,11 @@ confirm "Back to Standard, the picture is as before?"
 viewer_stop
 expect "no encoder restart for the colour range" "^0$" count_new "encoder restart"
 
-source_mode 1080i "Tick only 1080i."
-step "1080i"
-sample 1080i 1920x1080 "1920 1080" tt 40 '((30000|60000)/1001|30/1|60/1)'
-source_mode "576p (PAL PS3) or 480p (NTSC PS3)" "Tick only 576p (or 480p)."
+source_mode "1920x1080 at 50 Hz" "If the laptop offers no 50 Hz, choose the lowest refresh it offers for 1920x1080 (30, 25 or 24 Hz) and note it."
+step "1080p at 50 Hz (or the lower rate)"
+run v4l2-ctl -d $D --get-dv-timings
+sample 1080p_low 1920x1080 "1920 1080" progressive 40 "(25/1|30/1|30000/1001|24/1|24000/1001)"
+source_mode "720x576 at 50 Hz (or 720x480 at 60 Hz)" "If the laptop offers neither, choose 640x480 and note it."
 step "SD progressive"
 run v4l2-ctl -d $D --get-dv-timings
 sample sd 1920x1080 "720 (480|576)" progressive 30 '(50/1|60/1|60000/1001)'
@@ -122,7 +125,7 @@ size 1920 1080
 set_input 0
 mark
 viewer_start
-prompt "In the 'Elgato HDMI' window, change the PS3's HDMI output to 720p only (the picture may go away for a few seconds and comes back). Press Enter when it shows 720p again."
+prompt "While the 'Elgato HDMI' window shows the laptop, set the laptop's HDMI display to 1280x720 at 60 Hz (the picture may go away for a few seconds and comes back). Press Enter when it shows 720p again."
 viewer_stop
 expect "the driver followed the source change" "^[1-9]" count_new "HDMI source mode changed while capturing"
 run sh -c "sudo dmesg | tail -n +$((N0 + 1)) | grep -E 'HDMI|detected|failed' | tail -12"
@@ -159,14 +162,16 @@ expect "OBS 8.00: VBR 16 Mbit/s" "video_bitrate_mode: 0 video_bitrate: 1(5[5-9]|
 prompt "Close OBS."
 run obs_log 6
 
-step "composite: bitrate ranges of the slider"
+step "composite: bitrate ranges of the slider, then HDMI after composite"
 set_input 2
 size 720 480
 expect "composite source size: 6 to 19.98 Mbit/s, highest 11.25" "^6000000-19980000 11250000$" range_of
 size 480 360
 expect "composite 480x360: 4 to 15 Mbit/s" "^4000000-15000000 15000000$" range_of
 size 720 480
-set_input 0
+set_input 2
+expect "composite capture (PS3) before HDMI" "width=720 height=(480|576)" sh -c "timeout -k 5 20 head -c 6000000 < $D > /tmp/gchd-c.ts; ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of default=nw=1 /tmp/gchd-c.ts | tr '\n' ' '"
+sample after_composite 1920x1080 "1280 720" progressive 40 "(60/1|60000/1001)"
 
 step "v4l2-compliance"
 run sh -c "v4l2-compliance -d $D 2>&1 | tail -3"
