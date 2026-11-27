@@ -118,7 +118,6 @@ initialized on `VIDIOC_STREAMON`. The output format is described in
 | `elgato_gchd.h` | Driver structures, configuration and prototypes. |
 | `usb.c` | Control transfers, mailbox transport, SCMD and state completion, enable bits, firmware loading, initialization and shutdown. |
 | `input.c` | Encoder start, input configuration and signal detection for each input, mode changes. |
-| `protocol_common.c` | Back-end blocks shared by several inputs. |
 | `transcoder.c` | Encoder defaults and per-mode configuration. |
 | `core.c` | V4L2 device, buffer queue, device lifecycle, bulk-IN reception, USB probe and disconnect. |
 | `fops.c` | V4L2 file operations. |

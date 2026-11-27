@@ -163,6 +163,7 @@
 /* ---------------------------------------------------------------------- */
 
 /* Front end, device 0x9c (GCHD_PORT_FRONTEND) */
+#define GCHD_FE_XOR		0xcc	/* device 0x9C values are sent XOR this */
 #define GCHD_FE_REG_BANK		0x00	/* bank select: 0xcc/0xce/0xcd/0x4c */
 #define GCHD_FE_REG_INPUT_SEL		0x51	/* input selector */
 #define GCHD_FE_SEL_HDMI		0x45
