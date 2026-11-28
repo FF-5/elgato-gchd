@@ -85,7 +85,7 @@ Driver with DKMS, and the udev rule:
 
 ```sh
 sudo dkms add ./src/driver
-sudo dkms install elgato-gchd/0.5.13
+sudo dkms install elgato-gchd/0.5.14
 sudo modprobe elgato_gchd
 sudo cp udev-rules/55-elgato-gchd-device.rules udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload

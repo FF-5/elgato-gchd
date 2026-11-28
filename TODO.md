@@ -14,9 +14,10 @@ settings); then the repository layout and installation scripts; then
 guvcview/OBS support; then component the same way; then HDMI.
 **Before the first `master` merge (maintainer, 2026-11-26):** after HDMI
 the picture and audio settings (T-080), then stage 5 in its order: user
-profiles, the installer download (after Elgato's answer), uninstall with
-the firmware, documentation, performance, pre-release test, security,
-repository cleanup with detaching the fork (maintainer, 2026-11-26/27).
+profiles, uninstall with the firmware, test suite, documentation,
+performance, pre-release test, security, repository cleanup with
+detaching the fork, and last, once the repository is clean, the
+installer download (after Elgato's answer) (maintainer, 2026-11-26/28).
 
 Legend: **[HW]** maintainer's hardware, **[WIN]** new Windows recording,
 **[OFF]** offline, **(S/M/L)** size. Test results: `logs/hardware-test-log.md`
@@ -24,7 +25,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.13): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.14): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -93,7 +94,7 @@ licence files (T-094), installer (T-071, 0.5.7), v4l2-compliance (T-066,
 Windows software and optional installer parts (T-096, 0.5.10), component
 input, all modes (T-051, 0.5.11), HDMI, all modes, and the bitrate as one
 slider (T-050, 0.5.12), picture settings and analog audio gain (T-080,
-0.5.13). Test results: `logs/hardware-test-log.md` on the `traces` branch.
+0.5.13), user profiles (T-091, 0.5.14). Test results: `logs/hardware-test-log.md` on the `traces` branch.
 
 ## Stage 4 — Picture and audio settings (after HDMI, before the release)
 
@@ -108,25 +109,14 @@ slider (T-050, 0.5.12), picture settings and analog audio gain (T-080,
 
 In this order, each its own task and branch:
 
-- [ ] **T-091 (M)** User profiles (maintainer, 2026-11-18): named sets of
-      all settings (input, output size, format, bitrate, mode, stretch,
-      picture/audio settings, colour range), several per
-      input, recalled at once; the original software has only fixed
-      profiles. Builds on the remembered settings (per output mode); before
-      the first release (maintainer, 2026-11-27). Decided 2026-11-27: per user
-      (`~/.config`), the bitrate of the profile's output size, the OBS
-      plugin with the same functions as the settings window; the settings
-      window in the system settings menu (*System > Preferences >
-      Hardware*). In work on `feat/profiles`.
-- [ ] **T-095 (S)** (Before the first release, maintainer 2026-11-27.) Optional download of the Elgato installer by the
-      firmware script, after the user confirms (link to Elgato's terms, no
-      mirroring, checksum check, URL in one place). **Maintainer: e-mail
-      Elgato (Corsair) and ask whether the script may download the
-      official installer from their server.** Until the answer the script
-      only uses an installer the user downloaded. The script looks for the
-      installer only in `firmware/` (maintainer 2026-11-18), so a download
-      goes there too; the installer only calls the script and checks its
-      result.
+- [x] **T-091 (M)** User profiles: named sets of all settings (input,
+      output size, bitrate of that size, stretch, Allow 50/60 fps, HDMI
+      colour range, picture settings, audio gain), per user in
+      `~/.config/elgato-gchd/profiles`, with `gchd-profile` (installed with
+      the core); Load, Save (new name or replace, asks), Delete in the
+      settings window, text menu and OBS plugin (Qt question boxes); the
+      settings window as "Elgato Game Capture HD" in the system settings
+      menu (0.5.14, 2026-11-28).
 - [ ] **T-101 (S)** Uninstall removes the firmware too (maintainer,
       2026-11-27): `install-driver.sh --uninstall` also deletes the firmware
       files it extracted (`/lib/firmware/gchd/`), after asking (default yes;
@@ -221,6 +211,16 @@ In this order, each its own task and branch:
       support to detach the fork (keeps history and stars), or create a
       new repository and push the branches. Consider a distinct name so it
       is not confused with the old userspace driver.
+- [ ] **T-095 (S)** (Before the first release, maintainer 2026-11-27; last, after the cleanup and the fork detachment, once the repository is clean and professional looking, maintainer 2026-11-28.) Optional download of the Elgato installer by the
+      firmware script, after the user confirms (link to Elgato's terms, no
+      mirroring, checksum check, URL in one place). **Maintainer: e-mail
+      Elgato (Corsair) and ask whether the script may download the
+      official installer from their server.** Until the answer the script
+      only uses an installer the user downloaded. The script looks for the
+      installer only in `firmware/` (maintainer 2026-11-18), so a download
+      goes there too; the installer only calls the script and checks its
+      result. Comes after the security review (T-099): its download code
+      gets the same review in this task.
 
 ## Later
 

@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** second run all PASS; OBS profile controls reworked (dialogs, list update); third run (OBS only) next
+- **Status:** done, merged into `dev` as 0.5.14 (2026-11-28)
 - **Type:** userspace feature (stage 5)
 - **Branch:** `feat/profiles` (from `dev` 0.5.13)
 - **TODO items:** T-091 (stage 5)
@@ -97,6 +97,10 @@ composite"), several per input, recalled at once.
   Fixed: Qt question boxes for replace and delete, the list refilled in
   the shown properties, no messages.
 
+- T-091 third run (bfe6f1a): OBS profile controls, 15 PASS, 0 FAIL
+  (question boxes for replace and delete, list updated, no messages).
+  Acceptance criteria met; merged as 0.5.14.
+
 ## Hardware test (maintainer)
 
 ```sh
@@ -110,20 +114,3 @@ Needs the PS3 on composite and OBS with the plugin.
 
 ## Maintainer comments
 
-=== summary (T-091, bfe6f1a T-091: OBS profile controls ask in question boxes (replace, delete), refill the shown list, no result messages)
-PASS | step 1 install | OBS plugin built with Qt
-PASS | step 1 install | save composite profile
-PASS | step 1 install | save component profile
-PASS | step 2 OBS plugin | OBS: component profile loaded
-PASS | step 2 OBS plugin | OBS: Profile still shows 'T-091 component', the properties show Component with brightness -10, and no message below the buttons?
-PASS | step 2 OBS plugin | OBS: new profile saved
-PASS | step 2 OBS plugin | OBS: no question for the new name, no message, and 'T-091 obs' is in the Profile list now?
-PASS | step 2 OBS plugin | OBS: a box asks whether to replace profile 'T-091 obs'? Click No.
-PASS | step 2 OBS plugin | OBS: No keeps the profile
-PASS | step 2 OBS plugin | OBS: Yes replaces it
-PASS | step 2 OBS plugin | OBS: a box asks whether to delete profile 'T-091 obs'? Click Yes.
-PASS | step 2 OBS plugin | OBS: profile deleted
-PASS | step 2 OBS plugin | OBS: the Profile field is empty and 'T-091 obs' is no longer in the list?
-PASS | step 2 OBS plugin | OBS: a box says to choose a profile or type a name?
-
-FAIL: 0  WARN: 0
