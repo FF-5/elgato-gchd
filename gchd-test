@@ -1,0 +1,219 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+#
+# gchd-test: hardware test suite of the elgato_gchd driver (Elgato Game
+# Capture HD) and its programs.
+#
+#   bash gchd-test                       menu
+#   bash gchd-test PART fast|deep        one part (e.g. composite)
+#   bash gchd-test all fast|deep         every part
+#   bash gchd-test --list                the parts and their cases
+#
+# For development: --repo DIR [--branch NAME] builds and installs that
+# checkout of the driver (its installer, core part) before testing.
+#
+# The fast test checks general function on the driver as installed; the
+# deep test checks everything and switches on the driver's detailed
+# messages (debug parameter) while it runs. The tester is asked only for
+# what needs hands or eyes. At the end a summary to paste into an issue;
+# the full log is in ~/gchd-test-logs.
+#
+# Needs: v4l2-ctl and v4l2-compliance (v4l-utils), ffmpeg, ffprobe, ffplay
+# (ffmpeg), sudo.
+
+set -u
+
+HERE=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
+SUITE_VERSION=$(cat "$HERE/VERSION" 2>/dev/null || echo unknown)
+# shellcheck source=lib/runner.sh
+. "$HERE/lib/runner.sh"
+# shellcheck source=lib/measure.sh
+. "$HERE/lib/measure.sh"
+# shellcheck source=lib/links.conf
+. "$HERE/lib/links.conf"
+
+# ------------------------------------------------------------ registry
+
+PARTS=()		# part names in menu order
+declare -A PART_TITLE PART_SETUP
+CASES=()		# "part|tag|title|function"
+
+# part NAME TITLE SETUP: a part of the suite (an input or a program).
+part() { PARTS+=("$1"); PART_TITLE[$1]=$2; PART_SETUP[$1]=$3; }
+# tcase PART fast|deep TITLE FUNCTION: a case; fast cases run in both.
+tcase() { CASES+=("$1|$2|$3|$4"); }
+
+# shellcheck source=parts/analog.sh
+. "$HERE/parts/analog.sh"
+# shellcheck source=parts/composite.sh
+. "$HERE/parts/composite.sh"
+# Parts still to come (shown in the menu).
+LATER="S-video, component, HDMI, settings window, text menu, OBS plugin, installer"
+
+# ------------------------------------------------------------ running
+
+# run_part NAME: its setup, then its cases (all, or the fast ones).
+run_part() {
+	local c p t title fn
+	PART=$1
+	CASE=setup
+	printf '\n%s##### %s (%s test)%s\n' "$B" "${PART_TITLE[$1]}" "$MODE" "$N"
+	log ""
+	log "##### ${PART_TITLE[$1]} ($MODE test)"
+	"${PART_SETUP[$1]}"
+	for c in "${CASES[@]}"; do
+		IFS='|' read -r p t title fn <<< "$c"
+		[ "$p" = "$1" ] || continue
+		[ "$MODE" = deep ] || [ "$t" = fast ] || continue
+		case_start "$title"
+		"$fn"
+		case_end
+	done
+}
+
+list_cases() {
+	local name c p t title fn
+	for name in "${PARTS[@]}"; do
+		echo "${PART_TITLE[$name]} ($name):"
+		for c in "${CASES[@]}"; do
+			IFS='|' read -r p t title fn <<< "$c"
+			[ "$p" = "$name" ] && printf '  %-5s %s\n' "$t" "$title"
+		done
+	done
+	echo "Later: $LATER"
+}
+
+need_tools() {
+	local t missing=
+	for t in v4l2-ctl ffmpeg ffprobe ffplay sudo; do
+		command -v $t >/dev/null || missing="$missing $t"
+	done
+	if [ -n "$missing" ]; then
+		echo "Missing:$missing (packages: v4l-utils, ffmpeg)." >&2
+		exit 1
+	fi
+}
+
+# build_checkout DIR BRANCH: install the driver of a checkout (development).
+build_checkout() {
+	local dir=$1 branch=$2
+	say "== installing the driver of $dir${branch:+ ($branch)}"
+	( cd "$dir" || exit 1
+	  git fetch -q origin || exit 1
+	  [ -z "$branch" ] || git checkout -q "$branch" || exit 1
+	  git pull -q --ff-only || { echo "git pull failed (local changes?)"; exit 1; }
+	  [ -z "$branch" ] || [ "$(git rev-parse HEAD)" = "$(git rev-parse "origin/$branch")" ] ||
+		{ echo "the checkout is not at origin/$branch"; exit 1; }
+	) 2>&1 | tee -a "$LOG"
+	[ "${PIPESTATUS[0]}" = 0 ] || { say "${R}Stopping: the checkout could not be updated.${N}"; exit 1; }
+	BUILT="$(git -C "$dir" log -1 --format='%h %s' | cut -c1-70)"
+	say "commit: $BUILT"
+	run bash "$dir/install-driver.sh" --core --yes --in-terminal < /dev/null ||
+		{ say "${R}Stopping: installing the driver failed.${N}"; exit 1; }
+}
+
+tester_cases() {
+	cat <<EOF
+
+${B}Cases that need testers with other equipment${N}
+These cannot be tested by the maintainer. If you can, run the part named
+and post the summary in the issue (also when everything passes).
+
+  Original Game Capture HD (USB IDs 0fd9:0044, 004e, 0051)
+    Run: the composite (and other) parts, deep, with that model connected.
+    Issue: $ISSUE_ORIGINAL
+
+  HDMI 1080i (a source that outputs 1080i over HDMI without HDCP)
+    Run: the HDMI part, deep (part still to come).
+    Issue: $ISSUE_HDMI_1080I
+EOF
+}
+
+menu() {
+	local i a name
+	while :; do
+		printf '\n%sElgato Game Capture HD test suite%s (suite %s)\n' "$B" "$N" "$SUITE_VERSION"
+		printf 'Device: %s, USB 0fd9:%s, driver %s\n\n' "${DEV:-none}" "$(usb_id)" "$(driver_version)"
+		i=1
+		for name in "${PARTS[@]}"; do
+			printf '  %d) %s\n' $i "${PART_TITLE[$name]}"
+			i=$((i + 1))
+		done
+		printf '  f) Full fast test (every part, general function)\n'
+		printf '  d) Full deep test (every part, everything)\n'
+		printf '  o) Cases that need other testers (original model, HDMI 1080i)\n'
+		printf '  l) List the cases\n'
+		printf '  q) Quit\n'
+		printf '  (still to come: %s)\n' "$LATER"
+		printf '\nChoice: '
+		read -r a
+		case "$a" in
+		q|Q) exit 0 ;;
+		f|F) MODE=fast; RUN_NAME=all; return ;;
+		d|D) MODE=deep; RUN_NAME=all; return ;;
+		o|O) tester_cases ;;
+		l|L) list_cases ;;
+		*)
+			if [[ "$a" =~ ^[0-9]+$ ]] && [ "$a" -ge 1 ] && [ "$a" -le ${#PARTS[@]} ]; then
+				RUN_NAME=${PARTS[$((a - 1))]}
+				if ask_yn "Deep test (everything, longer)? No: fast test"; then MODE=deep; else MODE=fast; fi
+				return
+			fi ;;
+		esac
+	done
+}
+
+# ------------------------------------------------------------ main
+
+REPO_DIR=
+REPO_BRANCH=
+BUILT=
+RUN_NAME=
+ARGS=()
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--repo) REPO_DIR=$2; shift 2 ;;
+	--branch) REPO_BRANCH=$2; shift 2 ;;
+	--list) list_cases; exit 0 ;;
+	-h|--help) sed -n '3,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+	*) ARGS+=("$1"); shift ;;
+	esac
+done
+need_tools
+if [ ${#ARGS[@]} -ge 1 ]; then
+	RUN_NAME=${ARGS[0]}
+	MODE=${ARGS[1]:-fast}
+	case "$MODE" in fast|deep) ;; *) echo "fast or deep, not '$MODE'" >&2; exit 2 ;; esac
+	if [ "$RUN_NAME" != all ] && [ -z "${PART_TITLE[$RUN_NAME]:-}" ]; then
+		echo "unknown part '$RUN_NAME'; parts: ${PARTS[*]} (or all)" >&2
+		exit 2
+	fi
+fi
+
+STAMP=$(date +%Y%m%d-%H%M%S)
+mkdir -p "$HOME/gchd-test-logs"
+WORK=$HOME/gchd-test-logs/suite-$STAMP
+mkdir -p "$WORK"
+LOG=$WORK.log
+sudo -v || exit 1
+trap 'viewer_stop; debug_off; echo; echo "interrupted; log: $LOG"; exit 130' INT
+
+[ -n "$REPO_DIR" ] && build_checkout "$REPO_DIR" "$REPO_BRANCH"
+if ! wait_dev 3; then
+	prompt "Plug in the Elgato Game Capture HD (the driver must be installed)."
+	wait_dev 15 || { say "${R}No Elgato Game Capture HD found (driver installed and loaded?).${N}"; exit 1; }
+fi
+[ -n "$RUN_NAME" ] || menu
+WORK_NEW=$HOME/gchd-test-logs/suite-$RUN_NAME-$MODE-$STAMP
+mv "$WORK" "$WORK_NEW" && mv "$LOG" "$WORK_NEW.log" 2>/dev/null
+WORK=$WORK_NEW; LOG=$WORK.log; touch "$LOG"
+log "gchd-test $RUN_NAME $MODE $STAMP; suite $SUITE_VERSION; device $DEV USB 0fd9:$(usb_id); driver $(driver_version); kernel $(uname -r)"
+
+if [ "$RUN_NAME" = all ]; then
+	for p in "${PARTS[@]}"; do run_part "$p"; done
+else
+	run_part "$RUN_NAME"
+fi
+viewer_stop
+debug_off
+summary
