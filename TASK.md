@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** implemented; hardware test next
+- **Status:** done, merged into `dev` as 0.5.15 (2026-11-28)
 - **Type:** installer (stage 5)
 - **Branch:** `feat/uninstall-firmware` (from `dev` 0.5.14)
 - **TODO items:** T-101 (stage 5)
@@ -52,6 +52,12 @@ unless the user wants to keep it (maintainer, 2026-11-27).
   it, most likely a copy in `~/.local/share/applications`. The test
   lists every entry before the install to confirm.
 
+- T-101 (f198ae6): 10 PASS, 0 FAIL: one menu entry (system settings
+  only, confirmed in the menu), uninstall removes driver, firmware,
+  profile command and menu entry without a question, a new installation
+  extracts the firmware again, capture after the reinstall. Merged as
+  0.5.15.
+
 ## Hardware test (maintainer)
 
 ```sh
@@ -67,16 +73,3 @@ uninstalls and reinstalls.
 
 ## Maintainer comments
 
-=== summary (T-101, f198ae6 T-101: uninstall removes the firmware without asking (maintainer); installer removes stale user menu entries of the settings window (a shortcut was still under Sound & Video))
-PASS | step 2 install: one menu entry | Elgato's installer file in firmware/
-PASS | step 2 install: one menu entry | firmware installed
-PASS | step 2 install: one menu entry | only the installed menu entry
-PASS | step 2 install: one menu entry | Application menu: 'Elgato Game Capture HD' only under System > Preferences > Hardware, no longer under Sound & Video? (If the menu has not refreshed, log out and in once.)
-PASS | step 3 uninstall: driver and firmware removed without a question | driver removed
-PASS | step 3 uninstall: driver and firmware removed without a question | firmware removed, folder gone
-PASS | step 3 uninstall: driver and firmware removed without a question | profile command removed
-PASS | step 3 uninstall: driver and firmware removed without a question | no menu entry left
-PASS | step 4 install extracts the firmware again | firmware extracted again
-PASS | step 4 install extracts the firmware again | driver installed
-
-FAIL: 0  WARN: 0
