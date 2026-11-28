@@ -16,3 +16,5 @@ modules.order
 *.tgz
 *.bin
 *.dll
+# Python caches
+__pycache__/
