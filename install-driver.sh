@@ -116,6 +116,13 @@ pkg_name() { # what -> package name for this distribution
 	build:pacman) echo "base-devel" ;;
 	build:*) echo "make gcc" ;;
 	dkms:*) echo "dkms" ;;
+	cxx:apt-get) echo "g++" ;;
+	cxx:pacman) echo "base-devel" ;;
+	cxx:*) echo "gcc-c++" ;;
+	qtdev:apt-get) echo "qt6-base-dev" ;;
+	qtdev:dnf) echo "qt6-qtbase-devel" ;;
+	qtdev:pacman) echo "qt6-base" ;;
+	qtdev:*) echo "qt6-base-devel" ;;
 	obsdev:apt-get) echo "libobs-dev" ;;
 	obsdev:pacman) echo "obs-studio" ;;
 	obsdev:*) echo "obs-studio-devel" ;;
@@ -285,7 +292,9 @@ install_obs() {
 	fi
 	need cmake command -v cmake
 	need pkgconfig command -v pkg-config
+	need cxx command -v g++
 	need obsdev pkg-config --exists libobs
+	need qtdev pkg-config --exists Qt6Widgets
 	need ffmpegdev pkg-config --exists libavformat libavcodec libavutil
 	rm -rf "$OBS_BUILD"
 	mkdir -p "$BUILD"

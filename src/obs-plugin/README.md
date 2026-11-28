@@ -42,8 +42,8 @@ properties.
   window and text menu; the driver's `gchd-profile` command, installed
   with the core). In the Profile field choose a saved profile or type a
   new name; Load applies the profile at once, Save saves the current
-  settings under the name (replacing a saved profile and Delete ask for
-  a second click). The result is shown below the buttons.
+  settings under the name, Delete removes the profile. Replacing a saved
+  profile and deleting ask first; an error is shown in a message box.
 - **Bitrate:** one slider in Mbit/s: below 10.00 variable (VBR, shown as
   the average, half the bitrate), from 10.00 constant (CBR, the bitrate),
   up to the highest bitrate of the output mode (480 × 360 15, 640 × 480
@@ -76,10 +76,11 @@ programs cannot capture from the device at the same time.
 
 The installer of the repository installs the plugin
 (`./install-driver.sh --obs`). By hand: the development files of OBS
-(libobs) and FFmpeg (libavformat, libavcodec, libavutil), `cmake` and
-`pkg-config` (Debian and Ubuntu: `libobs-dev`, `libavformat-dev`,
-`libavcodec-dev`, `libavutil-dev`; other distributions have equivalent
-packages).
+(libobs, the frontend API), FFmpeg (libavformat, libavcodec, libavutil)
+and Qt 6 Widgets (the profile question boxes, the Qt of OBS), a C and C++
+compiler, `cmake` and `pkg-config` (Debian and Ubuntu: `libobs-dev`,
+`libavformat-dev`, `libavcodec-dev`, `libavutil-dev`, `qt6-base-dev`,
+`g++`; other distributions have equivalent packages).
 
 ```sh
 cmake -S src/obs-plugin -B build/obs-plugin -DCMAKE_BUILD_TYPE=Release
