@@ -11,8 +11,9 @@
 #   ./install-driver.sh --obs        the core and the OBS plugin
 #   ./install-driver.sh --all        the core and both optional parts
 #                                    (--settings --obs is the same)
-#   ./install-driver.sh --uninstall  remove everything (with --settings or
-#                                    --obs: only that optional part)
+#   ./install-driver.sh --uninstall  remove everything, the firmware after
+#                                    asking (with --settings or --obs: only
+#                                    that optional part)
 #   ./install-driver.sh --yes        do not ask (installs everything and the
 #                                    packages it needs)
 #
@@ -168,7 +169,27 @@ uninstall_driver() {
 	sudo depmod -a
 	sudo rm -f "/etc/udev/rules.d/$UDEV_RULE" "/etc/udev/rules.d/$UDEV_DEVICE_RULE" "$SETTINGS" "$PROFILE_TOOL"
 	sudo udevadm control --reload 2>/dev/null
-	ok "Driver removed. The firmware in $FIRMWARE_DIR and saved profiles (~/.config/elgato-gchd) were kept."
+	ok "Driver removed. Saved profiles (~/.config/elgato-gchd) were kept."
+	uninstall_firmware
+}
+
+# The firmware files the installer extracted (other files in the folder
+# stay; the folder goes when it is empty). Asks first (Enter = yes).
+uninstall_firmware() {
+	local f found=0
+	for f in $FIRMWARE_FILES; do
+		[ -e "$FIRMWARE_DIR/$f" ] && found=1
+	done
+	[ $found = 1 ] || return 0
+	if ! ask_yes "Remove the firmware in $FIRMWARE_DIR too? (A new installation then needs Elgato's installer file again.)"; then
+		ok "Firmware kept in $FIRMWARE_DIR."
+		return 0
+	fi
+	for f in $FIRMWARE_FILES; do
+		sudo rm -f "$FIRMWARE_DIR/$f"
+	done
+	sudo rmdir "$FIRMWARE_DIR" 2>/dev/null
+	ok "Firmware removed from $FIRMWARE_DIR."
 }
 
 uninstall_settings() {

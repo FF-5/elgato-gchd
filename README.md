@@ -69,8 +69,9 @@ the programs use no distribution-specific features.
    the OBS and FFmpeg development packages, `cmake`) are named and can be
    installed on request.
 
-Remove everything with `./install-driver.sh --uninstall` (the firmware is
-kept), or one optional part with `--uninstall --settings` or
+Remove everything with `./install-driver.sh --uninstall` (it asks whether
+to remove the firmware too; `--yes` removes it without asking; saved
+profiles are kept), or one optional part with `--uninstall --settings` or
 `--uninstall --obs`.
 
 ### Manual installation

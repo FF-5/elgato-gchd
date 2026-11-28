@@ -117,7 +117,7 @@ In this order, each its own task and branch:
       settings window, text menu and OBS plugin (Qt question boxes); the
       settings window as "Elgato Game Capture HD" in the system settings
       menu (0.5.14, 2026-11-28).
-- [ ] **T-101 (S)** Uninstall removes the firmware too (maintainer,
+- [ ] **T-101 (S)** (In work on `feat/uninstall-firmware`.) Uninstall removes the firmware too (maintainer,
       2026-11-27): `install-driver.sh --uninstall` also deletes the firmware
       files it extracted (`/lib/firmware/gchd/`), after asking (default yes;
       `--yes` without asking); today it keeps them.
