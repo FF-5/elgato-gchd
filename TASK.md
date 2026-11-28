@@ -1,75 +1,93 @@
-# TASK T-101 — Uninstall removes the firmware
+# TASK T-102 — Test suite
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** done, merged into `dev` as 0.5.15 (2026-11-28)
-- **Type:** installer (stage 5)
-- **Branch:** `feat/uninstall-firmware` (from `dev` 0.5.14)
-- **TODO items:** T-101 (stage 5)
+- **Status:** plan (2026-11-28); maintainer to confirm
+- **Type:** test suite (stage 5), on the orphan branch `tests`
+- **Branch:** `feat/test-suite` (from `dev` 0.5.15) for TASK/TODO; the
+  suite itself on `tests` (RULES B3)
+- **TODO items:** T-102 (stage 5), T-090 (runs it)
 
 ## Why
 
-`./install-driver.sh --uninstall` removed the driver but kept the firmware
-in `/lib/firmware/gchd/`. A full uninstall should leave nothing behind
-unless the user wants to keep it (maintainer, 2026-11-27).
+One test file per task tested what changed. Before the release the whole
+driver and its programs need deep tests, a quick check, and a way for
+other people to test what the maintainer cannot (the original GCHD
+models, HDMI 1080i) and report it in an issue (maintainer, 2026-11-27).
 
-## Goal (acceptance criteria)
+## Goal (acceptance criteria, draft)
 
-1. `--uninstall` removes the extracted firmware too, always, without a
-   question: it has no use without the driver (maintainer, 2026-11-28;
-   during development the test runner reinstalls without uninstalling, and
-   a new installation extracts the firmware again from the installer file
-   in `firmware/`).
-2. Only the four firmware files the installer extracted are removed; the
-   folder goes when it is empty (other files stay).
-3. A new installation extracts the firmware again.
-4. Saved profiles are kept; the README says what the uninstall does.
-5. The settings window has one menu entry, under the system settings
-   (maintainer 2026-11-28: a shortcut was still under *Sound & Video*):
-   the installer and the uninstall remove copies of its entry in the
-   user's applications folder (`~/.local/share/applications`; a menu
-   editor saves such a copy, which keeps the old categories).
+1. Orphan branch `tests`, separate from development and releases; a
+   tester fetches only it.
+2. One launcher, `gchd-test`, with a menu: one input (composite,
+   S-video, component, HDMI) or program (settings window, text menu, OBS
+   plugin, installer), the full deep test, the full fast test, and the
+   cases that need outside testers with a direct link to their GitHub
+   issue.
+3. Driver tests per input, automated: the tester is only asked to change
+   cables/inputs or the source's mode (with a viewer window open, as with
+   the PS3). Everything for that input: each source mode the tester has
+   and mode changes while capturing, output sizes, stretch / Allow
+   50/60 fps / colour range, bitrate modes and limits, picture settings
+   and audio gain, formats, close and reopen, unplug while capturing,
+   settings kept after replug and module reload, v4l2-compliance.
+4. Program tests (settings window, text menu, OBS plugin, installer): the
+   tester uses the program as told; the suite checks the result through
+   the driver.
+5. Each test case is tagged deep or fast in one place; the fast test runs
+   the fast ones of every part (general function in a short time).
+6. At the end a summary to paste into an issue: device (USB ID), kernel,
+   distribution, driver version, PASS/FAIL/SKIP per case, the log file.
+7. A README for testers: what each part needs (sources, cables, OBS),
+   how to run it, how to report.
 
-## Done so far
+## Plan (proposed; open points below)
 
-- `install-driver.sh`: `uninstall_firmware()` after `uninstall_driver()`,
-  no question; `remove_user_shortcuts()` (entries with
-  `Exec=...gchd-settings-gui` in the user's applications folder) on
-  install and uninstall of the settings programs; header comment and
-  README.
-- Checked with scratch folders: firmware files and the empty folder
-  removed, an extra file stays; a stale user menu entry removed, other
-  entries untouched.
+1. **Layout** of `tests`:
+   `gchd-test` (launcher), `lib/runner.sh` (the helpers of today's
+   `gchd-test.sh`: steps, `expect`, `capture`, `prompt`, `confirm`,
+   dmesg check, summary), `lib/links.conf` (issue links, in one place:
+   the repository URL may change with T-093), `parts/` one file per part
+   (`composite`, `svideo`, `component`, `hdmi`, `window`, `menu`, `obs`,
+   `install`), `README.md`.
+2. **Test cases** as functions registered with a tag:
+   `case fast "composite: capture 480i" t_composite_capture`; a part runs
+   its cases in order; the fast test only those tagged fast.
+3. **What is tested:** the installed driver (as users have it). For the
+   maintainer an option builds and installs a checkout first
+   (`--repo DIR --branch NAME`, as today).
+4. **Sources the tester has:** at the start of each part the suite asks
+   which sources and modes are available (e.g. composite: NTSC 480i, PAL
+   576i, 240p/288p; component: 480i … 1080p; HDMI: which modes the
+   source can output); cases for missing ones are SKIP, not FAIL.
+5. **Automatic checks where eyes were needed so far:** picture settings
+   measured on captured frames (`ffmpeg` `signalstats`: brightness moves
+   the average luma, saturation −100 gives zero saturation, contrast
+   widens the luma spread); audio gain measured as the level difference
+   with a steady sound (when the tester has one, else only "louder /
+   quieter"). `confirm` stays for what cannot be measured.
+6. **Outside-tester cases:** the menu lists "Original Game Capture HD
+   (0044/004e/0051)" and "HDMI 1080i" with their issue links; each runs
+   the matching part and ends with the summary for the issue. The issues
+   are created at the first `master` merge (T-100); until then the links
+   point to the repository's issue list.
+7. **Delivered in pieces**, each tested on hardware before the next:
+   (a) framework, launcher, composite deep and fast; (b) S-video,
+   component, HDMI; (c) settings window, text menu, OBS plugin,
+   installer; (d) outside-tester cases, README, issue texts for T-100.
 
-## Findings
+## Open points (maintainer)
 
-- Maintainer (2026-11-28): asking whether to keep the firmware is poor
-  for users; the release always removes it.
-- Maintainer (2026-11-28): the settings window still had a shortcut under
-  *Applications > Sound & Video*. The repository installs only
-  `/usr/local/share/applications/elgato-gchd-settings.desktop` (now
-  `Categories=Settings;HardwareSettings;`); the other entry is outside
-  it, most likely a copy in `~/.local/share/applications`. The test
-  lists every entry before the install to confirm.
-
-- T-101 (f198ae6): 10 PASS, 0 FAIL: one menu entry (system settings
-  only, confirmed in the menu), uninstall removes driver, firmware,
-  profile command and menu entry without a question, a new installation
-  extracts the firmware again, capture after the reinstall. Merged as
-  0.5.15.
+- Test the installed driver by default, with building a checkout as an
+  option (proposed), or always build from a checkout?
+- Picture and audio checks measured automatically (proposed), keeping
+  `confirm` only for what cannot be measured?
+- The current `tools/gchd-test.sh` and `tools/tests/` stay on `tools` for
+  task tests until the suite replaces them (proposed), or move now?
 
 ## Hardware test (maintainer)
 
-```sh
-cd ~ && git -C elgato-gchd fetch origin
-git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
-mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-101.sh > tests/T-101.sh
-bash gchd-test.sh T-101 --branch feat/uninstall-firmware
-```
-
-Needs Elgato's installer file (`GameCaptureSetup*.msi`) in the
-repository's `firmware/` folder and the PS3 on composite. The test
-uninstalls and reinstalls.
+Not yet.
 
 ## Maintainer comments
 
