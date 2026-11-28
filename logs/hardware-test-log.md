@@ -127,3 +127,4 @@ output is in the history of `TASK.md` on the feature branch named in the row.
 | 2026-11-28 | `feat/profiles` 04ae5cc (gchd-test.sh T-091) | User profiles | 18 PASS, 17 FAIL: every load refused (menu controls stored as "0 (Variable Bitrate)"); controls too complicated (maintainer). Install, menu location, list, refusals PASS. |
 | 2026-11-28 | `feat/profiles` 468c0f0 (gchd-test.sh T-091, second run) | User profiles | 32 PASS, 0 FAIL. Maintainer on OBS: no replace question, deleted profile stayed in the list, permanent message (OBS does not rebuild shown properties after a button). |
 | 2026-11-28 | `feat/profiles` bfe6f1a (gchd-test.sh T-091, third run) | OBS profile controls | 15 PASS, 0 FAIL. T-091 merged as 0.5.14. |
+| 2026-11-28 | `feat/uninstall-firmware` f198ae6 (gchd-test.sh T-101) | Uninstall with the firmware, menu entry | 10 PASS, 0 FAIL. Merged as 0.5.15. |
