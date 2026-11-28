@@ -2,7 +2,7 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** plan (2026-11-28); maintainer to confirm
+- **Status:** plan agreed (2026-11-28); first the logging task T-103, then piece (a)
 - **Type:** test suite (stage 5), on the orphan branch `tests`
 - **Branch:** `feat/test-suite` (from `dev` 0.5.15) for TASK/TODO; the
   suite itself on `tests` (RULES B3)
@@ -53,9 +53,16 @@ models, HDMI 1080i) and report it in an issue (maintainer, 2026-11-27).
 2. **Test cases** as functions registered with a tag:
    `case fast "composite: capture 480i" t_composite_capture`; a part runs
    its cases in order; the fast test only those tagged fast.
-3. **What is tested:** the installed driver (as users have it). For the
-   maintainer an option builds and installs a checkout first
-   (`--repo DIR --branch NAME`, as today).
+3. **What is tested:** one driver build for everybody, no separate
+   development version. The detailed log messages the tests rely on move
+   behind a `debug` module parameter (T-103), off by default and
+   switchable while the driver runs
+   (`/sys/module/elgato_gchd/parameters/debug`). The fast test checks
+   function only, on the driver as installed, with the default (quiet)
+   logging; the deep test switches `debug` on for its run and off at the
+   end, so it gets the detailed messages from a release build too. The
+   maintainer can still build and install a checkout first (`--repo DIR
+   --branch NAME`, as today).
 4. **Sources the tester has:** at the start of each part the suite asks
    which sources and modes are available (e.g. composite: NTSC 480i, PAL
    576i, 240p/288p; component: 480i … 1080p; HDMI: which modes the
@@ -76,14 +83,19 @@ models, HDMI 1080i) and report it in an issue (maintainer, 2026-11-27).
    component, HDMI; (c) settings window, text menu, OBS plugin,
    installer; (d) outside-tester cases, README, issue texts for T-100.
 
-## Open points (maintainer)
+## Decisions (maintainer, 2026-11-28)
 
-- Test the installed driver by default, with building a checkout as an
-  option (proposed), or always build from a checkout?
-- Picture and audio checks measured automatically (proposed), keeping
-  `confirm` only for what cannot be measured?
-- The current `tools/gchd-test.sh` and `tools/tests/` stay on `tools` for
-  task tests until the suite replaces them (proposed), or move now?
+- What is tested: the maintainer asked whether the deep test needs a
+  development build with the log messages. Agreed instead (proposal,
+  2026-11-28): the same build for everyone, the detailed messages behind
+  a `debug` parameter (T-103): quiet by default for users, on for the
+  deep test and for troubleshooting (an issue can ask for a log with
+  `debug` on). A second build would be one more thing to install and to
+  keep equal to the release.
+- Everything that can be measured is checked automatically (picture from
+  captured frames, audio levels); the tester checks only the rest.
+- `tools/gchd-test.sh` and `tools/tests/` stay for task tests until the
+  suite replaces them.
 
 ## Hardware test (maintainer)
 
