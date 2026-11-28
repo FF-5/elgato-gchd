@@ -67,3 +67,16 @@ uninstalls and reinstalls.
 
 ## Maintainer comments
 
+=== summary (T-101, f198ae6 T-101: uninstall removes the firmware without asking (maintainer); installer removes stale user menu entries of the settings window (a shortcut was still under Sound & Video))
+PASS | step 2 install: one menu entry | Elgato's installer file in firmware/
+PASS | step 2 install: one menu entry | firmware installed
+PASS | step 2 install: one menu entry | only the installed menu entry
+PASS | step 2 install: one menu entry | Application menu: 'Elgato Game Capture HD' only under System > Preferences > Hardware, no longer under Sound & Video? (If the menu has not refreshed, log out and in once.)
+PASS | step 3 uninstall: driver and firmware removed without a question | driver removed
+PASS | step 3 uninstall: driver and firmware removed without a question | firmware removed, folder gone
+PASS | step 3 uninstall: driver and firmware removed without a question | profile command removed
+PASS | step 3 uninstall: driver and firmware removed without a question | no menu entry left
+PASS | step 4 install extracts the firmware again | firmware extracted again
+PASS | step 4 install extracts the firmware again | driver installed
+
+FAIL: 0  WARN: 0
