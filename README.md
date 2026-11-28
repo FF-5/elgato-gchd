@@ -85,7 +85,7 @@ Driver with DKMS, and the udev rule:
 
 ```sh
 sudo dkms add ./src/driver
-sudo dkms install elgato-gchd/0.5.15
+sudo dkms install elgato-gchd/0.5.16
 sudo modprobe elgato_gchd
 sudo cp udev-rules/55-elgato-gchd-device.rules udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
@@ -171,6 +171,19 @@ ffmpeg -f mpegts -i /dev/elgato-gchd -c copy capture.ts
 The output size (720 × 480/576, 640 × 480, 480 × 360), bitrate and other
 settings are set with `v4l2-ctl` (`-v width=…,height=…`, `-c video_bitrate=…`);
 see [`docs/video-output.md`](docs/video-output.md).
+
+### Troubleshooting
+
+The driver logs warnings, errors and its main events (device ready,
+source detected with its mode, signal lost) to the kernel log
+(`sudo dmesg`). For a detailed log, switch the `debug` parameter on,
+repeat what went wrong, and look at `sudo dmesg` (or attach it to a
+report):
+
+```sh
+echo 1 | sudo tee /sys/module/elgato_gchd/parameters/debug
+echo 0 | sudo tee /sys/module/elgato_gchd/parameters/debug    # off again
+```
 
 ## Documentation
 

@@ -33,13 +33,14 @@ DKMS:
 
 ```sh
 sudo dkms add ./src/driver
-sudo dkms install elgato-gchd/0.5.15
+sudo dkms install elgato-gchd/0.5.16
 ```
 
 ## Module parameters
 
 | Parameter | Default | Meaning |
 |---|---|---|
+| `debug` | `N` | Log detailed messages (every step of detection, capture start and stop, encoder restarts, transfer statistics) for troubleshooting; can be changed while the driver is loaded (`/sys/module/elgato_gchd/parameters/debug`). Without it the driver logs warnings, errors, the device being ready, the detected source and its mode, a lost signal and mode changes while capturing. |
 | `trace_mailbox` | `N` | Log every mailbox transfer. |
 | `ring_bytes` | 64 MiB | Maximum size of the frame buffer. |
 | `signal_active_retries` | 3 | Signal measurement retries when timing is detected. |

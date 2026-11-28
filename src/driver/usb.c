@@ -166,7 +166,7 @@ static int gchd_load_firmware(struct gchd *d, const char *name)
    break;
   }
 
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "firmware chunk offset=%zu size=%zu OUT ep 0x%02x maxpacket=%u speed=%u alt=%u\n",
            off, n, GCHD_EP_FW_OUT, usb_endpoint_maxp(&ep->desc), d->udev->speed,
            d->intf->cur_altsetting->desc.bAlternateSetting);
@@ -471,7 +471,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
  if (d->family == GCHD_FAMILY_HDNEW &&
      (command == GCHD_SCMD_IDLE || command == GCHD_SCMD_INIT ||
       command == GCHD_SCMD_STATE_CHANGE))
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "SCMD write succeeded: req=0xb8 value=0x0000 index=0x0000 payload=%02x %02x %02x %02x\n",
            payload_new[0], payload_new[1], payload_new[2], payload_new[3]);
 
@@ -491,7 +491,7 @@ int gchd_scmd(struct gchd *d, u8 command, u8 mode, u16 data)
   r = gchd_interrupt_pend(d);
   if (r)
    return r;
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "SCMD interrupt completed: command=0x%02x\n", command);
   for (tries = 0; tries < 500; ++tries) {
    r = gchd_req_read16(d, GCHD_BANK_SYS, GCHD_REG_HDNEW_SCMD_RECEIPT, &rb);
@@ -558,7 +558,7 @@ static int gchd_complete_state_change(struct gchd *d, u16 current_state, u16 nex
        (tries < 16 || (tries % 100) == 0 ||
         state != last_state || completion != last_completion ||
         clear_index != last_clear_index)) {
-    dev_info(&d->intf->dev,
+    gchd_dbg(&d->intf->dev,
              "START poll=%d state=0x%04x completion(0900:0074)=0x%04x clear_index(0900:01b0)=0x%04x ack=%u\n",
              tries, state, completion, clear_index,
              !!(completion & GCHD_SCMD_COMPLETE_BIT));
@@ -646,7 +646,7 @@ int gchd_state_cmd(struct gchd *d, u8 command, u8 mode, u16 data,
   er1 = gchd_req_read16(d, GCHD_BANK_CTRL, GCHD_REG_ENABLE_SHADOW, &enable_state);
   er2 = gchd_req_read16(d, GCHD_BANK_CTRL, GCHD_REG_ENABLE, &enable);
   er3 = gchd_req_read16(d, GCHD_BANK_CTRL, GCHD_REG_SCMD_COMPLETE, &completion);
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "START before SCMD: state=0x%04x enable_state=0x%04x (r=%d) enable=0x%04x (r=%d) completion=0x%04x (r=%d) saved=0x%04x hw_state=0x%04x hw_enable=0x%04x\n",
            current_state, enable_state, er1, enable, er2, completion, er3,
            d->saved_enable_state, d->hw_enable_state, d->hw_enable_register);
@@ -1106,7 +1106,7 @@ int gchd_hw_init(struct gchd *d)
  }
 
 processor_state_ready:
- dev_info(&d->intf->dev, "device idle, processor state 0x%06x\n", magic);
+ gchd_dbg(&d->intf->dev, "device idle, processor state 0x%06x\n", magic);
  gchd_mark(d, "firmware ready");
  return 0;
 }
@@ -1212,7 +1212,7 @@ static int gchd_hw_shutdown_steps(struct gchd *d, const char **step)
   state &= GCHD_STATE_MASK;
   if (state != GCHD_STATE_STOP)
    return -EIO;
-  dev_info(&d->intf->dev, "shutdown: device in STOP after RESET; IDLE and RESET again\n");
+  gchd_dbg(&d->intf->dev, "shutdown: device in STOP after RESET; IDLE and RESET again\n");
   *step = "IDLE (after STOP)";
   r = gchd_state_cmd(d, GCHD_SCMD_IDLE, 0, 0, GCHD_STATE_IDLE);
   if (r) return r;
@@ -1244,7 +1244,7 @@ int gchd_hw_shutdown(struct gchd *d)
            "hardware shutdown failed at step '%s': %d (state 0x%04x before, 0x%04x now)\n",
            step, r, before, after);
  else
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "hardware shutdown done (state 0x%04x before, 0x%04x now)\n",
            before, after);
  return r;
