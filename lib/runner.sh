@@ -146,15 +146,18 @@ debug_off() {
 	return 0
 }
 
-# find_dev: the driver's video device into DEV (GCHD_DEV overrides).
+# find_dev: the driver's video device into DEV: GCHD_DEV, else the
+# installer's link /dev/elgato-gchd, else the first video device of the
+# driver (any name).
 find_dev() {
-	local v name
+	local v
 	[ -n "${GCHD_DEV:-}" ] && { DEV=$GCHD_DEV; return 0; }
+	[ -e /dev/elgato-gchd ] && { DEV=/dev/elgato-gchd; return 0; }
 	for v in /sys/class/video4linux/video*; do
 		[ -e "$v/name" ] || continue
 		[ "$(basename "$(readlink -f "$v/device/driver")")" = elgato_gchd ] || continue
-		name=$(cat "$v/name")
-		case "$name" in *"(H.264)"|"Elgato Game Capture HD") DEV=/dev/$(basename "$v"); return 0 ;; esac
+		DEV=/dev/$(basename "$v")
+		return 0
 	done
 	return 1
 }
