@@ -34,7 +34,8 @@ never cleared.
 - For the deep test's audio case: a steady sound (a constant tone), for
   example a phone with a 3.5 mm to RCA cable. Without it that case is
   skipped.
-- A desktop session (the deep test opens a window with the picture).
+- A desktop session: a window shows the picture whenever you are asked to
+  set the source or watch a change.
 
 ## Run it
 

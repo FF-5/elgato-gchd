@@ -19,10 +19,13 @@ a_expect() {
 # Frame rate of the scaled sizes (640x480, 480x360).
 a_rate() { case "$BASE" in 480i) echo 30000/1001 ;; *) echo 25/1 ;; esac; }
 
-# source_mode MODE: ask the tester to set the source to MODE (once).
+# source_mode MODE: ask the tester to set the source to MODE (once), with
+# a window showing the source's picture to do it.
 source_mode() {
 	[ "$SRC" = "$1" ] && return 0
-	prompt "Set the source on $ANAME to $1 (keep a colourful picture on screen, e.g. a game's title or menu screen)."
+	viewer_start "Elgato $ANAME"
+	prompt "A window 'Elgato $ANAME' shows the source. Set the source to $1, then keep a colourful picture on screen (e.g. a game's title or menu screen). The window closes when you press Enter."
+	viewer_stop
 	SRC=$1
 }
 
@@ -36,7 +39,10 @@ a_defaults() {
 }
 
 a_setup() {
-	prompt "Connect the source to the Elgato's $ANAME input (video and the red/white audio) and switch it on."
+	input $AIN
+	viewer_start "Elgato $ANAME"
+	prompt "Connect the source to the Elgato's $ANAME input (video and the red/white audio) and switch it on; a window 'Elgato $ANAME' shows its picture. The window closes when you press Enter."
+	viewer_stop
 	have ntsc "Can the source output NTSC (60 Hz) 480i on $ANAME?"
 	have pal "Can the source output PAL (50 Hz) 576i on $ANAME?"
 	if [ "${HAVE[ntsc]}" = 1 ]; then BASE=480i; elif [ "${HAVE[pal]}" = 1 ]; then BASE=576i; else BASE=; fi
