@@ -642,7 +642,7 @@ int gchd_transcoder_init(struct gchd *d)
  if (r)
   return r;
 
- dev_info(&d->intf->dev, "transcoder defaults loaded\n");
+ gchd_dbg(&d->intf->dev, "transcoder defaults loaded\n");
  return 0;
 }
 
