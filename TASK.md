@@ -1,75 +1,66 @@
-# TASK T-101 — Uninstall removes the firmware
+# TASK T-103 — Release logging
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** done, merged into `dev` as 0.5.15 (2026-11-28)
-- **Type:** installer (stage 5)
-- **Branch:** `feat/uninstall-firmware` (from `dev` 0.5.14)
-- **TODO items:** T-101 (stage 5)
+- **Status:** done, merged into `dev` as 0.5.16 (2026-11-28)
+- **Type:** driver (stage 5), before T-102
+- **Branch:** `feat/release-logging` (from `dev` 0.5.15)
+- **TODO items:** T-103 (stage 5)
 
 ## Why
 
-`./install-driver.sh --uninstall` removed the driver but kept the firmware
-in `/lib/firmware/gchd/`. A full uninstall should leave nothing behind
-unless the user wants to keep it (maintainer, 2026-11-27).
+The driver logged every step of a capture start to the kernel log (65
+informational messages): useful for troubleshooting and for the tests,
+too much for users. One build for everybody, the details behind a switch
+(maintainer, 2026-11-28; T-102 decision).
 
 ## Goal (acceptance criteria)
 
-1. `--uninstall` removes the extracted firmware too, always, without a
-   question: it has no use without the driver (maintainer, 2026-11-28;
-   during development the test runner reinstalls without uninstalling, and
-   a new installation extracts the firmware again from the installer file
-   in `firmware/`).
-2. Only the four firmware files the installer extracted are removed; the
-   folder goes when it is empty (other files stay).
-3. A new installation extracts the firmware again.
-4. Saved profiles are kept; the README says what the uninstall does.
-5. The settings window has one menu entry, under the system settings
-   (maintainer 2026-11-28: a shortcut was still under *Sound & Video*):
-   the installer and the uninstall remove copies of its entry in the
-   user's applications folder (`~/.local/share/applications`; a menu
-   editor saves such a copy, which keeps the old categories).
+1. Always logged: warnings, errors, and the main events: the device ready
+   (with its video device), the source detected with its mode, a lost
+   signal, mode changes while capturing.
+2. Everything else only with the `debug` module parameter (default off,
+   changeable while the driver is loaded); `timing` and `trace_mailbox`
+   stay separate switches; per-buffer messages stay `dev_dbg` (the
+   kernel's dynamic debug).
+3. The test runner switches `debug` on for its tests and off at the end.
+4. Documented: parameter table, troubleshooting in the README.
 
 ## Done so far
 
-- `install-driver.sh`: `uninstall_firmware()` after `uninstall_driver()`,
-  no question; `remove_user_shortcuts()` (entries with
-  `Exec=...gchd-settings-gui` in the user's applications folder) on
-  install and uninstall of the settings programs; header comment and
-  README.
-- Checked with scratch folders: firmware files and the empty folder
-  removed, an extra file stays; a stale user menu entry removed, other
-  entries untouched.
+- `gchd_dbg()` / `gchd_dbg_ratelimited()` (`elgato_gchd.h`): `dev_info`
+  while `debug` is on. 59 messages moved to them; kept as `dev_info`:
+  "signal detected", "analog mode now …", "… output now …", "input N:
+  signal lost; detecting again" (was `pr_info`), "Elgato Game Capture HD
+  ready as /dev/videoN" (was the probe's lifecycle line).
+- Build without warnings; `debug` in the module's parameters.
+- `tools/gchd-test.sh`: `debug_on` at each step, after prompts and
+  commands (a reinstall or replug loads the module again), `debug_off` at
+  the end and on Ctrl-C.
+- Driver README (parameter table), README (Troubleshooting).
 
 ## Findings
 
-- Maintainer (2026-11-28): asking whether to keep the firmware is poor
-  for users; the release always removes it.
-- Maintainer (2026-11-28): the settings window still had a shortcut under
-  *Applications > Sound & Video*. The repository installs only
-  `/usr/local/share/applications/elgato-gchd-settings.desktop` (now
-  `Categories=Settings;HardwareSettings;`); the other entry is outside
-  it, most likely a copy in `~/.local/share/applications`. The test
-  lists every entry before the install to confirm.
-
-- T-101 (f198ae6): 10 PASS, 0 FAIL: one menu entry (system settings
-  only, confirmed in the menu), uninstall removes driver, firmware,
-  profile command and menu entry without a question, a new installation
-  extracts the firmware again, capture after the reinstall. Merged as
-  0.5.15.
+- T-103 (5a2330d): 8 PASS, 1 FAIL. PASS: `debug` exists and is off after
+  loading; a capture with `debug` off logs only "signal detected" (no
+  step-by-step messages, confirmed); switched on while loaded the details
+  return (capture setup, transfer statistics); switched off, quiet again.
+  FAIL: the ready message read "ready as video0" (the node name without
+  `/dev/`); now "ready as /dev/video0". Also the probe's debug message
+  ended in a literal `\n`; fixed. Text only: merged as 0.5.16, the
+  message checked again at the start of the next hardware test.
 
 ## Hardware test (maintainer)
 
 ```sh
 cd ~ && git -C elgato-gchd fetch origin
 git -C elgato-gchd show origin/tools:tools/gchd-test.sh > gchd-test.sh
-mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-101.sh > tests/T-101.sh
-bash gchd-test.sh T-101 --branch feat/uninstall-firmware
+mkdir -p tests && git -C elgato-gchd show origin/tools:tools/tests/T-103.sh > tests/T-103.sh
+bash gchd-test.sh T-103 --branch feat/release-logging
 ```
 
-Needs Elgato's installer file (`GameCaptureSetup*.msi`) in the
-repository's `firmware/` folder and the PS3 on composite. The test
-uninstalls and reinstalls.
+Needs the PS3 on composite. Note: `gchd-test.sh` changed (it switches
+`debug` on); fetch it again as above.
 
 ## Maintainer comments
 

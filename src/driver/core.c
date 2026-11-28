@@ -241,6 +241,14 @@ static int gchd_set_audio_gain;
 module_param_named(audio_gain, gchd_set_audio_gain, int, 0644);
 MODULE_PARM_DESC(audio_gain, "Analog audio gain in dB (-12 ... 12)");
 /*
+ * Detailed messages for troubleshooting and tests (gchd_dbg()): off by
+ * default, switchable while the driver runs.
+ */
+bool gchd_debug;
+module_param_named(debug, gchd_debug, bool, 0644);
+MODULE_PARM_DESC(debug, "Log detailed messages for troubleshooting (0 off, 1 on)");
+
+/*
  * Latency marks for benchmarks: "gchd-timing: <microseconds> <event>" at
  * requests, device commands and their completion, and the first stream
  * data after START.
@@ -844,7 +852,7 @@ static void gchd_ts(struct gchd *d, const u8 *p, u8 *pes, size_t *n,
   ev.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
   v4l2_event_queue(&d->vdev, &ev);
   WRITE_ONCE(d->signal_present, true);
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "signal present: input=%u; first video TS packet on PID 0x1011\n",
            READ_ONCE(d->input));
  }
@@ -936,8 +944,8 @@ static void gchd_signal_check(struct gchd *d)
   /* RX must not issue control transfers or attempt to stop itself here. */
   if (READ_ONCE(d->capture_active) && READ_ONCE(d->detect_requested))
    schedule_delayed_work(&d->detect_work, 0);
-  pr_info("elgato_gchd: input %u signal lost; scheduling redetection\n",
-          d->input);
+  dev_info(&d->intf->dev, "input %u: signal lost; detecting again\n",
+           d->input);
  }
 }
 
@@ -1131,7 +1139,7 @@ static int gchd_rx(void *arg)
  atomic_set(&d->rx_urb_errors, 0);
  WRITE_ONCE(d->rx_urb_last_status, 0);
  WRITE_ONCE(d->rx_active, true);
- dev_info(&d->intf->dev,
+ gchd_dbg(&d->intf->dev,
           "async bulk-IN starting: ep=0x81 URBs=%u maxpacket=%u; ep=0x84 URBs=%u maxpacket=%u speed=%u alt=%u\n",
           GCHD_RX_URBS_EP_IN, usb_endpoint_maxp(&ep81->desc),
           GCHD_RX_URBS_AUX_IN, usb_endpoint_maxp(&ep84->desc),
@@ -1176,7 +1184,7 @@ static int gchd_rx(void *arg)
    gchd_signal_check(d);
    gchd_deliver(d);
    if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
-    dev_info(&d->intf->dev,
+    gchd_dbg(&d->intf->dev,
              "async bulk-IN stats: reads=%llu bytes=%llu ep84_bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
              (unsigned long long)rx_reads,
              (unsigned long long)rx_bytes,
@@ -1197,7 +1205,7 @@ static int gchd_rx(void *arg)
   rx_reads++;
   if (done->endpoint == GCHD_EP_AUX_IN && done->urb->actual_length > 0) {
    if (!rx_aux_bytes)
-    dev_info(&d->intf->dev,
+    gchd_dbg(&d->intf->dev,
              "bulk-IN: first data on ep=0x84 (%d bytes)\n",
              done->urb->actual_length);
    rx_aux_bytes += done->urb->actual_length;
@@ -1258,7 +1266,7 @@ static int gchd_rx(void *arg)
   }
 
   if (rx_reads <= 5)
-   dev_info(&d->intf->dev,
+   gchd_dbg(&d->intf->dev,
             "bulk-IN first reads: read=%llu ep=0x81 actual=%d total_bytes=%llu\n",
             (unsigned long long)rx_reads, done->urb->actual_length,
             (unsigned long long)rx_bytes);
@@ -1276,7 +1284,7 @@ static int gchd_rx(void *arg)
   }
 
   if (time_after_eq(jiffies, report_jiffies + 5 * HZ)) {
-   dev_info(&d->intf->dev,
+   gchd_dbg(&d->intf->dev,
             "async bulk-IN stats: reads=%llu bytes=%llu ep84_bytes=%llu empty=%llu errors=%llu urb_errors=%d last_status=%d queued=%u start_pending=%u ring_dropped=%llu frames_waiting=%u\n",
             (unsigned long long)rx_reads,
             (unsigned long long)rx_bytes,
@@ -1370,7 +1378,7 @@ static void gchd_detection_worker(struct work_struct *work)
 
    if (!gchd_input_read_analog_mode(d, &interlaced) &&
        interlaced != d->input_interlaced) {
-    dev_info(&d->intf->dev,
+    gchd_dbg(&d->intf->dev,
              "redetection: source is now %s; preparing before stop\n",
              interlaced ? "480i" : "240p");
     gchd_analog_mode_pre_stop(d, interlaced);
@@ -1448,7 +1456,7 @@ static void gchd_detection_worker(struct work_struct *work)
    */
   r = gchd_probe_video_source(d);
   if (r == -ENOLINK) {
-   dev_info_ratelimited(&d->intf->dev, "no signal on input=%u; retrying detection\n",
+   gchd_dbg_ratelimited(&d->intf->dev, "no signal on input=%u; retrying detection\n",
             READ_ONCE(d->input));
    d->input_prepared = false;
    goto retry;
@@ -1646,7 +1654,7 @@ static void gchd_mode_workfn(struct work_struct *work)
    if (r > 0 && ++d->comp_mode_mismatch >= 2) {
     d->comp_mode_mismatch = 0;
     gchd_mark(d, "source mode-change");
-    dev_info(&d->intf->dev,
+    gchd_dbg(&d->intf->dev,
              "%s source mode changed while capturing; detecting again\n",
              d->input == 0 ? "HDMI" : "component");
     WRITE_ONCE(d->signal_present, false);
@@ -1659,7 +1667,7 @@ static void gchd_mode_workfn(struct work_struct *work)
    schedule_delayed_work(&d->mode_work, msecs_to_jiffies(750));
    goto out;
   }
-  dev_info(&d->intf->dev, "encoder restart: output %u -> %u%s\n",
+  gchd_dbg(&d->intf->dev, "encoder restart: output %u -> %u%s\n",
            d->out_active, gchd_out_target(d),
            READ_ONCE(d->enc_dirty) ? ", settings changed" : "");
   gchd_mark(d, "restart encoder");
@@ -1677,7 +1685,7 @@ static void gchd_mode_workfn(struct work_struct *work)
   * changed: restart with the new encoder block.
   */
  if (d->out_active != d->analog_out || READ_ONCE(d->enc_dirty)) {
-  dev_info(&d->intf->dev, "encoder restart: output %u -> %u%s\n",
+  gchd_dbg(&d->intf->dev, "encoder restart: output %u -> %u%s\n",
            d->out_active, d->analog_out,
            READ_ONCE(d->enc_dirty) ? ", settings changed" : "");
   gchd_mark(d, "restart encoder");
@@ -1708,7 +1716,7 @@ static void gchd_mode_workfn(struct work_struct *work)
    if ((std & 0x80) || d->family_mismatch >= 2) {
     d->family_mismatch = 0;
     gchd_mark(d, "source family-change");
-    dev_info(&d->intf->dev,
+    gchd_dbg(&d->intf->dev,
              "decoder status changed while capturing (FA=%x CA=%02x E7=%02x); configuring again\n",
              family, lock, std);
     family_change = true;
@@ -1747,7 +1755,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  if (d->input_height == 576) {
   /* 576i <-> 288p: decoder only, the encoder keeps running. */
   gchd_mark(d, "source mode-change");
-  dev_info(&d->intf->dev, "analog mode change detected: %s -> %s\n",
+  gchd_dbg(&d->intf->dev, "analog mode change detected: %s -> %s\n",
            d->input_interlaced ? "576i" : "288p",
            target_interlaced ? "576i" : "288p");
   WRITE_ONCE(d->stop_pending, true);
@@ -1769,7 +1777,7 @@ static void gchd_mode_workfn(struct work_struct *work)
  }
 
  gchd_mark(d, "source mode-change");
-  dev_info(&d->intf->dev, "analog mode change detected: %s -> %s\n",
+  gchd_dbg(&d->intf->dev, "analog mode change detected: %s -> %s\n",
           d->input_interlaced ? "480i" : "240p",
           target_interlaced ? "480i" : "240p");
 
@@ -1953,7 +1961,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
   d->input_fps_num = 0;
   d->input_fps_den = 0;
 
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "GCHD lifecycle: starting hardware boot/init from V4L2 STREAMON\n");
   /*
    * A boot directly after the shutdown (0.1 s) left the decoder without a
@@ -1964,7 +1972,7 @@ static int gchd_start(struct vb2_queue *q, unsigned int count)
    unsigned int ms = jiffies_to_msecs(d->shutdown_done +
                                       msecs_to_jiffies(GCHD_REBOOT_GAP_MS) - jiffies);
 
-   dev_info(&d->intf->dev, "waiting %u ms after the previous shutdown\n", ms);
+   gchd_dbg(&d->intf->dev, "waiting %u ms after the previous shutdown\n", ms);
    msleep(ms);
   }
   r = gchd_hw_init(d);
@@ -2095,7 +2103,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
 
  if (i > 3)
   return -EINVAL;
- dev_info(&d->intf->dev,
+ gchd_dbg(&d->intf->dev,
           "input switch requested: old=%u new=%u hw_initialized=%u streaming=%u\n",
           READ_ONCE(d->input), i, READ_ONCE(d->hw_initialized),
           READ_ONCE(d->streaming));
@@ -2201,7 +2209,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
   * untouched until the V4L2 client opens the device.
   */
  if (!READ_ONCE(d->hw_initialized)) {
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "input selected: input=%u; detection deferred until device open\n", i);
   mutex_unlock(&d->lifecycle_lock);
   gchd_ctrls_show(d);
@@ -2213,7 +2221,7 @@ static int gchd_set_input(struct gchd *d, unsigned int i)
  WRITE_ONCE(d->detect_requested, true);
  gchd_set_lifecycle(d, GCHD_SOURCE_DETECTION);
  schedule_delayed_work(&d->detect_work, 0);
- dev_info(&d->intf->dev,
+ gchd_dbg(&d->intf->dev,
           "input selected: input=%u; detection scheduled\n", i);
  mutex_unlock(&d->lifecycle_lock);
  gchd_ctrls_show(d);
@@ -2921,7 +2929,7 @@ static int gchd_fop_open(struct file *file)
   }
  }
 
- dev_info(&d->intf->dev,
+ gchd_dbg(&d->intf->dev,
           "GCHD lifecycle: V4L2 open requested by pid=%d comm=%s\n",
           task_pid_nr(current), current->comm);
 
@@ -3133,7 +3141,7 @@ static int gchd_probe(struct usb_interface *i,
  d->intf = i;
  d->family = (enum gchd_family)id->driver_info;
 
- dev_info(&i->dev, "GCHD lifecycle: USB probe; registering V4L2 only\\n");
+ gchd_dbg(&i->dev, "GCHD lifecycle: USB probe; registering V4L2 only\n");
  r = usb_reset_configuration(d->udev);
  if (r)
   goto err;
@@ -3195,8 +3203,8 @@ static int gchd_probe(struct usb_interface *i,
   goto err;
  }
  gchd_set_lifecycle(d, GCHD_ONLINE);
- dev_info(&i->dev,
-          "GCHD lifecycle: USB present; V4L2 registered; hardware stays powered off until STREAMON\n");
+ dev_info(&i->dev, "Elgato Game Capture HD ready as /dev/%s\n",
+          video_device_node_name(&d->vdev));
  return 0;
 
 err:

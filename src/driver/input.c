@@ -620,7 +620,7 @@ static int gchd_be_poll_status(struct gchd *d, u8 *status)
   *status = v;
  if (d->input < 2 || !(v & GCHD_BE_STATUS_FLAG))
   return 0;
- dev_info_ratelimited(&d->intf->dev,
+ gchd_dbg_ratelimited(&d->intf->dev,
                       "back-end status 0x%02x while polling; retrigger\n", v);
  return gchd_be_retrigger(d);
 }
@@ -811,7 +811,7 @@ int gchd_probe_video_source(struct gchd *d)
   if (r) return r;
   value6665 = sum6665 / count6665;
   value6463 = sum6463 / count6463;
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "gchd-diag detect HDMI: samples6665=%u avg6665=0x%04x samples6463=%u avg6463=0x%04x rgb=%u\n",
            count6665, value6665, count6463, value6463, d->rgb_input);
   if (!gchd_hdmi_mode(d, value6463, value6665))
@@ -827,7 +827,7 @@ int gchd_probe_video_source(struct gchd *d)
   value6867=(u32)hi<<8;
   GCHD_FE_R(d, 0x67, lo);
   value6867|=lo;
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "gchd-diag detect component: raw6665=0x%04x raw6867=0x%04x\n",
            (u16)sum6665, (u16)value6867);
   if (!gchd_component_timing_valid(value6867) ||
@@ -865,7 +865,7 @@ int gchd_probe_video_source(struct gchd *d)
   r = gchd_be_poll_status(d, &be_status);
   if (r)
    return r;
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "gchd-diag detect %s: pre-config raw_status=0x%02x mode=0x%x\n",
            d->input == 2 ? "composite" : "s-video", v, v & 0x0f);
   v &= 0x0f;
@@ -877,7 +877,7 @@ int gchd_probe_video_source(struct gchd *d)
 
    /* Diagnostic only: decoder lock status while no family is reported. */
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, lock);
-   dev_info_ratelimited(&d->intf->dev,
+   gchd_dbg_ratelimited(&d->intf->dev,
                         "gchd-diag no analog family: 0x88:FA=0x%02x 0x88:CA=0x%02x 0x98:F5=0x%02x\n",
                         v, lock, be_status);
    return -ENOLINK;
@@ -892,7 +892,7 @@ int gchd_probe_video_source(struct gchd *d)
 
   /* The 0x94 prime already ran before SOURCE_DETECTION. */
   GCHD_DEC_R(d, GCHD_DEC_REG_FAMILY, v);
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "gchd-diag detect %s: raw_status=0x%02x masked_mode=0x%01x\n",
            d->input == 2 ? "composite" : "s-video", v, v & 0x0f);
   v &= 0x0f;
@@ -905,7 +905,7 @@ int gchd_probe_video_source(struct gchd *d)
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, mode);
    if (mode != GCHD_DEC_LOCK_480I && mode != GCHD_DEC_LOCK_240P) {
     /* Transitional value: detect again until the decoder has locked. */
-    dev_info(&d->intf->dev,
+    gchd_dbg(&d->intf->dev,
              "analog format status 0x%02x not locked yet\n", mode);
     return -ENOLINK;
    }
@@ -915,7 +915,7 @@ int gchd_probe_video_source(struct gchd *d)
     return -ENOLINK;
    gchd_analog_note_std(d, 6);
    d->input_interlaced = mode != GCHD_DEC_LOCK_240P;
-   dev_info(&d->intf->dev,
+   gchd_dbg(&d->intf->dev,
             "analog format initial status=0x%02x; configuring %s\n",
             mode, d->input_interlaced ? "480i" : "240p");
   } else if (v == 7) {
@@ -927,20 +927,20 @@ int gchd_probe_video_source(struct gchd *d)
    d->input_interlaced=true; d->input_fps_num=50;
    GCHD_DEC_R(d, GCHD_DEC_REG_LOCK, mode);
    if (mode != GCHD_DEC_LOCK_480I && mode != GCHD_DEC_LOCK_240P) {
-    dev_info(&d->intf->dev,
+    gchd_dbg(&d->intf->dev,
              "analog format status 0x%02x not locked yet\n", mode);
     return -ENOLINK;
    }
    d->input_interlaced = mode != GCHD_DEC_LOCK_240P;
    gchd_analog_note_std(d, 7);
-   dev_info(&d->intf->dev,
+   gchd_dbg(&d->intf->dev,
             "analog format initial status=0x%02x; configuring %s\n",
             mode, d->input_interlaced ? "576i" : "288p");
   } else return -ENOLINK;
   d->input_fps_den=1;
  }
  WRITE_ONCE(d->signal_present,true);
- dev_info(&d->intf->dev,
+ gchd_dbg(&d->intf->dev,
           "gchd-diag detected input=%u mode=%ux%u fps=%u/%u interlaced=%u signal_present=%u\n",
           d->input, d->input_width, d->input_height, d->input_fps_num,
           d->input_fps_den, d->input_interlaced, d->signal_present);
@@ -1561,7 +1561,7 @@ static int gchd_dec_write_standard(struct gchd *d)
  }
  GCHD_DEC_R(d, 0xf1, v);
  if (!val) {
-  dev_info(&d->intf->dev, "decoder standard not reported; 0x88:0A kept\n");
+  gchd_dbg(&d->intf->dev, "decoder standard not reported; 0x88:0A kept\n");
   return 0;
  }
  GCHD_DEC_W(d, 0x0a, val);
@@ -1845,7 +1845,7 @@ bool gchd_analog_pal60_hold(struct gchd *d, u8 e7, unsigned long since,
  if (time_after(jiffies, since + msecs_to_jiffies(GCHD_PAL60_HOLD_MS)))
   return false;
  if (!*logged)
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "%s (0x88:E7=%02x); waiting up to %u ms\n",
            e7 == 0x59 ? "decoder reports 60 Hz, standard 59" :
                         "decoder standard not settled",
@@ -1909,7 +1909,7 @@ int gchd_analog_family_reconfigure(struct gchd *d, bool hold)
    continue;
   }
   if (time_after(jiffies, start + msecs_to_jiffies(4000))) {
-   dev_info(&d->intf->dev,
+   gchd_dbg(&d->intf->dev,
             "family change: decoder not locked (FA=%02x CA=%02x)\n", fa, ca);
    return -ENOLINK;
   }
@@ -2178,7 +2178,7 @@ static int gchd_encoder_program(struct gchd *d)
   dev_err(&d->intf->dev, "capture setup: encoder programming failed: %d\n", r);
   return r;
  }
- dev_info(&d->intf->dev, "capture setup: encoder programming completed\n");
+ gchd_dbg(&d->intf->dev, "capture setup: encoder programming completed\n");
 
  /*
   * Every input finishes with: encoder programming,
@@ -2204,7 +2204,7 @@ static int gchd_encoder_program(struct gchd *d)
            "capture setup: state readback after final SCMD_INIT failed: %d\n", r);
    return r;
   }
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "capture setup: state after final SCMD_INIT=0x%04x\n", state);
  }
  return 0;
@@ -2222,7 +2222,7 @@ static int gchd_input_configure_mode(struct gchd *d)
   * to from the running capture by the mode worker.
   */
  d->out_active = GCHD_OUT_STANDARD;
- dev_info(&d->intf->dev,
+ gchd_dbg(&d->intf->dev,
           "capture setup: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
           d->input, d->input_width, d->input_height, d->input_fps_num,
           d->input_fps_den, d->input_interlaced);
@@ -2234,7 +2234,7 @@ static int gchd_input_configure_mode(struct gchd *d)
    return r;
   }
   d->encoder_started = true;
-  dev_info(&d->intf->dev, "capture setup: encoder start completed\n");
+  gchd_dbg(&d->intf->dev, "capture setup: encoder start completed\n");
  }
 
  /*
@@ -2274,7 +2274,7 @@ static int gchd_input_configure_mode(struct gchd *d)
   dev_err(&d->intf->dev, "capture setup: input configuration failed: %d\n", r);
   return r;
  }
- dev_info(&d->intf->dev, "capture setup: input configuration completed\n");
+ gchd_dbg(&d->intf->dev, "capture setup: input configuration completed\n");
 
  /* HDMI/component: the output size the detected source allows, from the start. */
  if (gchd_hd(d)) {
@@ -2375,7 +2375,7 @@ void gchd_input_log_status(struct gchd *d, const char *why)
 
  if (gchd_input_read_status(d, v))
   return;
- dev_info(&d->intf->dev, "%s: 0x88:FA=%02x CA=%02x E7=%02x F1=%02x\n",
+ gchd_dbg(&d->intf->dev, "%s: 0x88:FA=%02x CA=%02x E7=%02x F1=%02x\n",
           why, v[0], v[1], v[2], v[3]);
 }
 
@@ -2398,14 +2398,14 @@ int gchd_input_check_mode(struct gchd *d)
  family &= 0x0f;
  if ((family == 6 && d->input_height == 576) ||
      (family == 7 && d->input_height == 480)) {
-  dev_info(&d->intf->dev, "source changed to %s during setup; configuring again\n",
+  gchd_dbg(&d->intf->dev, "source changed to %s during setup; configuring again\n",
            family == 7 ? "50 Hz" : "60 Hz");
   return -EAGAIN;
  }
  if (gchd_input_read_analog_mode(d, &interlaced) ||
      interlaced == d->input_interlaced)
   return 0;
- dev_info(&d->intf->dev,
+ gchd_dbg(&d->intf->dev,
           "source changed to %s during setup; configuring again\n",
           d->input_height == 576 ? (interlaced ? "576i" : "288p") :
           (interlaced ? "480i" : "240p"));
@@ -2426,13 +2426,13 @@ int gchd_input_start(struct gchd *d)
   * until a valid source is found, then starts capture automatically.
   */
  if (!d->signal_present) {
-  dev_info(&d->intf->dev,
+  gchd_dbg(&d->intf->dev,
            "gchd-diag refusing START: no signal; input=%u mode=%ux%u interlaced=%u\n",
            d->input, d->input_width, d->input_height, d->input_interlaced);
   return -ENOLINK;
  }
 
- dev_info(&d->intf->dev,
+ gchd_dbg(&d->intf->dev,
           "gchd-diag issuing START: input=%u mode=%ux%u fps=%u/%u interlaced=%u\n",
           d->input, d->input_width, d->input_height, d->input_fps_num,
           d->input_fps_den, d->input_interlaced);
@@ -2443,7 +2443,7 @@ int gchd_input_start(struct gchd *d)
  }
  d->std_hold_until = jiffies + msecs_to_jiffies(1000);
  WRITE_ONCE(d->start_jiffies, jiffies);
- dev_info(&d->intf->dev, "gchd-diag START transition completed\n");
+ gchd_dbg(&d->intf->dev, "gchd-diag START transition completed\n");
  return 0;
 }
 
