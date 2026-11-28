@@ -110,3 +110,20 @@ Needs the PS3 on composite and OBS with the plugin.
 
 ## Maintainer comments
 
+=== summary (T-091, bfe6f1a T-091: OBS profile controls ask in question boxes (replace, delete), refill the shown list, no result messages)
+PASS | step 1 install | OBS plugin built with Qt
+PASS | step 1 install | save composite profile
+PASS | step 1 install | save component profile
+PASS | step 2 OBS plugin | OBS: component profile loaded
+PASS | step 2 OBS plugin | OBS: Profile still shows 'T-091 component', the properties show Component with brightness -10, and no message below the buttons?
+PASS | step 2 OBS plugin | OBS: new profile saved
+PASS | step 2 OBS plugin | OBS: no question for the new name, no message, and 'T-091 obs' is in the Profile list now?
+PASS | step 2 OBS plugin | OBS: a box asks whether to replace profile 'T-091 obs'? Click No.
+PASS | step 2 OBS plugin | OBS: No keeps the profile
+PASS | step 2 OBS plugin | OBS: Yes replaces it
+PASS | step 2 OBS plugin | OBS: a box asks whether to delete profile 'T-091 obs'? Click Yes.
+PASS | step 2 OBS plugin | OBS: profile deleted
+PASS | step 2 OBS plugin | OBS: the Profile field is empty and 'T-091 obs' is no longer in the list?
+PASS | step 2 OBS plugin | OBS: a box says to choose a profile or type a name?
+
+FAIL: 0  WARN: 0
