@@ -3141,7 +3141,7 @@ static int gchd_probe(struct usb_interface *i,
  d->intf = i;
  d->family = (enum gchd_family)id->driver_info;
 
- gchd_dbg(&i->dev, "GCHD lifecycle: USB probe; registering V4L2 only\\n");
+ gchd_dbg(&i->dev, "GCHD lifecycle: USB probe; registering V4L2 only\n");
  r = usb_reset_configuration(d->udev);
  if (r)
   goto err;
@@ -3203,7 +3203,7 @@ static int gchd_probe(struct usb_interface *i,
   goto err;
  }
  gchd_set_lifecycle(d, GCHD_ONLINE);
- dev_info(&i->dev, "Elgato Game Capture HD ready as %s\n",
+ dev_info(&i->dev, "Elgato Game Capture HD ready as /dev/%s\n",
           video_device_node_name(&d->vdev));
  return 0;
 

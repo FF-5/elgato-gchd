@@ -25,7 +25,7 @@ on the `traces` branch.
 
 ## Current state
 
-- `dev` (0.5.15): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
+- `dev` (0.5.16): composite and S-video, NTSC 480i/240p and PAL 576i/288p,
   fresh start, mode changes while capturing (NTSC ~1.5 s with encoder
   restart, PAL ~0.5 s decoder-only), 60 ↔ 50 Hz changes while capturing
   (console reset, power cycle, console swap; ~1-5 s, `docs/composite.md
@@ -95,7 +95,7 @@ Windows software and optional installer parts (T-096, 0.5.10), component
 input, all modes (T-051, 0.5.11), HDMI, all modes, and the bitrate as one
 slider (T-050, 0.5.12), picture settings and analog audio gain (T-080,
 0.5.13), user profiles (T-091, 0.5.14), uninstall with the firmware (T-101,
-0.5.15). Test results: `logs/hardware-test-log.md` on the `traces` branch.
+0.5.15), release logging (T-103, 0.5.16). Test results: `logs/hardware-test-log.md` on the `traces` branch.
 
 ## Stage 4 — Picture and audio settings (after HDMI, before the release)
 
@@ -121,14 +121,11 @@ In this order, each its own task and branch:
 - [x] **T-101 (S)** Uninstall removes the extracted firmware, always,
       without a question (maintainer); the installer removes stale user
       menu entries of the settings window (0.5.15, 2026-11-28).
-- [ ] **T-103 (M)** (In work on `feat/release-logging`.) Release logging (maintainer, 2026-11-28: the driver
-      logs every step of a capture start to dmesg, useful for
-      troubleshooting but too much for users). Kept always: warnings,
-      errors and a few events (device found, firmware loaded, source
-      detected with its mode, capture started/stopped). The rest behind a
-      `debug` module parameter (default off, writable while loaded, also
-      for the `timing` marks); the test files that grep these messages
-      switch it on. Before T-102: the deep tests rely on it.
+- [x] **T-103 (M)** Release logging: warnings, errors and the main events
+      (device ready, source detected, signal lost, mode changes) always;
+      the detailed messages behind the `debug` parameter (off by default,
+      switchable while loaded); the test runner switches it on (0.5.16,
+      2026-11-28).
 - [ ] **T-102 (L)** (Plan in `TASK.md` on `feat/test-suite`.) Test suite shipped with the driver (maintainer,
       2026-11-27), replacing the single pre-release test file. Lives on
       its own orphan branch `tests`, separate from development and releases
