@@ -64,6 +64,21 @@ prompt() {
 	printf '\n%s>>> %s%s\n    Press Enter when done.' "$B" "$*" "$N"
 	read -r _
 	log "PROMPT: $*"
+	debug_on
+}
+
+# The driver's detailed messages (debug parameter, 0.5.16 and later), which
+# the tests read from dmesg: switched on whenever the module may have been
+# loaded again (each step, after prompts and commands); off at the end.
+debug_on() {
+	local p=/sys/module/elgato_gchd/parameters/debug
+	[ -e $p ] && [ "$(cat $p)" != Y ] && echo 1 | sudo tee $p >/dev/null
+	return 0
+}
+debug_off() {
+	local p=/sys/module/elgato_gchd/parameters/debug
+	[ -e $p ] && echo 0 | sudo tee $p >/dev/null
+	return 0
 }
 
 # Visual check: y/n plus an optional note; recorded as PASS/FAIL.
@@ -85,9 +100,12 @@ confirm() {
 
 # Run a command; command and output go to the log, output also to the screen.
 run() {
+	local r
 	log "\$ $*"
 	"$@" 2>&1 | tee -a "$LOG"
-	return "${PIPESTATUS[0]}"
+	r=${PIPESTATUS[0]}
+	debug_on
+	return "$r"
 }
 
 # ---------------------------------------------------------------- module
@@ -199,6 +217,7 @@ step() {
 	log ""
 	log "=== step $STEP: $*"
 	sudo dmesg -C
+	debug_on
 }
 
 # end_step: dmesg of the step into the log, failure lines flagged.
@@ -313,7 +332,7 @@ set_input() {
 
 # ---------------------------------------------------------------- main
 
-trap 'echo; echo "interrupted; log: $LOG"; exit 130' INT
+trap 'debug_off; echo; echo "interrupted; log: $LOG"; exit 130' INT
 sudo -v || exit 1
 log "gchd-test $TEST $STAMP host $(uname -r)"
 say "log: $LOG"
@@ -321,6 +340,7 @@ build
 # shellcheck source=/dev/null
 . "$HERE/tests/$TEST.sh"
 end_step
+debug_off
 
 {
 	echo
