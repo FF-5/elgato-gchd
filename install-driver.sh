@@ -11,9 +11,9 @@
 #   ./install-driver.sh --obs        the core and the OBS plugin
 #   ./install-driver.sh --all        the core and both optional parts
 #                                    (--settings --obs is the same)
-#   ./install-driver.sh --uninstall  remove everything, the firmware after
-#                                    asking (with --settings or --obs: only
-#                                    that optional part)
+#   ./install-driver.sh --uninstall  remove everything, the extracted
+#                                    firmware included (with --settings or
+#                                    --obs: only that optional part)
 #   ./install-driver.sh --yes        do not ask (installs everything and the
 #                                    packages it needs)
 #
@@ -173,18 +173,14 @@ uninstall_driver() {
 	uninstall_firmware
 }
 
-# The firmware files the installer extracted (other files in the folder
-# stay; the folder goes when it is empty). Asks first (Enter = yes).
+# The firmware files the installer extracted (only the driver uses them);
+# other files in the folder stay, the folder goes when it is empty.
 uninstall_firmware() {
 	local f found=0
 	for f in $FIRMWARE_FILES; do
 		[ -e "$FIRMWARE_DIR/$f" ] && found=1
 	done
 	[ $found = 1 ] || return 0
-	if ! ask_yes "Remove the firmware in $FIRMWARE_DIR too? (A new installation then needs Elgato's installer file again.)"; then
-		ok "Firmware kept in $FIRMWARE_DIR."
-		return 0
-	fi
 	for f in $FIRMWARE_FILES; do
 		sudo rm -f "$FIRMWARE_DIR/$f"
 	done
@@ -195,7 +191,22 @@ uninstall_firmware() {
 uninstall_settings() {
 	step "Removing the settings programs"
 	sudo rm -f "$SETTINGS_TOOL" "$SETTINGS_GUI" "$SETTINGS_DESKTOP"
+	remove_user_shortcuts
 	ok "Settings programs removed (the driver keeps its settings)."
+}
+
+# Menu entries of the settings window in the user's own applications
+# folder (a menu editor saves a copy there when an entry is changed; the
+# copy keeps its own menu categories): removed, so only the installed
+# entry is shown.
+remove_user_shortcuts() {
+	local d=${XDG_DATA_HOME:-$HOME/.local/share}/applications f
+	[ -d "$d" ] || return 0
+	for f in "$d"/*.desktop; do
+		[ -f "$f" ] || continue
+		grep -q '^Exec=.*gchd-settings-gui' "$f" || continue
+		rm -f "$f" && echo "Removed the menu entry $f."
+	done
 }
 
 uninstall_obs() {
@@ -290,6 +301,7 @@ install_settings() {
 	fi
 	sudo install -D -m 0755 "$HERE/src/settings/gchd-settings-gui" "$SETTINGS_GUI"
 	sudo install -D -m 0644 "$HERE/src/settings/elgato-gchd-settings.desktop" "$SETTINGS_DESKTOP"
+	remove_user_shortcuts
 	need v4lutils command -v v4l2-ctl
 	if ! /usr/bin/python3 -c "import gi; gi.require_version('Gtk', '3.0')" 2>/dev/null; then
 		cmd=$(pkg_cmd)
