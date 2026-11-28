@@ -121,7 +121,15 @@ In this order, each its own task and branch:
 - [x] **T-101 (S)** Uninstall removes the extracted firmware, always,
       without a question (maintainer); the installer removes stale user
       menu entries of the settings window (0.5.15, 2026-11-28).
-- [ ] **T-102 (L)** Test suite shipped with the driver (maintainer,
+- [ ] **T-103 (M)** (In work on `feat/release-logging`.) Release logging (maintainer, 2026-11-28: the driver
+      logs every step of a capture start to dmesg, useful for
+      troubleshooting but too much for users). Kept always: warnings,
+      errors and a few events (device found, firmware loaded, source
+      detected with its mode, capture started/stopped). The rest behind a
+      `debug` module parameter (default off, writable while loaded, also
+      for the `timing` marks); the test files that grep these messages
+      switch it on. Before T-102: the deep tests rely on it.
+- [ ] **T-102 (L)** (Plan in `TASK.md` on `feat/test-suite`.) Test suite shipped with the driver (maintainer,
       2026-11-27), replacing the single pre-release test file. Lives on
       its own orphan branch `tests`, separate from development and releases
       (maintainer, 2026-11-27; RULES B3); other people fetch it from there
