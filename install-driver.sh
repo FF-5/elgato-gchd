@@ -18,8 +18,9 @@
 #
 # Core: 1. firmware present? If not, extract it with firmware/ (stop when
 # that fails). 2. build the module in build/. 3. install it (DKMS when
-# available) and the udev rules (remembered settings, device name
-# /dev/elgato-gchd), and load it.
+# available), the udev rules (remembered settings, device name
+# /dev/elgato-gchd) and the profile command gchd-profile (used by the
+# settings programs and the OBS plugin), and load it.
 # Settings programs: the settings window gchd-settings-gui (application
 # menu) and the text menu gchd-settings.
 # OBS plugin: build it in build/obs-plugin and install it for the current
@@ -40,6 +41,7 @@ SETTINGS=/etc/modprobe.d/elgato-gchd-settings.conf
 BUILD=$HERE/build
 OBJ=$BUILD/objects/kernel
 KDIR=${KDIR:-/lib/modules/$(uname -r)/build}
+PROFILE_TOOL=/usr/local/bin/gchd-profile
 SETTINGS_TOOL=/usr/local/bin/gchd-settings
 SETTINGS_GUI=/usr/local/bin/gchd-settings-gui
 SETTINGS_DESKTOP=/usr/local/share/applications/elgato-gchd-settings.desktop
@@ -114,6 +116,13 @@ pkg_name() { # what -> package name for this distribution
 	build:pacman) echo "base-devel" ;;
 	build:*) echo "make gcc" ;;
 	dkms:*) echo "dkms" ;;
+	cxx:apt-get) echo "g++" ;;
+	cxx:pacman) echo "base-devel" ;;
+	cxx:*) echo "gcc-c++" ;;
+	qtdev:apt-get) echo "qt6-base-dev" ;;
+	qtdev:dnf) echo "qt6-qtbase-devel" ;;
+	qtdev:pacman) echo "qt6-base" ;;
+	qtdev:*) echo "qt6-base-devel" ;;
 	obsdev:apt-get) echo "libobs-dev" ;;
 	obsdev:pacman) echo "obs-studio" ;;
 	obsdev:*) echo "obs-studio-devel" ;;
@@ -157,9 +166,9 @@ uninstall_driver() {
 	fi
 	sudo rm -f "/lib/modules/$(uname -r)/updates/$MODULE.ko"
 	sudo depmod -a
-	sudo rm -f "/etc/udev/rules.d/$UDEV_RULE" "/etc/udev/rules.d/$UDEV_DEVICE_RULE" "$SETTINGS"
+	sudo rm -f "/etc/udev/rules.d/$UDEV_RULE" "/etc/udev/rules.d/$UDEV_DEVICE_RULE" "$SETTINGS" "$PROFILE_TOOL"
 	sudo udevadm control --reload 2>/dev/null
-	ok "Driver removed. The firmware in $FIRMWARE_DIR was kept."
+	ok "Driver removed. The firmware in $FIRMWARE_DIR and saved profiles (~/.config/elgato-gchd) were kept."
 }
 
 uninstall_settings() {
@@ -239,6 +248,9 @@ install_driver() {
 	sudo install -D -m 0644 "$HERE/udev-rules/$UDEV_DEVICE_RULE" "/etc/udev/rules.d/$UDEV_DEVICE_RULE"
 	sudo udevadm control --reload
 	ok "udev rules installed (settings are remembered; device name /dev/elgato-gchd)."
+	sudo install -D -m 0755 "$HERE/src/settings/gchd-profile" "$PROFILE_TOOL" ||
+		die "cannot install $PROFILE_TOOL."
+	ok "Profile command installed: gchd-profile (named sets of all settings)."
 	sudo modprobe "$MODULE" || die "the driver could not be loaded (see: sudo dmesg)."
 	ok "Driver loaded. Plug in the Game Capture HD; it appears as a /dev/video device."
 	echo "Watch: v4l2-ctl -d /dev/elgato-gchd -v pixelformat=MPEG && ffplay -f mpegts /dev/elgato-gchd"
@@ -266,7 +278,7 @@ install_settings() {
 			sudo $cmd $pk || echo "Installing $pk failed; the settings window needs it."
 		fi
 	fi
-	ok "Settings installed: 'Elgato Game Capture HD Settings' in the application menu (gchd-settings-gui); text menu: gchd-settings"
+	ok "Settings installed: 'Elgato Game Capture HD' in the system settings menu (Preferences > Hardware; gchd-settings-gui); text menu: gchd-settings"
 }
 
 install_obs() {
@@ -280,7 +292,9 @@ install_obs() {
 	fi
 	need cmake command -v cmake
 	need pkgconfig command -v pkg-config
+	need cxx command -v g++
 	need obsdev pkg-config --exists libobs
+	need qtdev pkg-config --exists Qt6Widgets
 	need ffmpegdev pkg-config --exists libavformat libavcodec libavutil
 	rm -rf "$OBS_BUILD"
 	mkdir -p "$BUILD"

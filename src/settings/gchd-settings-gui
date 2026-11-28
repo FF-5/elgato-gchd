@@ -5,7 +5,8 @@ elgato_gchd driver (input, output size, bitrate, stretch of SD input, for
 HDMI and component "Allow 50/60 fps", for HDMI the colour range, picture
 settings, analog audio gain). Changes are applied at once, also while a
 program captures, and the driver remembers them. The window shows changes
-made by other programs (it reads the device every 1.5 s).
+made by other programs (it reads the device every 1.5 s). Profiles: named
+sets of all settings, saved and loaded with gchd-profile.
 
     gchd-settings-gui [DEVICE]   DEVICE: default /dev/elgato-gchd, else the
                                  first device of the driver
@@ -15,6 +16,7 @@ Needs: python3-gi, gir1.2-gtk-3.0, v4l2-ctl (v4l-utils).
 
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -46,6 +48,15 @@ PICTURE = [("Brightness", "brightness", -100, 100),
            ("Saturation", "saturation", -100, 100),
            ("Hue (degrees)", "hue", -180, 180)]
 AUDIO = ("Audio gain (dB)", "analog_audio_gain_db", -12, 12)
+
+
+def profile_command():
+    """gchd-profile: next to this program, else in PATH."""
+    here = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                        "gchd-profile")
+    if os.access(here, os.X_OK):
+        return here
+    return shutil.which("gchd-profile")
 
 
 def find_device():
@@ -122,6 +133,33 @@ class Window(Gtk.Window):
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.add(box)
+
+        # Profiles: choose one, then Load or Delete; Save asks for a new
+        # name or a profile to replace.
+        self.profile_cmd = profile_command()
+        self.profiles = []  # (name, input) in the list's order
+        self.profiles_shown = []  # as shown (the list may be reordered)
+        pbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        prow = Gtk.Box(spacing=12)
+        prow.pack_start(Gtk.Label(label="Profile", xalign=0), False, False, 0)
+        self.profile = Gtk.ComboBoxText()
+        self.profile.set_hexpand(True)
+        self.profile.connect("changed", lambda _c: self.profile_buttons())
+        prow.pack_start(self.profile, True, True, 0)
+        pbox.pack_start(prow, False, False, 0)
+        brow = Gtk.Box(spacing=6, halign=Gtk.Align.END)
+        self.p_load = Gtk.Button(label="Load")
+        self.p_load.connect("clicked", self.on_profile_load)
+        self.p_save = Gtk.Button(label="Save")
+        self.p_save.connect("clicked", self.on_profile_save)
+        self.p_delete = Gtk.Button(label="Delete")
+        self.p_delete.connect("clicked", self.on_profile_delete)
+        for b in (self.p_load, self.p_save, self.p_delete):
+            brow.pack_start(b, False, False, 0)
+        pbox.pack_start(brow, False, False, 0)
+        box.pack_start(pbox, False, False, 0)
+        box.pack_start(Gtk.Separator(), False, False, 0)
+
         grid = Gtk.Grid(column_spacing=12, row_spacing=8)
         box.pack_start(grid, False, False, 0)
 
@@ -204,6 +242,7 @@ class Window(Gtk.Window):
         self.status_timer = 0
 
         self.load()
+        self.load_profiles()
         GLib.timeout_add(REFRESH_MS, self.refresh)
 
     # ------------------------------------------------------------ state
@@ -213,7 +252,7 @@ class Window(Gtk.Window):
         if self.dragging or self.rate_timer or self.pending or self.pic_timer:
             return True
         return any(c.get_property("popup-shown")
-                   for c in (self.input, self.output, self.range))
+                   for c in (self.input, self.output, self.range, self.profile))
 
     def refresh(self):
         if not self.busy_with_user():
@@ -335,6 +374,172 @@ class Window(Gtk.Window):
                   self.stretch, self.allow, self.pic_reset,
                   *(sc for _lab, sc in self.pic.values())):
             w.set_sensitive(on)
+        self.device_ok = on
+        self.profile_buttons()
+
+    # ------------------------------------------------------------ profiles
+
+    def run_profile(self, *args):
+        p = subprocess.run([self.profile_cmd, *args], capture_output=True,
+                           text=True)
+        return p.returncode, (p.stdout + p.stderr).strip()
+
+    def load_profiles(self, select=None):
+        """The profile list, by name (as gchd-profile lists them)."""
+        if not self.profile_cmd:
+            self.profiles = []
+        else:
+            rc, out = self.run_profile("list")
+            found = []
+            for line in out.splitlines() if rc == 0 else []:
+                name, _tab, inp = line.rpartition("\t")
+                if name and inp.isdigit() and int(inp) < len(INPUTS):
+                    found.append((name, int(inp)))
+            self.profiles = found
+        if select is None:
+            i = self.profile.get_active()
+            select = self.profiles_shown[i][0] if 0 <= i < len(
+                getattr(self, "profiles_shown", [])) else None
+        self.profiles_shown = list(self.profiles)
+        self.profile.remove_all()
+        for name, _inp in self.profiles:
+            self.profile.append_text(name)
+        names = [p[0] for p in self.profiles]
+        self.profile.set_active(names.index(select) if select in names else
+                                (0 if names else -1))
+        self.profile_buttons()
+
+    def chosen_profile(self):
+        i = self.profile.get_active()
+        return self.profiles_shown[i][0] if 0 <= i < len(self.profiles_shown) \
+            else None
+
+    def profile_buttons(self):
+        have = self.profile_cmd is not None
+        chosen = have and self.chosen_profile() is not None
+        dev = getattr(self, "device_ok", False)
+        self.profile.set_sensitive(have)
+        self.p_load.set_sensitive(chosen and dev)
+        self.p_save.set_sensitive(have and dev)
+        self.p_delete.set_sensitive(chosen)
+        if not have:
+            self.profile.set_tooltip_text("gchd-profile is not installed")
+
+    def message(self, kind, text, detail="", buttons=Gtk.ButtonsType.OK):
+        dialog = Gtk.MessageDialog(transient_for=self, modal=True,
+                                   message_type=kind, buttons=buttons, text=text)
+        if detail:
+            dialog.format_secondary_text(detail)
+        r = dialog.run()
+        dialog.destroy()
+        return r
+
+    def ask_save_name(self):
+        """Save dialog: a new name, or a profile to replace (chosen from the
+        list). The name, or None."""
+        dialog = Gtk.Dialog(title="Save profile", transient_for=self,
+                            modal=True)
+        dialog.add_buttons("Cancel", Gtk.ResponseType.CANCEL,
+                           "Save", Gtk.ResponseType.OK)
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        area = dialog.get_content_area()
+        area.set_spacing(6)
+        area.set_border_width(12)
+        area.add(Gtk.Label(label="Type a new name, or choose a profile to "
+                           "replace:", xalign=0))
+        names = Gtk.ComboBoxText.new_with_entry()
+        for name, _inp in self.profiles:
+            names.append_text(name)
+        entry = names.get_child()
+        entry.set_activates_default(True)
+        entry.set_max_length(64)
+        entry.set_text(self.chosen_profile() or "")
+        area.add(names)
+        dialog.show_all()
+        r = dialog.run()
+        name = entry.get_text().strip()
+        dialog.destroy()
+        if r != Gtk.ResponseType.OK or not name:
+            return None
+        if not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9 ._-]{0,63}", name):
+            self.message(Gtk.MessageType.WARNING, "Invalid profile name",
+                         "Use letters, digits, space, '.', '_' and '-' "
+                         "(not first), at most 64 characters.")
+            return None
+        return name
+
+    def profile_work(self, what, args, done):
+        """Run gchd-profile in the background; DONE(rc, out) afterwards."""
+        self.pending += 1
+        self.notify(what + " ...", keep=True)
+
+        def work():
+            rc, out = self.run_profile(*args)
+            GLib.idle_add(finish, rc, out)
+
+        def finish(rc, out):
+            self.pending -= 1
+            done(rc, out)
+            if not self.pending:
+                self.load(quiet=True)
+            return False
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def on_profile_load(self, _b):
+        name = self.chosen_profile()
+        if not name or not self.dev:
+            return
+
+        def done(rc, out):
+            if rc == 0:
+                self.notify("Profile '%s' loaded." % name)
+            else:
+                self.notify("Profile '%s' not loaded completely." % name)
+                self.message(Gtk.MessageType.WARNING,
+                             "Profile '%s' not loaded completely" % name, out)
+
+        self.profile_work("Loading profile '%s'" % name,
+                          ["-d", self.dev.path, "load", name], done)
+
+    def on_profile_save(self, _b):
+        if not self.dev:
+            return
+        name = self.ask_save_name()
+        if not name:
+            return
+        args = ["-d", self.dev.path, "save", name]
+        if any(p[0] == name for p in self.profiles):
+            if self.message(Gtk.MessageType.QUESTION,
+                            "Replace profile '%s'?" % name,
+                            "It gets the current settings.",
+                            Gtk.ButtonsType.YES_NO) != Gtk.ResponseType.YES:
+                return
+            args.append("--replace")
+
+        def done(rc, out):
+            if rc == 0:
+                self.notify("Profile '%s' saved." % name)
+            else:
+                self.notify("Profile '%s' not saved." % name)
+                self.message(Gtk.MessageType.WARNING,
+                             "Profile '%s' not saved" % name, out)
+            self.load_profiles(select=name)
+
+        self.profile_work("Saving profile '%s'" % name, args, done)
+
+    def on_profile_delete(self, _b):
+        name = self.chosen_profile()
+        if not name or self.message(
+                Gtk.MessageType.QUESTION, "Delete profile '%s'?" % name, "",
+                Gtk.ButtonsType.YES_NO) != Gtk.ResponseType.YES:
+            return
+        rc, out = self.run_profile("delete", name)
+        if rc != 0:
+            self.message(Gtk.MessageType.WARNING, "Profile not deleted", out)
+        else:
+            self.notify("Profile '%s' deleted." % name)
+        self.load_profiles()
 
     def apply(self, what, *args, side=False):
         """Run a change in the background (the device may take a while);
