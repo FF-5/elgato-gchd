@@ -37,13 +37,13 @@ properties.
   keeps for that output mode (the picture encoded; read from its module
   parameters, the source mode from `VIDIOC_G_DV_TIMINGS`); it is not sent:
   the driver loads it itself.
-- **Profiles:** the "Profiles" group of the properties loads, saves,
-  renames and deletes profiles (named sets of all settings, shared with
-  the settings window and text menu; the driver's `gchd-profile` command,
-  installed with the core). "Load profile" applies the chosen profile at
-  once; "Save to this profile" and "Delete profile" ask for a second click;
-  "Save as new profile" and "Rename to the new name" use the name typed in
-  "New name". The result is shown below the buttons.
+- **Profiles:** the "Profiles" group of the properties loads, saves and
+  deletes profiles (named sets of all settings, shared with the settings
+  window and text menu; the driver's `gchd-profile` command, installed
+  with the core). In the Profile field choose a saved profile or type a
+  new name; Load applies the profile at once, Save saves the current
+  settings under the name (replacing a saved profile and Delete ask for
+  a second click). The result is shown below the buttons.
 - **Bitrate:** one slider in Mbit/s: below 10.00 variable (VBR, shown as
   the average, half the bitrate), from 10.00 constant (CBR, the bitrate),
   up to the highest bitrate of the output mode (480 × 360 15, 640 × 480

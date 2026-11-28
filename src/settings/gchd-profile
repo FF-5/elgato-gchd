@@ -73,8 +73,9 @@ check_name() {
 
 file_of() { printf '%s/%s.conf' "$DIR" "$1"; }
 
-# value FILE KEY: the value of KEY in a profile file.
-value() { sed -n "s/^$2=//p" "$1" | head -1; }
+# value FILE KEY: the value of KEY in a profile file (the number; text
+# after it, as v4l2-ctl prints for menu controls, is ignored).
+value() { sed -n "s/^$2=\(-\{0,1\}[0-9]*\).*/\1/p" "$1" | head -1; }
 
 # check_file FILE: a profile of this version with valid values.
 check_file() {
@@ -124,7 +125,8 @@ cmd_save() {
 		echo "output=$o"
 		for c in $CONTROLS; do
 			k=${c%%:*}
-			printf '%s=%s\n' "$k" "$(printf '%s\n' "$out" | sed -n "s/^$k: //p" | head -1)"
+			# The number only: menu controls read "0 (Variable Bitrate)".
+			printf '%s=%s\n' "$k" "$(printf '%s\n' "$out" | sed -n "s/^$k: \(-\{0,1\}[0-9]*\).*/\1/p" | head -1)"
 		done
 	} > "$tmp" || { rm -f "$tmp"; die "cannot write $f"; }
 	mv -f "$tmp" "$f" || { rm -f "$tmp"; die "cannot write $f"; }

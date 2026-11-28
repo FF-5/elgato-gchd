@@ -271,7 +271,7 @@ install_settings() {
 			sudo $cmd $pk || echo "Installing $pk failed; the settings window needs it."
 		fi
 	fi
-	ok "Settings installed: 'Elgato Game Capture HD Settings' in the system settings menu (Preferences > Hardware; gchd-settings-gui); text menu: gchd-settings"
+	ok "Settings installed: 'Elgato Game Capture HD' in the system settings menu (Preferences > Hardware; gchd-settings-gui); text menu: gchd-settings"
 }
 
 install_obs() {
