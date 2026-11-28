@@ -2,9 +2,9 @@
 
 **Development-only file** (never merged to `master`, RULES B2).
 
-- **Status:** plan agreed (2026-11-28); first the logging task T-103, then piece (a)
+- **Status:** piece (a) written (framework, launcher, composite); hardware test next
 - **Type:** test suite (stage 5), on the orphan branch `tests`
-- **Branch:** `feat/test-suite` (from `dev` 0.5.15) for TASK/TODO; the
+- **Branch:** `feat/test-suite` (from `dev`, now 0.5.16) for TASK/TODO; the
   suite itself on `tests` (RULES B3)
 - **TODO items:** T-102 (stage 5), T-090 (runs it)
 
@@ -97,9 +97,53 @@ models, HDMI 1080i) and report it in an issue (maintainer, 2026-11-27).
 - `tools/gchd-test.sh` and `tools/tests/` stay for task tests until the
   suite replaces them.
 
+## Done so far
+
+- Piece (a) on `tests` (suite 0.1):
+  - `gchd-test`: menu (parts, full fast, full deep, cases for other
+    testers with their issue links, case list), or `PART|all fast|deep`
+    on the command line; `--repo DIR --branch NAME` installs a checkout
+    first (its installer, core part); summary with device, driver,
+    distribution, kernel, PASS/FAIL/WARN/SKIP per case; log and captures
+    in `~/gchd-test-logs/`.
+  - `lib/runner.sh`: results, `prompt`, `confirm`, `ask_yn`, `have` /
+    `needs` (sources the tester has; missing ones SKIP), `expect`,
+    `check` (numbers), `capture` (stream size, rate, field order, audio,
+    bitrate), viewer window, the kernel log read from a mark (never
+    cleared), `debug` on for the deep test only, off at the end.
+  - `lib/measure.sh`: picture statistics of captured frames (ffmpeg
+    `signalstats`: luma average and spread, saturation, hue), audio level
+    (`volumedetect`), aspect ratio.
+  - `parts/analog.sh` (shared by composite and S-video) and
+    `parts/composite.sh`: 17 cases, 6 fast (capture at the source's mode,
+    output sizes, CBR measured, brightness/saturation measured, H.264,
+    v4l2-compliance) and 11 deep only (every source mode, mode change and
+    60/50 Hz change while capturing, stretch, VBR / limits / per output
+    size / change while capturing, contrast / saturation / hue and a
+    change while capturing, audio gain with a steady sound, close and
+    reopen, signal lost, USB unplugged while capturing with the ready
+    message, settings kept after replug and reload).
+  - `README.md` for testers, `lib/links.conf` (issue links in one place).
+- Checked offline (a recorded stream as the device, a simulated
+  `v4l2-ctl`): the whole flow of the fast and deep test, the
+  measurements on real captured frames; shellcheck clean.
+
 ## Hardware test (maintainer)
 
-Not yet.
+The suite runs from the `tests` branch (not `tools`):
+
+```sh
+cd ~ && git -C elgato-gchd fetch origin
+mkdir -p gchd-tests && git -C elgato-gchd archive origin/tests | tar -x -C gchd-tests
+bash gchd-tests/gchd-test --repo ~/elgato-gchd --branch dev composite deep
+bash gchd-tests/gchd-test composite fast
+```
+
+The deep test installs `dev` (0.5.16) first and takes about 15 to 20
+minutes; it asks which modes your composite source has. Have a steady
+sound ready for the audio case (or answer no). The fast test then runs on
+the driver as installed. Paste both summaries (and the logs of failures)
+into the comments, and anything that was unclear or awkward to do.
 
 ## Maintainer comments
 

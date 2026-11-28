@@ -126,7 +126,7 @@ In this order, each its own task and branch:
       the detailed messages behind the `debug` parameter (off by default,
       switchable while loaded); the test runner switches it on (0.5.16,
       2026-11-28).
-- [ ] **T-102 (L)** (Plan in `TASK.md` on `feat/test-suite`.) Test suite shipped with the driver (maintainer,
+- [ ] **T-102 (L)** (In work: plan in `TASK.md` on `feat/test-suite`, the suite on `tests`.) Test suite shipped with the driver (maintainer,
       2026-11-27), replacing the single pre-release test file. Lives on
       its own orphan branch `tests`, separate from development and releases
       (maintainer, 2026-11-27; RULES B3); other people fetch it from there
