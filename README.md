@@ -69,9 +69,9 @@ the programs use no distribution-specific features.
    the OBS and FFmpeg development packages, `cmake`) are named and can be
    installed on request.
 
-Remove everything with `./install-driver.sh --uninstall` (the firmware is
-kept), or one optional part with `--uninstall --settings` or
-`--uninstall --obs`.
+Remove everything with `./install-driver.sh --uninstall` (the extracted
+firmware too; saved profiles are kept), or one optional part with
+`--uninstall --settings` or `--uninstall --obs`.
 
 ### Manual installation
 
@@ -85,7 +85,7 @@ Driver with DKMS, and the udev rule:
 
 ```sh
 sudo dkms add ./src/driver
-sudo dkms install elgato-gchd/0.5.14
+sudo dkms install elgato-gchd/0.5.15
 sudo modprobe elgato_gchd
 sudo cp udev-rules/55-elgato-gchd-device.rules udev-rules/56-elgato-gchd-settings.rules /etc/udev/rules.d/
 sudo udevadm control --reload
