@@ -25,7 +25,7 @@ step "install: one menu entry"
 expect "Elgato's installer file in firmware/" "\.msi" sh -c "ls $REPO/firmware/*.msi"
 run bash "$INST" --all --yes --in-terminal < /dev/null
 expect "firmware installed" "MB86H57_H58_ENC_H.*MB86M01_ASSP_NSEC_IDLE" fw_state
-expect "only the installed menu entry" "^/usr/local/share/applications/elgato-gchd-settings.desktop: Categories=Settings;HardwareSettings;$" sh -c "$(declare -f entries); entries | tr '\n' '|' | sed 's/|$//'"
+expect "only the installed menu entry" "^/usr/local/share/applications/elgato-gchd-settings.desktop: Categories=Settings;HardwareSettings;$" bash -c "$(declare -f entries); entries | tr '\n' '|' | sed 's/|$//'"
 confirm "Application menu: 'Elgato Game Capture HD' only under System > Preferences > Hardware, no longer under Sound & Video? (If the menu has not refreshed, log out and in once.)"
 
 step "uninstall: driver and firmware removed without a question"
@@ -33,7 +33,7 @@ run bash "$INST" --uninstall --in-terminal < /dev/null
 expect "driver removed" "^removed$" module_state
 expect "firmware removed, folder gone" "^no folder$" fw_state
 expect "profile command removed" "^gone$" sh -c "[ -e /usr/local/bin/gchd-profile ] && echo there || echo gone"
-expect "no menu entry left" "^$" sh -c "$(declare -f entries); entries"
+expect "no menu entry left" "^$" bash -c "$(declare -f entries); entries"
 
 step "install extracts the firmware again"
 run bash "$INST" --all --yes --in-terminal < /dev/null
