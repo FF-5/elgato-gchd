@@ -128,3 +128,4 @@ output is in the history of `TASK.md` on the feature branch named in the row.
 | 2026-11-28 | `feat/profiles` 468c0f0 (gchd-test.sh T-091, second run) | User profiles | 32 PASS, 0 FAIL. Maintainer on OBS: no replace question, deleted profile stayed in the list, permanent message (OBS does not rebuild shown properties after a button). |
 | 2026-11-28 | `feat/profiles` bfe6f1a (gchd-test.sh T-091, third run) | OBS profile controls | 15 PASS, 0 FAIL. T-091 merged as 0.5.14. |
 | 2026-11-28 | `feat/uninstall-firmware` f198ae6 (gchd-test.sh T-101) | Uninstall with the firmware, menu entry | 10 PASS, 0 FAIL. Merged as 0.5.15. |
+| 2026-11-28 | `feat/release-logging` 5a2330d (gchd-test.sh T-103) | Release logging (debug parameter) | 8 PASS, 1 FAIL (ready message "video0" without /dev/, fixed). Merged as 0.5.16. |
